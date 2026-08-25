@@ -1,36 +1,44 @@
 # Hasnaria Business Analyzer
 
-Dashboard bisnis live untuk Hasnaria (Data → Trend → Diagnosis → Action).
+Dashboard operasional & bisnis live untuk **Hasnaria**.
 
-## Fitur
+**Live:** https://hasnaria-business-analyzer.vercel.app
+
+## Fitur saat ini
+
 - Login / Signup (Supabase Auth)
-- Dashboard omzet 30 hari, growth, average ticket
-- Input penjualan harian
-- Input performa konten Instagram / TikTok
+- **Dashboard**: Omzet 30 hari, growth, average ticket, pembelian, waste, kompensasi
+- **Penjualan**: Input data harian + tabel
+- **Operasional**: Input pembelian, waste, kompensasi dengan batas Authority
+- **Medsos**: Input performa konten Instagram/TikTok
+- **Authority**: Matrix keputusan + 5 Aturan Emas
 - Diagnosis otomatis + rekomendasi aksi
 
-## Tech
-- Pure HTML + Vanilla JS
+## Authority Limits (sudah diimplementasi di UI)
+
+| Jenis              | Batas Head of Store     |
+|--------------------|-------------------------|
+| Pembelian rutin    | Rp 1.500.000 / transaksi |
+| Kompensasi         | Rp 50.000               |
+| Di atas batas      | Wajib approval Owner    |
+
+## Tech Stack
+
+- HTML + Vanilla JS
 - Supabase (Auth + Postgres)
 - Chart.js
+- Deployed on Vercel
 
-## Deploy
-Repo ini siap di-deploy ke Vercel.
+## Database tables yang dipakai
 
-1. Import project di Vercel dari GitHub repo ini
-2. Framework Preset: Other / Static
-3. Deploy
-
-Aplikasi sudah terhubung ke Supabase project Hasnaria.
-
-## Struktur Database (Supabase)
 - `brands`
 - `daily_metrics`
 - `social_contents`
-- `products`, `sales`, `sale_items`, `expenses` (siap untuk pengembangan lanjutan)
+- `expenses` (pembelian / waste / kompensasi)
 
-## Next Development
-- Authority Matrix & limit rupiah
-- Input pembelian / waste / kompensasi
+## Next roadmap
+
 - Role-based access (Owner / Head of Store / PIC)
-- Laporan harian otomatis
+- Stock opname & variance
+- Laporan harian otomatis ke Owner
+- Multi-outlet
