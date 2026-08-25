@@ -24,7 +24,9 @@ h2{font-size:17px;margin-bottom:12px}
 button{border:0;border-radius:10px;padding:10px 14px;background:#e7eeeb;color:var(--text);font-weight:700;cursor:pointer;font-size:13px}
 button.primary,.tab.active{background:var(--green);color:#fff}
 button.primary:hover{background:var(--green-dark)}
-button.guest{background:#1e293b;color:#fff;width:100%;margin-top:12px;padding:12px}
+button.google{background:#fff;color:#3c4043;border:1px solid #dadce0;width:100%;margin-top:10px;padding:12px;display:flex;align-items:center;justify-content:center;gap:10px}
+button.google:hover{background:#f8f9fa;box-shadow:0 1px 3px rgba(0,0,0,.1)}
+button.guest{background:#1e293b;color:#fff;width:100%;margin-top:10px;padding:12px}
 button:disabled{opacity:.5;cursor:not-allowed}
 .tab{white-space:nowrap}
 .hidden{display:none!important}
@@ -93,10 +95,15 @@ th{font-size:12px;color:var(--muted);font-weight:600}
 
     <div class="auth-divider">atau</div>
 
+    <button id="googleBtn" class="google" type="button">
+      <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/><path fill="none" d="M0 0h48v48H0z"/></svg>
+      Masuk dengan Google
+    </button>
+
     <button id="guestBtn" class="guest" type="button">Masuk sebagai Guest (Developer)</button>
 
     <p id="authMsg" class="auth-message"></p>
-    <div class="auth-note">Guest = mode developer. Data disimpan di browser ini saja (localStorage).</div>
+    <div class="auth-note">Google login butuh setup di Supabase + Google Cloud. Guest = data lokal di browser ini.</div>
   </div>
 </div>
 
@@ -247,30 +254,16 @@ th{font-size:12px;color:var(--muted);font-weight:600}
 
 <script>
 (function () {
-  // ========== SAFE HELPERS ==========
   const $ = id => document.getElementById(id);
   const rp = n => 'Rp' + Number(n || 0).toLocaleString('id-ID');
   const today = new Date().toISOString().slice(0, 10);
-
   const LS = {
-    get(key, fallback) {
-      try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; }
-      catch { return fallback; }
-    },
-    set(key, val) {
-      try { localStorage.setItem(key, JSON.stringify(val)); } catch {}
-    }
+    get(key, fallback) { try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; } catch { return fallback; } },
+    set(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch {} }
   };
 
-  let isGuest = false;
-  let brandId = null;
-  let data = [];
-  let social = [];
-  let expenses = [];
-  let chart = null;
-  let db = null;
+  let isGuest = false, brandId = null, data = [], social = [], expenses = [], chart = null, db = null;
 
-  // Init Supabase safely (jangan sampai crash seluruh app)
   try {
     if (typeof supabase !== 'undefined') {
       db = supabase.createClient(
@@ -278,9 +271,7 @@ th{font-size:12px;color:var(--muted);font-weight:600}
         'sb_publishable_eXrgSxWTXoa9q-hVpLx-sQ_IaEiUbeO'
       );
     }
-  } catch (e) {
-    console.warn('Supabase init failed:', e);
-  }
+  } catch (e) { console.warn('Supabase init failed:', e); }
 
   function setAuthMessage(msg, type) {
     const el = $('authMsg');
@@ -288,18 +279,9 @@ th{font-size:12px;color:var(--muted);font-weight:600}
     el.textContent = msg || '';
     el.className = 'auth-message' + (type ? ' ' + type : '');
   }
+  function showApp() { $('auth').classList.add('hidden'); $('app').classList.remove('hidden'); }
+  function showAuth() { $('app').classList.add('hidden'); $('auth').classList.remove('hidden'); }
 
-  function showApp() {
-    $('auth').classList.add('hidden');
-    $('app').classList.remove('hidden');
-  }
-
-  function showAuth() {
-    $('app').classList.add('hidden');
-    $('auth').classList.remove('hidden');
-  }
-
-  // ========== GUEST (selalu jalan) ==========
   function enterGuest() {
     try {
       isGuest = true;
@@ -308,7 +290,6 @@ th{font-size:12px;color:var(--muted);font-weight:600}
       startGuest();
     } catch (e) {
       setAuthMessage('Error Guest: ' + (e.message || e), 'error');
-      console.error(e);
     }
   }
 
@@ -317,85 +298,77 @@ th{font-size:12px;color:var(--muted);font-weight:600}
     showApp();
     $('guestBanner').classList.remove('hidden');
     $('modeBadge').classList.remove('hidden');
-
     data = LS.get('hasnaria_metrics', []);
     social = LS.get('hasnaria_social', []);
     expenses = LS.get('hasnaria_expenses', []);
     brandId = 'guest-local';
-
-    // set default date
     if ($('date')) $('date').value = today;
     if ($('cdate')) $('cdate').value = today;
     if ($('opsDate')) $('opsDate').value = today;
-
     render();
   }
 
-  // ========== AUTH ==========
+  async function loginWithGoogle() {
+    if (!db) {
+      setAuthMessage('Supabase belum siap. Setup Google dulu di Supabase Dashboard.', 'error');
+      return;
+    }
+    setAuthMessage('Membuka Google…');
+    try {
+      const { data, error } = await db.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin + window.location.pathname,
+          queryParams: { access_type: 'offline', prompt: 'consent' }
+        }
+      });
+      if (error) {
+        setAuthMessage('Google login gagal: ' + error.message + '. Pastikan provider Google sudah diaktifkan di Supabase.', 'error');
+      }
+      // redirect akan terjadi otomatis jika sukses
+    } catch (e) {
+      setAuthMessage('Google error: ' + (e.message || e), 'error');
+    }
+  }
+
   async function login() {
     const email = ($('email').value || '').trim();
     const password = $('password').value || '';
-    if (!email || !password) {
-      setAuthMessage('Email dan password wajib diisi.', 'error');
-      return;
-    }
-    if (!db) {
-      setAuthMessage('Supabase belum siap. Gunakan Guest mode dulu.', 'error');
-      return;
-    }
+    if (!email || !password) { setAuthMessage('Email dan password wajib diisi.', 'error'); return; }
+    if (!db) { setAuthMessage('Supabase belum siap. Gunakan Guest mode dulu.', 'error'); return; }
     setAuthMessage('Sedang masuk…');
     try {
       const r = await db.auth.signInWithPassword({ email, password });
-      if (r.error) {
-        setAuthMessage('Login gagal: ' + r.error.message, 'error');
-        return;
-      }
+      if (r.error) { setAuthMessage('Login gagal: ' + r.error.message, 'error'); return; }
       isGuest = false;
       localStorage.removeItem('hasnaria_guest');
       setAuthMessage('Login berhasil…', 'success');
-      await start(false);
-    } catch (e) {
-      setAuthMessage('Login error: ' + (e.message || e), 'error');
-    }
+      await start();
+    } catch (e) { setAuthMessage('Login error: ' + (e.message || e), 'error'); }
   }
 
   async function signup() {
     const email = ($('email').value || '').trim();
     const password = $('password').value || '';
-    if (!email || !password) {
-      setAuthMessage('Email dan password wajib diisi.', 'error');
-      return;
-    }
-    if (password.length < 6) {
-      setAuthMessage('Password minimal 6 karakter.', 'error');
-      return;
-    }
-    if (!db) {
-      setAuthMessage('Supabase belum siap. Gunakan Guest mode dulu.', 'error');
-      return;
-    }
+    if (!email || !password) { setAuthMessage('Email dan password wajib diisi.', 'error'); return; }
+    if (password.length < 6) { setAuthMessage('Password minimal 6 karakter.', 'error'); return; }
+    if (!db) { setAuthMessage('Supabase belum siap. Gunakan Guest mode dulu.', 'error'); return; }
     setAuthMessage('Membuat akun…');
     try {
       const r = await db.auth.signUp({
-        email,
-        password,
+        email, password,
         options: { emailRedirectTo: window.location.origin + window.location.pathname }
       });
-      if (r.error) {
-        setAuthMessage('Daftar gagal: ' + r.error.message, 'error');
-        return;
-      }
+      if (r.error) { setAuthMessage('Daftar gagal: ' + r.error.message, 'error'); return; }
       if (r.data.session) {
         isGuest = false;
         localStorage.removeItem('hasnaria_guest');
         setAuthMessage('Akun berhasil dibuat.', 'success');
-        await start(false);
+        await start();
       } else {
-        setAuthMessage('Akun dibuat. Cek email verifikasi, atau pakai Guest dulu.', 'success');
+        setAuthMessage('Akun dibuat. Cek email verifikasi, atau pakai Guest / Google.', 'success');
       }
-    } catch (e) {
-      setAuthMessage('Daftar error: ' + (e.message || e), 'error');
-    }
+    } catch (e) { setAuthMessage('Daftar error: ' + (e.message || e), 'error'); }
   }
 
   async function logout() {
@@ -405,28 +378,22 @@ th{font-size:12px;color:var(--muted);font-weight:600}
     location.reload();
   }
 
-  // ========== SUPABASE START ==========
   async function start() {
     isGuest = false;
     showApp();
     $('guestBanner').classList.add('hidden');
     $('modeBadge').classList.add('hidden');
-
     if ($('date')) $('date').value = today;
     if ($('cdate')) $('cdate').value = today;
     if ($('opsDate')) $('opsDate').value = today;
-
     try {
       let r = await db.from('brands').select('*').limit(1);
       if (r.error) throw new Error(r.error.message);
-
       if (!r.data || !r.data.length) {
         r = await db.from('brands').insert({ name: 'Hasnaria' }).select().single();
         if (r.error) throw new Error(r.error.message);
         brandId = r.data.id;
-      } else {
-        brandId = r.data[0].id;
-      }
+      } else brandId = r.data[0].id;
       await load();
     } catch (e) {
       alert('Gagal load data Supabase: ' + e.message + '\n\nCoba pakai Guest mode.');
@@ -439,116 +406,69 @@ th{font-size:12px;color:var(--muted);font-weight:600}
       data = LS.get('hasnaria_metrics', []);
       social = LS.get('hasnaria_social', []);
       expenses = LS.get('hasnaria_expenses', []);
-      render();
-      return;
+      render(); return;
     }
-
     const d = new Date(); d.setDate(d.getDate() - 89);
     const from = d.toISOString().slice(0, 10);
-
     try {
       let r = await db.from('daily_metrics').select('*').eq('brand_id', brandId).gte('metric_date', from).order('metric_date');
-      if (r.error) throw r.error;
-      data = r.data || [];
-
+      if (r.error) throw r.error; data = r.data || [];
       r = await db.from('social_contents').select('*').eq('brand_id', brandId).gte('posted_at', from).order('posted_at', { ascending: false });
-      if (r.error) throw r.error;
-      social = r.data || [];
-
+      if (r.error) throw r.error; social = r.data || [];
       r = await db.from('expenses').select('*').eq('brand_id', brandId).gte('expense_date', from).order('expense_date', { ascending: false });
-      if (r.error) throw r.error;
-      expenses = r.data || [];
-
+      if (r.error) throw r.error; expenses = r.data || [];
       render();
-    } catch (e) {
-      console.error(e);
-      alert('Error load: ' + e.message);
-    }
+    } catch (e) { console.error(e); alert('Error load: ' + e.message); }
   }
 
-  // ========== RENDER ==========
   function render() {
     const now = Date.now();
     const cut = new Date(now - 30 * 864e5).toISOString().slice(0, 10);
     const prev = new Date(now - 60 * 864e5).toISOString().slice(0, 10);
-
     const sum = a => a.reduce((s, x) => s + Number(x.cash_revenue || 0), 0);
     const cnt = a => a.reduce((s, x) => s + Number(x.transactions || 0), 0);
-
     const cur = data.filter(x => x.metric_date >= cut);
     const old = data.filter(x => x.metric_date >= prev && x.metric_date < cut);
-
     const cr = sum(cur), ct = cnt(cur), pr = sum(old), pt = cnt(old);
     const ca = ct ? cr / ct : 0;
     const g = pr ? ((cr - pr) / pr * 100) : null;
-
     if ($('rev')) $('rev').textContent = rp(cr);
     if ($('tx')) $('tx').textContent = ct.toLocaleString('id-ID');
     if ($('avg')) $('avg').textContent = rp(ca);
-    if ($('growth')) {
-      $('growth').textContent = g == null ? '—' : (g >= 0 ? '+' : '') + g.toFixed(1) + '%';
-      $('growth').style.color = g == null ? 'inherit' : g >= 0 ? '#17734d' : '#b43b3b';
-    }
-
+    if ($('growth')) { $('growth').textContent = g == null ? '—' : (g >= 0 ? '+' : '') + g.toFixed(1) + '%'; $('growth').style.color = g == null ? 'inherit' : g >= 0 ? '#17734d' : '#b43b3b'; }
     const exp30 = expenses.filter(x => x.expense_date >= cut);
     const buy = exp30.filter(x => x.category === 'pembelian').reduce((s, x) => s + Number(x.amount || 0), 0);
     const waste = exp30.filter(x => x.category === 'waste').reduce((s, x) => s + Number(x.amount || 0), 0);
     const comp = exp30.filter(x => x.category === 'kompensasi').reduce((s, x) => s + Number(x.amount || 0), 0);
-
     if ($('expBuy')) $('expBuy').textContent = rp(buy);
     if ($('expWaste')) $('expWaste').textContent = rp(waste);
     if ($('expComp')) $('expComp').textContent = rp(comp);
-
-    draw(cur);
-    diagnose(g, waste, cr);
-    rows();
-    opsRows();
-    socialRender();
+    draw(cur); diagnose(g, waste, cr); rows(); opsRows(); socialRender();
   }
 
   function draw(a) {
     try {
       if (typeof Chart === 'undefined') return;
       if (chart) chart.destroy();
-      const canvas = $('chart');
-      if (!canvas) return;
+      const canvas = $('chart'); if (!canvas) return;
       chart = new Chart(canvas, {
         type: 'line',
-        data: {
-          labels: a.map(x => x.metric_date.slice(5)),
-          datasets: [{
-            label: 'Omzet',
-            data: a.map(x => Number(x.cash_revenue || 0)),
-            tension: 0.3,
-            borderColor: '#176b55',
-            backgroundColor: 'rgba(23,107,85,.1)',
-            fill: true
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: { legend: { display: false } },
-          scales: { y: { ticks: { callback: v => rp(v) } } }
-        }
+        data: { labels: a.map(x => x.metric_date.slice(5)), datasets: [{ label: 'Omzet', data: a.map(x => Number(x.cash_revenue || 0)), tension: 0.3, borderColor: '#176b55', backgroundColor: 'rgba(23,107,85,.1)', fill: true }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { ticks: { callback: v => rp(v) } } } }
       });
     } catch (e) { console.warn('Chart error', e); }
   }
 
   function diagnose(g, waste, revenue) {
     const d = [], act = [];
-    if (!data.length) {
-      d.push('📌 Belum ada data penjualan. Isi minimal 14 hari agar diagnosis lebih berguna.');
-    } else if (g !== null) {
+    if (!data.length) d.push('📌 Belum ada data penjualan. Isi minimal 14 hari agar diagnosis lebih berguna.');
+    else if (g !== null) {
       if (g < 0) d.push('⚠️ Omzet turun <b>' + Math.abs(g).toFixed(1) + '%</b> dibanding 30 hari sebelumnya.');
       else d.push('✅ Omzet naik <b>' + g.toFixed(1) + '%</b> dibanding 30 hari sebelumnya.');
       if (g < 0) act.push('Bandingkan 7 hari terakhir dengan minggu sebelumnya.');
       if (g >= 0) act.push('Ulangi format konten/promo yang berhasil.');
     }
-    if (revenue > 0 && waste / revenue > 0.05) {
-      d.push('⚠️ Waste sudah > 5% dari omzet.');
-      act.push('Lakukan stock opname.');
-    }
+    if (revenue > 0 && waste / revenue > 0.05) { d.push('⚠️ Waste sudah > 5% dari omzet.'); act.push('Lakukan stock opname.'); }
     if ($('diagnosis')) $('diagnosis').innerHTML = d.map(x => '<div class="insight">' + x + '</div>').join('') || '';
     if ($('actions')) $('actions').innerHTML = (act.length ? act : ['Kumpulkan data penjualan harian secara konsisten.']).map(x => '<div class="insight">→ ' + x + '</div>').join('');
   }
@@ -586,172 +506,95 @@ th{font-size:12px;color:var(--muted);font-weight:600}
     return String(s).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
   }
 
-  // ========== SAVE ==========
   function saveSale() {
-    const p = {
-      metric_date: $('date').value,
-      cash_revenue: Number($('revenue').value || 0),
-      transactions: Number($('transactions').value || 0),
-      notes: $('notes').value || ''
-    };
-
+    const p = { metric_date: $('date').value, cash_revenue: Number($('revenue').value || 0), transactions: Number($('transactions').value || 0), notes: $('notes').value || '' };
     if (isGuest) {
       const idx = data.findIndex(x => x.metric_date === p.metric_date);
-      if (idx >= 0) data[idx] = { ...data[idx], ...p };
-      else data.push({ id: Date.now().toString(), ...p });
+      if (idx >= 0) data[idx] = { ...data[idx], ...p }; else data.push({ id: Date.now().toString(), ...p });
       data.sort((a, b) => a.metric_date.localeCompare(b.metric_date));
-      LS.set('hasnaria_metrics', data);
-      $('saleMsg').textContent = 'Tersimpan (Guest) ✓';
-      render();
-      return;
+      LS.set('hasnaria_metrics', data); $('saleMsg').textContent = 'Tersimpan (Guest) ✓'; render(); return;
     }
-
-    // supabase path
     (async () => {
       p.brand_id = brandId;
       let q = await db.from('daily_metrics').select('id').eq('brand_id', brandId).eq('metric_date', p.metric_date).maybeSingle();
       if (q.error) { $('saleMsg').textContent = q.error.message; return; }
       let r = q.data ? await db.from('daily_metrics').update(p).eq('id', q.data.id) : await db.from('daily_metrics').insert(p);
-      $('saleMsg').textContent = r.error ? r.error.message : 'Tersimpan ✓';
-      if (!r.error) await load();
+      $('saleMsg').textContent = r.error ? r.error.message : 'Tersimpan ✓'; if (!r.error) await load();
     })();
   }
 
   function saveExpense() {
-    const amount = Number($('opsAmount').value || 0);
-    const category = $('opsCategory').value;
-
-    if (category === 'pembelian' && amount > 1500000) {
-      if (!confirm('Pembelian > Rp 1.500.000 (batas Head of Store). Tetap simpan?')) return;
-    }
-    if (category === 'kompensasi' && amount > 50000) {
-      if (!confirm('Kompensasi > Rp 50.000 (batas Head of Store). Tetap simpan?')) return;
-    }
-
-    const p = {
-      expense_date: $('opsDate').value,
-      category,
-      amount,
-      notes: $('opsNotes').value || ''
-    };
-
+    const amount = Number($('opsAmount').value || 0); const category = $('opsCategory').value;
+    if (category === 'pembelian' && amount > 1500000) { if (!confirm('Pembelian > Rp 1.500.000 (batas Head of Store). Tetap simpan?')) return; }
+    if (category === 'kompensasi' && amount > 50000) { if (!confirm('Kompensasi > Rp 50.000 (batas Head of Store). Tetap simpan?')) return; }
+    const p = { expense_date: $('opsDate').value, category, amount, notes: $('opsNotes').value || '' };
     if (isGuest) {
-      expenses.unshift({ id: Date.now().toString(), ...p });
-      LS.set('hasnaria_expenses', expenses);
-      $('opsMsg').textContent = 'Tersimpan (Guest) ✓';
-      $('opsAmount').value = '';
-      $('opsNotes').value = '';
-      render();
-      return;
+      expenses.unshift({ id: Date.now().toString(), ...p }); LS.set('hasnaria_expenses', expenses);
+      $('opsMsg').textContent = 'Tersimpan (Guest) ✓'; $('opsAmount').value = ''; $('opsNotes').value = ''; render(); return;
     }
-
     (async () => {
-      p.brand_id = brandId;
-      const r = await db.from('expenses').insert(p);
+      p.brand_id = brandId; const r = await db.from('expenses').insert(p);
       $('opsMsg').textContent = r.error ? r.error.message : 'Tersimpan ✓';
-      if (!r.error) {
-        $('opsAmount').value = '';
-        $('opsNotes').value = '';
-        await load();
-      }
+      if (!r.error) { $('opsAmount').value = ''; $('opsNotes').value = ''; await load(); }
     })();
   }
 
   function saveContent() {
-    const p = {
-      posted_at: $('cdate').value,
-      platform: $('platform').value,
-      content_title: $('title').value,
-      views: Number($('views').value || 0),
-      likes: Number($('likes').value || 0),
-      comments: Number($('comments').value || 0),
-      shares: Number($('shares').value || 0),
-      saves: Number($('saves').value || 0),
-      attributed_transactions: Number($('contentTx').value || 0)
-    };
-
+    const p = { posted_at: $('cdate').value, platform: $('platform').value, content_title: $('title').value, views: Number($('views').value || 0), likes: Number($('likes').value || 0), comments: Number($('comments').value || 0), shares: Number($('shares').value || 0), saves: Number($('saves').value || 0), attributed_transactions: Number($('contentTx').value || 0) };
     if (isGuest) {
-      social.unshift({ id: Date.now().toString(), ...p });
-      LS.set('hasnaria_social', social);
-      $('socialMsg').textContent = 'Tersimpan (Guest) ✓';
-      render();
-      return;
+      social.unshift({ id: Date.now().toString(), ...p }); LS.set('hasnaria_social', social);
+      $('socialMsg').textContent = 'Tersimpan (Guest) ✓'; render(); return;
     }
-
     (async () => {
-      p.brand_id = brandId;
-      const r = await db.from('social_contents').insert(p);
-      $('socialMsg').textContent = r.error ? r.error.message : 'Tersimpan ✓';
-      if (!r.error) await load();
+      p.brand_id = brandId; const r = await db.from('social_contents').insert(p);
+      $('socialMsg').textContent = r.error ? r.error.message : 'Tersimpan ✓'; if (!r.error) await load();
     })();
   }
 
   function switchTab(id) {
     document.querySelectorAll('main section').forEach(x => x.classList.add('hidden'));
-    const sec = $(id);
-    if (sec) sec.classList.remove('hidden');
-    document.querySelectorAll('.tab').forEach(x => {
-      x.classList.toggle('active', x.getAttribute('data-tab') === id);
-    });
+    const sec = $(id); if (sec) sec.classList.remove('hidden');
+    document.querySelectorAll('.tab').forEach(x => x.classList.toggle('active', x.getAttribute('data-tab') === id));
   }
 
-  // ========== BIND EVENTS (penting: bukan inline onclick) ==========
   function bind() {
-    const loginBtn = $('loginBtn');
-    const signupBtn = $('signupBtn');
-    const guestBtn = $('guestBtn');
-    const logoutBtn = $('logoutBtn');
-
-    if (loginBtn) loginBtn.addEventListener('click', login);
-    if (signupBtn) signupBtn.addEventListener('click', signup);
-    if (guestBtn) guestBtn.addEventListener('click', enterGuest);
-    if (logoutBtn) logoutBtn.addEventListener('click', logout);
-
+    if ($('loginBtn')) $('loginBtn').addEventListener('click', login);
+    if ($('signupBtn')) $('signupBtn').addEventListener('click', signup);
+    if ($('googleBtn')) $('googleBtn').addEventListener('click', loginWithGoogle);
+    if ($('guestBtn')) $('guestBtn').addEventListener('click', enterGuest);
+    if ($('logoutBtn')) $('logoutBtn').addEventListener('click', logout);
     if ($('saveSaleBtn')) $('saveSaleBtn').addEventListener('click', saveSale);
     if ($('saveExpenseBtn')) $('saveExpenseBtn').addEventListener('click', saveExpense);
     if ($('saveContentBtn')) $('saveContentBtn').addEventListener('click', saveContent);
-
-    document.querySelectorAll('.tab').forEach(btn => {
-      btn.addEventListener('click', () => switchTab(btn.getAttribute('data-tab')));
-    });
-
-    // Enter key
-    if ($('password')) {
-      $('password').addEventListener('keydown', e => { if (e.key === 'Enter') login(); });
-    }
+    document.querySelectorAll('.tab').forEach(btn => btn.addEventListener('click', () => switchTab(btn.getAttribute('data-tab'))));
+    if ($('password')) $('password').addEventListener('keydown', e => { if (e.key === 'Enter') login(); });
   }
 
-  // ========== INIT ==========
   function init() {
     bind();
-
-    // Kalau sebelumnya Guest, langsung masuk
-    if (localStorage.getItem('hasnaria_guest') === '1') {
-      startGuest();
-      return;
-    }
-
-    // Coba session Supabase
+    if (localStorage.getItem('hasnaria_guest') === '1') { startGuest(); return; }
     if (db) {
       db.auth.getSession().then(x => {
-        if (x.data && x.data.session) {
-          start();
-        } else {
-          showAuth();
-        }
+        if (x.data && x.data.session) start();
+        else showAuth();
       }).catch(() => showAuth());
+
+      // Handle OAuth redirect callback
+      db.auth.onAuthStateChange((event, session) => {
+        if (event === 'SIGNED_IN' && session && $('app').classList.contains('hidden')) {
+          isGuest = false;
+          localStorage.removeItem('hasnaria_guest');
+          start();
+        }
+      });
     } else {
       showAuth();
       setAuthMessage('Supabase belum load. Bisa langsung pakai Guest mode.', 'error');
     }
   }
 
-  // Jalankan setelah DOM siap
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
-  } else {
-    init();
-  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
 })();
 </script>
 </body>
