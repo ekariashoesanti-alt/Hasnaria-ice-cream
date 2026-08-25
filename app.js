@@ -57,6 +57,13 @@
   function canOps(r) { return ["owner", "head_store", "pic"].indexOf(r) >= 0; }
   function canSoc(r) { return ["owner", "marketing", "head_store"].indexOf(r) >= 0; }
   function canTeam(r) { return r === "owner"; }
+  function canApproveRow(r, cat, amt) {
+    if (r === "owner") return true;
+    if (r !== "head_store") return false;
+    if (cat === "pembelian") return amt <= 1500000;
+    if (cat === "kompensasi") return amt <= 50000;
+    return amt <= 500000;
+  }
   function canAppr(r) { return r === "owner" || r === "head_store"; }
   function canStock(r) { return r === "owner" || r === "head_store" || r === "pic"; }
   function encode(m) { return "HASNARIA_USER|" + m.userId + "|" + m.role + "|" + m.email + "|" + (m.name || "").replace(/\|/g, "/"); }
@@ -240,7 +247,11 @@
       '<div class="grid" style="margin-top:12px"><div><div class="label">Omzet hari ini</div><div class="metric">' + rp(omzetH) + '</div></div>' +
       '<div><div class="label">Target</div><div class="metric">' + rp(TARGET) + '</div></div>' +
       '<div><div class="label">Pencapaian</div><div class="metric">' + ach + '%</div></div>' +
-      '<div><div class="label">Pembeli / ATV</div><div class="metric">' + txH + ' · ' + rp(txH ? omzetH / txH : 0) + '</div></div></div></div>' +
+      '<div><div class="label">Pembeli / ATV</div><div class="metric">' + txH + ' · ' + rp(txH ? omzetH / txH : 0) + '</div></div></div>' +
+      '<div class="grid" style="margin-top:12px"><div><div class="label">Tunai</div><div class="metric">' + (todayRow && todayRow.pay ? rp(todayRow.pay.cash) : "—") + '</div></div>' +
+      '<div><div class="label">QRIS</div><div class="metric">' + (todayRow && todayRow.pay ? rp(todayRow.pay.qris) : "—") + '</div></div>' +
+      '<div><div class="label">Transfer</div><div class="metric">' + (todayRow && todayRow.pay ? rp(todayRow.pay.tf) : "—") + '</div></div>' +
+      '<div><div class="label">Selisih kas</div><div class="metric">' + (todayRow && todayRow.pay ? rp(todayRow.pay.cash + todayRow.pay.qris + todayRow.pay.tf - omzetH) : "Belum") + "</div></div></div></div>" +
       (red.length ? '<div class="redbox"><b>PERLU KEPUTUSAN OWNER</b>' + red.map(function (x) { return '<div style="margin-top:8px">' + esc(x.t) + '<div class="small">' + esc(x.d) + "</div></div>"; }).join("") + "</div>" : '<div class="okbox">Tidak ada keputusan merah hari ini. Owner cukup pantau.</div>') +
       (yel.length ? '<div class="warnbox"><b>PIC / Head yang kerjakan</b> — bukan Owner.' + yel.map(function (x) { return '<div style="margin-top:6px">' + esc(x.t) + " · " + esc(x.d) + "</div>"; }).join("") + "</div>" : "") +
       '<div class="grid-3"><div class="card"><div class="label">Omzet 30 hari</div><div class="metric">' + rp(cr) + '</div><div class="small">' + (g == null ? "—" : (g >= 0 ? "+" : "") + g.toFixed(1) + "% vs 30 hari lalu") + '</div></div>' +
@@ -388,7 +399,10 @@
     var pending = expenses.filter(function (x) { return x.status === "pending_approval"; });
     $("approval").innerHTML = '<div class="card"><h2>Keputusan yang naik</h2><p class="small" style="margin-bottom:10px">Makin sedikit yang sampai ke sini, makin sehat delegasi. Yang hijau tidak boleh muncul di sini.</p>' +
       (pending.length ? pending.map(function (x) {
-        return '<div class="pend"><b>' + (CAT[x.category] || x.category) + " · " + rp(x.amount) + '</b><div class="small">' + x.expense_date + " · " + esc(x.displayNotes || "—") + '</div><div style="margin-top:8px"><button class="primary" data-ok="' + x.id + '">Setujui</button> <button data-no="' + x.id + '">Tolak</button></div></div>';
+        var ok = canApproveRow(role, x.category, x.amount);
+        return '<div class="pend"><b>' + (CAT[x.category] || x.category) + " · " + rp(x.amount) + '</b><div class="small">' + x.expense_date + " · " + esc(x.displayNotes || "—") + '</div><div style="margin-top:8px">' +
+          (ok ? '<button class="primary" data-ok="' + x.id + '">Setujui</button> <button data-no="' + x.id + '">Tolak</button>' : '<span class="small">Di luar wewenang Anda — biarkan Owner.</span>') +
+          "</div></div>";
       }).join("") : '<div class="okbox">Tidak ada antrean. Operasional berjalan di bawah.</div>') + "</div>";
     document.querySelectorAll("[data-ok]").forEach(function (b) {
       b.addEventListener("click", async function () {
@@ -413,8 +427,15 @@
       }).join("") + "</tbody></table></div>" +
       '<div class="card"><h2>Izin — kategori, bukan cerita</h2><p class="small">A Cuti · B Darurat · C Sakit · D Tidak memenuhi. PIC tidak menilai “saya percaya atau tidak”. Masuk kategori mana berdasarkan bukti.</p>' +
       (canOps(role) || canTeam(role) ? '<div class="form"><div><label>Nama</label><input id="lzName"></div><div><label>Tanggal</label><input id="lzDate" type="date" value="' + today() + '"></div><div><label>Kategori</label><select id="lzCat"><option value="A">A · Cuti</option><option value="B">B · Darurat</option><option value="C">C · Sakit</option><option value="D">D · Tidak memenuhi</option></select></div><div><label>Status</label><select id="lzSt"><option value="pending">Menunggu Head</option><option value="ok">Disetujui</option><option value="tolak">Ditolak</option></select></div></div><br><button class="primary" id="lzSave">Catat izin</button><p class="small" id="lzMsg"></p>' : "") +
-      '<table style="margin-top:12px"><thead><tr><th>Tanggal</th><th>Nama</th><th>Kat</th><th>Status</th></tr></thead><tbody>' +
-      (leaves.map(function (x) { var p = (x.content_title || "").split("|"); return "<tr><td>" + esc(p[3] || x.posted_at) + "</td><td>" + esc(p[1] || "") + "</td><td>" + esc(p[2] || "") + "</td><td>" + esc(p[4] || "") + "</td></tr>"; }).join("") || '<tr><td colspan="4" class="small">Belum ada izin.</td></tr>') +
+      '<table style="margin-top:12px"><thead><tr><th>Tanggal</th><th>Nama</th><th>Kat</th><th>Status</th><th></th></tr></thead><tbody>' +
+      (leaves.map(function (x) {
+        var p = (x.content_title || "").split("|");
+        var st = p[4] || "";
+        var btns = (canOps(role) || canTeam(role)) && st === "pending"
+          ? '<button class="primary" data-lzok="' + x.id + '">Setujui</button> <button data-lzno="' + x.id + '">Tolak</button>'
+          : "";
+        return "<tr><td>" + esc(p[3] || x.posted_at) + "</td><td>" + esc(p[1] || "") + "</td><td>" + esc(p[2] || "") + "</td><td>" + esc(st) + "</td><td>" + btns + "</td></tr>";
+      }).join("") || '<tr><td colspan="5" class="small">Belum ada izin.</td></tr>') +
       "</tbody></table></div>";
     document.querySelectorAll("[data-user]").forEach(function (sel) {
       sel.addEventListener("change", async function () {
@@ -432,6 +453,16 @@
       $("lzMsg").textContent = r.error ? r.error.message : "Izin tercatat.";
       await loadAll(); render();
     });
+    async function setLz(id, st) {
+      var row = leaves.find(function (x) { return x.id === id; });
+      if (!row) return;
+      var p = (row.content_title || "").split("|");
+      var title = "IZIN|" + (p[1] || "—") + "|" + (p[2] || "A") + "|" + (p[3] || today()) + "|" + st;
+      await db.from("social_contents").update({ content_title: title }).eq("id", id);
+      await loadAll(); render();
+    }
+    document.querySelectorAll("[data-lzok]").forEach(function (b) { b.addEventListener("click", function () { setLz(b.getAttribute("data-lzok"), "ok"); }); });
+    document.querySelectorAll("[data-lzno]").forEach(function (b) { b.addEventListener("click", function () { setLz(b.getAttribute("data-lzno"), "tolak"); }); });
 
     $("sistem").innerHTML =
       '<div class="card"><h2>Piramida & jalur komando</h2><p>Owner memegang strategi + kontrol + keputusan luar biasa. Bukan shift, bukan stok harian, bukan posting rutin.</p><p style="margin-top:8px"><b>Owner → Head / PIC → Pelaksana</b></p><p class="small" style="margin-top:8px">Level 1 karyawan boleh putuskan. Level 2 PIC/Head. Level 3 hanya uang besar, reputasi, kebijakan, fraud, PHK.</p></div>' +
@@ -447,7 +478,13 @@
       '<div class="card"><h2>Keluarkan dari kepala Owner</h2><p class="small">Kalau Anda memutuskan hal yang sama dua kali, itu belum menjadi aturan.</p><ul style="margin:10px 0 0 18px;font-size:13px"><li>Siapa ganti shift</li><li>Kapan beli bahan (PAR)</li><li>Refund di bawah Rp50.000</li><li>Posting harian (kalender)</li><li>Komplain kecil</li><li>Pembelian di bawah Rp1,5 juta</li></ul></div>' +
       '<div class="card"><h2>5 aturan emas</h2><p>1. Masalah diselesaikan di level terendah yang mampu.</p><p>2. Yang diberi tanggung jawab harus diberi wewenang.</p><p>3. Owner tidak memutuskan hal yang sama dua kali.</p><p>4. Laporan membawa solusi.</p><p>5. Yang luar biasa naik. Yang rutin tetap di bawah.</p></div>' +
       '<div class="card"><h2>KPI</h2><p class="small">Owner: omzet vs target, jumlah putusan merah turun. Head: stok kritis 0, selisih kas 0. PIC: checklist lengkap. Marketing: 7/7 kalender.</p></div>' +
-      '<div class="card"><h2>Ritme Owner</h2><p>Setiap hari 15 menit: dashboard. Setiap minggu 60 menit: 3 masalah terbesar. Setiap bulan 2–3 jam: apakah bisnis semakin sehat — bukan “karyawan A kenapa”.</p></div>';
+      '<div class="card"><h2>Ritme Owner</h2><p>Setiap hari 15 menit: dashboard. Setiap minggu 60 menit: 3 masalah terbesar. Setiap bulan 2–3 jam: apakah bisnis semakin sehat — bukan “karyawan A kenapa”.</p></div>' +
+      '<div class="card"><h2>Menu — data, bukan feeling</h2><table><thead><tr><th>Tingkatan</th><th>Maksud</th></tr></thead><tbody>' +
+      [["HERO","Wajib tersedia. Wajah Hasnaria."],["PROFIT","Margin bagus. Jaga stok."],["TRAFFIC","Murah, menarik orang datang."],["SUPPORT","Pelengkap."],["EVALUATION","Penjualan rendah atau merepotkan — tinjau."]].map(function (r) { return "<tr><td>" + r[0] + "</td><td>" + r[1] + "</td></tr>"; }).join("") +
+      "</tbody></table></div>" +
+      '<div class="card"><h2>Pengalaman tamu</h2><p class="small">Lihat → tertarik → masuk → nyaman → makan → worth it → ingin kembali.</p><table><thead><tr><th>Saat</th><th>Standar</th></tr></thead><tbody>' +
+      [["Datang","Disambut"],["Order","Dikonfirmasi"],["Menunggu","Ada standar waktu"],["Selesai","Dipastikan lengkap"],["Pulang","Closing interaction"]].map(function (r) { return "<tr><td>" + r[0] + "</td><td>" + r[1] + "</td></tr>"; }).join("") +
+      "</tbody></table></div>";
   }
 
   async function enter(user) {
