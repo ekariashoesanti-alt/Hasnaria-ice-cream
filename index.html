@@ -23,6 +23,7 @@ h2{font-size:17px;margin-bottom:12px}
 .tabs{display:flex;gap:6px;overflow:auto;margin-bottom:14px;padding-bottom:4px}
 button{border:0;border-radius:10px;padding:10px 14px;background:#e7eeeb;color:var(--text);font-weight:700;cursor:pointer;font-size:13px}
 button.primary,.tab.active{background:var(--green);color:#fff}
+button.guest{background:#1e293b;color:#fff;width:100%;margin-top:10px}
 button:disabled{opacity:.5;cursor:not-allowed}
 .tab{white-space:nowrap}
 .hidden{display:none!important}
@@ -32,7 +33,6 @@ button:disabled{opacity:.5;cursor:not-allowed}
 .form{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
 label{font-size:12px;color:var(--muted);display:block;margin-bottom:4px}
 input,select,textarea{width:100%;padding:10px 12px;border:1px solid #d5dfda;border-radius:10px;font:inherit;background:#fff}
-textarea{min-height:70px;resize:vertical}
 .auth{min-height:100vh;display:grid;place-items:center;padding:18px}
 .auth .card{width:min(420px,100%)}
 table{width:100%;border-collapse:collapse;font-size:13px}
@@ -42,8 +42,10 @@ th{font-size:12px;color:var(--muted);font-weight:600}
 .badge.ok{background:#dcfce7;color:#166534}
 .badge.warn{background:#fee2e2;color:#991b1b}
 .badge.info{background:#e0f2fe;color:#075985}
+.badge.guest{background:#fef3c7;color:#92400e}
 .limit-box{background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:12px;font-size:13px;margin-bottom:12px}
 .limit-box b{color:#92400e}
+.guest-banner{background:#fef3c7;color:#92400e;text-align:center;padding:8px;font-size:13px;font-weight:600}
 @media(max-width:800px){.grid,.grid-3{grid-template-columns:1fr 1fr}.form{grid-template-columns:1fr}.chart{height:230px}}
 @media(max-width:480px){.grid,.grid-3{grid-template-columns:1fr}}
 </style>
@@ -62,14 +64,17 @@ th{font-size:12px;color:var(--muted);font-weight:600}
 <button class="primary" onclick="login()">Masuk</button>
 <button onclick="signup()">Daftar</button>
 </div>
+<button class="guest" onclick="enterGuest()">Masuk sebagai Guest (Developer)</button>
 <p id="authMsg" class="small" style="margin-top:12px"></p>
+<p class="small" style="margin-top:8px;opacity:.7">Guest mode: data disimpan di browser (localStorage), cocok untuk testing UI.</p>
 </div></div>
 
 <div id="app" class="hidden">
+<div id="guestBanner" class="guest-banner hidden">MODE GUEST (DEVELOPER) — Data tidak tersimpan ke server</div>
 <header>
 <div class="wrap head">
 <div>
-<h1>Hasnaria Business Analyzer</h1>
+<h1>Hasnaria Business Analyzer <span id="modeBadge" class="badge guest hidden">GUEST</span></h1>
 <div style="font-size:12px;opacity:.85">Data → Trend → Diagnosis → Action</div>
 </div>
 <button onclick="logout()" style="background:rgba(255,255,255,.15);color:#fff">Keluar</button>
@@ -85,7 +90,6 @@ th{font-size:12px;color:var(--muted);font-weight:600}
 <button class="tab" onclick="tab('authority',this)">Authority</button>
 </div>
 
-<!-- DASHBOARD -->
 <section id="dashboard">
 <div class="grid">
 <div class="card"><div class="label">Omzet 30 hari</div><div id="rev" class="metric">Rp0</div></div>
@@ -93,19 +97,16 @@ th{font-size:12px;color:var(--muted);font-weight:600}
 <div class="card"><div class="label">Average ticket</div><div id="avg" class="metric">Rp0</div></div>
 <div class="card"><div class="label">Growth omzet</div><div id="growth" class="metric">—</div></div>
 </div>
-
 <div class="grid-3" style="margin-bottom:14px">
 <div class="card"><div class="label">Pembelian 30 hari</div><div id="expBuy" class="metric">Rp0</div></div>
 <div class="card"><div class="label">Waste 30 hari</div><div id="expWaste" class="metric">Rp0</div></div>
 <div class="card"><div class="label">Kompensasi 30 hari</div><div id="expComp" class="metric">Rp0</div></div>
 </div>
-
 <div class="card"><h2>Trend omzet</h2><div class="chart"><canvas id="chart"></canvas></div></div>
 <div class="card"><h2>Diagnosis bisnis</h2><div id="diagnosis"></div></div>
 <div class="card"><h2>Action minggu ini</h2><div id="actions"></div></div>
 </section>
 
-<!-- PENJUALAN -->
 <section id="sales" class="hidden">
 <div class="card">
 <h2>Input penjualan harian</h2>
@@ -114,73 +115,56 @@ th{font-size:12px;color:var(--muted);font-weight:600}
 <div><label>Omzet (Rp)</label><input id="revenue" type="number" min="0" placeholder="0"></div>
 <div><label>Jumlah transaksi</label><input id="transactions" type="number" min="0" placeholder="0"></div>
 <div><label>Catatan</label><input id="notes" placeholder="Opsional"></div>
-</div>
-<br>
+</div><br>
 <button class="primary" onclick="saveSale()">Simpan penjualan</button>
 <p id="saleMsg" class="small" style="margin-top:8px"></p>
 </div>
 <div class="card">
 <h2>Data terbaru</h2>
 <div style="overflow:auto">
-<table>
-<thead><tr><th>Tanggal</th><th>Omzet</th><th>Tx</th><th>ATV</th></tr></thead>
-<tbody id="rows"></tbody>
-</table>
-</div>
-</div>
+<table><thead><tr><th>Tanggal</th><th>Omzet</th><th>Tx</th><th>ATV</th></tr></thead>
+<tbody id="rows"></tbody></table>
+</div></div>
 </section>
 
-<!-- OPERASIONAL -->
 <section id="ops" class="hidden">
 <div class="limit-box">
 <b>Batas Authority (Head of Store):</b><br>
-• Pembelian rutin max <b>Rp 1.500.000</b> / transaksi & <b>Rp 5.000.000</b> / minggu<br>
+• Pembelian rutin max <b>Rp 1.500.000</b> / transaksi<br>
 • Kompensasi customer max <b>Rp 50.000</b><br>
 • Di atas batas → wajib minta approval Owner
 </div>
-
 <div class="card">
 <h2>Input operasional</h2>
 <div class="form">
 <div><label>Tanggal</label><input id="opsDate" type="date"></div>
-<div>
-<label>Jenis</label>
+<div><label>Jenis</label>
 <select id="opsCategory">
 <option value="pembelian">Pembelian bahan</option>
 <option value="waste">Waste / kerugian</option>
 <option value="kompensasi">Kompensasi / refund</option>
 <option value="lainnya">Pengeluaran lainnya</option>
-</select>
-</div>
+</select></div>
 <div><label>Nominal (Rp)</label><input id="opsAmount" type="number" min="0" placeholder="0"></div>
 <div><label>Keterangan</label><input id="opsNotes" placeholder="Contoh: beli odeng 50 pcs"></div>
-</div>
-<br>
+</div><br>
 <button class="primary" onclick="saveExpense()">Simpan</button>
 <p id="opsMsg" class="small" style="margin-top:8px"></p>
 </div>
-
 <div class="card">
-<h2>Riwayat operasional (30 hari)</h2>
+<h2>Riwayat operasional</h2>
 <div style="overflow:auto">
-<table>
-<thead><tr><th>Tanggal</th><th>Jenis</th><th>Nominal</th><th>Keterangan</th></tr></thead>
-<tbody id="opsRows"></tbody>
-</table>
-</div>
-</div>
+<table><thead><tr><th>Tanggal</th><th>Jenis</th><th>Nominal</th><th>Keterangan</th></tr></thead>
+<tbody id="opsRows"></tbody></table>
+</div></div>
 </section>
 
-<!-- MEDSOS -->
 <section id="social" class="hidden">
 <div class="card">
 <h2>Input performa konten</h2>
 <div class="form">
 <div><label>Tanggal</label><input id="cdate" type="date"></div>
-<div>
-<label>Platform</label>
-<select id="platform"><option>Instagram</option><option>TikTok</option></select>
-</div>
+<div><label>Platform</label><select id="platform"><option>Instagram</option><option>TikTok</option></select></div>
 <div style="grid-column:1/-1"><label>Judul konten</label><input id="title" placeholder="Judul / deskripsi singkat"></div>
 <div><label>Views</label><input id="views" type="number" min="0" value="0"></div>
 <div><label>Likes</label><input id="likes" type="number" min="0" value="0"></div>
@@ -188,27 +172,19 @@ th{font-size:12px;color:var(--muted);font-weight:600}
 <div><label>Shares</label><input id="shares" type="number" min="0" value="0"></div>
 <div><label>Saves</label><input id="saves" type="number" min="0" value="0"></div>
 <div><label>Transaksi dari konten</label><input id="contentTx" type="number" min="0" value="0"></div>
-</div>
-<br>
+</div><br>
 <button class="primary" onclick="saveContent()">Simpan konten</button>
 <p id="socialMsg" class="small" style="margin-top:8px"></p>
 </div>
-<div class="card">
-<h2>Performa konten</h2>
-<div id="socialSummary"></div>
-</div>
+<div class="card"><h2>Performa konten</h2><div id="socialSummary"></div></div>
 </section>
 
-<!-- AUTHORITY -->
 <section id="authority" class="hidden">
 <div class="card">
 <h2>Authority Matrix Hasnaria</h2>
-<p class="small" style="margin-bottom:14px">Ringkasan siapa boleh memutuskan apa. Detail lengkap ada di dokumen sistem kerja.</p>
-
+<p class="small" style="margin-bottom:14px">Ringkasan siapa boleh memutuskan apa.</p>
 <table>
-<thead>
-<tr><th>Keputusan</th><th>PIC Shift</th><th>Head Store</th><th>Owner</th></tr>
-</thead>
+<thead><tr><th>Keputusan</th><th>PIC Shift</th><th>Head Store</th><th>Owner</th></tr></thead>
 <tbody>
 <tr><td>Pembagian tugas harian</td><td><span class="badge ok">Boleh</span></td><td><span class="badge ok">Boleh</span></td><td><span class="badge info">Review</span></td></tr>
 <tr><td>Tukar shift / ganti orang</td><td><span class="badge info">Sementara</span></td><td><span class="badge ok">Boleh</span></td><td><span class="badge info">Review</span></td></tr>
@@ -220,10 +196,8 @@ th{font-size:12px;color:var(--muted);font-weight:600}
 <tr><td>SP / PHK</td><td><span class="badge warn">Tidak</span></td><td><span class="badge info">Rekomendasi</span></td><td><span class="badge ok">Putuskan</span></td></tr>
 <tr><td>Selisih kas > Rp 50rb</td><td><span class="badge warn">Lapor</span></td><td><span class="badge warn">Lapor</span></td><td><span class="badge ok">Wajib</span></td></tr>
 <tr><td>Fraud / kecelakaan</td><td><span class="badge warn">Lapor</span></td><td><span class="badge warn">Lapor</span></td><td><span class="badge ok">Wajib</span></td></tr>
-</tbody>
-</table>
+</tbody></table>
 </div>
-
 <div class="card">
 <h2>5 Aturan Emas</h2>
 <div class="insight"><b>1.</b> Masalah diselesaikan di level terendah yang mampu.</div>
@@ -233,31 +207,87 @@ th{font-size:12px;color:var(--muted);font-weight:600}
 <div class="insight"><b>5.</b> Exception naik ke atas, routine tetap di bawah.</div>
 </div>
 </section>
-
-</main>
-</div>
+</main></div>
 
 <script>
 const URL = 'https://bnnhmtkpdjlgehsvgoda.supabase.co';
 const KEY = 'sb_publishable_eXrgSxWTXoa9q-hVpLx-sQ_IaEiUbeO';
 const db = supabase.createClient(URL, KEY);
 
+let isGuest = false;
 let brandId = null, data = [], social = [], expenses = [], chart = null;
 
 const $ = id => document.getElementById(id);
 const rp = n => 'Rp' + Number(n || 0).toLocaleString('id-ID');
 const today = new Date().toISOString().slice(0, 10);
+const LS_KEY = 'hasnaria_guest_data';
 
 $('date').value = today;
 $('cdate').value = today;
 $('opsDate').value = today;
 
+// ========== GUEST MODE ==========
+function enterGuest() {
+  isGuest = true;
+  localStorage.setItem('hasnaria_guest', '1');
+  loadGuestData();
+  showApp();
+  $('guestBanner').classList.remove('hidden');
+  $('modeBadge').classList.remove('hidden');
+  render();
+}
+
+function loadGuestData() {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      data = parsed.data || [];
+      social = parsed.social || [];
+      expenses = parsed.expenses || [];
+    } else {
+      // seed demo data
+      const d = new Date();
+      data = [];
+      for (let i = 14; i >= 0; i--) {
+        const dt = new Date(d); dt.setDate(d.getDate() - i);
+        const dateStr = dt.toISOString().slice(0, 10);
+        const revenue = 800000 + Math.floor(Math.random() * 600000);
+        const tx = 40 + Math.floor(Math.random() * 30);
+        data.push({ metric_date: dateStr, cash_revenue: revenue, transactions: tx, notes: '' });
+      }
+      expenses = [
+        { expense_date: today, category: 'pembelian', amount: 450000, notes: 'Beli odeng + bahan' },
+        { expense_date: today, category: 'waste', amount: 35000, notes: 'Es krim rusak' }
+      ];
+      social = [
+        { posted_at: today, platform: 'Instagram', content_title: 'Promo weekend', views: 1200, likes: 89, comments: 12, shares: 5, saves: 20, attributed_transactions: 3 }
+      ];
+      saveGuestData();
+    }
+  } catch (e) {
+    data = []; social = []; expenses = [];
+  }
+}
+
+function saveGuestData() {
+  localStorage.setItem(LS_KEY, JSON.stringify({ data, social, expenses }));
+}
+
+function showApp() {
+  $('auth').classList.add('hidden');
+  $('app').classList.remove('hidden');
+}
+
 // ========== AUTH ==========
 async function login() {
   const email = $('email').value.trim(), password = $('password').value;
   if (!email || !password) { $('authMsg').textContent = 'Email dan password wajib diisi.'; return; }
+  $('authMsg').textContent = 'Sedang login…';
   const r = await db.auth.signInWithPassword({ email, password });
   if (r.error) { $('authMsg').textContent = 'Login gagal: ' + r.error.message; return; }
+  isGuest = false;
+  localStorage.removeItem('hasnaria_guest');
   $('authMsg').textContent = 'Login berhasil…';
   await start();
 }
@@ -266,29 +296,39 @@ async function signup() {
   const email = $('email').value.trim(), password = $('password').value;
   if (!email || !password) { $('authMsg').textContent = 'Email dan password wajib diisi.'; return; }
   if (password.length < 6) { $('authMsg').textContent = 'Password minimal 6 karakter.'; return; }
+  $('authMsg').textContent = 'Sedang mendaftar…';
   const redirectTo = window.location.origin + window.location.pathname;
   const r = await db.auth.signUp({ email, password, options: { emailRedirectTo: redirectTo } });
   if (r.error) { $('authMsg').textContent = 'Daftar gagal: ' + r.error.message; return; }
-  if (r.data.session) { $('authMsg').textContent = 'Akun berhasil dibuat.'; await start(); }
-  else $('authMsg').textContent = 'Akun dibuat. Cek email verifikasi, lalu kembali ke aplikasi.';
+  if (r.data.session) {
+    isGuest = false;
+    localStorage.removeItem('hasnaria_guest');
+    $('authMsg').textContent = 'Akun berhasil dibuat.';
+    await start();
+  } else {
+    $('authMsg').textContent = 'Akun dibuat. Cek email verifikasi, atau gunakan Guest mode sementara.';
+  }
 }
 
 async function logout() {
-  await db.auth.signOut();
+  isGuest = false;
+  localStorage.removeItem('hasnaria_guest');
+  try { await db.auth.signOut(); } catch (e) {}
   location.reload();
 }
 
-// ========== START & LOAD ==========
+// ========== START & LOAD (authenticated) ==========
 async function start() {
-  $('auth').classList.add('hidden');
-  $('app').classList.remove('hidden');
+  showApp();
+  $('guestBanner').classList.add('hidden');
+  $('modeBadge').classList.add('hidden');
 
   let r = await db.from('brands').select('*').limit(1);
-  if (r.error) throw r.error;
+  if (r.error) { alert('Error load brand: ' + r.error.message); return; }
 
   if (!r.data?.length) {
     r = await db.from('brands').insert({ name: 'Hasnaria' }).select().single();
-    if (r.error) throw r.error;
+    if (r.error) { alert('Error create brand: ' + r.error.message); return; }
     brandId = r.data.id;
   } else {
     brandId = r.data[0].id;
@@ -297,6 +337,8 @@ async function start() {
 }
 
 async function load() {
+  if (isGuest) { loadGuestData(); render(); return; }
+
   const d = new Date(); d.setDate(d.getDate() - 89);
   const from = d.toISOString().slice(0, 10);
 
@@ -337,7 +379,6 @@ function render() {
   $('growth').textContent = g == null ? '—' : (g >= 0 ? '+' : '') + g.toFixed(1) + '%';
   $('growth').style.color = g == null ? 'inherit' : g >= 0 ? '#17734d' : '#b43b3b';
 
-  // expenses summary
   const exp30 = expenses.filter(x => x.expense_date >= cut);
   const buy = exp30.filter(x => x.category === 'pembelian').reduce((s, x) => s + Number(x.amount || 0), 0);
   const waste = exp30.filter(x => x.category === 'waste').reduce((s, x) => s + Number(x.amount || 0), 0);
@@ -373,49 +414,43 @@ function draw(a) {
 
 function diagnose(cr, ct, ca, pr, pt, pa, g, waste, revenue) {
   let d = [], act = [];
-
   if (!data.length) {
     d.push('📌 Belum ada data penjualan. Isi minimal 14 hari agar diagnosis lebih berguna.');
   } else if (g !== null) {
     if (g < 0) d.push('⚠️ Omzet turun <b>' + Math.abs(g).toFixed(1) + '%</b> dibanding 30 hari sebelumnya.');
     else d.push('✅ Omzet naik <b>' + g.toFixed(1) + '%</b> dibanding 30 hari sebelumnya.');
-
     const tg = pt ? ((ct - pt) / pt * 100) : 0;
     const ag = pa ? ((ca - pa) / pa * 100) : 0;
-
-    if (tg < g - 3) d.push('Kemungkinan penyebab utama: <b>jumlah transaksi / traffic</b>. Transaksi berubah ' + tg.toFixed(1) + '%.');
-    else if (ag < g - 3) d.push('Kemungkinan penyebab utama: <b>average ticket</b>. Nilai belanja per transaksi berubah ' + ag.toFixed(1) + '%.');
+    if (tg < g - 3) d.push('Kemungkinan penyebab utama: <b>jumlah transaksi / traffic</b>.');
+    else if (ag < g - 3) d.push('Kemungkinan penyebab utama: <b>average ticket</b>.');
     else d.push('Perubahan omzet relatif sejalan dengan transaksi dan average ticket.');
-
-    if (ca < 15000) act.push('Naikkan average ticket lewat bundling, add-on topping, atau paket hemat.');
-    if (tg < 0) act.push('Fokus mendatangkan transaksi: promo dengan CTA jelas, signage, dan konten lokal.');
-    if (g < 0) act.push('Bandingkan 7 hari terakhir dengan minggu sebelumnya dan cari hari yang paling turun.');
-    if (g >= 0) act.push('Catat promo/konten yang bertepatan dengan kenaikan omzet dan ulangi format yang efektif.');
-  } else {
-    d.push('Masukkan data periode sebelumnya untuk menghitung growth.');
-  }
+    if (ca < 15000) act.push('Naikkan average ticket lewat bundling / topping.');
+    if (tg < 0) act.push('Fokus mendatangkan transaksi: promo + konten lokal.');
+    if (g < 0) act.push('Bandingkan 7 hari terakhir dengan minggu sebelumnya.');
+    if (g >= 0) act.push('Ulangi format konten/promo yang berhasil.');
+  } else d.push('Masukkan data periode sebelumnya untuk menghitung growth.');
 
   if (revenue > 0 && waste / revenue > 0.05) {
-    d.push('<span class="insight warn">⚠️ Waste sudah > 5% dari omzet. Perlu evaluasi penyebab waste.</span>');
-    act.push('Lakukan stock opname dan cek proses preparation untuk tekan waste.');
+    d.push('⚠️ Waste sudah > 5% dari omzet. Perlu evaluasi.');
+    act.push('Lakukan stock opname dan cek preparation.');
   }
 
   $('diagnosis').innerHTML = d.map(x => '<div class="insight">' + x + '</div>').join('');
-  $('actions').innerHTML = (act.length ? act : ['Kumpulkan data penjualan harian dan performa konten secara konsisten.']).map(x => '<div class="insight">→ ' + x + '</div>').join('');
+  $('actions').innerHTML = (act.length ? act : ['Kumpulkan data penjualan harian secara konsisten.']).map(x => '<div class="insight">→ ' + x + '</div>').join('');
 }
 
 function rows() {
   $('rows').innerHTML = data.slice().reverse().slice(0, 40).map(x => {
     const atv = x.transactions ? Number(x.cash_revenue || 0) / Number(x.transactions) : 0;
     return '<tr><td>' + x.metric_date + '</td><td>' + rp(x.cash_revenue) + '</td><td>' + Number(x.transactions || 0) + '</td><td>' + rp(atv) + '</td></tr>';
-  }).join('');
+  }).join('') || '<tr><td colspan="4" class="small">Belum ada data.</td></tr>';
 }
 
 function opsRows() {
   const map = { pembelian: 'Pembelian', waste: 'Waste', kompensasi: 'Kompensasi', lainnya: 'Lainnya' };
-  $('opsRows').innerHTML = expenses.slice(0, 50).map(x => {
-    return '<tr><td>' + x.expense_date + '</td><td>' + (map[x.category] || x.category) + '</td><td>' + rp(x.amount) + '</td><td>' + escapeHtml(x.notes || '-') + '</td></tr>';
-  }).join('') || '<tr><td colspan="4" class="small">Belum ada data operasional.</td></tr>';
+  $('opsRows').innerHTML = expenses.slice(0, 50).map(x =>
+    '<tr><td>' + x.expense_date + '</td><td>' + (map[x.category] || x.category) + '</td><td>' + rp(x.amount) + '</td><td>' + escapeHtml(x.notes || '-') + '</td></tr>'
+  ).join('') || '<tr><td colspan="4" class="small">Belum ada data operasional.</td></tr>';
 }
 
 function socialRender() {
@@ -423,26 +458,36 @@ function socialRender() {
   const e = social.reduce((a, x) => a + Number(x.likes || 0) + Number(x.comments || 0) + Number(x.shares || 0) + Number(x.saves || 0), 0);
   const t = social.reduce((a, x) => a + Number(x.attributed_transactions || 0), 0);
   const best = social.slice().sort((a, b) => Number(b.views || 0) - Number(a.views || 0))[0];
-
   $('socialSummary').innerHTML =
     '<div class="grid">' +
     '<div class="card"><div class="label">Konten</div><div class="metric">' + social.length + '</div></div>' +
     '<div class="card"><div class="label">Views</div><div class="metric">' + v.toLocaleString('id-ID') + '</div></div>' +
     '<div class="card"><div class="label">Engagement</div><div class="metric">' + (v ? (e / v * 100).toFixed(2) : 0) + '%</div></div>' +
-    '<div class="card"><div class="label">Attributed tx</div><div class="metric">' + t + '</div></div>' +
-    '</div>' +
+    '<div class="card"><div class="label">Attributed tx</div><div class="metric">' + t + '</div></div></div>' +
     (best ? '<div class="insight">Konten views tertinggi: <b>' + escapeHtml(best.content_title || '-') + '</b></div>' : '');
 }
 
 // ========== SAVE ==========
 async function saveSale() {
   const p = {
-    brand_id: brandId,
     metric_date: $('date').value,
     cash_revenue: Number($('revenue').value || 0),
     transactions: Number($('transactions').value || 0),
     notes: $('notes').value || ''
   };
+
+  if (isGuest) {
+    const idx = data.findIndex(x => x.metric_date === p.metric_date);
+    if (idx >= 0) data[idx] = { ...data[idx], ...p };
+    else data.push(p);
+    data.sort((a, b) => a.metric_date.localeCompare(b.metric_date));
+    saveGuestData();
+    $('saleMsg').textContent = 'Tersimpan (Guest) ✓';
+    render();
+    return;
+  }
+
+  p.brand_id = brandId;
   let q = await db.from('daily_metrics').select('id').eq('brand_id', brandId).eq('metric_date', p.metric_date).maybeSingle();
   if (q.error) { $('saleMsg').textContent = q.error.message; return; }
   let r = q.data ? await db.from('daily_metrics').update(p).eq('id', q.data.id) : await db.from('daily_metrics').insert(p);
@@ -454,22 +499,31 @@ async function saveExpense() {
   const amount = Number($('opsAmount').value || 0);
   const category = $('opsCategory').value;
 
-  // Authority check (simple client-side warning)
   if (category === 'pembelian' && amount > 1500000) {
-    if (!confirm('Nominal pembelian > Rp 1.500.000. Ini sudah melewati batas Head of Store. Tetap simpan? (seharusnya minta approval Owner)')) return;
+    if (!confirm('Pembelian > Rp 1.500.000 (batas Head of Store). Tetap simpan?')) return;
   }
   if (category === 'kompensasi' && amount > 50000) {
-    if (!confirm('Kompensasi > Rp 50.000. Melewati batas Head of Store. Tetap simpan?')) return;
+    if (!confirm('Kompensasi > Rp 50.000 (batas Head of Store). Tetap simpan?')) return;
   }
 
   const p = {
-    brand_id: brandId,
     expense_date: $('opsDate').value,
     category,
     amount,
     notes: $('opsNotes').value || ''
   };
 
+  if (isGuest) {
+    expenses.unshift(p);
+    saveGuestData();
+    $('opsMsg').textContent = 'Tersimpan (Guest) ✓';
+    $('opsAmount').value = '';
+    $('opsNotes').value = '';
+    render();
+    return;
+  }
+
+  p.brand_id = brandId;
   const r = await db.from('expenses').insert(p);
   $('opsMsg').textContent = r.error ? r.error.message : 'Tersimpan ✓';
   if (!r.error) {
@@ -481,7 +535,6 @@ async function saveExpense() {
 
 async function saveContent() {
   const p = {
-    brand_id: brandId,
     posted_at: $('cdate').value,
     platform: $('platform').value,
     content_title: $('title').value,
@@ -492,12 +545,21 @@ async function saveContent() {
     saves: Number($('saves').value || 0),
     attributed_transactions: Number($('contentTx').value || 0)
   };
+
+  if (isGuest) {
+    social.unshift(p);
+    saveGuestData();
+    $('socialMsg').textContent = 'Tersimpan (Guest) ✓';
+    render();
+    return;
+  }
+
+  p.brand_id = brandId;
   const r = await db.from('social_contents').insert(p);
   $('socialMsg').textContent = r.error ? r.error.message : 'Tersimpan ✓';
   if (!r.error) await load();
 }
 
-// ========== UI ==========
 function tab(id, el) {
   document.querySelectorAll('main section').forEach(x => x.classList.add('hidden'));
   $(id).classList.remove('hidden');
@@ -510,10 +572,20 @@ function escapeHtml(s) {
 }
 
 // Init
-db.auth.onAuthStateChange((event, session) => {
-  if (session && $('app').classList.contains('hidden')) start();
-});
-db.auth.getSession().then(x => x.data.session ? start() : $('auth').classList.remove('hidden'));
+if (localStorage.getItem('hasnaria_guest') === '1') {
+  enterGuest();
+} else {
+  db.auth.onAuthStateChange((event, session) => {
+    if (session && $('app').classList.contains('hidden')) {
+      isGuest = false;
+      start();
+    }
+  });
+  db.auth.getSession().then(x => {
+    if (x.data.session) start();
+    else $('auth').classList.remove('hidden');
+  });
+}
 </script>
 </body>
 </html>
