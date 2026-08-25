@@ -1,44 +1,16 @@
-# Hasnaria Business Analyzer
+# Hasnaria Command Center
 
-Dashboard operasional & bisnis live untuk **Hasnaria**.
+Live: https://hasnaria-business-analyzer.vercel.app
 
-**Live:** https://hasnaria-business-analyzer.vercel.app
+Sistem kerja Hasnaria: role, pagar wewenang, antrean approval.
 
-## Fitur saat ini
+## Yang baru
+- Login Google / email (tanpa Guest di produksi)
+- User baru = menunggu persetujuan Owner
+- Tab Tim: Owner mengaktifkan role
+- Operasional di atas batas = diajukan, bukan tersimpan final
+- Tab Approval: Owner / Head Store setujui atau tolak
+- Header menampilkan nama + role
 
-- Login / Signup (Supabase Auth)
-- **Dashboard**: Omzet 30 hari, growth, average ticket, pembelian, waste, kompensasi
-- **Penjualan**: Input data harian + tabel
-- **Operasional**: Input pembelian, waste, kompensasi dengan batas Authority
-- **Medsos**: Input performa konten Instagram/TikTok
-- **Authority**: Matrix keputusan + 5 Aturan Emas
-- Diagnosis otomatis + rekomendasi aksi
-
-## Authority Limits (sudah diimplementasi di UI)
-
-| Jenis              | Batas Head of Store     |
-|--------------------|-------------------------|
-| Pembelian rutin    | Rp 1.500.000 / transaksi |
-| Kompensasi         | Rp 50.000               |
-| Di atas batas      | Wajib approval Owner    |
-
-## Tech Stack
-
-- HTML + Vanilla JS
-- Supabase (Auth + Postgres)
-- Chart.js
-- Deployed on Vercel
-
-## Database tables yang dipakai
-
-- `brands`
-- `daily_metrics`
-- `social_contents`
-- `expenses` (pembelian / waste / kompensasi)
-
-## Next roadmap
-
-- Role-based access (Owner / Head of Store / PIC)
-- Stock opname & variance
-- Laporan harian otomatis ke Owner
-- Multi-outlet
+## Role
+Owner, Head of Store, Marketing, PIC Shift, Pelaksana, Pending
