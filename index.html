@@ -66,534 +66,222 @@ th{font-size:12px;color:var(--muted);font-weight:600}
 </style>
 </head>
 <body>
-
 <div id="auth" class="auth">
   <div class="card">
-    <div class="auth-brand">
-      <div class="auth-logo">H</div>
-      <div>
-        <div style="font-weight:800">Hasnaria</div>
-        <div class="auth-subtitle">Business Analyzer</div>
-      </div>
-    </div>
+    <div class="auth-brand"><div class="auth-logo">H</div><div><div style="font-weight:800">Hasnaria</div><div class="auth-subtitle">Business Analyzer</div></div></div>
     <h1 class="auth-title">Selamat datang</h1>
     <p class="auth-subtitle">Masuk untuk mengakses dashboard operasional & bisnis.</p>
-
-    <div class="auth-field" style="margin-top:22px">
-      <label for="email">Email</label>
-      <input id="email" type="email" placeholder="email@contoh.com" autocomplete="email">
-    </div>
-    <div class="auth-field">
-      <label for="password">Password</label>
-      <input id="password" type="password" placeholder="Minimal 6 karakter" autocomplete="current-password">
-    </div>
-
-    <div class="auth-actions">
-      <button id="loginBtn" class="primary" type="button">Masuk</button>
-      <button id="signupBtn" type="button">Daftar</button>
-    </div>
-
+    <div class="auth-field" style="margin-top:22px"><label for="email">Email</label><input id="email" type="email" placeholder="email@contoh.com" autocomplete="email"></div>
+    <div class="auth-field"><label for="password">Password</label><input id="password" type="password" placeholder="Minimal 6 karakter" autocomplete="current-password"></div>
+    <div class="auth-actions"><button id="loginBtn" class="primary" type="button">Masuk</button><button id="signupBtn" type="button">Daftar</button></div>
     <div class="auth-divider">atau</div>
-
-    <button id="googleBtn" class="google" type="button">
-      <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/><path fill="none" d="M0 0h48v48H0z"/></svg>
-      Masuk dengan Google
-    </button>
-
+    <button id="googleBtn" class="google" type="button"><svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/><path fill="none" d="M0 0h48v48H0z"/></svg> Masuk dengan Google</button>
     <button id="guestBtn" class="guest" type="button">Masuk sebagai Guest (Developer)</button>
-
     <p id="authMsg" class="auth-message"></p>
-    <div class="auth-note">Google login butuh setup di Supabase + Google Cloud. Guest = data lokal di browser ini.</div>
+    <div class="auth-note">Login Google = akun real di Supabase. Guest = data lokal browser saja.</div>
   </div>
 </div>
-
 <div id="app" class="hidden">
   <div id="guestBanner" class="guest-banner hidden">MODE GUEST (DEVELOPER) — Data disimpan di browser ini saja</div>
-  <header>
-    <div class="wrap head">
-      <div>
-        <h1>Hasnaria Business Analyzer <span id="modeBadge" class="badge guest hidden">GUEST</span></h1>
-        <div style="font-size:12px;opacity:.85">Data → Trend → Diagnosis → Action</div>
-      </div>
-      <button id="logoutBtn" type="button" style="background:rgba(255,255,255,.15);color:#fff">Keluar</button>
-    </div>
-  </header>
-
+  <header><div class="wrap head"><div><h1>Hasnaria Business Analyzer <span id="modeBadge" class="badge guest hidden">GUEST</span></h1><div style="font-size:12px;opacity:.85">Data → Trend → Diagnosis → Action</div></div><button id="logoutBtn" type="button" style="background:rgba(255,255,255,.15);color:#fff">Keluar</button></div></header>
   <main class="wrap">
-    <div class="tabs">
-      <button class="tab active" data-tab="dashboard" type="button">Dashboard</button>
-      <button class="tab" data-tab="sales" type="button">Penjualan</button>
-      <button class="tab" data-tab="ops" type="button">Operasional</button>
-      <button class="tab" data-tab="social" type="button">Medsos</button>
-      <button class="tab" data-tab="authority" type="button">Authority</button>
-    </div>
-
-    <section id="dashboard">
-      <div class="grid">
-        <div class="card"><div class="label">Omzet 30 hari</div><div id="rev" class="metric">Rp0</div></div>
-        <div class="card"><div class="label">Transaksi 30 hari</div><div id="tx" class="metric">0</div></div>
-        <div class="card"><div class="label">Average ticket</div><div id="avg" class="metric">Rp0</div></div>
-        <div class="card"><div class="label">Growth omzet</div><div id="growth" class="metric">—</div></div>
-      </div>
-      <div class="grid-3" style="margin-bottom:14px">
-        <div class="card"><div class="label">Pembelian 30 hari</div><div id="expBuy" class="metric">Rp0</div></div>
-        <div class="card"><div class="label">Waste 30 hari</div><div id="expWaste" class="metric">Rp0</div></div>
-        <div class="card"><div class="label">Kompensasi 30 hari</div><div id="expComp" class="metric">Rp0</div></div>
-      </div>
-      <div class="card"><h2>Trend omzet</h2><div class="chart"><canvas id="chart"></canvas></div></div>
-      <div class="card"><h2>Diagnosis bisnis</h2><div id="diagnosis"></div></div>
-      <div class="card"><h2>Action minggu ini</h2><div id="actions"></div></div>
-    </section>
-
-    <section id="sales" class="hidden">
-      <div class="card">
-        <h2>Input penjualan harian</h2>
-        <div class="form">
-          <div><label>Tanggal</label><input id="date" type="date"></div>
-          <div><label>Omzet (Rp)</label><input id="revenue" type="number" min="0" placeholder="0"></div>
-          <div><label>Jumlah transaksi</label><input id="transactions" type="number" min="0" placeholder="0"></div>
-          <div><label>Catatan</label><input id="notes" placeholder="Opsional"></div>
-        </div><br>
-        <button class="primary" id="saveSaleBtn" type="button">Simpan penjualan</button>
-        <p id="saleMsg" class="small" style="margin-top:8px"></p>
-      </div>
-      <div class="card">
-        <h2>Data terbaru</h2>
-        <div style="overflow:auto">
-          <table><thead><tr><th>Tanggal</th><th>Omzet</th><th>Tx</th><th>ATV</th></tr></thead>
-          <tbody id="rows"></tbody></table>
-        </div>
-      </div>
-    </section>
-
-    <section id="ops" class="hidden">
-      <div class="limit-box">
-        <b>Batas Authority (Head of Store):</b><br>
-        • Pembelian rutin max <b>Rp 1.500.000</b> / transaksi<br>
-        • Kompensasi customer max <b>Rp 50.000</b><br>
-        • Di atas batas → wajib minta approval Owner
-      </div>
-      <div class="card">
-        <h2>Input operasional</h2>
-        <div class="form">
-          <div><label>Tanggal</label><input id="opsDate" type="date"></div>
-          <div><label>Jenis</label>
-            <select id="opsCategory">
-              <option value="pembelian">Pembelian bahan</option>
-              <option value="waste">Waste / kerugian</option>
-              <option value="kompensasi">Kompensasi / refund</option>
-              <option value="lainnya">Pengeluaran lainnya</option>
-            </select>
-          </div>
-          <div><label>Nominal (Rp)</label><input id="opsAmount" type="number" min="0" placeholder="0"></div>
-          <div><label>Keterangan</label><input id="opsNotes" placeholder="Contoh: beli odeng 50 pcs"></div>
-        </div><br>
-        <button class="primary" id="saveExpenseBtn" type="button">Simpan</button>
-        <p id="opsMsg" class="small" style="margin-top:8px"></p>
-      </div>
-      <div class="card">
-        <h2>Riwayat operasional</h2>
-        <div style="overflow:auto">
-          <table><thead><tr><th>Tanggal</th><th>Jenis</th><th>Nominal</th><th>Keterangan</th></tr></thead>
-          <tbody id="opsRows"></tbody></table>
-        </div>
-      </div>
-    </section>
-
-    <section id="social" class="hidden">
-      <div class="card">
-        <h2>Input performa konten</h2>
-        <div class="form">
-          <div><label>Tanggal</label><input id="cdate" type="date"></div>
-          <div><label>Platform</label><select id="platform"><option>Instagram</option><option>TikTok</option></select></div>
-          <div style="grid-column:1/-1"><label>Judul konten</label><input id="title" placeholder="Judul / deskripsi singkat"></div>
-          <div><label>Views</label><input id="views" type="number" min="0" value="0"></div>
-          <div><label>Likes</label><input id="likes" type="number" min="0" value="0"></div>
-          <div><label>Comments</label><input id="comments" type="number" min="0" value="0"></div>
-          <div><label>Shares</label><input id="shares" type="number" min="0" value="0"></div>
-          <div><label>Saves</label><input id="saves" type="number" min="0" value="0"></div>
-          <div><label>Transaksi dari konten</label><input id="contentTx" type="number" min="0" value="0"></div>
-        </div><br>
-        <button class="primary" id="saveContentBtn" type="button">Simpan konten</button>
-        <p id="socialMsg" class="small" style="margin-top:8px"></p>
-      </div>
-      <div class="card"><h2>Performa konten</h2><div id="socialSummary"></div></div>
-    </section>
-
-    <section id="authority" class="hidden">
-      <div class="card">
-        <h2>Authority Matrix Hasnaria</h2>
-        <p class="small" style="margin-bottom:14px">Ringkasan siapa boleh memutuskan apa.</p>
-        <table>
-          <thead><tr><th>Keputusan</th><th>PIC Shift</th><th>Head Store</th><th>Owner</th></tr></thead>
-          <tbody>
-            <tr><td>Pembagian tugas harian</td><td><span class="badge ok">Boleh</span></td><td><span class="badge ok">Boleh</span></td><td><span class="badge info">Review</span></td></tr>
-            <tr><td>Tukar shift / ganti orang</td><td><span class="badge info">Sementara</span></td><td><span class="badge ok">Boleh</span></td><td><span class="badge info">Review</span></td></tr>
-            <tr><td>Pembelian rutin</td><td><span class="badge warn">Tidak</span></td><td><span class="badge ok">≤ Rp 1,5jt</span></td><td><span class="badge ok">Di atas batas</span></td></tr>
-            <tr><td>Kompensasi customer</td><td><span class="badge ok">≤ Rp 15rb</span></td><td><span class="badge ok">≤ Rp 50rb</span></td><td><span class="badge ok">Di atas</span></td></tr>
-            <tr><td>Perubahan harga / menu</td><td><span class="badge warn">Tidak</span></td><td><span class="badge info">Usul</span></td><td><span class="badge ok">Putuskan</span></td></tr>
-            <tr><td>Promo baru</td><td><span class="badge warn">Tidak</span></td><td><span class="badge info">Koordinasi</span></td><td><span class="badge ok">Approve</span></td></tr>
-            <tr><td>Teguran ringan</td><td><span class="badge info">Lapor</span></td><td><span class="badge ok">Boleh</span></td><td><span class="badge info">Review</span></td></tr>
-            <tr><td>SP / PHK</td><td><span class="badge warn">Tidak</span></td><td><span class="badge info">Rekomendasi</span></td><td><span class="badge ok">Putuskan</span></td></tr>
-            <tr><td>Selisih kas > Rp 50rb</td><td><span class="badge warn">Lapor</span></td><td><span class="badge warn">Lapor</span></td><td><span class="badge ok">Wajib</span></td></tr>
-            <tr><td>Fraud / kecelakaan</td><td><span class="badge warn">Lapor</span></td><td><span class="badge warn">Lapor</span></td><td><span class="badge ok">Wajib</span></td></tr>
-          </tbody>
-        </table>
-      </div>
-      <div class="card">
-        <h2>5 Aturan Emas</h2>
-        <div class="insight"><b>1.</b> Masalah diselesaikan di level terendah yang mampu.</div>
-        <div class="insight"><b>2.</b> Yang diberi tanggung jawab harus diberi authority.</div>
-        <div class="insight"><b>3.</b> Owner tidak memberikan keputusan yang sama dua kali → jadikan SOP.</div>
-        <div class="insight"><b>4.</b> Laporan harus membawa solusi, bukan hanya masalah.</div>
-        <div class="insight"><b>5.</b> Exception naik ke atas, routine tetap di bawah.</div>
-      </div>
-    </section>
+    <div class="tabs"><button class="tab active" data-tab="dashboard" type="button">Dashboard</button><button class="tab" data-tab="sales" type="button">Penjualan</button><button class="tab" data-tab="ops" type="button">Operasional</button><button class="tab" data-tab="social" type="button">Medsos</button><button class="tab" data-tab="authority" type="button">Authority</button></div>
+    <section id="dashboard"><div class="grid"><div class="card"><div class="label">Omzet 30 hari</div><div id="rev" class="metric">Rp0</div></div><div class="card"><div class="label">Transaksi 30 hari</div><div id="tx" class="metric">0</div></div><div class="card"><div class="label">Average ticket</div><div id="avg" class="metric">Rp0</div></div><div class="card"><div class="label">Growth omzet</div><div id="growth" class="metric">—</div></div></div><div class="grid-3" style="margin-bottom:14px"><div class="card"><div class="label">Pembelian 30 hari</div><div id="expBuy" class="metric">Rp0</div></div><div class="card"><div class="label">Waste 30 hari</div><div id="expWaste" class="metric">Rp0</div></div><div class="card"><div class="label">Kompensasi 30 hari</div><div id="expComp" class="metric">Rp0</div></div></div><div class="card"><h2>Trend omzet</h2><div class="chart"><canvas id="chart"></canvas></div></div><div class="card"><h2>Diagnosis bisnis</h2><div id="diagnosis"></div></div><div class="card"><h2>Action minggu ini</h2><div id="actions"></div></div></section>
+    <section id="sales" class="hidden"><div class="card"><h2>Input penjualan harian</h2><div class="form"><div><label>Tanggal</label><input id="date" type="date"></div><div><label>Omzet (Rp)</label><input id="revenue" type="number" min="0" placeholder="0"></div><div><label>Jumlah transaksi</label><input id="transactions" type="number" min="0" placeholder="0"></div><div><label>Catatan</label><input id="notes" placeholder="Opsional"></div></div><br><button class="primary" id="saveSaleBtn" type="button">Simpan penjualan</button><p id="saleMsg" class="small" style="margin-top:8px"></p></div><div class="card"><h2>Data terbaru</h2><div style="overflow:auto"><table><thead><tr><th>Tanggal</th><th>Omzet</th><th>Tx</th><th>ATV</th></tr></thead><tbody id="rows"></tbody></table></div></div></section>
+    <section id="ops" class="hidden"><div class="limit-box"><b>Batas Authority (Head of Store):</b><br>• Pembelian rutin max <b>Rp 1.500.000</b> / transaksi<br>• Kompensasi customer max <b>Rp 50.000</b><br>• Di atas batas → wajib minta approval Owner</div><div class="card"><h2>Input operasional</h2><div class="form"><div><label>Tanggal</label><input id="opsDate" type="date"></div><div><label>Jenis</label><select id="opsCategory"><option value="pembelian">Pembelian bahan</option><option value="waste">Waste / kerugian</option><option value="kompensasi">Kompensasi / refund</option><option value="lainnya">Pengeluaran lainnya</option></select></div><div><label>Nominal (Rp)</label><input id="opsAmount" type="number" min="0" placeholder="0"></div><div><label>Keterangan</label><input id="opsNotes" placeholder="Contoh: beli odeng 50 pcs"></div></div><br><button class="primary" id="saveExpenseBtn" type="button">Simpan</button><p id="opsMsg" class="small" style="margin-top:8px"></p></div><div class="card"><h2>Riwayat operasional</h2><div style="overflow:auto"><table><thead><tr><th>Tanggal</th><th>Jenis</th><th>Nominal</th><th>Keterangan</th></tr></thead><tbody id="opsRows"></tbody></table></div></div></section>
+    <section id="social" class="hidden"><div class="card"><h2>Input performa konten</h2><div class="form"><div><label>Tanggal</label><input id="cdate" type="date"></div><div><label>Platform</label><select id="platform"><option>Instagram</option><option>TikTok</option></select></div><div style="grid-column:1/-1"><label>Judul konten</label><input id="title" placeholder="Judul / deskripsi singkat"></div><div><label>Views</label><input id="views" type="number" min="0" value="0"></div><div><label>Likes</label><input id="likes" type="number" min="0" value="0"></div><div><label>Comments</label><input id="comments" type="number" min="0" value="0"></div><div><label>Shares</label><input id="shares" type="number" min="0" value="0"></div><div><label>Saves</label><input id="saves" type="number" min="0" value="0"></div><div><label>Transaksi dari konten</label><input id="contentTx" type="number" min="0" value="0"></div></div><br><button class="primary" id="saveContentBtn" type="button">Simpan konten</button><p id="socialMsg" class="small" style="margin-top:8px"></p></div><div class="card"><h2>Performa konten</h2><div id="socialSummary"></div></div></section>
+    <section id="authority" class="hidden"><div class="card"><h2>Authority Matrix Hasnaria</h2><p class="small" style="margin-bottom:14px">Ringkasan siapa boleh memutuskan apa.</p><table><thead><tr><th>Keputusan</th><th>PIC Shift</th><th>Head Store</th><th>Owner</th></tr></thead><tbody><tr><td>Pembagian tugas harian</td><td><span class="badge ok">Boleh</span></td><td><span class="badge ok">Boleh</span></td><td><span class="badge info">Review</span></td></tr><tr><td>Tukar shift / ganti orang</td><td><span class="badge info">Sementara</span></td><td><span class="badge ok">Boleh</span></td><td><span class="badge info">Review</span></td></tr><tr><td>Pembelian rutin</td><td><span class="badge warn">Tidak</span></td><td><span class="badge ok">≤ Rp 1,5jt</span></td><td><span class="badge ok">Di atas batas</span></td></tr><tr><td>Kompensasi customer</td><td><span class="badge ok">≤ Rp 15rb</span></td><td><span class="badge ok">≤ Rp 50rb</span></td><td><span class="badge ok">Di atas</span></td></tr><tr><td>Perubahan harga / menu</td><td><span class="badge warn">Tidak</span></td><td><span class="badge info">Usul</span></td><td><span class="badge ok">Putuskan</span></td></tr><tr><td>Promo baru</td><td><span class="badge warn">Tidak</span></td><td><span class="badge info">Koordinasi</span></td><td><span class="badge ok">Approve</span></td></tr><tr><td>Teguran ringan</td><td><span class="badge info">Lapor</span></td><td><span class="badge ok">Boleh</span></td><td><span class="badge info">Review</span></td></tr><tr><td>SP / PHK</td><td><span class="badge warn">Tidak</span></td><td><span class="badge info">Rekomendasi</span></td><td><span class="badge ok">Putuskan</span></td></tr><tr><td>Selisih kas > Rp 50rb</td><td><span class="badge warn">Lapor</span></td><td><span class="badge warn">Lapor</span></td><td><span class="badge ok">Wajib</span></td></tr><tr><td>Fraud / kecelakaan</td><td><span class="badge warn">Lapor</span></td><td><span class="badge warn">Lapor</span></td><td><span class="badge ok">Wajib</span></td></tr></tbody></table></div><div class="card"><h2>5 Aturan Emas</h2><div class="insight"><b>1.</b> Masalah diselesaikan di level terendah yang mampu.</div><div class="insight"><b>2.</b> Yang diberi tanggung jawab harus diberi authority.</div><div class="insight"><b>3.</b> Owner tidak memberikan keputusan yang sama dua kali → jadikan SOP.</div><div class="insight"><b>4.</b> Laporan harus membawa solusi, bukan hanya masalah.</div><div class="insight"><b>5.</b> Exception naik ke atas, routine tetap di bawah.</div></div></section>
   </main>
 </div>
-
 <script>
-(function () {
-  const $ = id => document.getElementById(id);
-  const rp = n => 'Rp' + Number(n || 0).toLocaleString('id-ID');
-  const today = new Date().toISOString().slice(0, 10);
-  const LS = {
-    get(key, fallback) { try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; } catch { return fallback; } },
-    set(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch {} }
-  };
+(function(){
+  const $=id=>document.getElementById(id);
+  const rp=n=>'Rp'+Number(n||0).toLocaleString('id-ID');
+  const today=new Date().toISOString().slice(0,10);
+  const LS={get(k,f){try{const v=localStorage.getItem(k);return v?JSON.parse(v):f}catch{return f}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}};
+  let isGuest=false,brandId=null,data=[],social=[],expenses=[],chart=null,db=null;
+  try{if(typeof supabase!=='undefined'){db=supabase.createClient('https://bnnhmtkpdjlgehsvgoda.supabase.co','sb_publishable_eXrgSxWTXoa9q-hVpLx-sQ_IaEiUbeO')}}catch(e){console.warn(e)}
 
-  let isGuest = false, brandId = null, data = [], social = [], expenses = [], chart = null, db = null;
+  function setAuthMessage(m,t){const el=$('authMsg');if(!el)return;el.textContent=m||'';el.className='auth-message'+(t?' '+t:'')}
+  function showApp(){$('auth').classList.add('hidden');$('app').classList.remove('hidden')}
+  function showAuth(){$('app').classList.add('hidden');$('auth').classList.remove('hidden')}
 
-  try {
-    if (typeof supabase !== 'undefined') {
-      db = supabase.createClient(
-        'https://bnnhmtkpdjlgehsvgoda.supabase.co',
-        'sb_publishable_eXrgSxWTXoa9q-hVpLx-sQ_IaEiUbeO'
-      );
-    }
-  } catch (e) { console.warn('Supabase init failed:', e); }
+  function clearGuestFlag(){isGuest=false;localStorage.removeItem('hasnaria_guest')}
 
-  function setAuthMessage(msg, type) {
-    const el = $('authMsg');
-    if (!el) return;
-    el.textContent = msg || '';
-    el.className = 'auth-message' + (type ? ' ' + type : '');
-  }
-  function showApp() { $('auth').classList.add('hidden'); $('app').classList.remove('hidden'); }
-  function showAuth() { $('app').classList.add('hidden'); $('auth').classList.remove('hidden'); }
-
-  function enterGuest() {
-    try {
-      isGuest = true;
-      localStorage.setItem('hasnaria_guest', '1');
-      setAuthMessage('Masuk Guest mode…');
-      startGuest();
-    } catch (e) {
-      setAuthMessage('Error Guest: ' + (e.message || e), 'error');
-    }
+  function enterGuest(){
+    try{isGuest=true;localStorage.setItem('hasnaria_guest','1');setAuthMessage('Masuk Guest mode…');startGuest()}
+    catch(e){setAuthMessage('Error Guest: '+(e.message||e),'error')}
   }
 
-  function startGuest() {
-    isGuest = true;
-    showApp();
+  function startGuest(){
+    isGuest=true;showApp();
     $('guestBanner').classList.remove('hidden');
     $('modeBadge').classList.remove('hidden');
-    data = LS.get('hasnaria_metrics', []);
-    social = LS.get('hasnaria_social', []);
-    expenses = LS.get('hasnaria_expenses', []);
-    brandId = 'guest-local';
-    if ($('date')) $('date').value = today;
-    if ($('cdate')) $('cdate').value = today;
-    if ($('opsDate')) $('opsDate').value = today;
+    data=LS.get('hasnaria_metrics',[]);social=LS.get('hasnaria_social',[]);expenses=LS.get('hasnaria_expenses',[]);
+    brandId='guest-local';
+    if($('date'))$('date').value=today;if($('cdate'))$('cdate').value=today;if($('opsDate'))$('opsDate').value=today;
     render();
   }
 
-  async function loginWithGoogle() {
-    if (!db) {
-      setAuthMessage('Supabase belum siap. Setup Google dulu di Supabase Dashboard.', 'error');
-      return;
-    }
+  async function loginWithGoogle(){
+    if(!db){setAuthMessage('Supabase belum siap.','error');return}
+    // Hapus guest flag SEBELUM redirect Google
+    clearGuestFlag();
     setAuthMessage('Membuka Google…');
-    try {
-      const { data, error } = await db.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: window.location.origin + window.location.pathname,
-          queryParams: { access_type: 'offline', prompt: 'consent' }
-        }
+    try{
+      const{error}=await db.auth.signInWithOAuth({
+        provider:'google',
+        options:{redirectTo:window.location.origin+window.location.pathname,queryParams:{access_type:'offline',prompt:'consent'}}
       });
-      if (error) {
-        setAuthMessage('Google login gagal: ' + error.message + '. Pastikan provider Google sudah diaktifkan di Supabase.', 'error');
-      }
-      // redirect akan terjadi otomatis jika sukses
-    } catch (e) {
-      setAuthMessage('Google error: ' + (e.message || e), 'error');
-    }
+      if(error)setAuthMessage('Google login gagal: '+error.message,'error');
+    }catch(e){setAuthMessage('Google error: '+(e.message||e),'error')}
   }
 
-  async function login() {
-    const email = ($('email').value || '').trim();
-    const password = $('password').value || '';
-    if (!email || !password) { setAuthMessage('Email dan password wajib diisi.', 'error'); return; }
-    if (!db) { setAuthMessage('Supabase belum siap. Gunakan Guest mode dulu.', 'error'); return; }
+  async function login(){
+    const email=($('email').value||'').trim(),password=$('password').value||'';
+    if(!email||!password){setAuthMessage('Email dan password wajib diisi.','error');return}
+    if(!db){setAuthMessage('Supabase belum siap.','error');return}
     setAuthMessage('Sedang masuk…');
-    try {
-      const r = await db.auth.signInWithPassword({ email, password });
-      if (r.error) { setAuthMessage('Login gagal: ' + r.error.message, 'error'); return; }
-      isGuest = false;
-      localStorage.removeItem('hasnaria_guest');
-      setAuthMessage('Login berhasil…', 'success');
+    try{
+      const r=await db.auth.signInWithPassword({email,password});
+      if(r.error){setAuthMessage('Login gagal: '+r.error.message,'error');return}
+      clearGuestFlag();
+      setAuthMessage('Login berhasil…','success');
       await start();
-    } catch (e) { setAuthMessage('Login error: ' + (e.message || e), 'error'); }
+    }catch(e){setAuthMessage('Login error: '+(e.message||e),'error')}
   }
 
-  async function signup() {
-    const email = ($('email').value || '').trim();
-    const password = $('password').value || '';
-    if (!email || !password) { setAuthMessage('Email dan password wajib diisi.', 'error'); return; }
-    if (password.length < 6) { setAuthMessage('Password minimal 6 karakter.', 'error'); return; }
-    if (!db) { setAuthMessage('Supabase belum siap. Gunakan Guest mode dulu.', 'error'); return; }
+  async function signup(){
+    const email=($('email').value||'').trim(),password=$('password').value||'';
+    if(!email||!password){setAuthMessage('Email dan password wajib diisi.','error');return}
+    if(password.length<6){setAuthMessage('Password minimal 6 karakter.','error');return}
+    if(!db){setAuthMessage('Supabase belum siap.','error');return}
     setAuthMessage('Membuat akun…');
-    try {
-      const r = await db.auth.signUp({
-        email, password,
-        options: { emailRedirectTo: window.location.origin + window.location.pathname }
-      });
-      if (r.error) { setAuthMessage('Daftar gagal: ' + r.error.message, 'error'); return; }
-      if (r.data.session) {
-        isGuest = false;
-        localStorage.removeItem('hasnaria_guest');
-        setAuthMessage('Akun berhasil dibuat.', 'success');
-        await start();
-      } else {
-        setAuthMessage('Akun dibuat. Cek email verifikasi, atau pakai Guest / Google.', 'success');
-      }
-    } catch (e) { setAuthMessage('Daftar error: ' + (e.message || e), 'error'); }
+    try{
+      const r=await db.auth.signUp({email,password,options:{emailRedirectTo:window.location.origin+window.location.pathname}});
+      if(r.error){setAuthMessage('Daftar gagal: '+r.error.message,'error');return}
+      if(r.data.session){clearGuestFlag();setAuthMessage('Akun berhasil dibuat.','success');await start()}
+      else setAuthMessage('Akun dibuat. Cek email verifikasi, atau pakai Google.','success');
+    }catch(e){setAuthMessage('Daftar error: '+(e.message||e),'error')}
   }
 
-  async function logout() {
-    isGuest = false;
-    localStorage.removeItem('hasnaria_guest');
-    try { if (db) await db.auth.signOut(); } catch {}
+  async function logout(){
+    clearGuestFlag();
+    try{if(db)await db.auth.signOut()}catch{}
     location.reload();
   }
 
-  async function start() {
-    isGuest = false;
+  async function start(){
+    clearGuestFlag();
     showApp();
     $('guestBanner').classList.add('hidden');
     $('modeBadge').classList.add('hidden');
-    if ($('date')) $('date').value = today;
-    if ($('cdate')) $('cdate').value = today;
-    if ($('opsDate')) $('opsDate').value = today;
-    try {
-      let r = await db.from('brands').select('*').limit(1);
-      if (r.error) throw new Error(r.error.message);
-      if (!r.data || !r.data.length) {
-        r = await db.from('brands').insert({ name: 'Hasnaria' }).select().single();
-        if (r.error) throw new Error(r.error.message);
-        brandId = r.data.id;
-      } else brandId = r.data[0].id;
+    if($('date'))$('date').value=today;if($('cdate'))$('cdate').value=today;if($('opsDate'))$('opsDate').value=today;
+    try{
+      let r=await db.from('brands').select('*').limit(1);
+      if(r.error)throw new Error(r.error.message);
+      if(!r.data||!r.data.length){
+        r=await db.from('brands').insert({name:'Hasnaria'}).select().single();
+        if(r.error)throw new Error(r.error.message);
+        brandId=r.data.id;
+      }else brandId=r.data[0].id;
       await load();
-    } catch (e) {
-      alert('Gagal load data Supabase: ' + e.message + '\n\nCoba pakai Guest mode.');
-      enterGuest();
-    }
-  }
-
-  async function load() {
-    if (isGuest) {
-      data = LS.get('hasnaria_metrics', []);
-      social = LS.get('hasnaria_social', []);
-      expenses = LS.get('hasnaria_expenses', []);
-      render(); return;
-    }
-    const d = new Date(); d.setDate(d.getDate() - 89);
-    const from = d.toISOString().slice(0, 10);
-    try {
-      let r = await db.from('daily_metrics').select('*').eq('brand_id', brandId).gte('metric_date', from).order('metric_date');
-      if (r.error) throw r.error; data = r.data || [];
-      r = await db.from('social_contents').select('*').eq('brand_id', brandId).gte('posted_at', from).order('posted_at', { ascending: false });
-      if (r.error) throw r.error; social = r.data || [];
-      r = await db.from('expenses').select('*').eq('brand_id', brandId).gte('expense_date', from).order('expense_date', { ascending: false });
-      if (r.error) throw r.error; expenses = r.data || [];
+    }catch(e){
+      console.error(e);
+      alert('Login berhasil, tapi gagal load data: '+e.message+'\n\nCoba refresh halaman.');
+      // JANGAN masuk Guest — tetap di mode real
       render();
-    } catch (e) { console.error(e); alert('Error load: ' + e.message); }
-  }
-
-  function render() {
-    const now = Date.now();
-    const cut = new Date(now - 30 * 864e5).toISOString().slice(0, 10);
-    const prev = new Date(now - 60 * 864e5).toISOString().slice(0, 10);
-    const sum = a => a.reduce((s, x) => s + Number(x.cash_revenue || 0), 0);
-    const cnt = a => a.reduce((s, x) => s + Number(x.transactions || 0), 0);
-    const cur = data.filter(x => x.metric_date >= cut);
-    const old = data.filter(x => x.metric_date >= prev && x.metric_date < cut);
-    const cr = sum(cur), ct = cnt(cur), pr = sum(old), pt = cnt(old);
-    const ca = ct ? cr / ct : 0;
-    const g = pr ? ((cr - pr) / pr * 100) : null;
-    if ($('rev')) $('rev').textContent = rp(cr);
-    if ($('tx')) $('tx').textContent = ct.toLocaleString('id-ID');
-    if ($('avg')) $('avg').textContent = rp(ca);
-    if ($('growth')) { $('growth').textContent = g == null ? '—' : (g >= 0 ? '+' : '') + g.toFixed(1) + '%'; $('growth').style.color = g == null ? 'inherit' : g >= 0 ? '#17734d' : '#b43b3b'; }
-    const exp30 = expenses.filter(x => x.expense_date >= cut);
-    const buy = exp30.filter(x => x.category === 'pembelian').reduce((s, x) => s + Number(x.amount || 0), 0);
-    const waste = exp30.filter(x => x.category === 'waste').reduce((s, x) => s + Number(x.amount || 0), 0);
-    const comp = exp30.filter(x => x.category === 'kompensasi').reduce((s, x) => s + Number(x.amount || 0), 0);
-    if ($('expBuy')) $('expBuy').textContent = rp(buy);
-    if ($('expWaste')) $('expWaste').textContent = rp(waste);
-    if ($('expComp')) $('expComp').textContent = rp(comp);
-    draw(cur); diagnose(g, waste, cr); rows(); opsRows(); socialRender();
-  }
-
-  function draw(a) {
-    try {
-      if (typeof Chart === 'undefined') return;
-      if (chart) chart.destroy();
-      const canvas = $('chart'); if (!canvas) return;
-      chart = new Chart(canvas, {
-        type: 'line',
-        data: { labels: a.map(x => x.metric_date.slice(5)), datasets: [{ label: 'Omzet', data: a.map(x => Number(x.cash_revenue || 0)), tension: 0.3, borderColor: '#176b55', backgroundColor: 'rgba(23,107,85,.1)', fill: true }] },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { ticks: { callback: v => rp(v) } } } }
-      });
-    } catch (e) { console.warn('Chart error', e); }
-  }
-
-  function diagnose(g, waste, revenue) {
-    const d = [], act = [];
-    if (!data.length) d.push('📌 Belum ada data penjualan. Isi minimal 14 hari agar diagnosis lebih berguna.');
-    else if (g !== null) {
-      if (g < 0) d.push('⚠️ Omzet turun <b>' + Math.abs(g).toFixed(1) + '%</b> dibanding 30 hari sebelumnya.');
-      else d.push('✅ Omzet naik <b>' + g.toFixed(1) + '%</b> dibanding 30 hari sebelumnya.');
-      if (g < 0) act.push('Bandingkan 7 hari terakhir dengan minggu sebelumnya.');
-      if (g >= 0) act.push('Ulangi format konten/promo yang berhasil.');
     }
-    if (revenue > 0 && waste / revenue > 0.05) { d.push('⚠️ Waste sudah > 5% dari omzet.'); act.push('Lakukan stock opname.'); }
-    if ($('diagnosis')) $('diagnosis').innerHTML = d.map(x => '<div class="insight">' + x + '</div>').join('') || '';
-    if ($('actions')) $('actions').innerHTML = (act.length ? act : ['Kumpulkan data penjualan harian secara konsisten.']).map(x => '<div class="insight">→ ' + x + '</div>').join('');
   }
 
-  function rows() {
-    if (!$('rows')) return;
-    $('rows').innerHTML = data.slice().reverse().slice(0, 40).map(x => {
-      const atv = x.transactions ? Number(x.cash_revenue || 0) / Number(x.transactions) : 0;
-      return '<tr><td>' + x.metric_date + '</td><td>' + rp(x.cash_revenue) + '</td><td>' + Number(x.transactions || 0) + '</td><td>' + rp(atv) + '</td></tr>';
-    }).join('') || '<tr><td colspan="4" class="small">Belum ada data.</td></tr>';
+  async function load(){
+    if(isGuest){data=LS.get('hasnaria_metrics',[]);social=LS.get('hasnaria_social',[]);expenses=LS.get('hasnaria_expenses',[]);render();return}
+    const d=new Date();d.setDate(d.getDate()-89);const from=d.toISOString().slice(0,10);
+    try{
+      let r=await db.from('daily_metrics').select('*').eq('brand_id',brandId).gte('metric_date',from).order('metric_date');
+      if(r.error)throw r.error;data=r.data||[];
+      r=await db.from('social_contents').select('*').eq('brand_id',brandId).gte('posted_at',from).order('posted_at',{ascending:false});
+      if(r.error)throw r.error;social=r.data||[];
+      r=await db.from('expenses').select('*').eq('brand_id',brandId).gte('expense_date',from).order('expense_date',{ascending:false});
+      if(r.error)throw r.error;expenses=r.data||[];
+      render();
+    }catch(e){console.error(e);alert('Error load: '+e.message)}
   }
 
-  function opsRows() {
-    if (!$('opsRows')) return;
-    const map = { pembelian: 'Pembelian', waste: 'Waste', kompensasi: 'Kompensasi', lainnya: 'Lainnya' };
-    $('opsRows').innerHTML = expenses.slice(0, 50).map(x =>
-      '<tr><td>' + x.expense_date + '</td><td>' + (map[x.category] || x.category) + '</td><td>' + rp(x.amount) + '</td><td>' + escapeHtml(x.notes || '-') + '</td></tr>'
-    ).join('') || '<tr><td colspan="4" class="small">Belum ada data operasional.</td></tr>';
+  function render(){
+    const now=Date.now(),cut=new Date(now-30*864e5).toISOString().slice(0,10),prev=new Date(now-60*864e5).toISOString().slice(0,10);
+    const sum=a=>a.reduce((s,x)=>s+Number(x.cash_revenue||0),0),cnt=a=>a.reduce((s,x)=>s+Number(x.transactions||0),0);
+    const cur=data.filter(x=>x.metric_date>=cut),old=data.filter(x=>x.metric_date>=prev&&x.metric_date<cut);
+    const cr=sum(cur),ct=cnt(cur),pr=sum(old),pt=cnt(old),ca=ct?cr/ct:0,g=pr?((cr-pr)/pr*100):null;
+    if($('rev'))$('rev').textContent=rp(cr);if($('tx'))$('tx').textContent=ct.toLocaleString('id-ID');if($('avg'))$('avg').textContent=rp(ca);
+    if($('growth')){$('growth').textContent=g==null?'—':(g>=0?'+':'')+g.toFixed(1)+'%';$('growth').style.color=g==null?'inherit':g>=0?'#17734d':'#b43b3b'}
+    const exp30=expenses.filter(x=>x.expense_date>=cut);
+    const buy=exp30.filter(x=>x.category==='pembelian').reduce((s,x)=>s+Number(x.amount||0),0);
+    const waste=exp30.filter(x=>x.category==='waste').reduce((s,x)=>s+Number(x.amount||0),0);
+    const comp=exp30.filter(x=>x.category==='kompensasi').reduce((s,x)=>s+Number(x.amount||0),0);
+    if($('expBuy'))$('expBuy').textContent=rp(buy);if($('expWaste'))$('expWaste').textContent=rp(waste);if($('expComp'))$('expComp').textContent=rp(comp);
+    draw(cur);diagnose(g,waste,cr);rows();opsRows();socialRender();
   }
 
-  function socialRender() {
-    if (!$('socialSummary')) return;
-    const v = social.reduce((a, x) => a + Number(x.views || 0), 0);
-    const e = social.reduce((a, x) => a + Number(x.likes || 0) + Number(x.comments || 0) + Number(x.shares || 0) + Number(x.saves || 0), 0);
-    const t = social.reduce((a, x) => a + Number(x.attributed_transactions || 0), 0);
-    $('socialSummary').innerHTML =
-      '<div class="grid">' +
-      '<div class="card"><div class="label">Konten</div><div class="metric">' + social.length + '</div></div>' +
-      '<div class="card"><div class="label">Views</div><div class="metric">' + v.toLocaleString('id-ID') + '</div></div>' +
-      '<div class="card"><div class="label">Engagement</div><div class="metric">' + (v ? (e / v * 100).toFixed(2) : 0) + '%</div></div>' +
-      '<div class="card"><div class="label">Attributed tx</div><div class="metric">' + t + '</div></div></div>';
+  function draw(a){try{if(typeof Chart==='undefined')return;if(chart)chart.destroy();const canvas=$('chart');if(!canvas)return;chart=new Chart(canvas,{type:'line',data:{labels:a.map(x=>x.metric_date.slice(5)),datasets:[{label:'Omzet',data:a.map(x=>Number(x.cash_revenue||0)),tension:.3,borderColor:'#176b55',backgroundColor:'rgba(23,107,85,.1)',fill:true}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{callback:v=>rp(v)}}}}})}catch(e){console.warn(e)}}
+  function diagnose(g,waste,revenue){const d=[],act=[];if(!data.length)d.push('📌 Belum ada data penjualan. Isi minimal 14 hari agar diagnosis lebih berguna.');else if(g!==null){if(g<0)d.push('⚠️ Omzet turun <b>'+Math.abs(g).toFixed(1)+'%</b> dibanding 30 hari sebelumnya.');else d.push('✅ Omzet naik <b>'+g.toFixed(1)+'%</b> dibanding 30 hari sebelumnya.');if(g<0)act.push('Bandingkan 7 hari terakhir dengan minggu sebelumnya.');if(g>=0)act.push('Ulangi format konten/promo yang berhasil.')}if(revenue>0&&waste/revenue>.05){d.push('⚠️ Waste sudah > 5% dari omzet.');act.push('Lakukan stock opname.')}if($('diagnosis'))$('diagnosis').innerHTML=d.map(x=>'<div class="insight">'+x+'</div>').join('')||'';if($('actions'))$('actions').innerHTML=(act.length?act:['Kumpulkan data penjualan harian secara konsisten.']).map(x=>'<div class="insight">→ '+x+'</div>').join('')}
+  function rows(){if(!$('rows'))return;$('rows').innerHTML=data.slice().reverse().slice(0,40).map(x=>{const atv=x.transactions?Number(x.cash_revenue||0)/Number(x.transactions):0;return '<tr><td>'+x.metric_date+'</td><td>'+rp(x.cash_revenue)+'</td><td>'+Number(x.transactions||0)+'</td><td>'+rp(atv)+'</td></tr>'}).join('')||'<tr><td colspan="4" class="small">Belum ada data.</td></tr>'}
+  function opsRows(){if(!$('opsRows'))return;const map={pembelian:'Pembelian',waste:'Waste',kompensasi:'Kompensasi',lainnya:'Lainnya'};$('opsRows').innerHTML=expenses.slice(0,50).map(x=>'<tr><td>'+x.expense_date+'</td><td>'+(map[x.category]||x.category)+'</td><td>'+rp(x.amount)+'</td><td>'+escapeHtml(x.notes||'-')+'</td></tr>').join('')||'<tr><td colspan="4" class="small">Belum ada data operasional.</td></tr>'}
+  function socialRender(){if(!$('socialSummary'))return;const v=social.reduce((a,x)=>a+Number(x.views||0),0),e=social.reduce((a,x)=>a+Number(x.likes||0)+Number(x.comments||0)+Number(x.shares||0)+Number(x.saves||0),0),t=social.reduce((a,x)=>a+Number(x.attributed_transactions||0),0);$('socialSummary').innerHTML='<div class="grid"><div class="card"><div class="label">Konten</div><div class="metric">'+social.length+'</div></div><div class="card"><div class="label">Views</div><div class="metric">'+v.toLocaleString('id-ID')+'</div></div><div class="card"><div class="label">Engagement</div><div class="metric">'+(v?(e/v*100).toFixed(2):0)+'%</div></div><div class="card"><div class="label">Attributed tx</div><div class="metric">'+t+'</div></div></div>'}
+  function escapeHtml(s){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+
+  function saveSale(){const p={metric_date:$('date').value,cash_revenue:Number($('revenue').value||0),transactions:Number($('transactions').value||0),notes:$('notes').value||''};if(isGuest){const idx=data.findIndex(x=>x.metric_date===p.metric_date);if(idx>=0)data[idx]={...data[idx],...p};else data.push({id:Date.now().toString(),...p});data.sort((a,b)=>a.metric_date.localeCompare(b.metric_date));LS.set('hasnaria_metrics',data);$('saleMsg').textContent='Tersimpan (Guest) ✓';render();return}(async()=>{p.brand_id=brandId;let q=await db.from('daily_metrics').select('id').eq('brand_id',brandId).eq('metric_date',p.metric_date).maybeSingle();if(q.error){$('saleMsg').textContent=q.error.message;return}let r=q.data?await db.from('daily_metrics').update(p).eq('id',q.data.id):await db.from('daily_metrics').insert(p);$('saleMsg').textContent=r.error?r.error.message:'Tersimpan ✓';if(!r.error)await load()})()}
+  function saveExpense(){const amount=Number($('opsAmount').value||0),category=$('opsCategory').value;if(category==='pembelian'&&amount>1500000){if(!confirm('Pembelian > Rp 1.500.000 (batas Head of Store). Tetap simpan?'))return}if(category==='kompensasi'&&amount>50000){if(!confirm('Kompensasi > Rp 50.000 (batas Head of Store). Tetap simpan?'))return}const p={expense_date:$('opsDate').value,category,amount,notes:$('opsNotes').value||''};if(isGuest){expenses.unshift({id:Date.now().toString(),...p});LS.set('hasnaria_expenses',expenses);$('opsMsg').textContent='Tersimpan (Guest) ✓';$('opsAmount').value='';$('opsNotes').value='';render();return}(async()=>{p.brand_id=brandId;const r=await db.from('expenses').insert(p);$('opsMsg').textContent=r.error?r.error.message:'Tersimpan ✓';if(!r.error){$('opsAmount').value='';$('opsNotes').value='';await load()}})()}
+  function saveContent(){const p={posted_at:$('cdate').value,platform:$('platform').value,content_title:$('title').value,views:Number($('views').value||0),likes:Number($('likes').value||0),comments:Number($('comments').value||0),shares:Number($('shares').value||0),saves:Number($('saves').value||0),attributed_transactions:Number($('contentTx').value||0)};if(isGuest){social.unshift({id:Date.now().toString(),...p});LS.set('hasnaria_social',social);$('socialMsg').textContent='Tersimpan (Guest) ✓';render();return}(async()=>{p.brand_id=brandId;const r=await db.from('social_contents').insert(p);$('socialMsg').textContent=r.error?r.error.message:'Tersimpan ✓';if(!r.error)await load()})()}
+  function switchTab(id){document.querySelectorAll('main section').forEach(x=>x.classList.add('hidden'));const sec=$(id);if(sec)sec.classList.remove('hidden');document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x.getAttribute('data-tab')===id))}
+
+  function bind(){
+    if($('loginBtn'))$('loginBtn').addEventListener('click',login);
+    if($('signupBtn'))$('signupBtn').addEventListener('click',signup);
+    if($('googleBtn'))$('googleBtn').addEventListener('click',loginWithGoogle);
+    if($('guestBtn'))$('guestBtn').addEventListener('click',enterGuest);
+    if($('logoutBtn'))$('logoutBtn').addEventListener('click',logout);
+    if($('saveSaleBtn'))$('saveSaleBtn').addEventListener('click',saveSale);
+    if($('saveExpenseBtn'))$('saveExpenseBtn').addEventListener('click',saveExpense);
+    if($('saveContentBtn'))$('saveContentBtn').addEventListener('click',saveContent);
+    document.querySelectorAll('.tab').forEach(btn=>btn.addEventListener('click',()=>switchTab(btn.getAttribute('data-tab'))));
+    if($('password'))$('password').addEventListener('keydown',e=>{if(e.key==='Enter')login()});
   }
 
-  function escapeHtml(s) {
-    return String(s).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
-  }
-
-  function saveSale() {
-    const p = { metric_date: $('date').value, cash_revenue: Number($('revenue').value || 0), transactions: Number($('transactions').value || 0), notes: $('notes').value || '' };
-    if (isGuest) {
-      const idx = data.findIndex(x => x.metric_date === p.metric_date);
-      if (idx >= 0) data[idx] = { ...data[idx], ...p }; else data.push({ id: Date.now().toString(), ...p });
-      data.sort((a, b) => a.metric_date.localeCompare(b.metric_date));
-      LS.set('hasnaria_metrics', data); $('saleMsg').textContent = 'Tersimpan (Guest) ✓'; render(); return;
-    }
-    (async () => {
-      p.brand_id = brandId;
-      let q = await db.from('daily_metrics').select('id').eq('brand_id', brandId).eq('metric_date', p.metric_date).maybeSingle();
-      if (q.error) { $('saleMsg').textContent = q.error.message; return; }
-      let r = q.data ? await db.from('daily_metrics').update(p).eq('id', q.data.id) : await db.from('daily_metrics').insert(p);
-      $('saleMsg').textContent = r.error ? r.error.message : 'Tersimpan ✓'; if (!r.error) await load();
-    })();
-  }
-
-  function saveExpense() {
-    const amount = Number($('opsAmount').value || 0); const category = $('opsCategory').value;
-    if (category === 'pembelian' && amount > 1500000) { if (!confirm('Pembelian > Rp 1.500.000 (batas Head of Store). Tetap simpan?')) return; }
-    if (category === 'kompensasi' && amount > 50000) { if (!confirm('Kompensasi > Rp 50.000 (batas Head of Store). Tetap simpan?')) return; }
-    const p = { expense_date: $('opsDate').value, category, amount, notes: $('opsNotes').value || '' };
-    if (isGuest) {
-      expenses.unshift({ id: Date.now().toString(), ...p }); LS.set('hasnaria_expenses', expenses);
-      $('opsMsg').textContent = 'Tersimpan (Guest) ✓'; $('opsAmount').value = ''; $('opsNotes').value = ''; render(); return;
-    }
-    (async () => {
-      p.brand_id = brandId; const r = await db.from('expenses').insert(p);
-      $('opsMsg').textContent = r.error ? r.error.message : 'Tersimpan ✓';
-      if (!r.error) { $('opsAmount').value = ''; $('opsNotes').value = ''; await load(); }
-    })();
-  }
-
-  function saveContent() {
-    const p = { posted_at: $('cdate').value, platform: $('platform').value, content_title: $('title').value, views: Number($('views').value || 0), likes: Number($('likes').value || 0), comments: Number($('comments').value || 0), shares: Number($('shares').value || 0), saves: Number($('saves').value || 0), attributed_transactions: Number($('contentTx').value || 0) };
-    if (isGuest) {
-      social.unshift({ id: Date.now().toString(), ...p }); LS.set('hasnaria_social', social);
-      $('socialMsg').textContent = 'Tersimpan (Guest) ✓'; render(); return;
-    }
-    (async () => {
-      p.brand_id = brandId; const r = await db.from('social_contents').insert(p);
-      $('socialMsg').textContent = r.error ? r.error.message : 'Tersimpan ✓'; if (!r.error) await load();
-    })();
-  }
-
-  function switchTab(id) {
-    document.querySelectorAll('main section').forEach(x => x.classList.add('hidden'));
-    const sec = $(id); if (sec) sec.classList.remove('hidden');
-    document.querySelectorAll('.tab').forEach(x => x.classList.toggle('active', x.getAttribute('data-tab') === id));
-  }
-
-  function bind() {
-    if ($('loginBtn')) $('loginBtn').addEventListener('click', login);
-    if ($('signupBtn')) $('signupBtn').addEventListener('click', signup);
-    if ($('googleBtn')) $('googleBtn').addEventListener('click', loginWithGoogle);
-    if ($('guestBtn')) $('guestBtn').addEventListener('click', enterGuest);
-    if ($('logoutBtn')) $('logoutBtn').addEventListener('click', logout);
-    if ($('saveSaleBtn')) $('saveSaleBtn').addEventListener('click', saveSale);
-    if ($('saveExpenseBtn')) $('saveExpenseBtn').addEventListener('click', saveExpense);
-    if ($('saveContentBtn')) $('saveContentBtn').addEventListener('click', saveContent);
-    document.querySelectorAll('.tab').forEach(btn => btn.addEventListener('click', () => switchTab(btn.getAttribute('data-tab'))));
-    if ($('password')) $('password').addEventListener('keydown', e => { if (e.key === 'Enter') login(); });
-  }
-
-  function init() {
+  function init(){
     bind();
-    if (localStorage.getItem('hasnaria_guest') === '1') { startGuest(); return; }
-    if (db) {
-      db.auth.getSession().then(x => {
-        if (x.data && x.data.session) start();
-        else showAuth();
-      }).catch(() => showAuth());
+    if(!db){showAuth();setAuthMessage('Supabase belum load. Bisa pakai Guest.','error');return}
 
-      // Handle OAuth redirect callback
-      db.auth.onAuthStateChange((event, session) => {
-        if (event === 'SIGNED_IN' && session && $('app').classList.contains('hidden')) {
-          isGuest = false;
-          localStorage.removeItem('hasnaria_guest');
-          start();
-        }
-      });
-    } else {
-      showAuth();
-      setAuthMessage('Supabase belum load. Bisa langsung pakai Guest mode.', 'error');
-    }
+    // PRIORITAS: session real dulu, baru Guest
+    db.auth.getSession().then(x=>{
+      if(x.data&&x.data.session){
+        // Ada session Google/email → hapus guest, masuk real
+        clearGuestFlag();
+        start();
+      } else if(localStorage.getItem('hasnaria_guest')==='1'){
+        // Tidak ada session, tapi ada flag guest
+        startGuest();
+      } else {
+        showAuth();
+      }
+    }).catch(()=>{
+      if(localStorage.getItem('hasnaria_guest')==='1') startGuest();
+      else showAuth();
+    });
+
+    db.auth.onAuthStateChange((event,session)=>{
+      if((event==='SIGNED_IN'||event==='TOKEN_REFRESHED')&&session){
+        clearGuestFlag();
+        if($('app').classList.contains('hidden')||isGuest) start();
+      }
+      if(event==='SIGNED_OUT'){
+        clearGuestFlag();
+        showAuth();
+      }
+    });
   }
 
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);
   else init();
 })();
 </script>
