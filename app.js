@@ -1,7 +1,11 @@
 (function () {
-  var URL = window.HASNARIA_SB;
-  var KEY = window.HASNARIA_KEY;
-  var BRAND = "a36d4b4f-3ccc-4a78-8aeb-b868f0407ea4";
-  var OWNERS = ["harisnu@gmail.com"];
-  alert('PLACEHOLDER_DO_NOT_KEEP');
+  var src = "https://cdn.jsdelivr.net/gh/ekariashoesanti-alt/Hasnaria-ice-cream@864e0349d18a56ef997216a89661deacf9a8c24a/app.js";
+  var s = document.createElement("script");
+  s.src = src;
+  s.async = false;
+  s.onerror = function () {
+    var el = document.getElementById("authMsg");
+    if (el) el.textContent = "Gagal memuat aplikasi. Refresh halaman.";
+  };
+  document.head.appendChild(s);
 })();
