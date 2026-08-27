@@ -74,6 +74,10 @@
     s.onload = function () {
       bindTabMemory();
       bindSaveGuard();
+      var mon = document.createElement("script");
+      mon.src = "/stock-monitor.js?v=p014";
+      mon.async = false;
+      document.body.appendChild(mon);
       setTimeout(hideJalur, 400);
       setTimeout(hideJalur, 1200);
       var dash = document.getElementById("dashboard");
