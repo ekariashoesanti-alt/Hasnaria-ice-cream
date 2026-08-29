@@ -1,7 +1,7 @@
 (function () {
   'use strict';
   var CORE = 'https://cdn.jsdelivr.net/gh/ekariashoesanti-alt/Hasnaria-ice-cream@864e0349d18a56ef997216a89661deacf9a8c24a/app.js';
-  var STOCK = '/stock-monitor.js?v=9';
+  var STOCK = '/stock-monitor.js?v=10';
   function load(src, done) {
     var s = document.createElement('script');
     s.src = src;
@@ -21,10 +21,18 @@
     st.textContent =
       '#stok .stk-form{' +
       'display:grid!important;' +
-      'grid-template-columns:minmax(135px,1.05fr) minmax(120px,.78fr) minmax(120px,.78fr) minmax(215px,1.30fr) minmax(165px,.88fr) 180px!important;' +
-      'gap:10px!important;' +
+      'grid-template-columns:198px 166px 164px 217px 226px 156px!important;' +
+      'column-gap:12px!important;' +
+      'row-gap:0!important;' +
       'align-items:start!important;' +
       'width:100%!important;' +
+      'background:transparent!important;' +
+      'border:0!important;' +
+      'border-radius:0!important;' +
+      'padding:0!important;' +
+      '}' +
+      '#stok .stk-form>div:not(.stk-buy),#stok .stk-form>.stk-buy{' +
+      'min-width:0!important;' +
       '}' +
       '#stok .stk-form>.stk-buy{' +
       'border:0!important;' +
@@ -35,46 +43,71 @@
       '#stok .stk-form>.stk-save{' +
       'grid-column:6!important;' +
       'grid-row:1!important;' +
-      'align-self:start!important;' +
-      'justify-self:stretch!important;' +
-      'width:180px!important;' +
-      'min-width:180px!important;' +
+      'width:156px!important;' +
+      'min-width:156px!important;' +
       'height:62px!important;' +
       'margin:0!important;' +
-      'padding:0 10px!important;' +
+      'padding:0!important;' +
+      'border-radius:13px!important;' +
+      'align-self:start!important;' +
+      'justify-self:start!important;' +
       'display:flex!important;' +
-      'flex-direction:column!important;' +
       'align-items:center!important;' +
       'justify-content:center!important;' +
-      'gap:0!important;' +
       'font-size:15px!important;' +
       'font-weight:800!important;' +
       'line-height:1!important;' +
       '}' +
-      '#stok .stk-save .ico,' +
-      '#stok .stk-save small{' +
-      'display:none!important;' +
-      '}' +
+      '#stok .stk-save .ico,#stok .stk-save small{display:none!important;}' +
       '#stok .stk-form>.stk-buy .stk-buy-row{' +
-      'height:62px!important;' +
+      'height:56px!important;' +
       'background:#fff!important;' +
       'border:1.5px solid #bcc8c2!important;' +
       'box-shadow:none!important;' +
       'border-radius:12px!important;' +
+      'padding:0 12px!important;' +
       '}' +
       '#stok .stk-form>.stk-buy .stk-buy-row:focus-within{' +
-      'border-color:#8ea99d!important;' +
-      'box-shadow:0 0 0 1px rgba(142,169,157,.08)!important;' +
+      'border-color:#a2b5ac!important;' +
+      'box-shadow:0 0 0 1px rgba(162,181,172,.10)!important;' +
       '}' +
       '#stok .stk-form>.stk-buy .stk-buy-row input{' +
-      'height:58px!important;' +
+      'height:52px!important;' +
+      'padding:0!important;' +
       'border:0!important;' +
       'box-shadow:none!important;' +
+      'background:transparent!important;' +
+      'min-width:0!important;' +
       '}' +
-      '#stok .stk-form>.stk-buy .unit{white-space:nowrap!important;}' +
-      '#stok .stk-form>.stk-buy .stk-hint{padding-left:0!important;}' +
+      '#stok .stk-form>.stk-buy .unit{white-space:nowrap!important;font-size:14px!important;color:#6b7a74!important;}' +
+      '#stok .stk-form>div>label{' +
+      'font-size:14px!important;' +
+      'font-weight:700!important;' +
+      'color:#13251d!important;' +
+      'margin-bottom:7px!important;' +
+      '}' +
+      '#stok .stk-form>div>input:not([type="number"]),#stok .stk-form>div>select{' +
+      'height:60px!important;' +
+      'border-radius:12px!important;' +
+      '}' +
+      '#stok .stk-form>div:nth-child(2)>input,#stok .stk-form>div:nth-child(3)>input{' +
+      'background:#f7f9f8!important;' +
+      'font-weight:700!important;' +
+      '}' +
+      '#stok .stk-form>.stk-buy .stk-hint{' +
+      'font-size:12px!important;' +
+      'line-height:1.25!important;' +
+      'margin-top:8px!important;' +
+      'padding:0!important;' +
+      '}' +
+      '#stok .stk-form>div:nth-child(1) select{' +
+      'height:60px!important;' +
+      '}' +
+      '@media(max-width:1250px){' +
+      '#stok .stk-form{grid-template-columns:minmax(170px,1.15fr) minmax(145px,.9fr) minmax(145px,.9fr) minmax(190px,1.2fr) minmax(190px,1.2fr) 156px!important;column-gap:10px!important;}' +
+      '}' +
       '@media(max-width:1100px){' +
-      '#stok .stk-form{grid-template-columns:1fr 1fr!important;}' +
+      '#stok .stk-form{grid-template-columns:1fr 1fr!important;row-gap:12px!important;}' +
       '#stok .stk-buy{grid-column:1/-1!important;}' +
       '#stok .stk-save{grid-column:1/-1!important;grid-row:auto!important;width:100%!important;min-width:0!important;height:58px!important;}' +
       '}' +
