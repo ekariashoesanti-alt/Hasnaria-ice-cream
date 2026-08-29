@@ -1,7 +1,7 @@
 (function () {
   'use strict';
   var CORE = 'https://cdn.jsdelivr.net/gh/ekariashoesanti-alt/Hasnaria-ice-cream@864e0349d18a56ef997216a89661deacf9a8c24a/app.js';
-  var STOCK = '/stock-monitor.js?v=6';
+  var STOCK = '/stock-monitor.js?v=7';
   function load(src, done) {
     var s = document.createElement('script');
     s.src = src;
@@ -41,18 +41,18 @@
       'min-width:112px!important;' +
       'height:70px!important;' +
       'margin:0!important;' +
+      'padding:7px 8px!important;' +
+      'display:flex!important;' +
+      'flex-direction:column!important;' +
+      'align-items:center!important;' +
+      'justify-content:center!important;' +
+      'gap:0!important;' +
+      'font-size:14px!important;' +
+      'line-height:1.1!important;' +
       '}' +
-      '#stok .stk-save .ico{' +
-      'display:none!important;' +
-      '}' +
-      '#stok .stk-save{' +
-      'padding:8px 10px!important;' +
-      'gap:2px!important;' +
-      'font-size:16px!important;' +
-      '}' +
+      '#stok .stk-save .ico,' +
       '#stok .stk-save small{' +
-      'font-size:10px!important;' +
-      'line-height:1.15!important;' +
+      'display:none!important;' +
       '}' +
       '#stok .stk-form>.stk-buy .stk-buy-row{' +
       'background:#fff!important;' +
