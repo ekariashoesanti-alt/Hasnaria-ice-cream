@@ -26,6 +26,12 @@
       'align-items:start!important;' +
       'width:100%!important;' +
       '}' +
+      '#stok .stk-form>.stk-buy{' +
+      'border:0!important;' +
+      'padding:0!important;' +
+      'background:transparent!important;' +
+      'border-radius:0!important;' +
+      '}' +
       '#stok .stk-form>.stk-save{' +
       'grid-column:6!important;' +
       'grid-row:1!important;' +
@@ -36,10 +42,25 @@
       'height:70px!important;' +
       'margin:0!important;' +
       '}' +
-      '#stok .stk-form>.stk-buy{min-width:0!important;}' +
-      '#stok .stk-buy-row{min-width:0!important;}' +
-      '#stok .stk-buy-row input{min-width:0!important;}' +
-      '#stok .stk-buy-row .unit{white-space:nowrap!important;}' +
+      '#stok .stk-save .ico{' +
+      'display:none!important;' +
+      '}' +
+      '#stok .stk-save{' +
+      'padding:8px 10px!important;' +
+      'gap:2px!important;' +
+      'font-size:16px!important;' +
+      '}' +
+      '#stok .stk-save small{' +
+      'font-size:10px!important;' +
+      'line-height:1.15!important;' +
+      '}' +
+      '#stok .stk-form>.stk-buy .stk-buy-row{' +
+      'background:#fff!important;' +
+      '}' +
+      '#stok .stk-form>.stk-buy .stk-hint{' +
+      'padding-left:0!important;' +
+      '}' +
+      '#stok .stk-form>.stk-buy .unit{white-space:nowrap!important;}' +
       '@media(max-width:1100px){' +
       '#stok .stk-form{grid-template-columns:1fr 1fr!important;}' +
       '#stok .stk-buy{grid-column:1/-1!important;}' +
