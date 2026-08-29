@@ -1,7 +1,7 @@
 (function () {
   'use strict';
   var CORE = 'https://cdn.jsdelivr.net/gh/ekariashoesanti-alt/Hasnaria-ice-cream@864e0349d18a56ef997216a89661deacf9a8c24a/app.js';
-  var STOCK = '/stock-monitor.js?v=7';
+  var STOCK = '/stock-monitor.js?v=8';
   function load(src, done) {
     var s = document.createElement('script');
     s.src = src;
@@ -21,7 +21,7 @@
     st.textContent =
       '#stok .stk-form{' +
       'display:grid!important;' +
-      'grid-template-columns:minmax(135px,1.05fr) minmax(120px,.78fr) minmax(120px,.78fr) minmax(215px,1.30fr) minmax(165px,.88fr) 112px!important;' +
+      'grid-template-columns:minmax(135px,1.05fr) minmax(120px,.78fr) minmax(120px,.78fr) minmax(215px,1.30fr) minmax(165px,.88fr) 170px!important;' +
       'gap:10px!important;' +
       'align-items:start!important;' +
       'width:100%!important;' +
@@ -37,9 +37,9 @@
       'grid-row:1!important;' +
       'align-self:stretch!important;' +
       'justify-self:stretch!important;' +
-      'width:112px!important;' +
-      'min-width:112px!important;' +
-      'height:70px!important;' +
+      'width:170px!important;' +
+      'min-width:170px!important;' +
+      'height:100px!important;' +
       'margin:0!important;' +
       'padding:7px 8px!important;' +
       'display:flex!important;' +
@@ -56,6 +56,12 @@
       '}' +
       '#stok .stk-form>.stk-buy .stk-buy-row{' +
       'background:#fff!important;' +
+      'border:1.5px solid #b9c7c0!important;' +
+      'box-shadow:0 0 0 1px rgba(185,199,192,.12)!important;' +
+      '}' +
+      '#stok .stk-form>.stk-buy .stk-buy-row:focus-within{' +
+      'border-color:#8da99d!important;' +
+      'box-shadow:0 0 0 2px rgba(141,169,157,.14)!important;' +
       '}' +
       '#stok .stk-form>.stk-buy .stk-hint{' +
       'padding-left:0!important;' +
@@ -64,7 +70,7 @@
       '@media(max-width:1100px){' +
       '#stok .stk-form{grid-template-columns:1fr 1fr!important;}' +
       '#stok .stk-buy{grid-column:1/-1!important;}' +
-      '#stok .stk-save{grid-column:1/-1!important;grid-row:auto!important;width:100%!important;height:58px!important;}' +
+      '#stok .stk-save{grid-column:1/-1!important;grid-row:auto!important;width:100%!important;min-width:0!important;height:58px!important;}' +
       '}' +
       '@media(max-width:700px){' +
       '#stok .stk-form{grid-template-columns:1fr!important;}' +
