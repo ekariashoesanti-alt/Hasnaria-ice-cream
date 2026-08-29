@@ -1,7 +1,7 @@
 (function () {
   'use strict';
   var CORE = 'https://cdn.jsdelivr.net/gh/ekariashoesanti-alt/Hasnaria-ice-cream@864e0349d18a56ef997216a89661deacf9a8c24a/app.js';
-  var STOCK = '/stock-monitor.js?v=3';
+  var STOCK = '/stock-monitor.js?v=4';
   function load(src, done) {
     var s = document.createElement('script');
     s.src = src;
