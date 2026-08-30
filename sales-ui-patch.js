@@ -2,27 +2,138 @@
   'use strict';
   var HIDDEN = ['Omzet + kas harian', 'Data terbaru'];
   var timer = null;
-  function hideSalesPanels(){var host=document.getElementById('sales');if(!host||host.classList.contains('hidden'))return;HIDDEN.forEach(function(label){Array.prototype.forEach.call(host.querySelectorAll('h1,h2,h3,h4,h5,h6,div,p,span,strong,b'),function(el){var text=(el.textContent||'').replace(/\s+/g,' ').trim();if(text!==label||el.getAttribute('data-backend-hidden')==='1')return;var panel=el.closest('.card,.panel,.box,.section')||el.parentElement;if(panel&&panel!==host){panel.setAttribute('data-backend-hidden','1');panel.style.display='none';}});});}
-  function injectStyle(){if(document.getElementById('hasnaria-sales-layout-style'))return;var s=document.createElement('style');s.id='hasnaria-sales-layout-style';s.textContent=`
-    #sales{width:100%!important;min-width:0;overflow:visible!important}
-    #sales .sale-board,#sales .sb-wrap{width:100%!important;max-width:none!important;min-width:0!important;margin-left:0!important;margin-right:0!important}
-    #sales .sb-wrap{padding:10px 14px!important}
-    #sales .sb-grid-main{display:grid!important;grid-template-columns:minmax(0,3fr) minmax(250px,1fr)!important;gap:10px!important;align-items:start}
-    #sales .sb-kpis{width:100%;min-width:0}
-    #sales .sb-card{min-width:0;overflow:hidden}
-    /* Tren Omzet kembali ke ukuran grafik semula */
-    #sales .sb-grid-main>.sb-card:first-child .sb-chart{width:100%!important;max-width:100%!important;margin-left:0!important;margin-right:0!important}
-    /* Panel kanan: Top 5 lalu Worst Performer, atas-bawah */
-    #sales .sb-grid-main>.sb-card:nth-child(2){display:flex!important;flex-direction:column!important;gap:8px!important;padding:8px 10px!important}
-    #sales .sb-grid-main>.sb-card:nth-child(2)>div{margin:0!important;padding:0!important}
-    #sales .sb-grid-main>.sb-card:nth-child(2) .sb-bars{margin-top:2px!important}
-    #sales .sb-grid-main>.sb-card:nth-child(2) .sb-bar-row{margin:4px 0!important}
-    #sales .sb-grid-main>.sb-card:nth-child(2) .sb-live-note{margin-top:4px!important;padding:5px 7px!important}
-    @media(max-width:1100px) and (min-width:701px){#sales .sb-grid-main{grid-template-columns:minmax(0,2.5fr) minmax(230px,1fr)!important}}
-    @media(max-width:700px){#sales .sb-grid-main{grid-template-columns:1fr!important}#sales .sb-grid-main>.sb-card:first-child .sb-chart{width:100%!important;max-width:100%!important}}
-  `;document.head.appendChild(s);}
-  function fit(){var host=document.getElementById('sales'),board=host&&host.querySelector('.sale-board');if(!host||host.classList.contains('hidden')||!board)return;board.style.transform='none';board.style.maxHeight='none';board.style.height='auto';board.style.overflow='visible';host.style.maxHeight='none';host.style.height='auto';host.style.overflow='visible';}
-  function run(){injectStyle();hideSalesPanels();requestAnimationFrame(fit);}
-  function start(){run();new MutationObserver(run).observe(document.body,{childList:true,subtree:true});window.addEventListener('resize',run);timer=setInterval(run,1200);}
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
+
+  function hideSalesPanels() {
+    var host = document.getElementById('sales');
+    if (!host || host.classList.contains('hidden')) return;
+    HIDDEN.forEach(function (label) {
+      Array.prototype.forEach.call(host.querySelectorAll('h1,h2,h3,h4,h5,h6,div,p,span,strong,b'), function (el) {
+        var text = (el.textContent || '').replace(/\s+/g, ' ').trim();
+        if (text !== label || el.getAttribute('data-backend-hidden') === '1') return;
+        var panel = el.closest('.card,.panel,.box,.section') || el.parentElement;
+        if (panel && panel !== host) {
+          panel.setAttribute('data-backend-hidden', '1');
+          panel.style.display = 'none';
+        }
+      });
+    });
+  }
+
+  function injectStyle() {
+    if (document.getElementById('hasnaria-sales-layout-style')) return;
+    var s = document.createElement('style');
+    s.id = 'hasnaria-sales-layout-style';
+    s.textContent = `
+      #sales{width:100%!important;min-width:0;overflow:visible!important}
+      #sales .sale-board,#sales .sb-wrap{width:100%!important;max-width:none!important;min-width:0!important;margin-left:0!important;margin-right:0!important}
+      #sales .sb-wrap{padding:10px 14px!important}
+      #sales .sb-grid-main{display:grid!important;grid-template-columns:minmax(0,3fr) minmax(250px,1fr)!important;gap:10px!important;align-items:start}
+      #sales .sb-kpis{width:100%;min-width:0}
+      #sales .sb-card{min-width:0;overflow:hidden}
+      #sales .sb-grid-main>.sb-card:first-child .sb-chart{width:100%!important;max-width:100%!important;margin-left:0!important;margin-right:0!important}
+      #sales .sales-right-stack{display:flex!important;flex-direction:column!important;gap:8px!important;min-width:0}
+      #sales .sales-right-stack .sb-card{width:100%!important;padding:10px 11px!important;margin:0!important}
+      #sales .sales-right-stack .sb-card h3{margin:0!important}
+      #sales .sales-right-stack .sb-bars{margin-top:4px!important}
+      #sales .sales-right-stack .sb-bar-row{margin:4px 0!important}
+      #sales .sales-right-stack .sb-live-note{margin-top:4px!important;padding:5px 7px!important}
+      @media(max-width:1100px) and (min-width:701px){#sales .sb-grid-main{grid-template-columns:minmax(0,2.5fr) minmax(230px,1fr)!important}}
+      @media(max-width:700px){#sales .sb-grid-main{grid-template-columns:1fr!important}#sales .sb-grid-main>.sb-card:first-child .sb-chart{width:100%!important;max-width:100%!important}}
+    `;
+    document.head.appendChild(s);
+  }
+
+  function textOf(el) { return (el.textContent || '').replace(/\s+/g, ' ').trim(); }
+
+  function findHeading(card, wanted) {
+    var found = null;
+    Array.prototype.some.call(card.querySelectorAll('h1,h2,h3,h4,h5,h6'), function (h) {
+      if (textOf(h) === wanted) { found = h; return true; }
+      return false;
+    });
+    return found;
+  }
+
+  function sectionParts(card, heading) {
+    var head = heading.closest('.sb-card-head') || heading.parentElement;
+    var parts = [head];
+    var n = head.nextElementSibling;
+    while (n) {
+      if (n.classList && n.classList.contains('sb-card-head')) break;
+      if (n.classList && (n.classList.contains('sb-live-note') || n.classList.contains('sb-legacy-note'))) break;
+      parts.push(n);
+      n = n.nextElementSibling;
+    }
+    return parts;
+  }
+
+  function splitPerformerBoxes() {
+    var host = document.getElementById('sales');
+    if (!host || host.classList.contains('hidden')) return;
+    var grid = host.querySelector('.sb-grid-main');
+    if (!grid || grid.getAttribute('data-performers-split') === '1') return;
+
+    var cards = Array.prototype.slice.call(grid.querySelectorAll(':scope > .sb-card'));
+    var chartCard = cards[0];
+    var performerCard = null;
+    cards.some(function (c) {
+      if (findHeading(c, 'Top 5 Seller (Qty)') || findHeading(c, '5 Worst Performer (Qty)')) { performerCard = c; return true; }
+      return false;
+    });
+    if (!performerCard) return;
+
+    var top = findHeading(performerCard, 'Top 5 Seller (Qty)');
+    var worst = findHeading(performerCard, '5 Worst Performer (Qty)');
+    if (!top || !worst) return;
+
+    var rightStack = document.createElement('div');
+    rightStack.className = 'sales-right-stack';
+    rightStack.setAttribute('data-sales-right-stack', '1');
+
+    function makeCard(heading) {
+      var c = document.createElement('div');
+      c.className = 'sb-card';
+      sectionParts(performerCard, heading).forEach(function (node) { c.appendChild(node); });
+      return c;
+    }
+
+    var topCard = makeCard(top);
+    var worstCard = makeCard(worst);
+    rightStack.appendChild(topCard);
+    rightStack.appendChild(worstCard);
+
+    /* Hapus card performer lama dan masukkan dua box nyata bertumpuk. */
+    performerCard.replaceWith(rightStack);
+    grid.setAttribute('data-performers-split', '1');
+  }
+
+  function fit() {
+    var host = document.getElementById('sales');
+    var board = host && host.querySelector('.sale-board');
+    if (!host || host.classList.contains('hidden') || !board) return;
+    board.style.transform = 'none';
+    board.style.maxHeight = 'none';
+    board.style.height = 'auto';
+    board.style.overflow = 'visible';
+    host.style.maxHeight = 'none';
+    host.style.height = 'auto';
+    host.style.overflow = 'visible';
+  }
+
+  function run() {
+    injectStyle();
+    hideSalesPanels();
+    requestAnimationFrame(function () {
+      splitPerformerBoxes();
+      fit();
+    });
+  }
+
+  function start() {
+    run();
+    new MutationObserver(run).observe(document.body, {childList:true, subtree:true});
+    window.addEventListener('resize', run);
+    timer = setInterval(run, 1200);
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
 })();
