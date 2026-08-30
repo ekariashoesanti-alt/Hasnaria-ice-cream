@@ -39,7 +39,45 @@
       #app > header .user-info #whoName { color: #fff; font-size: 13px; font-weight: 600; }
       #app > header .user-info #whoMeta { color: rgba(255,255,255,.72); font-size: 11px; }
       #app > header #logoutBtn { min-height: 36px; padding: 7px 13px; border: 1px solid rgba(255,255,255,.22); border-radius: 4px; background: rgba(255,255,255,.12); color: #fff; font-size: 13px; font-weight: 600; }
-      #app > main.wrap { max-width: 1200px; padding-top: 24px; }
+      #app > main.wrap { max-width: 1200px; padding-top: 18px; }
+
+      /* Penjualan: dipadatkan agar dashboard utuh dan nyaman pada browser zoom 100%. */
+      #sales .sb-wrap { padding: 14px 16px 16px; margin-bottom: 10px; border-radius: 14px; }
+      #sales .sb-head { gap: 10px; }
+      #sales .sb-head h2 { font-size: 20px; margin: 2px 0; }
+      #sales .sb-head p { font-size: 11px; }
+      #sales .sb-eyebrow { font-size: 10px; }
+      #sales .sb-actions { gap: 6px; }
+      #sales .sb-upload, #sales .sb-help { min-height: 36px; font-size: 12px; padding-left: 11px; padding-right: 11px; }
+      #sales .sb-period { margin-top: 10px; gap: 8px; }
+      #sales .sb-cal { gap: 7px; }
+      #sales .sb-cal label { font-size: 11px; }
+      #sales .sb-cal select, #sales .sb-cal input[type=date] { min-height: 32px; padding: 3px 7px; font-size: 11px; }
+      #sales .sb-period span { font-size: 10px; }
+      #sales .sb-toggle button { min-height: 30px; padding: 0 10px; font-size: 11px; }
+      #sales .sb-kpis { gap: 8px; margin-top: 10px; }
+      #sales .sb-kpi { padding: 10px 11px; border-radius: 11px; }
+      #sales .sb-kpi-label { font-size: 10px; }
+      #sales .sb-kpi-value { font-size: 18px; margin-top: 2px; }
+      #sales .sb-kpi-sub { font-size: 10px; margin-top: 3px; }
+      #sales .sb-grid-main { gap: 10px; margin-top: 10px; }
+      #sales .sb-card { padding: 11px 12px; border-radius: 11px; }
+      #sales .sb-card h3 { font-size: 14px; }
+      #sales .sb-card-head span { font-size: 10px; }
+      #sales .sb-chart { margin-top: 4px; }
+      #sales .sb-bars { margin-top: 6px; }
+      #sales .sb-bar-row { margin: 8px 0; }
+      #sales .sb-bar-label { font-size: 11px; }
+      #sales .sb-bar-track { height: 7px; margin-top: 5px; }
+      #sales .sb-import-copy { margin-top: 6px; padding: 8px 10px; font-size: 10px; }
+      #sales .sb-import-copy p { margin-top: 3px; }
+      #sales .sb-import .sb-actions { margin-top: 7px; }
+      #sales .sb-live-note { margin-top: 9px; padding: 7px 9px; font-size: 9.5px; }
+      #sales .sb-legacy-note { margin-top: 5px; font-size: 10px; }
+      @media (min-width: 901px) and (min-height: 760px) {
+        #sales .sb-grid-main { grid-template-columns: minmax(0,1.7fr) minmax(280px,.8fr); }
+      }
+
       @media (max-width: 900px) {
         #app > header .head { grid-template-columns: 1fr auto; min-height: 64px; padding: 8px 14px; gap: 10px; }
         #app > header .head > div:first-child { grid-column: 1; }
