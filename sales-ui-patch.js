@@ -16,100 +16,80 @@
     });
   }
 
-  function fitSales() {
-    var host = document.getElementById('sales');
-    if (!host || host.classList.contains('hidden')) return;
-    var board = host.querySelector('.sale-board');
-    var main = document.querySelector('#app > main.wrap');
-    if (!board || !main) return;
-
-    board.style.transform = 'none';
-    board.style.width = '100%';
-    board.style.maxWidth = '100%';
-    board.style.margin = '0';
-    host.style.height = 'auto';
-    host.style.overflow = 'visible';
-
-    /* Pakai seluruh lebar media view. Kolom kanan tidak boleh terpotong. */
-    var availableWidth = Math.max(320, main.clientWidth);
-    var naturalWidth = board.scrollWidth;
-    if (naturalWidth > availableWidth) {
-      board.style.width = '100%';
-      board.style.maxWidth = '100%';
-      board.style.overflow = 'hidden';
-    }
-
-    /* Atur tinggi box berdasarkan tinggi viewport, bukan mengecilkan seluruh UI.
-       Header + tab tetap; isi Penjualan dibuat lebih rapat agar terbaca besar. */
-    var header = document.querySelector('#app > header');
-    var tabs = document.getElementById('tabs');
-    var availableHeight = window.innerHeight -
-      (header ? header.getBoundingClientRect().height : 0) -
-      (tabs ? tabs.getBoundingClientRect().height : 0) - 42;
-    if (availableHeight <= 0) return;
-
-    var naturalHeight = board.scrollHeight;
-    if (naturalHeight <= availableHeight) return;
-
-    /* Hanya kompres spacing/tinggi box, font tidak dikecilkan. */
-    board.classList.add('sales-compact-height');
-    var stillTooTall = board.scrollHeight > availableHeight;
-    if (stillTooTall) {
-      board.classList.add('sales-ultra-compact-height');
-    }
-
-    if (board.scrollHeight > availableHeight) {
-      board.style.maxHeight = availableHeight + 'px';
-      board.style.overflow = 'hidden';
-    }
-  }
-
   function injectResponsiveStyle() {
     if (document.getElementById('hasnaria-sales-viewport-style')) return;
     var s = document.createElement('style');
     s.id = 'hasnaria-sales-viewport-style';
     s.textContent = `
-      #sales { width:100%; min-width:0; }
-      #sales .sale-board, #sales .sb-wrap { width:100% !important; max-width:100% !important; min-width:0 !important; }
-      #sales .sb-grid-main, #sales .sb-kpis { min-width:0; width:100%; }
+      #sales { width:100%; min-width:0; overflow:visible !important; }
+      #sales .sale-board, #sales .sb-wrap { width:100% !important; max-width:none !important; min-width:0 !important; margin-left:0 !important; margin-right:0 !important; }
+      #sales .sb-grid-main, #sales .sb-kpis { width:100%; min-width:0; }
       #sales .sb-grid-main > *, #sales .sb-kpi { min-width:0; }
       #sales .sb-card { min-width:0; overflow:hidden; }
       #sales .sb-chart, #sales .sb-bars { min-width:0; overflow:hidden; }
       #sales .sb-bar-label { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-      #sales .sales-compact-height .sb-wrap { padding-top:10px !important; padding-bottom:10px !important; }
-      #sales .sales-compact-height .sb-period { margin-top:7px !important; }
-      #sales .sales-compact-height .sb-kpis { margin-top:7px !important; gap:6px !important; }
+
+      /* Tinggi dipangkas lewat spacing, BUKAN crop dan BUKAN transform scale. */
+      #sales .sales-compact-height .sb-wrap { padding:10px 14px !important; }
+      #sales .sales-compact-height .sb-head { gap:6px !important; }
+      #sales .sales-compact-height .sb-head h2 { margin:1px 0 !important; }
+      #sales .sales-compact-height .sb-period { margin-top:6px !important; gap:6px !important; }
+      #sales .sales-compact-height .sb-cal { gap:5px !important; }
+      #sales .sales-compact-height .sb-kpis { margin-top:6px !important; gap:6px !important; }
       #sales .sales-compact-height .sb-kpi { padding:7px 9px !important; }
-      #sales .sales-compact-height .sb-kpi-value { font-size:17px !important; }
-      #sales .sales-compact-height .sb-grid-main { margin-top:7px !important; gap:7px !important; }
+      #sales .sales-compact-height .sb-kpi-value { margin-top:1px !important; }
+      #sales .sales-compact-height .sb-grid-main { margin-top:6px !important; gap:7px !important; }
       #sales .sales-compact-height .sb-card { padding:8px 10px !important; }
-      #sales .sales-compact-height .sb-bar-row { margin:5px 0 !important; }
-      #sales .sales-compact-height .sb-live-note { margin-top:5px !important; padding:5px 7px !important; }
-      #sales .sales-ultra-compact-height .sb-wrap { padding-top:7px !important; padding-bottom:7px !important; }
-      #sales .sales-ultra-compact-height .sb-head { gap:5px !important; }
-      #sales .sales-ultra-compact-height .sb-head h2 { font-size:18px !important; }
-      #sales .sales-ultra-compact-height .sb-period { margin-top:5px !important; gap:5px !important; }
-      #sales .sales-ultra-compact-height .sb-kpis { margin-top:5px !important; gap:5px !important; }
-      #sales .sales-ultra-compact-height .sb-kpi { padding:5px 7px !important; }
-      #sales .sales-ultra-compact-height .sb-kpi-label,
-      #sales .sales-ultra-compact-height .sb-kpi-sub { font-size:9px !important; }
-      #sales .sales-ultra-compact-height .sb-kpi-value { font-size:16px !important; }
-      #sales .sales-ultra-compact-height .sb-grid-main { margin-top:5px !important; gap:5px !important; }
-      #sales .sales-ultra-compact-height .sb-card { padding:6px 8px !important; }
-      #sales .sales-ultra-compact-height .sb-card h3 { margin-bottom:2px !important; }
-      #sales .sales-ultra-compact-height .sb-bar-row { margin:3px 0 !important; }
-      #sales .sales-ultra-compact-height .sb-live-note { display:none !important; }
+      #sales .sales-compact-height .sb-card h3 { margin-bottom:2px !important; }
+      #sales .sales-compact-height .sb-chart { margin-top:2px !important; }
+      #sales .sales-compact-height .sb-bars { margin-top:3px !important; }
+      #sales .sales-compact-height .sb-bar-row { margin:4px 0 !important; }
+      #sales .sales-compact-height .sb-bar-track { margin-top:3px !important; }
+      #sales .sales-compact-height .sb-import-copy { margin-top:4px !important; padding:6px 8px !important; }
+      #sales .sales-compact-height .sb-import .sb-actions { margin-top:5px !important; }
+      #sales .sales-compact-height .sb-live-note { margin-top:4px !important; padding:5px 7px !important; }
+
       @media (min-width:901px) {
-        #sales .sb-grid-main { grid-template-columns:minmax(0,1fr) minmax(300px,0.58fr) !important; }
+        #sales .sb-grid-main { grid-template-columns:minmax(0,1fr) minmax(270px,0.52fr) !important; }
       }
       @media (max-width:1100px) and (min-width:701px) {
-        #sales .sb-grid-main { grid-template-columns:minmax(0,1fr) minmax(250px,0.55fr) !important; }
+        #sales .sb-grid-main { grid-template-columns:minmax(0,1fr) minmax(235px,0.5fr) !important; }
       }
       @media (max-width:700px) {
         #sales .sb-grid-main { grid-template-columns:1fr !important; }
       }
     `;
     document.head.appendChild(s);
+  }
+
+  function fitSales() {
+    var host = document.getElementById('sales');
+    var board = host && host.querySelector('.sale-board');
+    var main = document.querySelector('#app > main.wrap');
+    if (!host || host.classList.contains('hidden') || !board || !main) return;
+
+    /* Reset semua mekanisme crop/scale dari versi sebelumnya. */
+    board.style.transform = 'none';
+    board.style.maxHeight = 'none';
+    board.style.height = 'auto';
+    board.style.overflow = 'visible';
+    host.style.maxHeight = 'none';
+    host.style.height = 'auto';
+    host.style.overflow = 'visible';
+
+    board.classList.remove('sales-compact-height');
+
+    var header = document.querySelector('#app > header');
+    var tabs = document.getElementById('tabs');
+    var available = window.innerHeight -
+      (header ? header.getBoundingClientRect().height : 0) -
+      (tabs ? tabs.getBoundingClientRect().height : 0) - 34;
+
+    if (available > 0 && board.scrollHeight > available) {
+      board.classList.add('sales-compact-height');
+    }
+    /* Jangan pernah memotong isi. Jika tinggi layar sangat pendek, browser tetap
+       boleh scroll daripada menghilangkan informasi. */
   }
 
   function run() {
@@ -122,8 +102,8 @@
     run();
     new MutationObserver(run).observe(document.body, { childList:true, subtree:true });
     window.addEventListener('resize', run);
-    if (timer) clearInterval(timer);
     timer = setInterval(run, 1200);
   }
+
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
 })();
