@@ -27,9 +27,9 @@
     var style = document.createElement('style'); style.id = 'hasnaria-tesla-nav-style';
     style.textContent = `
       #app > header { position: sticky; top: 0; z-index: 1000; background: #176955; color: #fff; border-bottom: 1px solid rgba(255,255,255,.12); box-shadow: 0 1px 8px rgba(0,0,0,.08); }
-      #app > header .head { width: 100%; max-width: 1440px; min-height: 72px; padding: 10px 24px; margin: 0 auto; display: grid; grid-template-columns: 190px minmax(0,1fr) 230px; align-items: center; gap: 20px; flex-wrap: nowrap; }
-      #app > header .head > div:first-child { min-width: 0; display: flex; align-items: center; }
-      #app > header .brand-logo { height: 42px; width: auto; }
+      #app > header .head { width: 100%; max-width: 1440px; min-height: 72px; padding: 8px 24px; margin: 0 auto; display: grid; grid-template-columns: 190px minmax(0,1fr) 230px; align-items: center; gap: 20px; flex-wrap: nowrap; box-sizing: border-box; }
+      #app > header .head > div:first-child { grid-column: 1; min-width: 0; display: flex; align-items: center; justify-content: flex-start; align-self: center; }
+      #app > header .brand-logo { display: block; height: 46px; max-width: 160px; width: auto; object-fit: contain; object-position: left center; }
       #app > header .tagline { display: none; }
       #app > header .hasnaria-header-nav { grid-column: 2; display: flex; justify-content: center; align-items: center; gap: 2px; margin: 0; overflow: visible; min-width: 0; }
       #app > header .hasnaria-header-nav .tab { min-height: 40px; padding: 8px 14px; border-radius: 4px; background: transparent; color: #fff; font-size: 14px; font-weight: 600; line-height: 1.2; white-space: nowrap; transition: background-color .2s ease, color .2s ease; }
@@ -48,7 +48,7 @@
         #app > header .hasnaria-header-nav .tab { padding: 7px 12px; }
         #app > header .user-info { display: none; }
       }
-      @media (max-width: 600px) { #app > header .brand-logo { height: 36px; } #app > header #logoutBtn { padding: 7px 10px; } }
+      @media (max-width: 600px) { #app > header .brand-logo { height: 38px; max-width: 140px; } #app > header #logoutBtn { padding: 7px 10px; } }
     `;
     document.head.appendChild(style);
   }
