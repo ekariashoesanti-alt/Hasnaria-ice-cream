@@ -1,1 +1,153 @@
-PLACEHOLDER_IDX
+<!doctype html>
+<html lang=\"id\">
+<head>
+<meta charset=\"utf-8\">
+<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">
+<meta name=\"theme-color\" content=\"#176b55\">
+<title>Hasnaria Command Center</title>
+<script src=\"https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2\"></script>
+<script>
+window.HASNARIA_SB = \"https://bnnhmtkpdjlgehsvgoda.supabase.co\";
+window.HASNARIA_KEY = \"sb_publishable_eXrgSxWTXoa9q-hVpLx-sQ_IaEiUbeO\";
+window.hasnariaGoogleHref = function () {
+  var dest = location.origin + location.pathname;
+  return window.HASNARIA_SB + \"/auth/v1/authorize?provider=google&redirect_to=\" + encodeURIComponent(dest);
+};
+window.hasnariaGoogle = function (ev) {
+  if (ev) ev.preventDefault();
+  if (window.__hgBusy) return false;
+  window.__hgBusy = true;
+  var msg = document.getElementById(\"authMsg\");
+  if (msg) msg.textContent = \"Membuka Google…\";
+  window.location.href = window.hasnariaGoogleHref();
+  return false;
+};
+</script>
+<style>
+:root{--g:#176b55;--bd:#d7e2dc;--tx:#15241d;--mu:#66756e;--bg:#f3f6f4;--d:#b43b3b;--w:#92400e;--ws:#fef3c7;--ok:#166534;--okb:#dcfce7;--redb:#fee2e2}
+*{box-sizing:border-box;margin:0;padding:0}body{font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;background:var(--bg);color:var(--tx);line-height:1.45}
+.wrap{max-width:1100px;margin:auto;padding:16px}header{background:#176b55;color:#fff}
+.head{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;padding:16px 0}
+header h1{font-size:20px;font-weight:700;margin:0;color:#fff}header .tagline{font-size:12.5px;color:rgba(255,255,255,.82);margin-top:3px}
+.user-box{display:flex;align-items:center;gap:14px}.user-info{text-align:right}
+.user-info #whoName{font-weight:600;font-size:14.5px;color:#fff}.user-info #whoMeta{font-size:12.5px;color:rgba(255,255,255,.9)}
+#logoutBtn{background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.25);border-radius:999px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;min-height:36px}
+h2{font-size:17px;margin-bottom:12px}.card{background:#fff;border:1px solid var(--bd);border-radius:16px;padding:16px;margin-bottom:14px}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.metric{font-size:22px;font-weight:800;margin-top:4px}.label,.small{font-size:12px;color:var(--mu)}
+.tabs{display:flex;gap:6px;overflow:auto;margin-bottom:14px}
+button{border:0;border-radius:10px;padding:12px 14px;background:#e7eeeb;font-weight:700;cursor:pointer;font-size:13px;min-height:44px}
+button.primary,.tab.on{background:var(--g);color:#fff}.tab{white-space:nowrap;min-height:40px}.hidden{display:none!important}
+.form{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}label{font-size:12px;color:var(--mu);display:block;margin-bottom:4px}
+input,select{width:100%;padding:10px 12px;border:1px solid #d5dfda;border-radius:10px;font:inherit;min-height:44px;background:#fff}
+.auth{min-height:100vh;display:grid;place-items:center;padding:24px;background:radial-gradient(circle at top right,#e3f2ec,#f5f7f6 42%)}
+.auth .card{width:min(430px,100%);padding:28px}.auth-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:18px}
+.note{margin-top:12px;padding:10px;border-radius:10px;background:#f7faf8;font-size:11px;color:var(--mu)}
+.msg{min-height:18px;margin-top:8px;font-size:12px;color:var(--d)}
+table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:8px;border-bottom:1px solid var(--bd);text-align:left;vertical-align:top}
+.warnbox{background:var(--ws);border:1px solid #fde68a;border-radius:12px;padding:12px;font-size:13px;margin-bottom:12px;color:var(--w)}
+.okbox{background:var(--okb);color:var(--ok);border-radius:12px;padding:12px;font-size:13px}
+.redbox{background:var(--redb);color:var(--d);border-radius:12px;padding:12px;font-size:13px;margin-bottom:12px}
+.pend{background:#fff7ed;border:1px solid #fed7aa;border-radius:12px;padding:12px;margin:8px 0}
+.chip{display:inline-block;padding:3px 8px;border-radius:99px;font-size:11px;font-weight:700}
+.chip.g{background:#dcfce7;color:#166534}.chip.y{background:#fef3c7;color:#92400e}.chip.r{background:#fee2e2;color:#b43b3b}
+.check{display:flex;gap:8px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--bd);font-size:13px}
+.check input{width:18px;height:18px;min-height:18px;margin-top:2px}
+.btn-google{display:inline-flex;align-items:center;justify-content:center;gap:12px;width:100%;margin-top:12px;min-height:44px;padding:0 16px;background:#fff;border:1px solid #dadce0;border-radius:4px;color:#3c4043;font-family:Roboto,Arial,sans-serif;font-size:14px;font-weight:500;text-decoration:none;cursor:pointer}
+.btn-google:hover{background:#f8f9fa}.btn-google svg{width:18px;height:18px}
+@media(max-width:800px){.grid,.grid-3,.grid-2,.form{grid-template-columns:1fr}.head{flex-direction:column;align-items:flex-start}}
+#stockMonitor{display:flex;flex-direction:column;gap:14px}
+.stk-monitor h2,.stk-table-card h2,.stk-gauge-title{font-size:16px;letter-spacing:.02em;margin:0 0 6px}
+.stk-form{display:grid;grid-template-columns:1.2fr .9fr .9fr 1.2fr .9fr .7fr;gap:12px;margin-top:14px;padding:12px;border:1px solid var(--bd);border-radius:14px;align-items:start}
+.stk-form .hint{font-size:11px;color:var(--mu);margin-top:4px}
+.stk-buy{border:1.5px solid #176b55;border-radius:12px;padding:8px 10px}
+.stk-buy-row{display:flex;align-items:center;gap:8px}
+.stk-buy-row input{flex:1}.stk-buy .unit{font-size:12px;color:var(--mu)}
+.stk-status{min-height:44px;display:flex;align-items:center}
+.stk-split{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(260px,.9fr);gap:14px;align-items:start}
+.stk-table-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:10px}
+.stk-filters{display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap;margin-top:8px}
+.seg{display:flex;background:#eef3f0;border-radius:10px;padding:3px;gap:2px}
+.seg-btn{min-height:34px;padding:6px 12px;border-radius:8px;background:transparent;font-size:12px}
+.seg-btn.on{background:var(--g);color:#fff}
+.xls{background:#fff;border:1px solid var(--bd);min-height:38px;padding:8px 12px}
+.stk-scroll{overflow:auto}.stk-scroll th{font-size:12px;white-space:nowrap}.th-sub{font-weight:500;color:var(--mu);font-size:11px}
+.stk-pager{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px}
+.stk-pages{display:flex;gap:6px;align-items:center}
+.pg{min-height:34px;min-width:34px;padding:6px 8px;border-radius:8px;background:#fff;border:1px solid var(--bd)}
+.pg.on{background:var(--g);color:#fff;border-color:var(--g)}.pg-dots{color:var(--mu)}
+.stk-gauge-card{text-align:center}.stk-gauge{width:100%;max-width:280px;margin:0 auto}
+.stk-pct{font-size:34px;font-weight:800;color:#166534;margin-top:-8px}.stk-pct-lab{font-weight:700;color:#166534;margin-bottom:6px}
+.stk-leg{text-align:left;border:1px solid var(--bd);border-radius:12px;padding:10px 12px;margin-top:12px;font-size:13px}
+.stk-leg div{display:flex;align-items:center;gap:8px;padding:4px 0}.stk-leg b{margin-left:auto;font-weight:700}
+.dot{width:10px;height:10px;border-radius:99px;display:inline-block}.dot.g{background:#16a34a}.dot.y{background:#f59e0b}.dot.r{background:#ef4444}
+.stk-info{margin-top:12px;background:#eff6ff;color:#1e40af;border-radius:12px;padding:10px 12px;font-size:13px;text-align:left}
+@media(max-width:980px){.stk-form,.stk-split{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div id=\"auth\" class=\"auth\">
+  <div class=\"card\">
+    <div style=\"display:flex;gap:12px;align-items:center;margin-bottom:16px\">
+      <div style=\"width:46px;height:46px;border-radius:13px;background:var(--g);color:#fff;display:grid;place-items:center;font-weight:900\">H</div>
+      <div><b>Hasnaria</b><div class=\"small\">Operating System · Command Center</div></div>
+    </div>
+    <h1>Selamat datang</h1>
+    <p class=\"small\">Masuk dengan akun kerja. User baru menunggu persetujuan Owner.</p>
+    <div style=\"margin-top:18px\"><label>Email</label><input id=\"email\" type=\"email\" autocomplete=\"email\"></div>
+    <div style=\"margin-top:10px\"><label>Password</label><input id=\"password\" type=\"password\" autocomplete=\"current-password\"></div>
+    <div class=\"auth-actions\">
+      <button class=\"primary\" id=\"loginBtn\" type=\"button\">Masuk</button>
+      <button id=\"signupBtn\" type=\"button\">Daftar</button>
+    </div>
+    <a class=\"btn-google\" id=\"googleBtn\" href=\"#\" onclick=\"return hasnariaGoogle(event)\">
+      <svg viewBox=\"0 0 48 48\" xmlns=\"http://www.w3.org/2000/svg\"><path fill=\"#EA4335\" d=\"M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z\"/><path fill=\"#4285F4\" d=\"M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z\"/><path fill=\"#FBBC05\" d=\"M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z\"/><path fill=\"#34A853\" d=\"M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z\"/></svg>
+      Masuk dengan Google
+    </a>
+    <button id=\"resetBtn\" type=\"button\" style=\"width:100%;margin-top:8px;background:transparent;border:1px solid var(--bd);color:var(--mu);min-height:40px\">Lupa password?</button>
+    <p class=\"msg\" id=\"authMsg\"></p>
+    <div class=\"note\">Gunakan alamat live Hasnaria, bukan localhost.</div>
+  </div>
+</div>
+<div id=\"pending\" class=\"auth hidden\">
+  <div class=\"card\" style=\"text-align:center\">
+    <h1>Menunggu Owner</h1>
+    <p class=\"small\" id=\"pendingEmail\" style=\"margin:12px 0\"></p>
+    <p class=\"small\">Akun sudah masuk, belum diberi wewenang.</p>
+    <button class=\"primary\" id=\"pendingOut\" type=\"button\" style=\"margin-top:16px\">Keluar</button>
+  </div>
+</div>
+<div id=\"app\" class=\"hidden\">
+  <header>
+    <div class=\"wrap head\">
+      <div><h1>Hasnaria OS</h1><div class=\"tagline\">Masalah → aturan → PIC → tindakan → laporan → evaluasi</div></div>
+      <div class=\"user-box\"><div class=\"user-info\"><div id=\"whoName\"></div><div id=\"whoMeta\"></div></div><button id=\"logoutBtn\" type=\"button\">Keluar</button></div>
+    </div>
+  </header>
+  <main class=\"wrap\"><div class=\"tabs\" id=\"tabs\"></div><section id=\"dashboard\"></section><section id=\"sales\" class=\"hidden\"></section><section id=\"ops\" class=\"hidden\"></section><section id=\"stok\" class=\"hidden\"></section><section id=\"shift\" class=\"hidden\"></section><section id=\"social\" class=\"hidden\"></section><section id=\"approval\" class=\"hidden\"></section><section id=\"team\" class=\"hidden\"></section><section id=\"sistem\" class=\"hidden\"></section></main>
+</div>
+<script src=\"/app.js?v=p017\"></script>
+<script>
+(function () {
+  var btn = document.getElementById(\"resetBtn\");
+  if (!btn) return;
+  btn.addEventListener(\"click\", async function () {
+    var email = (document.getElementById(\"email\").value || \"\").trim();
+    var msg = document.getElementById(\"authMsg\");
+    if (!email) { if (msg) msg.textContent = \"Isi email dulu untuk reset password.\"; return; }
+    if (typeof supabase === \"undefined\") { if (msg) msg.textContent = \"Pustaka login belum siap.\"; return; }
+    if (msg) msg.textContent = \"Mengirim tautan reset…\";
+    try {
+      var client = supabase.createClient(window.HASNARIA_SB, window.HASNARIA_KEY, {
+        auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false, storageKey: \"hasnaria-reset\" }
+      });
+      var r = await client.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname });
+      if (msg) msg.textContent = r.error ? r.error.message : \"Cek email untuk reset password.\";
+    } catch (e) {
+      if (msg) msg.textContent = e.message || \"Reset gagal.\";
+    }
+  });
+})();
+</script>
+</body>
+</html>
