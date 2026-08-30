@@ -15,18 +15,6 @@
       });
     });
   }
-  function hideSalesFooter() {
-    var host = document.getElementById('sales');
-    if (!host) return;
-    Array.prototype.forEach.call(host.querySelectorAll('div,p,span,small,footer'), function (el) {
-      var text = (el.textContent || '').replace(/\s+/g, ' ').trim();
-      if (text.indexOf('Data dashboard hanya berasal dari tabel') !== -1 &&
-          text.indexOf('daily_metrics') !== -1 &&
-          text.indexOf('Form omzet + kas harian tetap ada di bawah dashboard ini.') !== -1) {
-        el.style.display = 'none';
-      }
-    });
-  }
   function injectStyle() {
     if (document.getElementById('hasnaria-sales-layout-style')) return;
     var s = document.createElement('style'); s.id = 'hasnaria-sales-layout-style';
@@ -64,7 +52,7 @@
     board.style.transform='none'; board.style.maxHeight='none'; board.style.height='auto'; board.style.overflow='visible';
     host.style.maxHeight='none'; host.style.height='auto'; host.style.overflow='visible';
   }
-  function run(){injectStyle();hideSalesPanels();requestAnimationFrame(function(){removeWorstEverywhere();hideSalesFooter();fit();});}
+  function run(){injectStyle();hideSalesPanels();requestAnimationFrame(function(){removeWorstEverywhere();fit();});}
   function start(){run();new MutationObserver(run).observe(document.body,{childList:true,subtree:true});window.addEventListener('resize',run);timer=setInterval(run,800);}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
 })();
