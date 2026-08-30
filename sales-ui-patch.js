@@ -9,7 +9,7 @@
 #sales{width:100%!important;min-width:0;overflow:visible!important}
 #sales > *:not(.sale-board){display:none!important}
 #sales .sale-board,#sales .sb-wrap{width:100%!important;max-width:none!important;min-width:0!important;margin:0!important}
-#sales .sb-wrap{padding:10px 14px 10px!important}
+#sales .sb-wrap{padding:4px 14px 6px!important}
 #sales .sb-live-note,#sales .sb-legacy-note,#sales .sb-import{display:none!important}
 #sales .sb-grid-main{display:grid!important;grid-template-columns:minmax(0,1.7fr) minmax(260px,.82fr)!important;gap:10px!important;align-items:stretch}
 #sales .sales-right-stack{display:flex!important;flex-direction:column!important;gap:10px!important;min-width:0;height:100%}
@@ -17,10 +17,10 @@
 #sales .sales-right-stack .sb-card h3{margin:0!important;font-size:13px!important}
 #sales .sales-right-stack .sb-bars{margin-top:4px!important;flex:1}
 #sales .sales-right-stack .sb-bar-row{margin:5px 0!important}
-#sales .sb-kpis{width:100%;min-width:0;margin-top:8px!important}
+#sales .sb-kpis{width:100%;min-width:0;margin-top:5px!important}
 #sales .sb-card{min-width:0;overflow:hidden}
 #sales .sb-trend{display:flex;flex-direction:column}
-#sales .sb-trend .sb-chart{width:100%!important;max-width:100%!important;margin:4px 0 0!important;flex:1}
+#sales .sb-trend .sb-chart{width:100%!important;max-width:100%!important;margin:2px 0 0!important;flex:1}
 @media(max-width:900px){#sales .sb-grid-main{grid-template-columns:1fr!important}}
 `;
     document.head.appendChild(s);
@@ -49,18 +49,23 @@
       if (text.indexOf('Form omzet + kas harian tetap ada') === 0) el.style.display = 'none';
     });
   }
+  function removeWorst() {
+    var host = document.getElementById('sales');
+    if (!host) return;
+    Array.prototype.forEach.call(host.querySelectorAll('.sb-card'), function (card) {
+      var h = card.querySelector('h3');
+      if (h && (h.textContent || '').replace(/\s+/g, ' ').trim() === '5 Worst Performer (Qty)') card.remove();
+    });
+  }
   function stackRight() {
     var host = document.getElementById('sales');
     if (!host || host.classList.contains('hidden')) return;
-    var top = null, worst = null;
+    var top = null;
     Array.prototype.forEach.call(host.querySelectorAll('.sb-card'), function (card) {
       var h = card.querySelector('h3');
-      if (!h) return;
-      var t = (h.textContent || '').replace(/\s+/g, ' ').trim();
-      if (t === 'Top 5 Seller (Qty)') top = card;
-      if (t === '5 Worst Performer (Qty)') worst = card;
+      if (h && (h.textContent || '').replace(/\s+/g, ' ').trim() === 'Top 5 Seller (Qty)') top = card;
     });
-    if (!top || !worst) return;
+    if (!top) return;
     var firstGrid = top.closest('.sb-grid-main') || host.querySelector('.sb-grid-main');
     if (!firstGrid) return;
     var stack = firstGrid.querySelector('.sales-right-stack');
@@ -72,11 +77,6 @@
       else firstGrid.appendChild(stack);
     }
     if (top.parentElement !== stack) stack.appendChild(top);
-    if (worst.parentElement !== stack) stack.appendChild(worst);
-    Array.prototype.forEach.call(host.querySelectorAll('.sb-grid-main'), function (grid) {
-      if (grid === firstGrid) return;
-      if (!grid.querySelector('.sb-trend') && !grid.querySelector('.sales-right-stack')) grid.style.display = 'none';
-    });
   }
   function hideLeftover() {
     var host = document.getElementById('sales');
@@ -101,6 +101,7 @@
     injectStyle();
     hideSalesPanels();
     hideFooterOnly();
+    removeWorst();
     hideLeftover();
     stackRight();
     fitOneView();
