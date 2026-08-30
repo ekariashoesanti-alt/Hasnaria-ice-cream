@@ -5,7 +5,7 @@
   var KEY = window.HASNARIA_KEY;
   var BRAND = 'a36d4b4f-3ccc-4a78-8aeb-b868f0407ea4';
   var PAGE = 10;
-  var S = { items: [], buys: {}, selected: null, page: 1, mode: 'period', loading: false };
+  var S = { items: [], buys: {}, selected: null, page: 1, mode: 'period', view: 'buy', loading: false };
 
   function tok() {
     for (var i = 0; i < localStorage.length; i++) {
@@ -158,9 +158,8 @@
     a.remove();
   }
   function css() {
-    if (document.getElementById('stk-css')) return;
-    var s = document.createElement('style');
-    s.id = 'stk-css';
+    var s = document.getElementById('stk-css');
+    if (!s) { s = document.createElement('style'); s.id = 'stk-css'; document.head.appendChild(s); }
     s.textContent =
       'html:has(#stok:not(.hidden)),body:has(#stok:not(.hidden)){height:100%;overflow:hidden}' +
       '#app:has(#stok:not(.hidden)){height:100dvh;max-height:100dvh;overflow:hidden;display:flex;flex-direction:column}' +
@@ -207,10 +206,14 @@
       '.stk-legend{margin-top:8px;border:1px solid #e4ebe8;border-radius:12px;padding:8px 10px;background:#fff}' +
       '.stk-leg{display:flex;justify-content:space-between;padding:4px 0;font-size:12px}.stk-dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:8px}' +
       '.stk-note{margin-top:8px;padding:8px 10px;border:1px solid #bfd6f5;background:#f3f8ff;border-radius:12px;color:#1e4b8c;font-size:12px}' +
-      '@media(max-width:1100px){html:has(#stok:not(.hidden)),body:has(#stok:not(.hidden)),#app:has(#stok:not(.hidden)){height:auto;max-height:none;overflow:auto}#stok:not(.hidden),.stk-wrap,.stk-left,.stk-grid{overflow:visible;height:auto;max-height:none;flex:none}.stk-form{grid-template-columns:1fr 1fr}.stk-buy{grid-column:1/-1}.stk-save{width:100%;height:40px;margin-top:0;grid-column:1/-1}.stk-grid{grid-template-columns:1fr}.stk-xls{margin-left:0}}' +
+      '.stk-tabs{flex:0 0 auto;display:flex;gap:8px;flex-wrap:wrap;margin:2px 0 10px}' +
+      '.stk-tab{height:36px;padding:0 14px;border:1px solid #d7e0dc;background:#fff;color:#374151;border-radius:10px;font-weight:700;font-size:13px;cursor:pointer;min-height:36px}' +
+      '.stk-tab.on{background:#176b55;color:#fff;border-color:#176b55}' +
+      '.stk-pane{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;overflow:hidden}' +
+      '.stk-pane-buy{justify-content:flex-start}' +
+      '@media(max-width:1100px){html:has(#stok:not(.hidden)),body:has(#stok:not(.hidden)),#app:has(#stok:not(.hidden)){height:auto;max-height:none;overflow:auto}#stok:not(.hidden),.stk-wrap,.stk-left,.stk-grid,.stk-pane{overflow:visible;height:auto;max-height:none;flex:none}.stk-form{grid-template-columns:1fr 1fr}.stk-buy{grid-column:1/-1}.stk-save{width:100%;height:40px;margin-top:0;grid-column:1/-1}.stk-grid{grid-template-columns:1fr}.stk-xls{margin-left:0}}' +
       '@media(max-width:700px){.stk-form{grid-template-columns:1fr}}';
 
-    document.head.appendChild(s);
   }
   function chip(l) {
     return '<span class="stk-chip ' + (l === 'ok' ? 'stk-ok' : l === 'order' ? 'stk-order' : 'stk-critical') + '">' + (l === 'ok' ? 'Aman' : l === 'order' ? 'Perlu Order' : 'Kritis') + '</span>';
@@ -237,7 +240,12 @@
     S.drawing = true;
     var st = stats(), it = S.items.find(function (x) { return x.id === S.selected; }) || S.items[0];
     var last = Math.max(1, Math.ceil(S.items.length / PAGE));
+    var view = S.view === 'cmp' ? 'cmp' : 'buy';
     var html = '<div class="stk-wrap"><h2>MONITORING STOK MINIMUM</h2><p class="stk-sub">Bukan “kalau habis baru beli”. Sampai minimum → PIC order angka Order.</p>';
+    html += '<div class="stk-tabs">' +
+      '<button type="button" class="stk-tab' + (view === 'buy' ? ' on' : '') + '" data-stk-view="buy">Input Pembelian</button>' +
+      '<button type="button" class="stk-tab' + (view === 'cmp' ? ' on' : '') + '" data-stk-view="cmp">Perbandingan Stok per Periode</button>' +
+      '</div>';
     if (err) {
       host.innerHTML = html + '<div class="stk-form" style="color:#b42318">' + esc(err) + '</div></div>';
       S.drawing = false;
@@ -249,17 +257,23 @@
       return;
     }
     var buy = S.buys[it ? it.id : ''] || '';
-    html += '<div class="stk-form">' +
-      '<div><label>Pilih produk</label><select id="stkPick">' +
-      S.items.map(function (x) { return '<option value="' + x.id + '"' + (it && x.id === it.id ? ' selected' : '') + '>' + esc(x.display) + '</option>'; }).join('') +
-      '</select></div>' +
-      '<div><label>Stok Saat Ini (Qty)</label><input value="' + n(it ? current(it) : null) + '" disabled><div class="stk-hint">(Per ' + todayLabel() + ')</div></div>' +
-      '<div><label>Minimum (Min)</label><input value="' + n(it ? it.min : null) + '" disabled><div class="stk-hint">(Dari data historis)</div></div>' +
-      '<div class="stk-buy"><label>Jumlah barang yang dibeli</label><div class="stk-buy-row"><input id="stkBuy" type="number" min="0" step="1" value="' + esc(buy === '' || buy == null ? '0' : String(buy)) + '" placeholder="0"><span class="unit">' + esc(it ? unit(it) : 'pcs') + '</span></div><div class="stk-hint">Masukkan jumlah barang yang dibeli hari ini</div></div>' +
-      '<div class="stk-buy"><label>Harga beli satuan</label><div class="stk-buy-row"><span class="unit">Rp</span><input id="stkBuyPrice" type="number" min="0" step="1" placeholder="0"><span class="unit">/ pcs</span></div><div class="stk-hint">Masukkan harga beli satuan per pcs</div></div>' +
-      '<button type="button" class="stk-save" id="stkSave">SIMPAN</button>' +
-      '</div>';
-    html += '<div class="stk-grid"><div class="stk-left"><h3>Perbandingan Stok per Periode</h3>' +
+    if (view === 'buy') {
+      html += '<div class="stk-pane stk-pane-buy"><div class="stk-form">' +
+        '<div><label>Pilih produk</label><select id="stkPick">' +
+        S.items.map(function (x) { return '<option value="' + x.id + '"' + (it && x.id === it.id ? ' selected' : '') + '>' + esc(x.display) + '</option>'; }).join('') +
+        '</select></div>' +
+        '<div><label>Stok Saat Ini (Qty)</label><input value="' + n(it ? current(it) : null) + '" disabled><div class="stk-hint">(Per ' + todayLabel() + ')</div></div>' +
+        '<div><label>Minimum (Min)</label><input value="' + n(it ? it.min : null) + '" disabled><div class="stk-hint">(Dari data historis)</div></div>' +
+        '<div class="stk-buy"><label>Jumlah barang yang dibeli</label><div class="stk-buy-row"><input id="stkBuy" type="number" min="0" step="1" value="' + esc(buy === '' || buy == null ? '0' : String(buy)) + '" placeholder="0"><span class="unit">' + esc(it ? unit(it) : 'pcs') + '</span></div><div class="stk-hint">Masukkan jumlah barang yang dibeli hari ini</div></div>' +
+        '<div class="stk-buy"><label>Harga beli satuan</label><div class="stk-buy-row"><span class="unit">Rp</span><input id="stkBuyPrice" type="number" min="0" step="1" placeholder="0"><span class="unit">/ pcs</span></div><div class="stk-hint">Masukkan harga beli satuan per pcs</div></div>' +
+        '<button type="button" class="stk-save" id="stkSave">SIMPAN</button>' +
+        '</div></div></div>';
+      host.innerHTML = html;
+      bind();
+      setTimeout(function () { S.drawing = false; }, 0);
+      return;
+    }
+    html += '<div class="stk-pane"><div class="stk-grid"><div class="stk-left">' +
       '<div class="stk-filters"><div><label>Lihat berdasarkan</label><div class="stk-seg"><button type="button" class="' + (S.mode === 'period' ? 'on' : '') + '" data-mode="period">Periode</button><button type="button" class="' + (S.mode === 'date' ? 'on' : '') + '" data-mode="date">Per Tanggal</button></div></div>' +
       '<div><label>Periode</label><select id="stkPeriod" class="stk-period"><option value="2026-07">Juli 2026</option></select></div>' +
       '<button type="button" class="stk-xls" id="stkExport">Export Excel</button></div><div class="stk-scroll"><table class="stk-table"><thead><tr>' +
@@ -283,12 +297,18 @@
       '<div class="stk-legend"><div class="stk-leg"><span><i class="stk-dot" style="background:#22c55e"></i>Aman (&gt;= Min)</span><b>' + st.ok + ' item (' + st.pct.toFixed(1) + '%)</b></div>' +
       '<div class="stk-leg"><span><i class="stk-dot" style="background:#f59e0b"></i>Perlu Order</span><b>' + st.order + ' item (' + orderPct + '%)</b></div>' +
       '<div class="stk-leg"><span><i class="stk-dot" style="background:#ef4444"></i>Kritis</span><b>' + st.crit + ' item (' + critPct + '%)</b></div></div>' +
-      '<div class="stk-note">Semakin tinggi persentase, semakin aman kecukupan stok Anda.</div></div></div></div>';
+      '<div class="stk-note">Semakin tinggi persentase, semakin aman kecukupan stok Anda.</div></div></div></div></div>';
     host.innerHTML = html;
     bind();
     setTimeout(function () { S.drawing = false; }, 0);
   }
   function bind() {
+    document.querySelectorAll('#stok [data-stk-view]').forEach(function (x) {
+      x.onclick = function () {
+        S.view = x.getAttribute('data-stk-view') || 'buy';
+        render();
+      };
+    });
     var p = document.getElementById('stkPick');
     if (p) p.onchange = function () {
       S.selected = this.value;
