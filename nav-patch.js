@@ -42,7 +42,7 @@
       #app > main.wrap { max-width: 1200px; padding-top: 18px; }
 
       /* Penjualan: dipadatkan agar dashboard utuh dan nyaman pada browser zoom 100%. */
-      #sales .sb-wrap { padding: 14px 16px 16px; margin-bottom: 10px; border-radius: 14px; }
+      #sales .sb-wrap { padding: 10px 14px 10px; margin-bottom: 0; border-radius: 14px; }
       #sales .sb-head { gap: 10px; }
       #sales .sb-head h2 { font-size: 20px; margin: 2px 0; }
       #sales .sb-head p { font-size: 11px; }
@@ -71,9 +71,9 @@
       #sales .sb-bar-track { height: 7px; margin-top: 5px; }
       #sales .sb-import-copy { margin-top: 6px; padding: 8px 10px; font-size: 10px; }
       #sales .sb-import-copy p { margin-top: 3px; }
-      #sales .sb-import .sb-actions { margin-top: 7px; }
-      #sales .sb-live-note { margin-top: 9px; padding: 7px 9px; font-size: 9.5px; }
-      #sales .sb-legacy-note { margin-top: 5px; font-size: 10px; }
+      #sales .sb-import, #sales .sb-live-note, #sales .sb-legacy-note { display: none !important; }
+      #sales .sales-right-stack { display: flex; flex-direction: column; gap: 10px; }
+      #sales .sales-right-stack .sb-card { padding: 10px 11px; }
       @media (min-width: 901px) and (min-height: 760px) {
         #sales .sb-grid-main { grid-template-columns: minmax(0,1.7fr) minmax(280px,.8fr); }
       }
