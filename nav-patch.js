@@ -16,54 +16,39 @@
     var head = header && header.querySelector('.head');
     var tabs = document.getElementById('tabs');
     if (!head || !tabs) return;
-
-    if (tabs.parentElement !== head) {
-      head.insertBefore(tabs, head.querySelector('.user-box') || null);
-    }
-
+    if (tabs.parentElement !== head) head.insertBefore(tabs, head.querySelector('.user-box') || null);
     tabs.classList.add('hasnaria-header-nav');
-    styleButtons();
   }
 
   function styleButtons() {
     var tabs = document.getElementById('tabs');
     if (!tabs) return;
-
     Array.prototype.forEach.call(tabs.querySelectorAll('.tab'), function (button) {
       var id = button.getAttribute('data-tab');
-      if (LABELS[id]) {
-        button.textContent = LABELS[id];
-        button.setAttribute('aria-label', LABELS[id]);
+      var label = LABELS[id];
+      if (label) {
+        if (button.textContent !== label) button.textContent = label;
+        button.setAttribute('aria-label', label);
         button.style.display = '';
       } else {
         button.style.display = 'none';
       }
     });
-
-    Array.prototype.forEach.call(tabs.querySelectorAll('.tab'), function (button) {
-      if (button.__hasnariaCompoundBound) return;
-      var id = button.getAttribute('data-tab');
-      if (id !== 'shift' && id !== 'ops') return;
-      button.__hasnariaCompoundBound = true;
-      button.addEventListener('click', function () {
-        setTimeout(function () {
-          syncCompound(id);
-        }, 0);
-        setTimeout(function () {
-          syncCompound(id);
-        }, 80);
-      });
-    });
   }
 
-  function syncCompound(active) {
+  function syncGroupedContent() {
+    var active = document.querySelector('#tabs .tab.on');
+    var id = active && active.getAttribute('data-tab');
     var team = document.getElementById('team');
     var approval = document.getElementById('approval');
-    if (active === 'shift') {
+    if (id === 'shift') {
       if (team) team.classList.remove('hidden');
       if (approval) approval.classList.add('hidden');
-    } else if (active === 'ops') {
+    } else if (id === 'ops') {
       if (approval) approval.classList.remove('hidden');
+      if (team) team.classList.add('hidden');
+    } else {
+      if (approval) approval.classList.add('hidden');
       if (team) team.classList.add('hidden');
     }
   }
@@ -99,10 +84,7 @@
         display: flex;
         align-items: center;
       }
-      #app > header .brand-logo {
-        height: 42px;
-        width: auto;
-      }
+      #app > header .brand-logo { height: 42px; width: auto; }
       #app > header .tagline { display: none; }
       #app > header .hasnaria-header-nav {
         grid-column: 2;
@@ -139,15 +121,8 @@
         gap: 10px;
       }
       #app > header .user-info { text-align: right; }
-      #app > header .user-info #whoName {
-        color: #171a20;
-        font-size: 13px;
-        font-weight: 600;
-      }
-      #app > header .user-info #whoMeta {
-        color: #5c5e62;
-        font-size: 11px;
-      }
+      #app > header .user-info #whoName { color: #171a20; font-size: 13px; font-weight: 600; }
+      #app > header .user-info #whoMeta { color: #5c5e62; font-size: 11px; }
       #app > header #logoutBtn {
         min-height: 36px;
         padding: 7px 13px;
@@ -158,10 +133,7 @@
         font-size: 13px;
         font-weight: 600;
       }
-      #app > main.wrap {
-        max-width: 1200px;
-        padding-top: 24px;
-      }
+      #app > main.wrap { max-width: 1200px; padding-top: 24px; }
       @media (max-width: 900px) {
         #app > header .head {
           grid-template-columns: 1fr auto;
@@ -194,21 +166,15 @@
     injectStyle();
     moveNav();
     styleButtons();
+    syncGroupedContent();
   }
-
-  var observer = new MutationObserver(function () {
-    run();
-  });
 
   function start() {
     run();
-    observer.observe(document.body, { childList: true, subtree: true });
+    new MutationObserver(function () { run(); }).observe(document.body, { childList: true, subtree: true });
     setInterval(run, 1000);
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', start);
-  } else {
-    start();
-  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
+  else start();
 })();
