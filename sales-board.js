@@ -133,9 +133,42 @@
   }
   function previousFor(w) {
     if (!w.start || !w.end) return { start: '', end: '' };
-    var n = daysBetween(w.start, w.end) + 1;
-    var end = addDays(w.start, -1);
-    return { start: addDays(end, -(n - 1)), end: end };
+    if (STATE.mode === 'monthly') {
+      var y = String(Number(w.start.slice(0, 4)) - 1);
+      return { start: y + '-01-01', end: y + '-12-31' };
+    }
+    var ym = (STATE.viewMonth || w.start.slice(0, 7));
+    var y = Number(ym.slice(0, 4)), mo = Number(ym.slice(5, 7)) - 1;
+    if (mo < 1) { mo = 12; y -= 1; }
+    var pym = y + '-' + String(mo).padStart(2, '0');
+    return { start: pym + '-01', end: lastDayOfMonth(pym) };
+  }
+  function monthOfView() {
+    if (STATE.viewMonth) return STATE.viewMonth;
+    if (STATE.viewFrom) return STATE.viewFrom.slice(0, 7);
+    var months = monthsInData();
+    return months.length ? months[months.length - 1] : '';
+  }
+  function weekOfMonth(iso) {
+    var d = Number(String(iso).slice(8, 10));
+    if (!d) return 1;
+    return Math.min(5, Math.ceil(d / 7));
+  }
+  function lastWeekOfMonth(ym) {
+    return Number(lastDayOfMonth(ym).slice(8, 10)) > 28 ? 5 : 4;
+  }
+  function applyModeWindow() {
+    var ym = monthOfView();
+    if (!ym) return;
+    if (STATE.mode === 'monthly') {
+      var y = ym.slice(0, 4);
+      STATE.viewFrom = y + '-01-01';
+      STATE.viewTo = y + '-12-31';
+    } else {
+      STATE.viewFrom = ym + '-01';
+      STATE.viewTo = lastDayOfMonth(ym);
+      STATE.viewMonth = ym;
+    }
   }
   function daysBetween(a, b) { return Math.max(0, Math.round((isoFromDateOnly(b) - isoFromDateOnly(a)) / 86400000)); }
   function pickDate(rows) {
@@ -197,16 +230,40 @@
     return Object.keys(map).map(function (k) { return { name: k, qty: map[k] }; }).sort(function (a,b) { return b.qty - a.qty; });
   }
   function groupTrend(rows, mode) {
-    var map = {};
+    var IDM = ['','Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+    if (mode === 'weekly') {
+      var ym = monthOfView();
+      var lastW = ym ? lastWeekOfMonth(ym) : 5;
+      var map = {};
+      for (var w = 1; w <= lastW; w++) map['w' + w] = { key: 'w' + w, label: 'Minggu ' + w, omzet: 0, trx: 0, days: 0 };
+      rows.forEach(function (r) {
+        var wk = weekOfMonth(r.metric_date);
+        var g = map['w' + wk]; if (!g) return;
+        g.omzet += r.cash_revenue; g.trx += r.transactions; g.days += 1;
+      });
+      return Object.keys(map).sort().map(function (k) { return map[k]; });
+    }
+    if (mode === 'monthly') {
+      var y = (STATE.viewFrom || monthOfView() || '').slice(0, 4);
+      var mapM = {};
+      for (var m = 1; m <= 12; m++) {
+        var ym2 = y + '-' + String(m).padStart(2, '0');
+        mapM[ym2] = { key: ym2, label: IDM[m], omzet: 0, trx: 0, days: 0 };
+      }
+      rows.forEach(function (r) {
+        var key = monthStart(r.metric_date);
+        var g = mapM[key]; if (!g) return;
+        g.omzet += r.cash_revenue; g.trx += r.transactions; g.days += 1;
+      });
+      return Object.keys(mapM).sort().map(function (k) { return mapM[k]; });
+    }
+    var mapD = {};
     rows.forEach(function (r) {
       var key = r.metric_date;
-      var label = key;
-      if (mode === 'weekly') { key = startOfWeek(r.metric_date); label = 'Minggu ' + key.slice(8) + '/' + key.slice(5,7); }
-      if (mode === 'monthly') { key = monthStart(r.metric_date); label = key.slice(5,7) + '/' + key.slice(0,4); }
-      if (!map[key]) map[key] = { key: key, label: label, omzet: 0, trx: 0, days: 0 };
-      map[key].omzet += r.cash_revenue; map[key].trx += r.transactions; map[key].days += 1;
+      if (!mapD[key]) mapD[key] = { key: key, label: key.slice(8, 10) + '/' + key.slice(5, 7), omzet: 0, trx: 0, days: 0 };
+      mapD[key].omzet += r.cash_revenue; mapD[key].trx += r.transactions; mapD[key].days += 1;
     });
-    return Object.keys(map).sort().map(function (k) { return map[k]; });
+    return Object.keys(mapD).sort().map(function (k) { return mapD[k]; });
   }
   function statsFor(rows) {
     var omzet = rows.reduce(function (a,r) { return a + r.cash_revenue; }, 0);
@@ -264,6 +321,9 @@
       STATE.draw = false; bind(); return;
     }
     ensureView();
+    var vsLab = STATE.mode === 'monthly' ? 'vs tahun lalu' : 'vs bulan lalu';
+    var trendLab = STATE.mode === 'monthly' ? 'Januari–Desember tahun yang sama' : (STATE.mode === 'weekly' ? 'Minggu 1–5 di bulan yang sama (tgl 1–akhir)' : 'Harian di bulan yang dipilih');
+    var skuLab = STATE.mode === 'monthly' ? 'Produk pada tahun yang sama' : (STATE.mode === 'weekly' ? 'Produk pada bulan yang sama' : 'Produk pada periode aktif');
     var active = selectedWindow(), prev = previousFor(active);
     var ar = rangeRows(active), pr = rangeRows(prev), a = statsFor(ar), p = statsFor(pr);
     var trend = groupTrend(ar, STATE.mode), sku = aggregateSku(ar), top = sku.slice(0,5), worst = sku.slice().reverse().slice(0,5);
@@ -279,13 +339,13 @@
       '<label>Sampai <input id="sbTo" type="date" value="' + esc(STATE.viewTo) + '" min="' + esc(mm.min) + '" max="' + esc(mm.max) + '"></label>' +
       '<span>' + esc(active.start) + ' s/d ' + esc(active.end) + ' · ' + ar.length + ' hari</span></div><div class="sb-toggle">' + ['daily','weekly','monthly'].map(function(m){var t=m==='daily'?'Harian':m==='weekly'?'Mingguan':'Bulanan';return '<button type="button" class="'+(STATE.mode===m?'on':'')+'" data-mode="'+m+'">'+t+'</button>';}).join('') + '</div></div>';
     html += '<div class="sb-kpis">' +
-      kpiCard('Omzet', money(a.omzet), percent(a.omzet,p.omzet) + ' vs periode sebelumnya', pctClass(a.omzet,p.omzet)) +
-      kpiCard('Jumlah transaksi', a.trx.toLocaleString('id-ID'), percent(a.trx,p.trx) + ' vs periode sebelumnya', pctClass(a.trx,p.trx)) +
-      kpiCard('ATV / nota', money(a.atv), percent(a.atv,p.atv) + ' vs periode sebelumnya', pctClass(a.atv,p.atv)) +
-      kpiCard('Hari tercatat', a.days.toLocaleString('id-ID'), 'periode sebelumnya: ' + p.days + ' hari', '') + '</div>';
-    html += '<div class="sb-grid-main"><section class="sb-card sb-trend"><div class="sb-card-head"><div><h3>Tren Omzet</h3><span>Agregasi sesuai toggle periode aktif</span></div></div>' + lineChart(trend) + '</section>';
-    html += '<section class="sb-card"><div class="sb-card-head"><div><h3>Top 5 Seller (Qty)</h3><span>Produk terlaris pada periode aktif</span></div></div>' + barList(top) + '</section></div>';
-    html += '<div class="sb-grid-main"><section class="sb-card"><div class="sb-card-head"><div><h3>5 Worst Performer (Qty)</h3><span>Produk dengan qty terendah</span></div></div>' + barList(worst) + '</section>';
+      kpiCard('Omzet', money(a.omzet), percent(a.omzet,p.omzet) + ' ' + vsLab, pctClass(a.omzet,p.omzet)) +
+      kpiCard('Jumlah transaksi', a.trx.toLocaleString('id-ID'), percent(a.trx,p.trx) + ' ' + vsLab, pctClass(a.trx,p.trx)) +
+      kpiCard('ATV / nota', money(a.atv), percent(a.atv,p.atv) + ' ' + vsLab, pctClass(a.atv,p.atv)) +
+      kpiCard('Hari tercatat', a.days.toLocaleString('id-ID'), 'pembanding: ' + p.days + ' hari', '') + '</div>';
+    html += '<div class="sb-grid-main"><section class="sb-card sb-trend"><div class="sb-card-head"><div><h3>Tren Omzet</h3><span>' + esc(trendLab) + '</span></div></div>' + lineChart(trend) + '</section>';
+    html += '<section class="sb-card"><div class="sb-card-head"><div><h3>Top 5 Seller (Qty)</h3><span>' + esc(skuLab) + '</span></div></div>' + barList(top) + '</section></div>';
+    html += '<div class="sb-grid-main"><section class="sb-card"><div class="sb-card-head"><div><h3>5 Worst Performer (Qty)</h3><span>' + esc(skuLab) + '</span></div></div>' + barList(worst) + '</section>';
     html += '<section class="sb-card sb-import"><div class="sb-card-head"><div><h3>Update dari Majoo</h3><span>Upload laporan untuk mengganti data produk per tanggal tanpa menambah duplikat</span></div></div>' +
       '<div class="sb-import-copy"><b>Format diterima</b><div>.csv · .xlsx · .xls · .txt</div><p>Kenali ekspor Majoo: Penjualan Per Periode (Periode, Penjualan, Total Transaksi) dan Penjualan Produk (Produk, SKU, Jumlah, Penjualan Rp).</p></div>' + renderImportBlock() + (STATE.msg ? '<div class="sb-ok">' + esc(STATE.msg) + '</div>' : '') + '</section></div>';
     html += '<div class="sb-live-note">Data dashboard hanya berasal dari tabel <b>daily_metrics</b>. Import Majoo melakukan upsert berdasarkan <b>brand_id + tanggal</b>, mengganti tag SKU pada tanggal yang sama dan mempertahankan tag PAY yang sudah ada bila data pembayaran tidak tersedia.</div>';
@@ -294,7 +354,7 @@
   }
   function bind() {
     var host = document.getElementById('sales'); if (!host) return;
-    host.querySelectorAll('[data-mode]').forEach(function (b) { b.onclick = function () { STATE.mode = b.getAttribute('data-mode'); draw(); }; });
+    host.querySelectorAll('[data-mode]').forEach(function (b) { b.onclick = function () { STATE.mode = b.getAttribute('data-mode'); applyModeWindow(); draw(); }; });
     host.querySelectorAll('#sbFormat').forEach(function (b) { b.onclick = function () { alert('Pakai Laporan Penjualan Per Periode (judul Majoo boleh ada). Kolom Periode + Penjualan. Satu file boleh banyak bulan; data lama tidak dihapus.'); }; });
     host.querySelectorAll('#sbFile').forEach(function (input) { input.onchange = function () { if (input.files && input.files[0]) importFile(input.files[0]); }; });
     var monthEl = host.querySelector('#sbMonth'), fromEl = host.querySelector('#sbFrom'), toEl = host.querySelector('#sbTo');
@@ -305,8 +365,8 @@
         var mm = dataMinMax();
         STATE.viewFrom = mm.min; STATE.viewTo = mm.max;
       } else {
-        STATE.viewFrom = ym + '-01';
-        STATE.viewTo = lastDayOfMonth(ym);
+        STATE.viewMonth = ym;
+        applyModeWindow();
       }
       draw();
     };
