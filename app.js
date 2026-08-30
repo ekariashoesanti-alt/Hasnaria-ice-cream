@@ -1,7 +1,7 @@
 (function () {
   'use strict';
   var CORE = 'https://cdn.jsdelivr.net/gh/ekariashoesanti-alt/Hasnaria-ice-cream@864e0349d18a56ef997216a89661deacf9a8c24a/app.js';
-  var STOCK = '/stock-monitor.js?v=14';
+  var STOCK = '/stock-monitor.js?v=15';
   var SALES = '/sales-board.js?v=6';
   function load(src, done) {
     var s = document.createElement('script'); s.src = src; s.async = false;
@@ -14,7 +14,7 @@
     var form = host.querySelector('.stk-form');
     if (form) { form.style.minWidth = '0'; form.style.maxWidth = '100%'; }
     var qty = host.querySelector('#stkBuy'), qtyUnit = qty && qty.parentElement ? qty.parentElement.querySelector('.unit') : null;
-    if (qtyUnit) qtyUnit.textContent = 'pcs';
+    /* keep product unit (e.g. porsi) */
     var price = host.querySelector('#stkBuyPrice'), priceBox = price && price.parentElement ? price.parentElement : null;
     if (priceBox) { var units = priceBox.querySelectorAll('.unit'); if (units.length) units[units.length - 1].textContent = '/ pcs'; }
   }
