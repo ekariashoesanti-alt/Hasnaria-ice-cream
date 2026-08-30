@@ -1,0 +1,214 @@
+(function () {
+  'use strict';
+
+  var LABELS = {
+    dashboard: 'Hari ini',
+    sales: 'Penjualan',
+    ops: 'Keuangan',
+    stok: 'Stok',
+    shift: 'HR',
+    social: 'Medsos'
+  };
+
+  function moveNav() {
+    var app = document.getElementById('app');
+    var header = app && app.querySelector('header');
+    var head = header && header.querySelector('.head');
+    var tabs = document.getElementById('tabs');
+    if (!head || !tabs) return;
+
+    if (tabs.parentElement !== head) {
+      head.insertBefore(tabs, head.querySelector('.user-box') || null);
+    }
+
+    tabs.classList.add('hasnaria-header-nav');
+    styleButtons();
+  }
+
+  function styleButtons() {
+    var tabs = document.getElementById('tabs');
+    if (!tabs) return;
+
+    Array.prototype.forEach.call(tabs.querySelectorAll('.tab'), function (button) {
+      var id = button.getAttribute('data-tab');
+      if (LABELS[id]) {
+        button.textContent = LABELS[id];
+        button.setAttribute('aria-label', LABELS[id]);
+        button.style.display = '';
+      } else {
+        button.style.display = 'none';
+      }
+    });
+
+    Array.prototype.forEach.call(tabs.querySelectorAll('.tab'), function (button) {
+      if (button.__hasnariaCompoundBound) return;
+      var id = button.getAttribute('data-tab');
+      if (id !== 'shift' && id !== 'ops') return;
+      button.__hasnariaCompoundBound = true;
+      button.addEventListener('click', function () {
+        setTimeout(function () {
+          syncCompound(id);
+        }, 0);
+        setTimeout(function () {
+          syncCompound(id);
+        }, 80);
+      });
+    });
+  }
+
+  function syncCompound(active) {
+    var team = document.getElementById('team');
+    var approval = document.getElementById('approval');
+    if (active === 'shift') {
+      if (team) team.classList.remove('hidden');
+      if (approval) approval.classList.add('hidden');
+    } else if (active === 'ops') {
+      if (approval) approval.classList.remove('hidden');
+      if (team) team.classList.add('hidden');
+    }
+  }
+
+  function injectStyle() {
+    if (document.getElementById('hasnaria-tesla-nav-style')) return;
+    var style = document.createElement('style');
+    style.id = 'hasnaria-tesla-nav-style';
+    style.textContent = `
+      #app > header {
+        position: sticky;
+        top: 0;
+        z-index: 1000;
+        background: #fff;
+        color: #171a20;
+        border-bottom: 1px solid #eeeeee;
+        box-shadow: none;
+      }
+      #app > header .head {
+        width: 100%;
+        max-width: 1440px;
+        min-height: 72px;
+        padding: 10px 24px;
+        margin: 0 auto;
+        display: grid;
+        grid-template-columns: 190px minmax(0,1fr) 230px;
+        align-items: center;
+        gap: 20px;
+        flex-wrap: nowrap;
+      }
+      #app > header .head > div:first-child {
+        min-width: 0;
+        display: flex;
+        align-items: center;
+      }
+      #app > header .brand-logo {
+        height: 42px;
+        width: auto;
+      }
+      #app > header .tagline { display: none; }
+      #app > header .hasnaria-header-nav {
+        grid-column: 2;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 2px;
+        margin: 0;
+        overflow: visible;
+        min-width: 0;
+      }
+      #app > header .hasnaria-header-nav .tab {
+        min-height: 40px;
+        padding: 8px 14px;
+        border-radius: 4px;
+        background: transparent;
+        color: #171a20;
+        font-size: 14px;
+        font-weight: 600;
+        line-height: 1.2;
+        white-space: nowrap;
+        transition: background-color .2s ease, color .2s ease;
+      }
+      #app > header .hasnaria-header-nav .tab:hover,
+      #app > header .hasnaria-header-nav .tab.on {
+        background: #f4f4f4;
+        color: #171a20;
+      }
+      #app > header .user-box {
+        grid-column: 3;
+        justify-self: end;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      #app > header .user-info { text-align: right; }
+      #app > header .user-info #whoName {
+        color: #171a20;
+        font-size: 13px;
+        font-weight: 600;
+      }
+      #app > header .user-info #whoMeta {
+        color: #5c5e62;
+        font-size: 11px;
+      }
+      #app > header #logoutBtn {
+        min-height: 36px;
+        padding: 7px 13px;
+        border: 0;
+        border-radius: 4px;
+        background: #f4f4f4;
+        color: #171a20;
+        font-size: 13px;
+        font-weight: 600;
+      }
+      #app > main.wrap {
+        max-width: 1200px;
+        padding-top: 24px;
+      }
+      @media (max-width: 900px) {
+        #app > header .head {
+          grid-template-columns: 1fr auto;
+          min-height: 64px;
+          padding: 8px 14px;
+          gap: 10px;
+        }
+        #app > header .head > div:first-child { grid-column: 1; }
+        #app > header .user-box { grid-column: 2; }
+        #app > header .hasnaria-header-nav {
+          grid-column: 1 / -1;
+          grid-row: 2;
+          justify-content: flex-start;
+          overflow-x: auto;
+          width: 100%;
+          padding-bottom: 3px;
+        }
+        #app > header .hasnaria-header-nav .tab { padding: 7px 12px; }
+        #app > header .user-info { display: none; }
+      }
+      @media (max-width: 600px) {
+        #app > header .brand-logo { height: 36px; }
+        #app > header #logoutBtn { padding: 7px 10px; }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  function run() {
+    injectStyle();
+    moveNav();
+    styleButtons();
+  }
+
+  var observer = new MutationObserver(function () {
+    run();
+  });
+
+  function start() {
+    run();
+    observer.observe(document.body, { childList: true, subtree: true });
+    setInterval(run, 1000);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start);
+  } else {
+    start();
+  }
+})();
