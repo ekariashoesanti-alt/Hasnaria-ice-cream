@@ -35,6 +35,8 @@
 #sales .sb-trend{display:flex;flex-direction:column;min-height:0;height:100%;padding:8px 10px!important}
 #sales .sb-trend .sb-chart{width:100%!important;max-width:100%!important;height:100%!important;flex:1 1 auto;min-height:0;margin:0!important}
 #sales .sb-ok{margin-top:4px!important;padding:6px 8px!important;flex:0 0 auto}
+#sales .majoo-file-status{margin-left:8px;display:inline-flex;align-items:center;gap:6px;min-height:32px;padding:0 10px;border:1px solid #d4dfd9;background:#fff;border-radius:10px;color:#176b55;font-size:12px;font-weight:700;max-width:280px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+#sales .majoo-file-status.ready{background:#eef7f3;border-color:#b9d9cd}
 @media(max-width:900px){#sales .sb-grid-main{grid-template-columns:1fr!important}#app:has(#sales:not(.hidden)){height:auto;overflow:auto}#app:has(#sales:not(.hidden)) > main.wrap{height:auto;overflow:visible}}
 `;
   }
@@ -104,6 +106,64 @@
     document.documentElement.style.overflow = on ? 'hidden' : '';
     document.body.style.overflow = on ? 'hidden' : '';
   }
+  function textReplace(root, from, to) {
+    if (!root) return;
+    var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+    var nodes = [], n;
+    while ((n = walker.nextNode())) nodes.push(n);
+    nodes.forEach(function (node) { if ((node.nodeValue || '').indexOf(from) >= 0) node.nodeValue = node.nodeValue.replace(from, to); });
+  }
+  function installMajooQueue() {
+    var host = document.getElementById('sales');
+    if (!host || host.classList.contains('hidden')) return;
+    var input = host.querySelector('input[type="file"]');
+    if (!input) return;
+    var actions = input.closest('.sb-actions') || input.parentElement;
+    var upload = host.querySelector('.sb-upload');
+    if (upload) textReplace(upload, 'Update', 'Upload');
+    var submit = host.querySelector('.sb-help');
+    if (submit) textReplace(submit, 'Format Majoo', 'Submit');
+    if (!input.__hasnariaQueueInstalled) {
+      input.__hasnariaQueueInstalled = true;
+      input.__hasnariaOriginalChange = input.onchange;
+      input.__hasnariaQueuedFile = null;
+      input.onchange = function () {
+        var file = input.files && input.files[0];
+        input.__hasnariaQueuedFile = file || null;
+        showFileStatus(file);
+      };
+    }
+    var status = host.querySelector('.majoo-file-status');
+    if (!status) {
+      status = document.createElement('span');
+      status.className = 'majoo-file-status';
+      status.textContent = 'Belum ada file dipilih';
+      if (actions) actions.appendChild(status);
+      else if (submit && submit.parentElement) submit.parentElement.appendChild(status);
+    }
+    function showFileStatus(file) {
+      var el = host.querySelector('.majoo-file-status');
+      if (!el) return;
+      if (!file) { el.className = 'majoo-file-status'; el.textContent = 'Belum ada file dipilih'; return; }
+      el.className = 'majoo-file-status ready';
+      el.textContent = '✓ ' + file.name + ' — siap disubmit';
+    }
+    if (submit && !submit.__hasnariaSubmitInstalled) {
+      submit.__hasnariaSubmitInstalled = true;
+      submit.addEventListener('click', function (ev) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        var file = input.__hasnariaQueuedFile;
+        if (!file) { showFileStatus(null); return; }
+        var original = input.__hasnariaOriginalChange;
+        if (typeof original === 'function') {
+          input.__hasnariaSubmitting = true;
+          original.call(input, { target: input, currentTarget: input, type: 'change' });
+          setTimeout(function () { input.__hasnariaSubmitting = false; }, 50);
+        }
+      });
+    }
+  }
   function run() {
     injectStyle();
     hideSalesPanels();
@@ -111,6 +171,7 @@
     hideLeftover();
     stackRight();
     lockPage();
+    installMajooQueue();
   }
   function start() {
     run();
