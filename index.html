@@ -9,8 +9,28 @@
 <script>
 window.HASNARIA_SB = "https://bnnhmtkpdjlgehsvgoda.supabase.co";
 window.HASNARIA_KEY = "sb_publishable_eXrgSxWTXoa9q-hVpLx-sQ_IaEiUbeO";
-window.hasnariaGoogleHref = function () { var dest = location.origin + location.pathname; return window.HASNARIA_SB + "/auth/v1/authorize?provider=google&redirect_to=" + encodeURIComponent(dest); };
-window.hasnariaGoogle = function (ev) { if (ev) ev.preventDefault(); if (window.__hgBusy) return false; window.__hgBusy = true; var msg = document.getElementById("authMsg"); if (msg) msg.textContent = "Membuka Google…"; window.location.href = window.hasnariaGoogleHref(); return false; };
+window.hasnariaGoogle = async function (ev) {
+  if (ev) ev.preventDefault();
+  if (window.__hgBusy) return false;
+  window.__hgBusy = true;
+  var msg = document.getElementById("authMsg");
+  if (msg) msg.textContent = "Membuka Google…";
+  try {
+    var client = supabase.createClient(window.HASNARIA_SB, window.HASNARIA_KEY, {
+      auth: { persistSession: true, detectSessionInUrl: true, flowType: "pkce" }
+    });
+    var r = await client.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: location.origin + location.pathname }
+    });
+    if (r.error) throw r.error;
+    if (r.data && r.data.url) window.location.assign(r.data.url);
+  } catch (e) {
+    window.__hgBusy = false;
+    if (msg) msg.textContent = e && e.message ? e.message : "Login Google gagal.";
+  }
+  return false;
+};
 </script>
 <style>
 :root{--g:#176b55;--bd:#d7e2dc;--tx:#15241d;--mu:#66756e;--bg:#f3f6f4;--d:#b43b3b;--w:#92400e;--ws:#fef3c7;--ok:#166534;--okb:#dcfce7;--redb:#fee2e2}
