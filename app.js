@@ -11,7 +11,8 @@
     load(SALES,function(){load(SALES_UI);});
     document.addEventListener('click',function(e){var b=e.target&&e.target.closest?e.target.closest('button'):null;if(!b)return;var id=b.id||'',watch=id==='sSave'||id==='oSave'||id==='cSave'||id==='lzSave'||id==='svOpen'||id==='svHand'||id==='svClose'||b.hasAttribute('data-stk')||b.hasAttribute('data-ok')||b.hasAttribute('data-no')||b.hasAttribute('data-lzok')||b.hasAttribute('data-lzno');if(!watch)return;if(b.getAttribute('data-busy')==='1'){e.preventDefault();e.stopImmediatePropagation();return;}b.setAttribute('data-busy','1');setTimeout(function(){try{b.removeAttribute('data-busy');}catch(_){}},1800);},true);
   }
-  // Backward-compatible alias for older cached login markup.
-  if (typeof window.hasnariaGoogle === 'function') window.hasnariaGoogleHref = window.hasnariaGoogle;
+  // The pinned core calls this legacy function during startup. It must never start OAuth.
+  // The real Google login is handled by window.hasnariaGoogle from index.html.
+  window.hasnariaGoogleHref = function () { return '#'; };
   load(CORE,afterCore);
 })();
