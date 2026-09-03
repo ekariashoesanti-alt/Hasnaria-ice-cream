@@ -7,10 +7,8 @@
   var AUTH_URL = window.HASNARIA_SB;
   var AUTH_KEY = window.HASNARIA_KEY;
 
-  // Keep exactly one browser Supabase Auth client for Hasnaria.
-  // The previous user-settings and Google-login clients could refresh the same
-  // session independently. Supabase refresh tokens are rotated, so concurrent
-  // refreshes can revoke the session and send the user back to login.
+  // One browser Supabase Auth client for the whole Hasnaria app.
+  // Refresh-token rotation must not be driven by multiple clients.
   if (typeof supabase !== 'undefined' && AUTH_URL && AUTH_KEY) {
     try {
       localStorage.removeItem('hasnaria-auth');
@@ -27,16 +25,19 @@
           storageKey: 'hasnaria-auth-v2'
         }
       });
-      // The pinned core and normal Hasnaria auth code resolve to this one client.
+
+      // The pinned core calls enter() both from getSession() and from
+      // SIGNED_IN. OAuth callback normally produces both, so do not forward
+      // SIGNED_IN to the legacy core; getSession() is the single bootstrap
+      // path. Password login already calls enter() directly in the core.
       var originalOnAuthStateChange = sharedAuthClient.auth.onAuthStateChange.bind(sharedAuthClient.auth);
       sharedAuthClient.auth.onAuthStateChange = function (callback) {
         return originalOnAuthStateChange(function (event, session) {
-          // Never run async Supabase work while GoTrue is holding its auth lock.
-          // The pinned core calls enter() from this callback and enter() performs
-          // database requests; deferring avoids the documented auth deadlock.
+          if (event === 'SIGNED_IN') return;
           setTimeout(function () { callback(event, session); }, 0);
         });
       };
+
       window.__HASNARIA_DB = sharedAuthClient;
       window.__HASNARIA_ORIGINAL_CREATE_CLIENT = originalCreateClient;
       supabase.createClient = function (url, key, options) {
@@ -55,6 +56,7 @@
     load(SALES,function(){load(SALES_UI);});
     document.addEventListener('click',function(e){var b=e.target&&e.target.closest?e.target.closest('button'):null;if(!b)return;var id=b.id||'',watch=id==='sSave'||id==='oSave'||id==='cSave'||id==='lzSave'||id==='svOpen'||id==='svHand'||id==='svClose'||b.hasAttribute('data-stk')||b.hasAttribute('data-ok')||b.hasAttribute('data-no')||b.hasAttribute('data-lzok')||b.hasAttribute('data-lzno');if(!watch)return;if(b.getAttribute('data-busy')==='1'){e.preventDefault();e.stopImmediatePropagation();return;}b.setAttribute('data-busy','1');setTimeout(function(){try{b.removeAttribute('data-busy');}catch(_){}},1800);},true);
   }
+
   // Compatibility API used by the pinned core to set the Google button href.
   // It must be a harmless URL helper, never the OAuth action itself.
   window.hasnariaGoogleHref = function () { return '#'; };
