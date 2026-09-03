@@ -27,8 +27,7 @@
           storageKey: 'hasnaria-auth-v2'
         }
       });
-      // The pinned core, Google login, reset UI and user-settings must all
-      // resolve to this same client/storage namespace.
+      // The pinned core and normal Hasnaria auth code resolve to this one client.
       var originalOnAuthStateChange = sharedAuthClient.auth.onAuthStateChange.bind(sharedAuthClient.auth);
       sharedAuthClient.auth.onAuthStateChange = function (callback) {
         return originalOnAuthStateChange(function (event, session) {
@@ -39,6 +38,7 @@
         });
       };
       window.__HASNARIA_DB = sharedAuthClient;
+      window.__HASNARIA_ORIGINAL_CREATE_CLIENT = originalCreateClient;
       supabase.createClient = function (url, key, options) {
         if (url === AUTH_URL && key === AUTH_KEY) return window.__HASNARIA_DB;
         return originalCreateClient(url, key, options);
@@ -55,6 +55,8 @@
     load(SALES,function(){load(SALES_UI);});
     document.addEventListener('click',function(e){var b=e.target&&e.target.closest?e.target.closest('button'):null;if(!b)return;var id=b.id||'',watch=id==='sSave'||id==='oSave'||id==='cSave'||id==='lzSave'||id==='svOpen'||id==='svHand'||id==='svClose'||b.hasAttribute('data-stk')||b.hasAttribute('data-ok')||b.hasAttribute('data-no')||b.hasAttribute('data-lzok')||b.hasAttribute('data-lzno');if(!watch)return;if(b.getAttribute('data-busy')==='1'){e.preventDefault();e.stopImmediatePropagation();return;}b.setAttribute('data-busy','1');setTimeout(function(){try{b.removeAttribute('data-busy');}catch(_){}},1800);},true);
   }
-  if (typeof window.hasnariaGoogle === 'function') window.hasnariaGoogleHref = window.hasnariaGoogle;
+  // Compatibility API used by the pinned core to set the Google button href.
+  // It must be a harmless URL helper, never the OAuth action itself.
+  window.hasnariaGoogleHref = function () { return '#'; };
   load(CORE,afterCore);
 })();
