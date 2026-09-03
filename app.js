@@ -7,12 +7,10 @@
   var AUTH_URL = window.HASNARIA_SB;
   var AUTH_KEY = window.HASNARIA_KEY;
 
-  // IMPORTANT: keep exactly one browser Supabase Auth client for Hasnaria.
-  // The old user-settings module created a second auto-refreshing client and
-  // the Google button created another one. Concurrent refreshes can rotate
-  // the same refresh token and revoke the session, which caused the login loop.
-  // Use a fresh storage namespace so stale tokens from the previous clients
-  // cannot poison the new OAuth flow.
+  // Keep exactly one browser Supabase Auth client for Hasnaria.
+  // The previous user-settings and Google-login clients could refresh the same
+  // session independently. Supabase refresh tokens are rotated, so concurrent
+  // refreshes can revoke the session and send the user back to login.
   if (typeof supabase !== 'undefined' && AUTH_URL && AUTH_KEY) {
     try {
       localStorage.removeItem('hasnaria-auth');
@@ -29,6 +27,17 @@
           storageKey: 'hasnaria-auth-v2'
         }
       });
+      // The pinned core, Google login, reset UI and user-settings must all
+      // resolve to this same client/storage namespace.
+      var originalOnAuthStateChange = sharedAuthClient.auth.onAuthStateChange.bind(sharedAuthClient.auth);
+      sharedAuthClient.auth.onAuthStateChange = function (callback) {
+        return originalOnAuthStateChange(function (event, session) {
+          // Never run async Supabase work while GoTrue is holding its auth lock.
+          // The pinned core calls enter() from this callback and enter() performs
+          // database requests; deferring avoids the documented auth deadlock.
+          setTimeout(function () { callback(event, session); }, 0);
+        });
+      };
       window.__HASNARIA_DB = sharedAuthClient;
       supabase.createClient = function (url, key, options) {
         if (url === AUTH_URL && key === AUTH_KEY) return window.__HASNARIA_DB;
@@ -46,7 +55,6 @@
     load(SALES,function(){load(SALES_UI);});
     document.addEventListener('click',function(e){var b=e.target&&e.target.closest?e.target.closest('button'):null;if(!b)return;var id=b.id||'',watch=id==='sSave'||id==='oSave'||id==='cSave'||id==='lzSave'||id==='svOpen'||id==='svHand'||id==='svClose'||b.hasAttribute('data-stk')||b.hasAttribute('data-ok')||b.hasAttribute('data-no')||b.hasAttribute('data-lzok')||b.hasAttribute('data-lzno');if(!watch)return;if(b.getAttribute('data-busy')==='1'){e.preventDefault();e.stopImmediatePropagation();return;}b.setAttribute('data-busy','1');setTimeout(function(){try{b.removeAttribute('data-busy');}catch(_){}},1800);},true);
   }
-  // Backward-compatible alias for older cached login markup.
   if (typeof window.hasnariaGoogle === 'function') window.hasnariaGoogleHref = window.hasnariaGoogle;
   load(CORE,afterCore);
 })();
