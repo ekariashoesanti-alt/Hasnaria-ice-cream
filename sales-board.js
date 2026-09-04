@@ -438,9 +438,8 @@
     html += '<div class="sb-grid-main"><section class="sb-card sb-trend"><div class="sb-card-head"><div><h3>Tren Omzet</h3><span>' + esc(trendLab) + '</span></div></div>' + lineChart(trend) + '</section>';
     html += '<section class="sb-card"><div class="sb-card-head"><div><h3>Top 5 Seller (Qty)</h3><span>' + esc(skuLab) + '</span></div></div>' + barList(top) + '</section></div>';
     html += '<div class="sb-grid-main"><section class="sb-card"><div class="sb-card-head"><div><h3>5 Worst Performer (Qty)</h3><span>' + esc(skuLab) + '</span></div></div>' + barList(worst) + '</section>';
-    html += '<section class="sb-card sb-import"><div class="sb-card-head"><div><h3>Update dari Majoo</h3><span>Upload laporan untuk mengganti data produk per tanggal tanpa menambah duplikat</span></div></div>' +
-      '<div class="sb-import-copy"><b>Format diterima</b><div>.csv · .xlsx · .xls · .txt</div><p>Kenali ekspor Majoo: Penjualan Per Periode (Periode, Penjualan, Total Transaksi) dan Penjualan Produk (Produk, SKU, Jumlah, Penjualan Rp).</p></div>' + renderImportBlock() + (STATE.msg ? '<div class="sb-ok">' + esc(STATE.msg) + '</div>' : '') + '</section></div>';
-    html += '<div class="sb-live-note">Data dashboard hanya berasal dari tabel <b>daily_metrics</b>. Import Majoo melakukan upsert berdasarkan <b>brand_id + tanggal</b>, mengganti tag SKU pada tanggal yang sama dan mempertahankan tag PAY yang sudah ada bila data pembayaran tidak tersedia.</div>';
+    if (STATE.msg) html += '<div class="sb-ok" style="margin-top:10px">' + esc(STATE.msg) + '</div>';
+    html += '</div>';
     html += '<div class="sb-legacy-note"><b>Form omzet + kas harian tetap ada di bawah dashboard ini.</b></div></div>';
     board.innerHTML = html; STATE.draw = false; bind();
   }

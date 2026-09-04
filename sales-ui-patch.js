@@ -27,7 +27,7 @@
 #sales .sb-card{min-width:0;overflow:visible}
 #sales .sb-trend{padding:10px 12px!important}
 #sales .sb-trend .sb-chart{width:100%!important;max-width:100%!important;height:auto!important;min-height:180px;margin:0!important}
-#sales .sb-import{display:block!important}
+#sales .sb-import{display:none!important}
 #sales .majoo-file-status{margin-left:8px;display:inline-flex;align-items:center;gap:6px;min-height:34px;padding:0 10px;border:1px solid #d4dfd9;background:#fff;border-radius:10px;color:#176b55;font-size:12px;font-weight:700;max-width:280px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
 #sales .majoo-file-status.ready{background:#eef7f3;border-color:#b9d9cd}
 @media(max-width:900px){#sales .sb-grid-main{grid-template-columns:1fr!important}#sales .sb-kpis{grid-template-columns:1fr 1fr!important}}
@@ -49,7 +49,7 @@
   function hideFooterOnly() {
     var host = document.getElementById('sales');
     if (!host) return;
-    host.querySelectorAll('.sb-live-note,.sb-legacy-note').forEach(function (el) { el.style.display = 'none'; });
+    host.querySelectorAll('.sb-live-note,.sb-legacy-note,.sb-import').forEach(function (el) { el.style.display = 'none'; });
   }
   function stackRight() {
     var host = document.getElementById('sales');
@@ -77,7 +77,7 @@
     if (worst && worst.parentElement !== stack) stack.appendChild(worst);
     Array.prototype.forEach.call(host.querySelectorAll('.sb-grid-main'), function (grid) {
       if (grid === firstGrid) return;
-      if (!grid.querySelector('.sb-trend') && !grid.querySelector('.sales-right-stack') && !grid.querySelector('.sb-import')) grid.style.display = 'none';
+      if (!grid.querySelector('.sb-trend') && !grid.querySelector('.sales-right-stack')) grid.style.display = 'none';
     });
   }
   function hideLeftover() {
