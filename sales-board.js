@@ -1,1 +1,1 @@
-__LOAD__/workspace/sales-board.js
+/* TEMP: loading full content next */
