@@ -35,7 +35,6 @@
         if(parts[i].indexOf('@')>=0){email=parts[i].toLowerCase();break}
       }
     }
-    // Super admin: Harisnu + Hasnaria owner email
     return email==='harisnu@gmail.com'||email==='ekariashoesanti@gmail.com';
   }
 
@@ -62,7 +61,8 @@
       page=document.createElement('div');
       page.id='hasnariaAccountPage';
       page.className='hasnaria-account-page';
-      page.innerHTML='PLACEHOLDER_WILL_FAIL';
+      page.innerHTML='LOADING';
     }
   }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){});else ;
 })();
