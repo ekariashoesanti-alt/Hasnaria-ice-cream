@@ -1,1 +1,1 @@
-PLACEHOLDER_LOAD_FROM_FILE
+__LOAD__/workspace/sales-board.js
