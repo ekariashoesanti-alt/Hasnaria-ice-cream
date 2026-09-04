@@ -48,7 +48,12 @@
 
   function getAccountEmail(){
     var meta=document.getElementById('whoMeta');
-    return meta ? (meta.textContent.split('·')[1]||'').trim() : '';
+    if(!meta) return '';
+    var parts=(meta.textContent||'').split('·').map(function(x){return x.trim()});
+    for(var i=0;i<parts.length;i++){
+      if(parts[i].indexOf('@')>=0) return parts[i];
+    }
+    return '';
   }
 
   function showAccountPage(mode){
@@ -57,7 +62,7 @@
       page=document.createElement('div');
       page.id='hasnariaAccountPage';
       page.className='hasnaria-account-page';
-      page.innerHTML='<div class="hasnaria-account-page-top"><button type="button" class="hasnaria-back-btn" id="hasnariaAccountBack">← Kembali</button><div class="hasnaria-page-brand">HASNARIA <span>TER RACE</span></div></div><main class="hasnaria-account-page-main"><section class="hasnaria-account-hero"><div class="hasnaria-account-kicker">AKUN</div><h1 id="hasnariaAccountPageTitle">Pengaturan Akun</h1><p id="hasnariaAccountPageDesc">Kelola akses akun dan password aplikasi Hasnaria.</p></section><section class="hasnaria-account-panel"><div class="hasnaria-account-profile"><div class="hasnaria-avatar" id="hasnariaAccountAvatar">H</div><div><h2 id="hasnariaAccountPageName">—</h2><p id="hasnariaAccountPageEmail">—</p><span class="hasnaria-access-badge" id="hasnariaAccountPageRole">—</span></div></div><div class="hasnaria-account-divider"></div><div id="hasnariaAccountSettingsBody"><div class="hasnaria-setting-item"><div><b>Password aplikasi</b><p>Gunakan password sendiri untuk login menggunakan email + password, selain login dengan Google.</p></div><button class="primary" type="button" id="hasnariaSendActivation">Kirim aktivasi password</button></div><div id="hasnariaActivationMsg" class="hasnaria-page-msg"></div></div><div id="hasnariaPasswordBody" class="hidden"><div class="hasnaria-password-title">Buat password aplikasi</div><p class="hasnaria-password-help">Password ini akan menjadi cara login kedua untuk akun Anda. Minimal 8 karakter.</p><label>Password baru</label><input id="hasnariaNewPassword" type="password" autocomplete="new-password" placeholder="Minimal 8 karakter"><label style="margin-top:14px">Ulangi password</label><input id="hasnariaConfirmPassword" type="password" autocomplete="new-password" placeholder="Ulangi password"><button class="primary" type="button" id="hasnariaSavePassword" style="width:100%;margin-top:18px">Aktifkan password aplikasi</button><div id="hasnariaPasswordMsg" class="hasnaria-page-msg"></div></div></section></main></div>';
+      page.innerHTML='<div class="hasnaria-account-page-top"><button type="button" class="hasnaria-back-btn" id="hasnariaAccountBack">← Kembali</button><div class="hasnaria-page-brand">HASNARIA <span>TERRACE</span></div></div><main class="hasnaria-account-page-main"><section class="hasnaria-account-hero"><div class="hasnaria-account-kicker">AKUN</div><h1 id="hasnariaAccountPageTitle">Pengaturan Akun</h1><p id="hasnariaAccountPageDesc">Kelola akses akun dan password aplikasi Hasnaria.</p></section><section class="hasnaria-account-panel"><div class="hasnaria-account-profile"><div class="hasnaria-avatar" id="hasnariaAccountAvatar">H</div><div><h2 id="hasnariaAccountPageName">—</h2><p id="hasnariaAccountPageEmail">—</p><span class="hasnaria-access-badge" id="hasnariaAccountPageRole">—</span></div></div><div class="hasnaria-account-divider"></div><div id="hasnariaAccountSettingsBody"><div class="hasnaria-setting-item"><div><b>Password aplikasi</b><p>Gunakan password sendiri untuk login menggunakan email + password, selain login dengan Google.</p></div><button class="primary" type="button" id="hasnariaSendActivation">Kirim aktivasi password</button></div><div id="hasnariaActivationMsg" class="hasnaria-page-msg"></div></div><div id="hasnariaPasswordBody" class="hidden"><div class="hasnaria-password-title">Buat password aplikasi</div><p class="hasnaria-password-help">Password ini akan menjadi cara login kedua untuk akun Anda. Minimal 8 karakter.</p><label>Password baru</label><input id="hasnariaNewPassword" type="password" autocomplete="new-password" placeholder="Minimal 8 karakter"><label style="margin-top:14px">Ulangi password</label><input id="hasnariaConfirmPassword" type="password" autocomplete="new-password" placeholder="Ulangi password"><button class="primary" type="button" id="hasnariaSavePassword" style="width:100%;margin-top:18px">Aktifkan password aplikasi</button><div id="hasnariaPasswordMsg" class="hasnaria-page-msg"></div></div></section></main></div>';
       document.body.appendChild(page);
       document.getElementById('hasnariaAccountBack').onclick=function(){page.classList.remove('open');};
       document.getElementById('hasnariaSendActivation').onclick=async function(){
@@ -105,14 +110,45 @@
 
   function openAccountSettings(){ closeAccountMenu(); showAccountPage('settings'); }
 
+  var passwordActivationArmed=false;
+  var passwordActivationOpened=false;
+  function stripPasswordActivationParam(){
+    try{
+      var u=new URL(location.href);
+      if(!u.searchParams.has('password-activation')) return;
+      u.searchParams.delete('password-activation');
+      history.replaceState({}, '', u.pathname + (u.search||'') + (u.hash||''));
+    }catch(_){}
+  }
+  function openPasswordActivationPage(){
+    if(passwordActivationOpened) return;
+    passwordActivationOpened=true;
+    showAccountPage('password');
+    stripPasswordActivationParam();
+  }
   function showPasswordActivation(){
     try{
-      if(location.search.indexOf('password-activation=1')<0 && !location.hash.match(/type=recovery/i)) return;
+      var wants = location.search.indexOf('password-activation=1')>=0 || /type=recovery/i.test(location.hash||'') || passwordActivationArmed;
+      if(!wants || passwordActivationOpened) return;
       var wait=0;(function poll(){
-        if(window.__HASNARIA_DB && document.getElementById('app') && !document.getElementById('app').classList.contains('hidden')) { showAccountPage('password'); return; }
-        if(wait++<40)setTimeout(poll,250);
+        var app=document.getElementById('app');
+        var ready = window.__HASNARIA_DB && app && !app.classList.contains('hidden');
+        if(ready){ openPasswordActivationPage(); return; }
+        if(wait++<60)setTimeout(poll,250);
       })();
     }catch(_){}
+  }
+  function watchPasswordRecovery(){
+    if(window.__hasnariaPwRecoveryWatch) return;
+    var db=window.__HASNARIA_DB;
+    if(!db || !db.auth || !db.auth.onAuthStateChange) return;
+    window.__hasnariaPwRecoveryWatch=true;
+    db.auth.onAuthStateChange(function(ev){
+      if(ev==='PASSWORD_RECOVERY'){
+        passwordActivationArmed=true;
+        openPasswordActivationPage();
+      }
+    });
   }
 
   function ensureAccountMenu(){
@@ -167,7 +203,7 @@
   }
 
   var runTimer=null;
-  function run(){injectStyle();injectAccountPageStyle();moveNav();styleButtons();syncGroupedContent();ensureAccountMenu();loadSettings();showPasswordActivation()}
+  function run(){injectStyle();injectAccountPageStyle();moveNav();styleButtons();syncGroupedContent();ensureAccountMenu();loadSettings();watchPasswordRecovery();showPasswordActivation()}
   function scheduleRun(){if(runTimer)return;runTimer=setTimeout(function(){runTimer=null;run()},120)}
   function start(){run();new MutationObserver(scheduleRun).observe(document.body,{childList:true,subtree:true});setInterval(run,2500)}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
