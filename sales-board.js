@@ -74,7 +74,8 @@
     loading: false,
     fetched: false,
     importing: false,
-    stagedFile: null,
+    importProgress: '',
+    stagedFiles: [],
     stagedFileType: '',
     stagedFileRows: 0,
     showHelp: false,
@@ -353,7 +354,7 @@
     if (!t) return;
     STATE.loading = true; STATE.error = ''; draw();
     try {
-      var rows = await api('daily_metrics?brand_id=eq.' + encodeURIComponent(BRAND) + '&select=metric_date,cash_revenue,transactions,notes,brand_id&order=metric_date.asc');
+      var rows = await api('daily_metrics?brand_id=eq.' + encodeURIComponent(BRAND) + '&limit=5000&select=metric_date,cash_revenue,transactions,notes,brand_id&order=metric_date.asc');
       STATE.rows = (rows || []).map(function (r) {
         return Object.assign({}, r, {
           cash_revenue: Number(r.cash_revenue || 0),
@@ -593,31 +594,38 @@
   }
 
   function renderUploadSection() {
-    var hasFile = !!STATE.stagedFile;
+    var hasFiles = STATE.stagedFiles && STATE.stagedFiles.length > 0;
     var pillHtml = '';
-    if (hasFile) {
-      var sizeKb = Math.round((STATE.stagedFile.size || 0) / 1024);
+    if (hasFiles) {
+      var count = STATE.stagedFiles.length;
+      var totalBytes = STATE.stagedFiles.reduce(function (sum, f) { return sum + (f.size || 0); }, 0);
+      var totalKb = Math.round(totalBytes / 1024);
+      var sizeDisp = totalKb >= 1024 ? (totalKb / 1024).toFixed(1) + ' MB' : totalKb + ' KB';
+
+      var titleText = count === 1 ? STATE.stagedFiles[0].name : (count + ' File Dipilih (Multi-Bulan / Periode)');
+      var tagText = count === 1 ? (STATE.stagedFileType || 'File Majoo') + ' (' + sizeDisp + ')' : (count + ' file Majoo · Total ' + sizeDisp);
+
       pillHtml = '<div class="sb-file-pill active" id="sbFilePill">' +
-        '<span class="sb-file-icon">📄</span>' +
+        '<span class="sb-file-icon">' + (count > 1 ? '📚' : '📄') + '</span>' +
         '<div class="sb-file-info">' +
-        '<span class="sb-file-name" title="' + esc(STATE.stagedFile.name) + '">' + esc(STATE.stagedFile.name) + '</span>' +
-        '<span class="sb-file-tag">' + esc(STATE.stagedFileType || 'File Majoo') + ' (' + sizeKb + ' KB)</span>' +
+        '<span class="sb-file-name" title="' + esc(titleText) + '">' + esc(titleText) + '</span>' +
+        '<span class="sb-file-tag">' + esc(tagText) + '</span>' +
         '</div>' +
-        '<button type="button" class="sb-file-del" id="sbBtnCancelFile" title="Batalkan file ini">✕</button>' +
+        '<button type="button" class="sb-file-del" id="sbBtnCancelFile" title="Batalkan pilihan file">✕</button>' +
         '</div>';
     }
 
     return '<div class="sb-upload-wrap">' +
-      '<input id="sbFileInput" type="file" accept=".csv,.xlsx,.xls,.txt" style="display:none">' +
+      '<input id="sbFileInput" type="file" accept=".csv,.xlsx,.xls,.txt" multiple style="display:none">' +
       '<button type="button" class="sb-btn-upload" id="sbBtnChoose">' +
       '<span>📁</span> Upload dari Majoo' +
       '</button>' +
       pillHtml +
-      '<button type="button" class="sb-btn-submit ' + (hasFile && !STATE.importing ? 'ready' : '') + '" id="sbBtnSubmit" ' + (!hasFile || STATE.importing ? 'disabled' : '') + '>' +
-      (STATE.importing ? '<span class="sb-spin">⏳</span> Memproses…' : '<span>⬆</span> Submit Data') +
+      '<button type="button" class="sb-btn-submit ' + (hasFiles && !STATE.importing ? 'ready' : '') + '" id="sbBtnSubmit" ' + (!hasFiles || STATE.importing ? 'disabled' : '') + '>' +
+      (STATE.importing ? '<span class="sb-spin">⏳</span> ' + esc(STATE.importProgress || 'Memproses…') : '<span>⬆</span> Submit Data') +
       '</button>' +
-      '<button type="button" class="sb-btn-format" id="sbBtnFormat" title="Panduan 3 format file Majoo">' +
-      'Format Majoo' +
+      '<button type="button" class="sb-btn-format" id="sbBtnFormat" title="Panduan multi-periode & 3 format file Majoo">' +
+      'Format & Multi-Periode' +
       '</button>' +
       '</div>';
   }
@@ -627,14 +635,18 @@
     return '<div class="sb-modal-overlay" id="sbModalOverlay">' +
       '<div class="sb-modal-card">' +
       '<div class="sb-modal-head">' +
-      '<h3>Panduan 3 Format Export Majoo</h3>' +
+      '<h3>Panduan Upload & Multi-Periode Majoo</h3>' +
       '<button type="button" class="sb-modal-close" id="sbModalClose">✕</button>' +
       '</div>' +
       '<div class="sb-modal-body">' +
-      '<p>Sistem Hasnaria secara otomatis mendeteksi dan mengintegrasikan 3 jenis file export dari Majoo POS:</p>' +
+      '<div class="sb-fmt-box" style="background:#f0fdf4;border-color:#bbf7d0">' +
+      '<b>✨ Mendukung Multi-Periode (Januari – Desember):</b>' +
+      '<p style="margin:4px 0 0">Anda dapat meng-upload <b>1 file langsung rentang 1 tahun penuh</b>, ATAU memilih <b>sekaligus banyak file bulanan</b> (misal 12 file CSV/Excel Jan–Des dengan menahan tombol Ctrl/Shift). Sistem otomatis membagi dalam batch 50 hari ke Supabase tanpa error/timeout dan langsung menyajikan grafik 12 bulan.</p>' +
+      '</div>' +
+      '<p style="margin-top:10px">Sistem Hasnaria mendeteksi 3 jenis file export Majoo POS:</p>' +
       '<div class="sb-fmt-box">' +
       '<b>1. Laporan Detail Transaksi (CSV) — Sangat Direkomendasikan ⭐</b>' +
-      '<p>Export transaksi per nota/struk. Memuat tanggal, nomor struk, omzet, metode bayar (Cash, QRIS, Transfer/Gojek), dan <b>rincian produk terjual harian</b>.</p>' +
+      '<p>Export per nota/struk: tanggal, nomor struk, omzet, metode bayar (Cash, QRIS, Transfer/Gojek), dan <b>rincian produk terjual harian</b>.</p>' +
       '<small>Kolom: No Transaksi, Waktu Order, Produk, Total Penjualan, Metode Pembayaran.</small>' +
       '</div>' +
       '<div class="sb-fmt-box">' +
@@ -647,7 +659,7 @@
       '<p>Rekapitulasi penjualan per SKU produk, jumlah pcs terjual, omzet produk, dan HPP.</p>' +
       '<small>Kolom: Produk, SKU, Jumlah Terjual, Penjualan (Rp.), Laba Kotor.</small>' +
       '</div>' +
-      '<p style="font-size:12px;color:#5d6d66;margin-top:10px">Cara pakai: Pilih file export dari Majoo, periksa badge file yang terdeteksi, lalu klik <b>Submit Data</b>. Tampilan dashboard akan langsung otomatis diperbarui.</p>' +
+      '<p style="font-size:12px;color:#5d6d66;margin-top:10px">💡 Catatan Database: Upload bulan baru tidak akan menimpa/menghapus bulan yang sudah ada di Supabase. Data tersimpan rapi per tanggal.</p>' +
       '</div>' +
       '<div class="sb-modal-foot">' +
       '<button type="button" class="sb-btn-modal-ok" id="sbModalOk">Mengerti</button>' +
@@ -878,17 +890,22 @@
 
     if (fileInput) {
       fileInput.onchange = async function () {
-        if (fileInput.files && fileInput.files[0]) {
-          var f = fileInput.files[0];
-          STATE.stagedFile = f;
+        if (fileInput.files && fileInput.files.length) {
+          var flist = Array.prototype.slice.call(fileInput.files);
+          STATE.stagedFiles = flist;
           STATE.error = '';
           STATE.msg = '';
-          try {
-            var rawPreview = await previewFileType(f);
-            STATE.stagedFileType = rawPreview.label;
-            STATE.stagedFileRows = rawPreview.count;
-          } catch (e) {
-            STATE.stagedFileType = 'File Majoo (' + f.name.split('.').pop().toUpperCase() + ')';
+          if (flist.length === 1) {
+            try {
+              var rawPreview = await previewFileType(flist[0]);
+              STATE.stagedFileType = rawPreview.label;
+              STATE.stagedFileRows = rawPreview.count;
+            } catch (e) {
+              STATE.stagedFileType = 'File Majoo (' + flist[0].name.split('.').pop().toUpperCase() + ')';
+            }
+          } else {
+            STATE.stagedFileType = flist.length + ' File Majoo';
+            STATE.stagedFileRows = 0;
           }
           draw();
         }
@@ -898,7 +915,7 @@
     var btnCancelFile = host.querySelector('#sbBtnCancelFile');
     if (btnCancelFile) {
       btnCancelFile.onclick = function () {
-        STATE.stagedFile = null;
+        STATE.stagedFiles = [];
         STATE.stagedFileType = '';
         if (fileInput) fileInput.value = '';
         draw();
@@ -909,8 +926,8 @@
     var btnSubmit = host.querySelector('#sbBtnSubmit');
     if (btnSubmit) {
       btnSubmit.onclick = function () {
-        if (STATE.stagedFile && !STATE.importing) {
-          importFile(STATE.stagedFile);
+        if (STATE.stagedFiles && STATE.stagedFiles.length && !STATE.importing) {
+          importFiles(STATE.stagedFiles);
         }
       };
     }
@@ -1173,29 +1190,94 @@
     });
   }
 
-  async function importFile(file) {
+  async function importFiles(fileOrFiles) {
+    var files = Array.isArray(fileOrFiles) ? fileOrFiles : (fileOrFiles ? [fileOrFiles] : []);
+    if (!files.length) return;
+
     STATE.importing = true;
-    STATE.msg = 'Membaca dan memproses ' + file.name + '…';
     STATE.error = '';
+    STATE.msg = '';
+    STATE.importProgress = 'Membaca ' + files.length + ' file…';
     draw();
 
     try {
-      var matrix = await readFileMatrix(file);
-      var data = normalizeImport(matrix);
-      if (!data.length) throw new Error('Tidak ada data valid setelah parsing. Periksa format file.');
+      var allDataByDate = {}; // date -> { date, omzet, trx, cash, qris, tf, skusMap: {} }
+      var totalParsed = 0;
 
-      var dates = data.map(function (x) { return x.date; });
-      var inList = dates.map(function (d) { return '"' + d + '"'; }).join(',');
-      var old = await api('daily_metrics?brand_id=eq.' + encodeURIComponent(BRAND) + '&metric_date=in.(' + dates.join(',') + ')&select=metric_date,cash_revenue,transactions,notes');
+      for (var fi = 0; fi < files.length; fi++) {
+        var file = files[fi];
+        STATE.importProgress = 'Membaca file ' + (fi + 1) + '/' + files.length + ' (' + file.name + ')…';
+        draw();
+
+        var matrix = await readFileMatrix(file);
+        var fileRows = normalizeImport(matrix);
+        totalParsed += fileRows.length;
+
+        fileRows.forEach(function (r) {
+          var d = r.date;
+          if (!d) return;
+          var cur = allDataByDate[d];
+          if (!cur) {
+            allDataByDate[d] = {
+              date: d,
+              omzet: r.omzet || 0,
+              trx: r.trx || 0,
+              cash: r.cash || 0,
+              qris: r.qris || 0,
+              tf: r.tf || 0,
+              skusMap: {}
+            };
+            (r.skus || []).forEach(function (s) {
+              allDataByDate[d].skusMap[s.name] = { name: s.name, qty: s.qty, rev: s.rev };
+            });
+          } else {
+            // Overlapping date: merge smartly
+            if (r.omzet > 0) cur.omzet = Math.max(cur.omzet, r.omzet);
+            if (r.trx > 0) cur.trx = Math.max(cur.trx, r.trx);
+            if (r.cash > 0 || r.qris > 0 || r.tf > 0) {
+              cur.cash = Math.max(cur.cash, r.cash || 0);
+              cur.qris = Math.max(cur.qris, r.qris || 0);
+              cur.tf = Math.max(cur.tf, r.tf || 0);
+            }
+            (r.skus || []).forEach(function (s) {
+              var prevSku = cur.skusMap[s.name];
+              if (prevSku) {
+                prevSku.qty = Math.max(prevSku.qty, s.qty);
+                prevSku.rev = Math.max(prevSku.rev, s.rev);
+              } else {
+                cur.skusMap[s.name] = { name: s.name, qty: s.qty, rev: s.rev };
+              }
+            });
+          }
+        });
+      }
+
+      var sortedDates = Object.keys(allDataByDate).sort();
+      if (!sortedDates.length) throw new Error('Tidak ada data valid setelah membaca ' + files.length + ' file. Periksa format file.');
+
+      var minDate = sortedDates[0];
+      var maxDate = sortedDates[sortedDates.length - 1];
+
+      // Fetch existing records safely using date range (prevents HTTP 414 URI Too Long for 365 days)
+      STATE.importProgress = 'Mengecek data lama di Supabase…';
+      draw();
+
       var oldMap = {};
-      (old || []).forEach(function (r) { oldMap[r.metric_date] = r; });
+      try {
+        var old = await api('daily_metrics?brand_id=eq.' + encodeURIComponent(BRAND) + '&metric_date=gte.' + minDate + '&metric_date=lte.' + maxDate + '&limit=5000&select=metric_date,cash_revenue,transactions,notes');
+        (old || []).forEach(function (r) { oldMap[r.metric_date] = r; });
+      } catch (eOld) {
+        console.warn('Could not fetch old metrics for date range', eOld);
+      }
 
-      var payload = data.map(function (x) {
-        var oldRec = oldMap[x.date];
+      var payload = sortedDates.map(function (d) {
+        var x = allDataByDate[d];
+        var oldRec = oldMap[d];
         var notesOld = oldRec ? (oldRec.notes || '') : '';
         var payAvailable = x.cash || x.qris || x.tf;
-        // Merge SKU: if new file has SKUs, replace them; if new file has no SKUs (e.g. per-periode report), preserve old SKUs!
-        var newSkus = (x.skus && x.skus.length) ? x.skus : parseSku(notesOld);
+
+        var skusList = Object.keys(x.skusMap).map(function (k) { return x.skusMap[k]; }).sort(function (a, b) { return b.qty - a.qty; });
+        var newSkus = skusList.length ? skusList : parseSku(notesOld);
         var notes = preservePayAndSku(notesOld, newSkus, payAvailable ? { cash: x.cash, qris: x.qris, tf: x.tf } : null);
 
         var finalOmzet = x.omzet > 0 ? x.omzet : (oldRec ? oldRec.cash_revenue : 0);
@@ -1203,52 +1285,69 @@
 
         return {
           brand_id: BRAND,
-          metric_date: x.date,
+          metric_date: d,
           cash_revenue: Math.round(finalOmzet),
           transactions: Math.round(finalTrx),
           notes: notes
         };
       });
 
-      // Upsert to Supabase
-      try {
-        await api('daily_metrics?on_conflict=brand_id,metric_date', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates,return=minimal' },
-          body: JSON.stringify(payload)
-        });
-      } catch (upErr) {
-        for (var ui = 0; ui < payload.length; ui++) {
-          var prow = payload[ui];
-          var hit = await api('daily_metrics?brand_id=eq.' + encodeURIComponent(BRAND) + '&metric_date=eq.' + prow.metric_date + '&select=id');
-          if (hit && hit[0] && hit[0].id) {
-            await api('daily_metrics?id=eq.' + hit[0].id, { method: 'PATCH', headers: { 'Content-Type': 'application/json', Prefer: 'return=minimal' }, body: JSON.stringify(prow) });
-          } else {
-            await api('daily_metrics', { method: 'POST', headers: { 'Content-Type': 'application/json', Prefer: 'return=minimal' }, body: JSON.stringify(prow) });
+      // Upsert in batches of 50 to guarantee smooth network transfer and avoid Supabase request timeouts
+      var BATCH_SIZE = 50;
+      for (var bi = 0; bi < payload.length; bi += BATCH_SIZE) {
+        var chunk = payload.slice(bi, bi + BATCH_SIZE);
+        var processed = Math.min(payload.length, bi + chunk.length);
+        var percent = Math.round((processed / payload.length) * 100);
+        STATE.importProgress = 'Menyimpan ' + processed + ' / ' + payload.length + ' hari (' + percent + '%)';
+        draw();
+
+        try {
+          await api('daily_metrics?on_conflict=brand_id,metric_date', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates,return=minimal' },
+            body: JSON.stringify(chunk)
+          });
+        } catch (chunkErr) {
+          // Fallback sequential if unique constraint was not yet indexed
+          for (var ci = 0; ci < chunk.length; ci++) {
+            var prow = chunk[ci];
+            var hit = await api('daily_metrics?brand_id=eq.' + encodeURIComponent(BRAND) + '&metric_date=eq.' + prow.metric_date + '&select=id');
+            if (hit && hit[0] && hit[0].id) {
+              await api('daily_metrics?id=eq.' + hit[0].id, { method: 'PATCH', headers: { 'Content-Type': 'application/json', Prefer: 'return=minimal' }, body: JSON.stringify(prow) });
+            } else {
+              await api('daily_metrics', { method: 'POST', headers: { 'Content-Type': 'application/json', Prefer: 'return=minimal' }, body: JSON.stringify(prow) });
+            }
           }
         }
       }
 
-      STATE.stagedFile = null;
+      STATE.stagedFiles = [];
       STATE.stagedFileType = '';
       STATE.importing = false;
-      STATE.msg = '✓ Berhasil update ' + payload.length + ' tanggal dari ' + file.name + '! Tampilan di bawah telah diperbarui.';
+      STATE.importProgress = '';
+      STATE.msg = '✓ Berhasil update ' + payload.length + ' tanggal (' + minDate + ' s/d ' + maxDate + ') dari ' + files.length + ' file Majoo!';
 
-      var ds = dates.slice().sort();
-      if (ds.length) {
-        STATE.viewFrom = ds[0];
-        STATE.viewTo = ds[ds.length - 1];
-        STATE.viewMonth = ds[0].slice(0, 7) === ds[ds.length - 1].slice(0, 7) ? ds[0].slice(0, 7) : '';
+      // Adjust date filter: if multi-month, switch to monthly view for 12-month overview
+      STATE.viewFrom = minDate;
+      STATE.viewTo = maxDate;
+      if (minDate.slice(0, 7) === maxDate.slice(0, 7)) {
+        STATE.viewMonth = minDate.slice(0, 7);
+      } else {
+        STATE.viewMonth = '';
+        STATE.mode = 'monthly';
       }
       STATE.slice = null;
       await loadMetrics();
     } catch (e) {
       STATE.importing = false;
+      STATE.importProgress = '';
       STATE.error = 'Gagal upload: ' + e.message;
       STATE.msg = '';
       draw();
     }
   }
+
+  function importFile(f) { return importFiles(f); }
 
   // Pre-seed 337 transactions of Jan 2026 if user clicks quick load
   async function seedJanuary2026() {
