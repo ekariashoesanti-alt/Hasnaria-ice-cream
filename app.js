@@ -66,12 +66,32 @@
       window.__HASNARIA_ENSURE_RECOVERY_SESSION = function () {
         return waitForAuthSession(3000).then(function (res) {
           if (res && res.data && res.data.session) return res.data.session;
+          // Implicit recovery links put tokens in the URL hash (works across browsers).
+          try {
+            var hash = (location.hash || '').replace(/^#/, '');
+            var hp = new URLSearchParams(hash);
+            var at = hp.get('access_token');
+            var rt = hp.get('refresh_token') || '';
+            if (at && sharedAuthClient.auth.setSession) {
+              return sharedAuthClient.auth.setSession({ access_token: at, refresh_token: rt }).then(function (ss) {
+                if (ss && ss.error) {
+                  window.__HASNARIA_RECOVERY_ERROR = ss.error.message || String(ss.error);
+                  return null;
+                }
+                window.__HASNARIA_PASSWORD_ACTIVATION = true;
+                return ss && ss.data ? ss.data.session : null;
+              }).catch(function (e) {
+                window.__HASNARIA_RECOVERY_ERROR = (e && e.message) ? e.message : String(e);
+                return null;
+              });
+            }
+          } catch (_) {}
           var code = null;
           try { code = new URLSearchParams(location.search).get('code'); } catch (_) {}
           if (!code || !sharedAuthClient.auth.exchangeCodeForSession) {
             return null;
           }
-          // detectSessionInUrl may still be racing; try explicit exchange once.
+          // PKCE path: detectSessionInUrl may still be racing; try explicit exchange once.
           return sharedAuthClient.auth.exchangeCodeForSession(code).then(function (ex) {
             if (ex && ex.error) {
               window.__HASNARIA_RECOVERY_ERROR = ex.error.message || String(ex.error);
