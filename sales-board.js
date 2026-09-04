@@ -616,9 +616,9 @@
     }
 
     return '<div class="sb-upload-wrap">' +
-      '<input id="sbFileInput" type="file" accept=".csv,.xlsx,.xls,.txt" multiple style="display:none">' +
+      '<input id="sbFileInput" type="file" accept=".xlsx,.xls,.csv,.txt,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv" multiple style="display:none">' +
       '<button type="button" class="sb-btn-upload" id="sbBtnChoose">' +
-      '<span>📁</span> Upload dari Majoo' +
+      '<span>📁</span> Upload Majoo (.xlsx, .xls, .csv)' +
       '</button>' +
       pillHtml +
       '<button type="button" class="sb-btn-submit ' + (hasFiles && !STATE.importing ? 'ready' : '') + '" id="sbBtnSubmit" ' + (!hasFiles || STATE.importing ? 'disabled' : '') + '>' +
