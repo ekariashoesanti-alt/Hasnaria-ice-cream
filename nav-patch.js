@@ -46,40 +46,73 @@
     if(btn)btn.setAttribute('aria-expanded','false');
   }
 
-  function openAccountSettings(){
-    closeAccountMenu();
-    var modal=document.getElementById('hasnariaAccountModal');
-    if(!modal){
-      modal=document.createElement('div');
-      modal.id='hasnariaAccountModal';
-      modal.innerHTML='<div class="hasnaria-account-backdrop" data-account-close></div><div class="hasnaria-account-dialog" role="dialog" aria-modal="true" aria-labelledby="hasnariaAccountTitle"><div class="hasnaria-account-head"><div><div class="hasnaria-account-kicker">AKUN</div><h2 id="hasnariaAccountTitle">Pengaturan Akun</h2></div><button type="button" class="hasnaria-account-close" data-account-close aria-label="Tutup">×</button></div><div class="hasnaria-account-body"><div class="hasnaria-account-row"><span>Nama</span><b id="hasnariaAccountName">—</b></div><div class="hasnaria-account-row"><span>Email</span><b id="hasnariaAccountEmail">—</b></div><div class="hasnaria-account-row"><span>Akses</span><b id="hasnariaAccountRole">—</b></div><div class="hasnaria-account-row"><span>Status</span><b id="hasnariaAccountStatus">Aktif</b></div><div id="hasnariaAccountMsg" class="small" style="min-height:18px;margin-top:12px"></div><button type="button" class="primary" id="hasnariaResetPassword" style="width:100%;margin-top:8px">Kirim link ubah password</button></div></div>';
-      document.body.appendChild(modal);
-      Array.prototype.forEach.call(modal.querySelectorAll('[data-account-close]'),function(x){x.addEventListener('click',function(){modal.classList.remove('open')})});
-      document.getElementById('hasnariaResetPassword').addEventListener('click',async function(){
-        var btn=this,msg=document.getElementById('hasnariaAccountMsg'),email=document.getElementById('hasnariaAccountEmail').textContent.trim();
-        if(!email)return;
-        btn.disabled=true;msg.textContent='Mengirim link…';
+  function getAccountEmail(){
+    var meta=document.getElementById('whoMeta');
+    return meta ? (meta.textContent.split('·')[1]||'').trim() : '';
+  }
+
+  function showAccountPage(mode){
+    var page=document.getElementById('hasnariaAccountPage');
+    if(!page){
+      page=document.createElement('div');
+      page.id='hasnariaAccountPage';
+      page.className='hasnaria-account-page';
+      page.innerHTML='<div class="hasnaria-account-page-top"><button type="button" class="hasnaria-back-btn" id="hasnariaAccountBack">← Kembali</button><div class="hasnaria-page-brand">HASNARIA <span>TER RACE</span></div></div><main class="hasnaria-account-page-main"><section class="hasnaria-account-hero"><div class="hasnaria-account-kicker">AKUN</div><h1 id="hasnariaAccountPageTitle">Pengaturan Akun</h1><p id="hasnariaAccountPageDesc">Kelola akses akun dan password aplikasi Hasnaria.</p></section><section class="hasnaria-account-panel"><div class="hasnaria-account-profile"><div class="hasnaria-avatar" id="hasnariaAccountAvatar">H</div><div><h2 id="hasnariaAccountPageName">—</h2><p id="hasnariaAccountPageEmail">—</p><span class="hasnaria-access-badge" id="hasnariaAccountPageRole">—</span></div></div><div class="hasnaria-account-divider"></div><div id="hasnariaAccountSettingsBody"><div class="hasnaria-setting-item"><div><b>Password aplikasi</b><p>Gunakan password sendiri untuk login menggunakan email + password, selain login dengan Google.</p></div><button class="primary" type="button" id="hasnariaSendActivation">Kirim aktivasi password</button></div><div id="hasnariaActivationMsg" class="hasnaria-page-msg"></div></div><div id="hasnariaPasswordBody" class="hidden"><div class="hasnaria-password-title">Buat password aplikasi</div><p class="hasnaria-password-help">Password ini akan menjadi cara login kedua untuk akun Anda. Minimal 8 karakter.</p><label>Password baru</label><input id="hasnariaNewPassword" type="password" autocomplete="new-password" placeholder="Minimal 8 karakter"><label style="margin-top:14px">Ulangi password</label><input id="hasnariaConfirmPassword" type="password" autocomplete="new-password" placeholder="Ulangi password"><button class="primary" type="button" id="hasnariaSavePassword" style="width:100%;margin-top:18px">Aktifkan password aplikasi</button><div id="hasnariaPasswordMsg" class="hasnaria-page-msg"></div></div></section></main></div>';
+      document.body.appendChild(page);
+      document.getElementById('hasnariaAccountBack').onclick=function(){page.classList.remove('open');};
+      document.getElementById('hasnariaSendActivation').onclick=async function(){
+        var btn=this,msg=document.getElementById('hasnariaActivationMsg'),email=getAccountEmail();
+        if(!email){msg.textContent='Email akun tidak ditemukan.';return}
+        btn.disabled=true;msg.textContent='Mengirim email aktivasi password…';
         try{
           var db=window.__HASNARIA_DB;
-          var r=await db.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});
+          var r=await db.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname+'?password-activation=1'});
           if(r.error)throw r.error;
-          msg.style.color='#166534';msg.textContent='Link ubah password sudah dikirim ke email.';
-        }catch(e){msg.style.color='#b43b3b';msg.textContent=e&&e.message?e.message:'Gagal mengirim link.'}
+          msg.style.color='#166534';msg.textContent='Email aktivasi sudah dikirim. Buka email tersebut untuk membuat password aplikasi.';
+        }catch(e){msg.style.color='#b43b3b';msg.textContent=e&&e.message?e.message:'Gagal mengirim email aktivasi.'}
         btn.disabled=false;
-      });
+      };
+      document.getElementById('hasnariaSavePassword').onclick=async function(){
+        var btn=this,msg=document.getElementById('hasnariaPasswordMsg'),p=document.getElementById('hasnariaNewPassword').value,c=document.getElementById('hasnariaConfirmPassword').value;
+        if(p.length<8){msg.textContent='Password minimal 8 karakter.';return}
+        if(p!==c){msg.textContent='Konfirmasi password belum sama.';return}
+        btn.disabled=true;msg.textContent='Menyimpan password…';
+        try{
+          var db=window.__HASNARIA_DB;
+          var r=await db.auth.updateUser({password:p});
+          if(r.error)throw r.error;
+          msg.style.color='#166534';msg.textContent='Password aplikasi berhasil diaktifkan. Sekarang Anda bisa login dengan Google atau email + password.';
+          setTimeout(function(){page.classList.remove('open');},1800);
+        }catch(e){msg.style.color='#b43b3b';msg.textContent=e&&e.message?e.message:'Gagal menyimpan password.'}
+        btn.disabled=false;
+      };
     }
-    var name=document.getElementById('whoName'),meta=document.getElementById('whoMeta');
-    document.getElementById('hasnariaAccountName').textContent=(name&&name.textContent)||'—';
-    var email='';
-    if(meta){
-      var parts=(meta.textContent||'').split('·').map(function(x){return x.trim()});
-      for(var i=0;i<parts.length;i++){if(parts[i].indexOf('@')>=0){email=parts[i];break}}
+    var name=document.getElementById('whoName'),email=getAccountEmail(),role=document.getElementById('hasnariaAccountPageRole');
+    document.getElementById('hasnariaAccountPageName').textContent=(name&&name.textContent)||'—';
+    document.getElementById('hasnariaAccountPageEmail').textContent=email||'—';
+    role.textContent=superAdmin()?'SUPER ADMIN':'USER';
+    document.getElementById('hasnariaAccountAvatar').textContent=((name&&name.textContent)||'H').trim().charAt(0).toUpperCase();
+    var settings=document.getElementById('hasnariaAccountSettingsBody'),pass=document.getElementById('hasnariaPasswordBody');
+    var title=document.getElementById('hasnariaAccountPageTitle'),desc=document.getElementById('hasnariaAccountPageDesc');
+    if(mode==='password'){
+      settings.classList.add('hidden');pass.classList.remove('hidden');title.textContent='Aktivasi Password Aplikasi';desc.textContent='Buat password sendiri agar akun ini dapat login dengan email + password.';
+    }else{
+      settings.classList.remove('hidden');pass.classList.add('hidden');title.textContent='Pengaturan Akun';desc.textContent='Kelola akses akun dan password aplikasi Hasnaria.';
+      document.getElementById('hasnariaActivationMsg').textContent='';
     }
-    document.getElementById('hasnariaAccountEmail').textContent=email||'—';
-    document.getElementById('hasnariaAccountRole').textContent=superAdmin()?'Super Admin':'User';
-    document.getElementById('hasnariaAccountStatus').textContent='Aktif';
-    document.getElementById('hasnariaAccountMsg').textContent='';
-    document.getElementById('hasnariaAccountModal').classList.add('open');
+    page.classList.add('open');
+  }
+
+  function openAccountSettings(){ closeAccountMenu(); showAccountPage('settings'); }
+
+  function showPasswordActivation(){
+    try{
+      if(location.search.indexOf('password-activation=1')<0 && !location.hash.match(/type=recovery/i)) return;
+      var wait=0;(function poll(){
+        if(window.__HASNARIA_DB && document.getElementById('app') && !document.getElementById('app').classList.contains('hidden')) { showAccountPage('password'); return; }
+        if(wait++<40)setTimeout(poll,250);
+      })();
+    }catch(_){}
   }
 
   function ensureAccountMenu(){
@@ -109,6 +142,13 @@
     }
   }
 
+  function injectAccountPageStyle(){
+    if(document.getElementById('hasnaria-account-page-style'))return;
+    var s=document.createElement('style');s.id='hasnaria-account-page-style';
+    s.textContent='.hasnaria-account-page{display:none;position:fixed;inset:0;z-index:5000;background:#f5f7f6;overflow:auto;color:#15241d}.hasnaria-account-page.open{display:block}.hasnaria-account-page-top{height:76px;background:#176b55;color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 34px}.hasnaria-page-brand{font-weight:900;letter-spacing:.08em;font-size:18px}.hasnaria-page-brand span{display:block;font-size:8px;text-align:center;letter-spacing:.35em;font-weight:500;margin-top:-2px}.hasnaria-back-btn{background:rgba(255,255,255,.12)!important;color:#fff!important;border:1px solid rgba(255,255,255,.28)!important;border-radius:10px!important;min-height:40px!important;padding:8px 14px!important}.hasnaria-account-page-main{width:min(980px,calc(100% - 40px));margin:0 auto;padding:64px 0 80px}.hasnaria-account-hero{margin-bottom:30px}.hasnaria-account-kicker{font-size:12px;letter-spacing:.14em;font-weight:900;color:#176b55}.hasnaria-account-hero h1{font-size:38px;line-height:1.1;margin:8px 0}.hasnaria-account-hero p{color:#66756e;font-size:16px}.hasnaria-account-panel{background:#fff;border:1px solid #d7e2dc;border-radius:20px;padding:28px;box-shadow:0 10px 30px rgba(0,0,0,.06)}.hasnaria-account-profile{display:flex;align-items:center;gap:16px}.hasnaria-avatar{width:58px;height:58px;border-radius:16px;background:#176b55;color:#fff;display:grid;place-items:center;font-size:24px;font-weight:900}.hasnaria-account-profile h2{margin:0 0 2px;font-size:20px}.hasnaria-account-profile p{color:#66756e;margin-bottom:8px}.hasnaria-access-badge{display:inline-block;padding:5px 9px;border-radius:99px;background:#dcfce7;color:#166534;font-size:11px;font-weight:800}.hasnaria-account-divider{height:1px;background:#e5ece8;margin:24px 0}.hasnaria-setting-item{display:flex;justify-content:space-between;align-items:center;gap:24px;padding:12px 0}.hasnaria-setting-item b{font-size:17px}.hasnaria-setting-item p,.hasnaria-password-help{color:#66756e;font-size:13px;max-width:640px;margin-top:5px}.hasnaria-setting-item .primary{white-space:nowrap;background:#176b55;color:#fff;border:0;border-radius:10px;min-height:46px;padding:10px 18px;font-weight:800}.hasnaria-page-msg{font-size:13px;color:#b43b3b;margin-top:12px;min-height:20px}.hasnaria-password-title{font-size:20px;font-weight:800;margin-bottom:4px}.hasnaria-account-page label{display:block;margin-top:22px;font-size:12px;color:#66756e}.hasnaria-account-page input{width:100%;min-height:48px;padding:12px;border:1px solid #d5dfda;border-radius:10px;font:inherit}.hasnaria-account-page #hasnariaSavePassword{background:#176b55;color:#fff;border:0;border-radius:10px;min-height:48px;padding:10px 18px;font-weight:800}@media(max-width:650px){.hasnaria-account-page-top{padding:0 16px}.hasnaria-account-page-main{width:min(100% - 24px,980px);padding:38px 0 50px}.hasnaria-account-hero h1{font-size:30px}.hasnaria-account-panel{padding:20px}.hasnaria-setting-item{align-items:stretch;flex-direction:column}.hasnaria-setting-item .primary{width:100%}}';
+    document.head.appendChild(s);
+  }
+
   function injectStyle(){
     if(document.getElementById('hasnaria-tesla-nav-style'))return;
     var s=document.createElement('style');
@@ -127,7 +167,7 @@
   }
 
   var runTimer=null;
-  function run(){injectStyle();moveNav();styleButtons();syncGroupedContent();ensureAccountMenu();loadSettings()}
+  function run(){injectStyle();injectAccountPageStyle();moveNav();styleButtons();syncGroupedContent();ensureAccountMenu();loadSettings();showPasswordActivation()}
   function scheduleRun(){if(runTimer)return;runTimer=setTimeout(function(){runTimer=null;run()},120)}
   function start(){run();new MutationObserver(scheduleRun).observe(document.body,{childList:true,subtree:true});setInterval(run,2500)}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
