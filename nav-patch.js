@@ -56,7 +56,7 @@
     return '';
   }
 
-  function showAccountPage(mode){
+  async function showAccountPage(mode){
     var page=document.getElementById('hasnariaAccountPage');
     if(!page){
       page=document.createElement('div');
