@@ -56,6 +56,17 @@
     return '';
   }
 
+
+  // Recovery emails must use a REAL implicit client (not the PKCE singleton).
+  // app.js wraps createClient and returns __HASNARIA_DB for hasnaria-auth-v2.
+  function recoveryMailClient(){
+    var create = window.__HASNARIA_ORIGINAL_CREATE_CLIENT;
+    if(!create) create = supabase.createClient.bind(supabase);
+    return create(window.HASNARIA_SB, window.HASNARIA_KEY, {
+      auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false, flowType: 'implicit', storageKey: 'hasnaria-reset' }
+    });
+  }
+
   async function showAccountPage(mode){
     var page=document.getElementById('hasnariaAccountPage');
     if(!page){
@@ -70,7 +81,7 @@
         if(!email){msg.textContent='Email akun tidak ditemukan.';return}
         btn.disabled=true;msg.textContent='Mengirim email aktivasi password…';
         try{
-          var db=supabase.createClient(window.HASNARIA_SB,window.HASNARIA_KEY,{auth:{persistSession:true,detectSessionInUrl:true,flowType:"implicit",storageKey:"hasnaria-auth-v2"}});
+          var db=recoveryMailClient();
           var r=await db.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname+'?password-activation=1'});
           if(r.error)throw r.error;
           msg.style.color='#166534';msg.textContent='Email aktivasi sudah dikirim. Buka email tersebut untuk membuat password aplikasi.';
@@ -102,23 +113,24 @@
       };
     }
     var name=document.getElementById('whoName'),email=getAccountEmail(),role=document.getElementById('hasnariaAccountPageRole');
-    document.getElementById('hasnariaAccountPageName').textContent=(name&&name.textContent)||'—';
-    document.getElementById('hasnariaAccountPageEmail').textContent=email||'—';
     if(mode==='password'){
+      document.getElementById('hasnariaAccountPageName').textContent='—';
+      document.getElementById('hasnariaAccountPageEmail').textContent='—';
+      document.getElementById('hasnariaAccountAvatar').textContent='H';
+      role.textContent='USER';
       try{
-        var db=window.__HASNARIA_DB||supabase.createClient(window.HASNARIA_SB,window.HASNARIA_KEY,{auth:{persistSession:true,detectSessionInUrl:true,flowType:'implicit',storageKey:'hasnaria-auth-v2'}});
-        var gu=await db.auth.getUser();
-        if(gu.data&&gu.data.user){
-          var u=gu.data.user, meta=u.user_metadata||{};
-          document.getElementById('hasnariaAccountPageName').textContent=meta.full_name||meta.name||u.email||'Pengguna';
-          document.getElementById('hasnariaAccountPageEmail').textContent=u.email||email||'—';
-          document.getElementById('hasnariaAccountAvatar').textContent=(meta.full_name||meta.name||u.email||'H').trim().charAt(0).toUpperCase();
-          role.textContent=(u.email||'').toLowerCase()==='harisnu@gmail.com'?'SUPER ADMIN':'USER';
+        var db=window.__HASNARIA_DB;
+        if(db&&db.auth&&db.auth.getUser){
+          var gu=await db.auth.getUser();
+          if(gu.data&&gu.data.user) fillPasswordPageIdentity(gu.data.user);
         }
       }catch(e){}
+    }else{
+      document.getElementById('hasnariaAccountPageName').textContent=(name&&name.textContent)||'—';
+      document.getElementById('hasnariaAccountPageEmail').textContent=email||'—';
+      role.textContent=superAdmin()?'SUPER ADMIN':'USER';
+      document.getElementById('hasnariaAccountAvatar').textContent=((name&&name.textContent)||'H').trim().charAt(0).toUpperCase();
     }
-    role.textContent=superAdmin()?'SUPER ADMIN':'USER';
-    document.getElementById('hasnariaAccountAvatar').textContent=((name&&name.textContent)||'H').trim().charAt(0).toUpperCase();
     var settings=document.getElementById('hasnariaAccountSettingsBody'),pass=document.getElementById('hasnariaPasswordBody');
     var title=document.getElementById('hasnariaAccountPageTitle'),desc=document.getElementById('hasnariaAccountPageDesc');
     if(mode==='password'){
