@@ -1,1 +1,1 @@
-/* TEMP: loading full content next */
+PLACEHOLDER_WILL_REPLACE_WITH_FULL
