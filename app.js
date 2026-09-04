@@ -11,6 +11,16 @@
     try {
       var originalCreateClient = supabase.createClient.bind(supabase);
       var sharedAuthClient = originalCreateClient(AUTH_URL, AUTH_KEY, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, flowType: 'pkce', storageKey: 'hasnaria-auth-v2' } });
+      // Arm password-activation early so nav-patch can open the page even if
+      // PASSWORD_RECOVERY fired before that script loaded.
+      try {
+        if (/[?&]password-activation=1(?:&|$)/.test(location.search) || /type=recovery/i.test(location.hash || '')) {
+          window.__HASNARIA_PASSWORD_ACTIVATION = true;
+        }
+      } catch (_) {}
+      sharedAuthClient.auth.onAuthStateChange(function (ev) {
+        if (ev === 'PASSWORD_RECOVERY') window.__HASNARIA_PASSWORD_ACTIVATION = true;
+      });
       var originalOnAuthStateChange = sharedAuthClient.auth.onAuthStateChange.bind(sharedAuthClient.auth);
       // Do not swallow SIGNED_IN: after Google OAuth return, getSession can race
       // and miss the session; core enter() depends on SIGNED_IN / INITIAL_SESSION.
@@ -36,7 +46,8 @@
               var done = false;
               var sub = sharedAuthClient.auth.onAuthStateChange(function (ev, sess) {
                 if (done) return;
-                if ((ev === 'SIGNED_IN' || ev === 'INITIAL_SESSION') && sess) {
+                if ((ev === 'SIGNED_IN' || ev === 'INITIAL_SESSION' || ev === 'PASSWORD_RECOVERY') && sess) {
+                  if (ev === 'PASSWORD_RECOVERY') window.__HASNARIA_PASSWORD_ACTIVATION = true;
                   done = true;
                   try { sub.data.subscription.unsubscribe(); } catch (_) {}
                   resolve({ data: { session: sess } });
