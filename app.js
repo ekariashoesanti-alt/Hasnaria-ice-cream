@@ -12,12 +12,45 @@
       var originalCreateClient = supabase.createClient.bind(supabase);
       var sharedAuthClient = originalCreateClient(AUTH_URL, AUTH_KEY, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, flowType: 'pkce', storageKey: 'hasnaria-auth-v2' } });
       var originalOnAuthStateChange = sharedAuthClient.auth.onAuthStateChange.bind(sharedAuthClient.auth);
+      // Do not swallow SIGNED_IN: after Google OAuth return, getSession can race
+      // and miss the session; core enter() depends on SIGNED_IN / INITIAL_SESSION.
+      // Debounce duplicate SIGNED_IN within 2s so bootstrap is not double-run.
+      var lastSignedInAt = 0;
       sharedAuthClient.auth.onAuthStateChange = function (callback) {
         return originalOnAuthStateChange(function (event, session) {
-          if (event === 'SIGNED_IN') return;
+          if (event === 'SIGNED_IN') {
+            var now = Date.now();
+            if (now - lastSignedInAt < 2000) return;
+            lastSignedInAt = now;
+          }
           setTimeout(function () { callback(event, session); }, 0);
         });
       };
+      // If returning from OAuth (?code=), wait for session before loading core
+      // so the UI does not stick on the login card.
+      var pendingOAuth = /[?&]code=/.test(location.search) || /[?#&]access_token=/.test(location.href);
+      window.__HASNARIA_AUTH_READY = pendingOAuth
+        ? sharedAuthClient.auth.getSession().then(function (res) {
+            if (res && res.data && res.data.session) return res;
+            return new Promise(function (resolve) {
+              var done = false;
+              var sub = sharedAuthClient.auth.onAuthStateChange(function (ev, sess) {
+                if (done) return;
+                if ((ev === 'SIGNED_IN' || ev === 'INITIAL_SESSION') && sess) {
+                  done = true;
+                  try { sub.data.subscription.unsubscribe(); } catch (_) {}
+                  resolve({ data: { session: sess } });
+                }
+              });
+              setTimeout(function () {
+                if (done) return;
+                done = true;
+                try { sub.data.subscription.unsubscribe(); } catch (_) {}
+                resolve(res);
+              }, 8000);
+            });
+          })
+        : Promise.resolve(null);
       window.__HASNARIA_DB = sharedAuthClient;
       window.__HASNARIA_ORIGINAL_CREATE_CLIENT = originalCreateClient;
       window.__HASNARIA_GET_ACCESS_TOKEN = async function () {
@@ -42,5 +75,10 @@
     document.addEventListener('click',function(e){var b=e.target&&e.target.closest?e.target.closest('button'):null;if(!b)return;var id=b.id||'',watch=id==='sSave'||id==='oSave'||id==='cSave'||id==='lzSave'||id==='svOpen'||id==='svHand'||id==='svClose'||b.hasAttribute('data-stk')||b.hasAttribute('data-ok')||b.hasAttribute('data-no')||b.hasAttribute('data-lzok')||b.hasAttribute('data-lzno');if(!watch)return;if(b.getAttribute('data-busy')==='1'){e.preventDefault();e.stopImmediatePropagation();return;}b.setAttribute('data-busy','1');setTimeout(function(){try{b.removeAttribute('data-busy');}catch(_){}},1800);},true);
   }
   window.hasnariaGoogleHref = function () { return '#'; };
-  load(CORE,afterCore);
+  function startCore() { load(CORE, afterCore); }
+  if (window.__HASNARIA_AUTH_READY && typeof window.__HASNARIA_AUTH_READY.then === 'function') {
+    window.__HASNARIA_AUTH_READY.then(function () { startCore(); }).catch(function () { startCore(); });
+  } else {
+    startCore();
+  }
 })();
