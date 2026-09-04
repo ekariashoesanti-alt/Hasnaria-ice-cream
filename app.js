@@ -2,8 +2,8 @@
   'use strict';
   var CORE = 'https://cdn.jsdelivr.net/gh/ekariashoesanti-alt/Hasnaria-ice-cream@864e0349d18a56ef997216a89661deacf9a8c24a/app.js';
   var STOCK = '/stock-monitor.js?v=25';
-  var SALES = '/sales-board.js?v=9';
-  var SALES_UI = '/sales-ui-patch.js?v=6';
+  var SALES = '/sales-board.js?v=12';
+  var SALES_UI = '/sales-ui-patch.js?v=7';
   var AUTH_URL = window.HASNARIA_SB;
   var AUTH_KEY = window.HASNARIA_KEY;
   if (typeof supabase !== 'undefined' && AUTH_URL && AUTH_KEY) {
