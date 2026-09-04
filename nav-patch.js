@@ -87,7 +87,9 @@
           var r=await db.auth.updateUser({password:p});
           if(r.error)throw r.error;
           msg.style.color='#166534';msg.textContent='Password aplikasi berhasil diaktifkan. Sekarang Anda bisa login dengan Google atau email + password.';
-          setTimeout(function(){page.classList.remove('open');},1800);
+          window.__HASNARIA_PASSWORD_ACTIVATION=false;
+          passwordActivationArmed=false;
+          setTimeout(function(){page.classList.remove('open'); location.href=location.pathname;},1800);
         }catch(e){msg.style.color='#b43b3b';msg.textContent=e&&e.message?e.message:'Gagal menyimpan password.'}
         btn.disabled=false;
       };
@@ -123,18 +125,36 @@
   function openPasswordActivationPage(){
     if(passwordActivationOpened) return;
     passwordActivationOpened=true;
+    passwordActivationArmed=true;
+    window.__HASNARIA_PASSWORD_ACTIVATION=true;
     showAccountPage('password');
     stripPasswordActivationParam();
+    // Fill identity from recovery session if header not ready yet
+    try{
+      var db=window.__HASNARIA_DB;
+      if(db&&db.auth&&db.auth.getUser){
+        db.auth.getUser().then(function(r){
+          var u=r&&r.data&&r.data.user;
+          if(!u) return;
+          var emailEl=document.getElementById('hasnariaAccountPageEmail');
+          var nameEl=document.getElementById('hasnariaAccountPageName');
+          var av=document.getElementById('hasnariaAccountAvatar');
+          if(emailEl && (!emailEl.textContent || emailEl.textContent==='—')) emailEl.textContent=u.email||'—';
+          var nm=(u.user_metadata&& (u.user_metadata.full_name||u.user_metadata.name)) || (u.email||'H').split('@')[0];
+          if(nameEl && (!nameEl.textContent || nameEl.textContent==='—')) nameEl.textContent=nm;
+          if(av) av.textContent=String(nm||'H').trim().charAt(0).toUpperCase();
+        }).catch(function(){});
+      }
+    }catch(_){}
   }
   function showPasswordActivation(){
     try{
-      var wants = location.search.indexOf('password-activation=1')>=0 || /type=recovery/i.test(location.hash||'') || passwordActivationArmed;
+      var wants = window.__HASNARIA_PASSWORD_ACTIVATION || passwordActivationArmed || location.search.indexOf('password-activation=1')>=0 || /type=recovery/i.test(location.hash||'');
       if(!wants || passwordActivationOpened) return;
       var wait=0;(function poll(){
-        var app=document.getElementById('app');
-        var ready = window.__HASNARIA_DB && app && !app.classList.contains('hidden');
-        if(ready){ openPasswordActivationPage(); return; }
-        if(wait++<60)setTimeout(poll,250);
+        // Do NOT wait for #app — recovery must open the password page even on login screen
+        if(window.__HASNARIA_DB){ openPasswordActivationPage(); return; }
+        if(wait++<80)setTimeout(poll,200);
       })();
     }catch(_){}
   }
@@ -143,12 +163,15 @@
     var db=window.__HASNARIA_DB;
     if(!db || !db.auth || !db.auth.onAuthStateChange) return;
     window.__hasnariaPwRecoveryWatch=true;
+    if(window.__HASNARIA_PASSWORD_ACTIVATION) passwordActivationArmed=true;
     db.auth.onAuthStateChange(function(ev){
       if(ev==='PASSWORD_RECOVERY'){
         passwordActivationArmed=true;
+        window.__HASNARIA_PASSWORD_ACTIVATION=true;
         openPasswordActivationPage();
       }
     });
+    if(passwordActivationArmed || window.__HASNARIA_PASSWORD_ACTIVATION) showPasswordActivation();
   }
 
   function ensureAccountMenu(){
