@@ -690,6 +690,15 @@
 
     if (STATE.error) html += '<div class="sb-error">' + esc(STATE.error) + '</div>';
     if (STATE.msg) html += '<div class="sb-ok">' + esc(STATE.msg) + '</div>';
+    if (STATE.importing) {
+      html += '<div class="sb-progress-banner" style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:12px;padding:12px 16px;margin-bottom:14px;display:flex;align-items:center;gap:12px">' +
+        '<div class="sb-spin" style="font-size:22px">⏳</div>' +
+        '<div style="flex:1">' +
+        '<div style="font-weight:700;font-size:14px;color:#166534">' + esc(STATE.importProgress || 'Sedang memproses upload data…') + '</div>' +
+        '<div style="font-size:12px;color:#15803d;margin-top:2px">Proses upload sedang berjalan cepat ke database Supabase. Mohon jangan tutup halaman ini.</div>' +
+        '</div>' +
+        '</div>';
+    }
 
     if (STATE.loading) {
       board.innerHTML = html + '<div class="sb-loading">Memuat data penjualan…</div></div>' + renderFormatHelpModal();
@@ -985,10 +994,11 @@
   function parseTextLines(text) {
     var lines = String(text || '').split(/\r?\n/).filter(function (x) { return x.trim(); });
     if (!lines.length) return [];
-    var sample = lines.slice(0, 10).join('\n');
+    var sample = lines.slice(0, 15).join('\n');
     var delim = (sample.match(/;/g) || []).length >= (sample.match(/,/g) || []).length ? ';' : ',';
     if ((sample.match(/\t/g) || []).length > (sample.match(/;/g) || []).length) delim = '\t';
     function split(line) {
+      if (line.indexOf('"') === -1) return line.split(delim);
       var out = [], cur = '', q = false;
       for (var i = 0; i < line.length; i++) {
         var c = line[i];
@@ -1037,9 +1047,18 @@
   }
 
   async function previewFileType(file) {
-    var matrix = await readFileMatrix(file);
-    var det = detectMajooType(matrix);
-    return { label: det.label, count: matrix.length - det.headerRow - 1 };
+    var ext = file.name.toLowerCase().split('.').pop();
+    if (ext === 'xlsx' || ext === 'xls') {
+      var matrix = await readFileMatrix(file);
+      var det = detectMajooType(matrix);
+      return { label: det.label, count: matrix.length - det.headerRow - 1 };
+    }
+    // Instant preview by inspecting first 32KB without parsing entire file twice
+    var slice = file.slice(0, 32768);
+    var text = await slice.text();
+    var sampleMatrix = parseTextLines(text);
+    var det2 = detectMajooType(sampleMatrix);
+    return { label: det2.label, count: 0 };
   }
 
   function normalizeImport(matrix) {
@@ -1264,7 +1283,7 @@
 
       var oldMap = {};
       try {
-        var old = await api('daily_metrics?brand_id=eq.' + encodeURIComponent(BRAND) + '&metric_date=gte.' + minDate + '&metric_date=lte.' + maxDate + '&limit=5000&select=metric_date,cash_revenue,transactions,notes');
+        var old = await api('daily_metrics?brand_id=eq.' + encodeURIComponent(BRAND) + '&metric_date=gte.' + minDate + '&metric_date=lte.' + maxDate + '&limit=5000&select=id,metric_date,cash_revenue,transactions,notes');
         (old || []).forEach(function (r) { oldMap[r.metric_date] = r; });
       } catch (eOld) {
         console.warn('Could not fetch old metrics for date range', eOld);
@@ -1292,13 +1311,13 @@
         };
       });
 
-      // Upsert in batches of 50 to guarantee smooth network transfer and avoid Supabase request timeouts
-      var BATCH_SIZE = 50;
+      // Upsert in batches of 100 for high throughput
+      var BATCH_SIZE = 100;
       for (var bi = 0; bi < payload.length; bi += BATCH_SIZE) {
         var chunk = payload.slice(bi, bi + BATCH_SIZE);
         var processed = Math.min(payload.length, bi + chunk.length);
         var percent = Math.round((processed / payload.length) * 100);
-        STATE.importProgress = 'Menyimpan ' + processed + ' / ' + payload.length + ' hari (' + percent + '%)';
+        STATE.importProgress = 'Menyimpan ' + processed + ' / ' + payload.length + ' hari (' + percent + '%)…';
         draw();
 
         try {
@@ -1308,15 +1327,36 @@
             body: JSON.stringify(chunk)
           });
         } catch (chunkErr) {
-          // Fallback sequential if unique constraint was not yet indexed
+          // Ultra-fast parallel fallback if unique constraint is not yet present:
+          var toInsert = [];
+          var toUpdate = [];
           for (var ci = 0; ci < chunk.length; ci++) {
             var prow = chunk[ci];
-            var hit = await api('daily_metrics?brand_id=eq.' + encodeURIComponent(BRAND) + '&metric_date=eq.' + prow.metric_date + '&select=id');
-            if (hit && hit[0] && hit[0].id) {
-              await api('daily_metrics?id=eq.' + hit[0].id, { method: 'PATCH', headers: { 'Content-Type': 'application/json', Prefer: 'return=minimal' }, body: JSON.stringify(prow) });
+            var exist = oldMap[prow.metric_date];
+            if (exist && exist.id) {
+              toUpdate.push({ id: exist.id, row: prow });
             } else {
-              await api('daily_metrics', { method: 'POST', headers: { 'Content-Type': 'application/json', Prefer: 'return=minimal' }, body: JSON.stringify(prow) });
+              toInsert.push(prow);
             }
+          }
+          // 1. Bulk insert all new dates in 1 single HTTP POST
+          if (toInsert.length) {
+            await api('daily_metrics', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+              body: JSON.stringify(toInsert)
+            });
+          }
+          // 2. Parallel updates in batches of 15 (takes ~300ms instead of 60s)
+          for (var ui = 0; ui < toUpdate.length; ui += 15) {
+            var subBatch = toUpdate.slice(ui, ui + 15);
+            await Promise.all(subBatch.map(function (item) {
+              return api('daily_metrics?id=eq.' + item.id, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+                body: JSON.stringify(item.row)
+              });
+            }));
           }
         }
       }
