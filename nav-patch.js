@@ -28,10 +28,15 @@
 
   function superAdmin(){
     var email='';
-    try{var u=window.__HASNARIA_DB&&window.__HASNARIA_DB.auth&&window.__HASNARIA_DB.auth.getUser;return u?null:null}catch(_){}
     var who=document.getElementById('whoMeta');
-    if(who){var m=who.textContent||'';email=(m.split('·')[1]||'').trim().toLowerCase()}
-    return email==='harisnu@gmail.com';
+    if(who){
+      var parts=(who.textContent||'').split('·').map(function(x){return x.trim()});
+      for(var i=0;i<parts.length;i++){
+        if(parts[i].indexOf('@')>=0){email=parts[i].toLowerCase();break}
+      }
+    }
+    // Super admin: Harisnu + Hasnaria owner email
+    return email==='harisnu@gmail.com'||email==='ekariashoesanti@gmail.com';
   }
 
   function closeAccountMenu(){
@@ -65,7 +70,11 @@
     }
     var name=document.getElementById('whoName'),meta=document.getElementById('whoMeta');
     document.getElementById('hasnariaAccountName').textContent=(name&&name.textContent)||'—';
-    var email=(meta&&meta.textContent.split('·')[1]||'').trim();
+    var email='';
+    if(meta){
+      var parts=(meta.textContent||'').split('·').map(function(x){return x.trim()});
+      for(var i=0;i<parts.length;i++){if(parts[i].indexOf('@')>=0){email=parts[i];break}}
+    }
     document.getElementById('hasnariaAccountEmail').textContent=email||'—';
     document.getElementById('hasnariaAccountRole').textContent=superAdmin()?'Super Admin':'User';
     document.getElementById('hasnariaAccountStatus').textContent='Aktif';
@@ -117,7 +126,9 @@
     document.head.appendChild(s)
   }
 
+  var runTimer=null;
   function run(){injectStyle();moveNav();styleButtons();syncGroupedContent();ensureAccountMenu();loadSettings()}
-  function start(){run();new MutationObserver(run).observe(document.body,{childList:true,subtree:true});setInterval(run,1000)}
+  function scheduleRun(){if(runTimer)return;runTimer=setTimeout(function(){runTimer=null;run()},120)}
+  function start(){run();new MutationObserver(scheduleRun).observe(document.body,{childList:true,subtree:true});setInterval(run,2500)}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
 })();
