@@ -36,31 +36,57 @@
           setTimeout(function () { callback(event, session); }, 0);
         });
       };
-      // If returning from OAuth (?code=), wait for session before loading core
-      // so the UI does not stick on the login card.
+      // Wait for PKCE/OAuth/recovery session. Code verifier lives in this client's
+      // storageKey (hasnaria-auth-v2) — must match the client that sent the email.
       var pendingOAuth = /[?&]code=/.test(location.search) || /[?#&]access_token=/.test(location.href);
-      window.__HASNARIA_AUTH_READY = pendingOAuth
-        ? sharedAuthClient.auth.getSession().then(function (res) {
-            if (res && res.data && res.data.session) return res;
-            return new Promise(function (resolve) {
-              var done = false;
-              var sub = sharedAuthClient.auth.onAuthStateChange(function (ev, sess) {
-                if (done) return;
-                if ((ev === 'SIGNED_IN' || ev === 'INITIAL_SESSION' || ev === 'PASSWORD_RECOVERY') && sess) {
-                  if (ev === 'PASSWORD_RECOVERY') window.__HASNARIA_PASSWORD_ACTIVATION = true;
-                  done = true;
-                  try { sub.data.subscription.unsubscribe(); } catch (_) {}
-                  resolve({ data: { session: sess } });
-                }
-              });
-              setTimeout(function () {
-                if (done) return;
+      var wantsPwAct = !!window.__HASNARIA_PASSWORD_ACTIVATION;
+      function waitForAuthSession(timeoutMs) {
+        return sharedAuthClient.auth.getSession().then(function (res) {
+          if (res && res.data && res.data.session) return res;
+          return new Promise(function (resolve) {
+            var done = false;
+            var sub = sharedAuthClient.auth.onAuthStateChange(function (ev, sess) {
+              if (done) return;
+              if ((ev === 'SIGNED_IN' || ev === 'INITIAL_SESSION' || ev === 'PASSWORD_RECOVERY') && sess) {
+                if (ev === 'PASSWORD_RECOVERY') window.__HASNARIA_PASSWORD_ACTIVATION = true;
                 done = true;
                 try { sub.data.subscription.unsubscribe(); } catch (_) {}
-                resolve(res);
-              }, 8000);
+                resolve({ data: { session: sess } });
+              }
             });
-          })
+            setTimeout(function () {
+              if (done) return;
+              done = true;
+              try { sub.data.subscription.unsubscribe(); } catch (_) {}
+              resolve(res);
+            }, timeoutMs || 8000);
+          });
+        });
+      }
+      window.__HASNARIA_ENSURE_RECOVERY_SESSION = function () {
+        return waitForAuthSession(3000).then(function (res) {
+          if (res && res.data && res.data.session) return res.data.session;
+          var code = null;
+          try { code = new URLSearchParams(location.search).get('code'); } catch (_) {}
+          if (!code || !sharedAuthClient.auth.exchangeCodeForSession) {
+            return null;
+          }
+          // detectSessionInUrl may still be racing; try explicit exchange once.
+          return sharedAuthClient.auth.exchangeCodeForSession(code).then(function (ex) {
+            if (ex && ex.error) {
+              window.__HASNARIA_RECOVERY_ERROR = ex.error.message || String(ex.error);
+              return null;
+            }
+            window.__HASNARIA_PASSWORD_ACTIVATION = true;
+            return ex && ex.data ? ex.data.session : null;
+          }).catch(function (e) {
+            window.__HASNARIA_RECOVERY_ERROR = (e && e.message) ? e.message : String(e);
+            return null;
+          });
+        });
+      };
+      window.__HASNARIA_AUTH_READY = (pendingOAuth || wantsPwAct)
+        ? waitForAuthSession(10000)
         : Promise.resolve(null);
       window.__HASNARIA_DB = sharedAuthClient;
       window.__HASNARIA_ORIGINAL_CREATE_CLIENT = originalCreateClient;
