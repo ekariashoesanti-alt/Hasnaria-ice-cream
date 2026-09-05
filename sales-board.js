@@ -1,1 +1,1 @@
-file:///workspace/hasnaria-sales/sales-board.js
+LOAD_FROM:/home/box/.cursor/projects/workspace/agent-tools/mcp-call-push_files-sb-v24.json
