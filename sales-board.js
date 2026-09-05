@@ -630,6 +630,19 @@
       '</div>';
   }
 
+  function renderImportStatusModal() {
+    var s = STATE.importStatus; if (!s) return '';
+    var cls=s.type==='error'?'error':(s.type==='success'?'success':'progress');
+    var title=s.type==='error'?'Upload Gagal':(s.type==='success'?'Upload Selesai':'Upload Sedang Berjalan');
+    var icon=s.type==='error'?'✕':(s.type==='success'?'✓':'↑');
+    return '<div class="sb-modal-overlay" id="sbImportStatusOverlay"><div class="sb-modal-card sb-status-card">' +
+      '<div class="sb-status-icon '+cls+'">'+icon+'</div><h3>'+esc(title)+'</h3><p class="sb-status-main">'+esc(s.message||'')+'</p>' +
+      (s.detail?'<p class="sb-status-detail">'+esc(s.detail)+'</p>':'') +
+      (s.type==='progress'?'<div class="sb-status-track"><div class="sb-status-fill" style="width:'+Math.max(3,Math.min(100,s.percent||0))+'%"></div></div><b>'+Math.round(s.percent||0)+'%</b>':'') +
+      ((s.type==='success'||s.type==='error')?'<button id="sbImportStatusClose" class="sb-btn-modal-ok">Tutup</button>':'') +
+      '</div></div>';
+  }
+
   function renderFormatHelpModal() {
     if (!STATE.showHelp) return '';
     return '<div class="sb-modal-overlay" id="sbModalOverlay">' +
@@ -817,7 +830,7 @@
       '</div>' +
       '</div>';
 
-    html += '</div>' + renderFormatHelpModal();
+    html += '</div>' + renderFormatHelpModal() + renderImportStatusModal();
     board.innerHTML = html;
     STATE.draw = false;
     bind();
@@ -867,6 +880,8 @@
       };
     });
 
+    var statusClose = host.querySelector('#sbImportStatusClose'); if(statusClose) statusClose.onclick=function(){STATE.importStatus=null;draw();};
+    var statusOverlay=host.querySelector('#sbImportStatusOverlay'); if(statusOverlay) statusOverlay.onclick=function(e){if(e.target===statusOverlay && STATE.importStatus.type!=='progress'){STATE.importStatus=null;draw();}};
     // Format Help Modal
     var btnFormat = host.querySelector('#sbBtnFormat');
     if (btnFormat) btnFormat.onclick = function () { STATE.showHelp = true; draw(); };
@@ -1198,6 +1213,7 @@
     STATE.error = '';
     STATE.msg = '';
     STATE.importProgress = 'Membaca ' + files.length + ' file…';
+    STATE.importStatus = {type:'progress',message:'Upload dimulai',detail:files.length+' file siap diproses.',percent:3};
     draw();
 
     try {
@@ -1207,6 +1223,7 @@
       for (var fi = 0; fi < files.length; fi++) {
         var file = files[fi];
         STATE.importProgress = 'Membaca file ' + (fi + 1) + '/' + files.length + ' (' + file.name + ')…';
+        STATE.importStatus = {type:'progress',message:'Membaca file '+(fi+1)+' dari '+files.length,detail:file.name,percent:5+Math.round((fi/files.length)*25)};
         draw();
 
         var matrix = await readFileMatrix(file);
@@ -1260,6 +1277,7 @@
 
       // Fetch existing records safely using date range (prevents HTTP 414 URI Too Long for 365 days)
       STATE.importProgress = 'Mengecek data lama di Supabase…';
+      STATE.importStatus = {type:'progress',message:'Validasi data',detail:'Memeriksa tanggal, duplikasi, dan kelengkapan data.',percent:35};
       draw();
 
       var oldMap = {};
@@ -1299,6 +1317,7 @@
         var processed = Math.min(payload.length, bi + chunk.length);
         var percent = Math.round((processed / payload.length) * 100);
         STATE.importProgress = 'Menyimpan ' + processed + ' / ' + payload.length + ' hari (' + percent + '%)';
+        STATE.importStatus = {type:'progress',message:'Menyimpan data',detail:processed+' dari '+payload.length+' hari diproses.',percent:35+Math.round(percent*.6)};
         draw();
 
         try {
@@ -1325,6 +1344,7 @@
       STATE.stagedFileType = '';
       STATE.importing = false;
       STATE.importProgress = '';
+      STATE.importStatus = {type:'success',message:'Data berhasil ter-upload.',detail:payload.length+' tanggal ('+minDate+' s/d '+maxDate+') tersimpan di database.'};
       STATE.msg = '✓ Berhasil update ' + payload.length + ' tanggal (' + minDate + ' s/d ' + maxDate + ') dari ' + files.length + ' file Majoo!';
 
       // Adjust date filter: if multi-month, switch to monthly view for 12-month overview
@@ -1341,6 +1361,7 @@
     } catch (e) {
       STATE.importing = false;
       STATE.importProgress = '';
+      STATE.importStatus = {type:'error',message:'Upload gagal.',detail:e.message||'Terjadi kesalahan saat memproses data.'};
       STATE.error = 'Gagal upload: ' + e.message;
       STATE.msg = '';
       draw();
