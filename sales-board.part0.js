@@ -85,8 +85,7 @@
     viewFrom: '',
     viewTo: '',
     viewMonth: '',
-    tooltip: null,
-    importStatus: null
+    tooltip: null
   };
 
   function jwtAlive(token) {
@@ -142,8 +141,8 @@
   }
 
   function esc(x) {
-    return String(x == null ? '' : x).replace(/[&<>\"']/g, function (c) {
-      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', "'": '&#39;' }[c];
+    return String(x == null ? '' : x).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
     });
   }
 
@@ -196,15 +195,7 @@
     return isFinite(n3) ? n3 : null;
   }
 
-
-  // Majoo can export omzet as a value in thousands (e.g. 5.835 = Rp5.835.000).
-  // Normalize only suspiciously small revenue totals; normal full-rupiah values
-  // such as 5.835.000 are already parsed correctly and remain unchanged.
-  function revenue(v) {
-    var n = num(v);
-    if (n == null) return null;
-    return (n > 0 && n < 10000) ? n * 1000 : n;
-  }
+  function revenue(v) { var n=num(v); if(n==null) return null; return (n>0 && n<10000) ? n*1000 : n; }
 
   function normHeader(s) {
     return String(s == null ? '' : s).toLowerCase().replace(/[\u00a0_\-\/\\()\[\]{}:;,.]+/g, ' ').replace(/\s+/g, ' ').trim();
@@ -437,13 +428,27 @@
       return Object.keys(mapW).sort().map(function (k) { return mapW[k]; });
     }
     if (mode === 'monthly') {
-      // Monthly view = total omzet for every month in the active year.
-      // The selected month determines the year (e.g. Feb 2026 -> Jan–Dec 2026).
-      // Aggregate by the YYYY-MM text directly so timezone/date parsing cannot
-      // accidentally turn valid daily records into zero-value months.
+      // Tahunan: aggregate by YYYY-MM so bars show already-inputted monthly omzet.
+      // Do NOT use monthStart() (returns YYYY-MM-01) as map key — map keys are YYYY-MM.
+      var yFrom = (STATE.viewFrom || '').slice(0, 4);
+      var yTo = (STATE.viewTo || '').slice(0, 4);
+      var mapM = {};
+      if (yFrom && yTo && yFrom !== yTo) {
+        rows.forEach(function (r) {
+          var key = (r.metric_date || '').slice(0, 7);
+          if (!key) return;
+          if (!mapM[key]) {
+            var mo = Number(key.slice(5, 7)); var yy = key.slice(2, 4);
+            mapM[key] = { key: key, type: 'month', label: IDM[mo] + ' ' + yy, sub: key, omzet: 0, trx: 0, days: 0 };
+          }
+          mapM[key].omzet += Number(r.cash_revenue || 0);
+          mapM[key].trx += Number(r.transactions || 0);
+          mapM[key].days += 1;
+        });
+        return Object.keys(mapM).sort().map(function (k) { return mapM[k]; });
+      }
       var selectedYm = monthOfView() || (STATE.viewFrom || '').slice(0, 7);
       var y = selectedYm ? selectedYm.slice(0, 4) : (STATE.viewFrom || '').slice(0, 4);
-      var mapM = {};
       if (!y) return [];
       for (var m = 1; m <= 12; m++) {
         var ym2 = y + '-' + String(m).padStart(2, '0');
@@ -452,63 +457,4 @@
       rows.forEach(function (r) {
         var date = String(r.metric_date || '');
         if (date.slice(0, 4) !== y) return;
-        var keyM = date.slice(0, 7);
-        var g2 = mapM[keyM];
-        if (!g2) return;
-        g2.omzet += Number(r.cash_revenue || 0);
-        g2.trx += Number(r.transactions || 0);
-        g2.days += 1;
-      });
-      return Object.keys(mapM).sort().map(function (k) { return mapM[k]; });
-    }
-    // Mode Daily
-    var mapD = {};
-    rows.forEach(function (r) {
-      var keyD = r.metric_date;
-      if (!mapD[keyD]) {
-        mapD[keyD] = { key: keyD, type: 'day', label: keyD.slice(8, 10) + '/' + keyD.slice(5, 7), sub: keyD, omzet: 0, trx: 0, days: 0 };
-      }
-      mapD[keyD].omzet += r.cash_revenue; mapD[keyD].trx += r.transactions; mapD[keyD].days += 1;
-    });
-    return Object.keys(mapD).sort().map(function (k) { return mapD[k]; });
-  }
-
-  function kpiCard(title, value, sub, cls) {
-    return '<div class="sb-kpi"><div class="sb-kpi-label">' + title + '</div><div class="sb-kpi-value">' + value + '</div><div class="sb-kpi-sub ' + cls + '">' + sub + '</div></div>';
-  }
-
-  // Modern Interactive SVG Chart
-  function renderChart(data) {
-    if (!data.length) return '<div class="sb-empty-chart">Belum ada data pada periode ini.</div>';
-    var w = 760, h = 230, padL = 60, padR = 20, padT = 20, padB = 44;
-    var max = Math.max.apply(null, data.map(function (x) { return x.omzet; }).concat([1]));
-
-    if (STATE.mode === 'daily') {
-      var pts = data.map(function (x, i) {
-        var xx = padL + (data.length === 1 ? (w - padL - padR) / 2 : i * ((w - padL - padR) / (data.length - 1)));
-        var yy = padT + (h - padT - padB) * (1 - x.omzet / max);
-        var isSelected = STATE.slice && STATE.slice.type === 'day' && STATE.slice.id === x.key;
-        return { x: xx, y: yy, d: x, sel: isSelected };
-      });
-
-      var path = pts.map(function (p, i) { return (i ? 'L' : 'M') + p.x.toFixed(1) + ' ' + p.y.toFixed(1); }).join(' ');
-      var area = 'M' + pts[0].x.toFixed(1) + ' ' + (h - padB) + ' ' + pts.map(function (p) { return 'L' + p.x.toFixed(1) + ' ' + p.y.toFixed(1); }).join(' ') + ' L' + pts[pts.length - 1].x.toFixed(1) + ' ' + (h - padB) + ' Z';
-
-      var labelStep = Math.max(1, Math.ceil(data.length / 8));
-      var labels = pts.map(function (p, i) {
-        if (i % labelStep === 0 || i === data.length - 1) {
-          return '<text x="' + p.x + '" y="' + (h - 16) + '" text-anchor="middle" class="x-label">' + esc(p.d.label) + '</text>';
-        }
-        return '';
-      }).join('');
-
-      var dots = pts.map(function (p) {
-        var tip = esc(p.d.sub) + ' · ' + esc(money(p.d.omzet)) + ' (' + p.d.trx + ' trx)';
-        var dotClass = 'sb-chart-point' + (p.sel ? ' on-slice' : '');
-        return '<g class="sb-chart-dot-group" data-slice-type="day" data-slice-id="' + p.d.key + '" data-slice-label="Tgl ' + esc(p.d.sub) + '">' +
-          '<circle cx="' + p.x + '" cy="' + p.y + '" r="12" class="sb-touch-target"/>' +
-          (p.sel ? '<circle cx="' + p.x + '" cy="' + p.y + '" r="8" class="sb-chart-ring"/>' : '') +
-          '<circle cx="' + p.x + '" cy="' + p.y + '" r="' + (p.sel ? '5' : '4') + '" class="' + dotClass + '"/>' +
-          '<title>' + tip + ' • Klik untuk slice</title></g>';
-      }).join('');
-
+        var keyM = date.slice(0, 7); //
