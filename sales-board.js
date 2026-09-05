@@ -426,30 +426,27 @@
       return Object.keys(mapW).sort().map(function (k) { return mapW[k]; });
     }
     if (mode === 'monthly') {
-      var yFrom = (STATE.viewFrom || '').slice(0, 4);
-      var yTo = (STATE.viewTo || '').slice(0, 4);
+      // Monthly view = total omzet for every month in the active year.
+      // The selected month determines the year (e.g. Feb 2026 -> Jan–Dec 2026).
+      // Aggregate by the YYYY-MM text directly so timezone/date parsing cannot
+      // accidentally turn valid daily records into zero-value months.
+      var selectedYm = monthOfView() || (STATE.viewFrom || '').slice(0, 7);
+      var y = selectedYm ? selectedYm.slice(0, 4) : (STATE.viewFrom || '').slice(0, 4);
       var mapM = {};
-      if (yFrom && yTo && yFrom !== yTo) {
-        rows.forEach(function (r) {
-          var key = (r.metric_date || '').slice(0, 7);
-          if (!key) return;
-          if (!mapM[key]) {
-            var mo = Number(key.slice(5, 7)); var yy = key.slice(2, 4);
-            mapM[key] = { key: key, type: 'month', label: IDM[mo] + ' ' + yy, sub: key, omzet: 0, trx: 0, days: 0 };
-          }
-          mapM[key].omzet += r.cash_revenue; mapM[key].trx += r.transactions; mapM[key].days += 1;
-        });
-        return Object.keys(mapM).sort().map(function (k) { return mapM[k]; });
-      }
-      var y = (STATE.viewFrom || monthOfView() || '').slice(0, 4);
+      if (!y) return [];
       for (var m = 1; m <= 12; m++) {
         var ym2 = y + '-' + String(m).padStart(2, '0');
         mapM[ym2] = { key: ym2, type: 'month', label: IDM[m], sub: y, omzet: 0, trx: 0, days: 0 };
       }
       rows.forEach(function (r) {
-        var keyM = monthStart(r.metric_date);
-        var g2 = mapM[keyM]; if (!g2) return;
-        g2.omzet += r.cash_revenue; g2.trx += r.transactions; g2.days += 1;
+        var date = String(r.metric_date || '');
+        if (date.slice(0, 4) !== y) return;
+        var keyM = date.slice(0, 7);
+        var g2 = mapM[keyM];
+        if (!g2) return;
+        g2.omzet += Number(r.cash_revenue || 0);
+        g2.trx += Number(r.transactions || 0);
+        g2.days += 1;
       });
       return Object.keys(mapM).sort().map(function (k) { return mapM[k]; });
     }
@@ -544,7 +541,7 @@
 
       return '<g class="sb-bar-group" data-slice-type="' + item.type + '" data-slice-id="' + item.key + '" data-slice-label="' + esc(item.label) + (item.sub ? ' (' + item.sub + ')' : '') + '">' +
         '<rect x="' + bx + '" y="' + by + '" width="' + barW + '" height="' + Math.max(3, barH) + '" rx="5" class="' + barClass + '"/>' +
-        (item.omzet > 0 ? '<text x="' + (bx + barW / 2) + '" y="' + (by - 6) + '" text-anchor="middle" class="bar-val-text">' + money(item.omzet).replace('Rp ', '') + '</text>' : '') +
+        (item.omzet > 0 ? '<text x="' + (bx + barW / 2) + '" y="' + (by - 6) + '" text-anchor="middle" class="bar-val-text">' + esc(money(item.omzet)) + '</text>' : '') +
         '<text x="' + (bx + barW / 2) + '" y="' + (h - 22) + '" text-anchor="middle" class="x-label-bold">' + esc(item.label) + '</text>' +
         (item.sub ? '<text x="' + (bx + barW / 2) + '" y="' + (h - 9) + '" text-anchor="middle" class="x-sub-label">' + esc(item.sub) + '</text>' : '') +
         '<title>' + tip + '</title></g>';
