@@ -195,6 +195,8 @@
     return isFinite(n3) ? n3 : null;
   }
 
+  function revenue(v) { var n=num(v); if(n==null) return null; return (n>0 && n<10000) ? n*1000 : n; }
+
   function normHeader(s) {
     return String(s == null ? '' : s).toLowerCase().replace(/[\u00a0_\-\/\\()\[\]{}:;,.]+/g, ' ').replace(/\s+/g, ' ').trim();
   }
@@ -1089,7 +1091,7 @@
         var d = parseDate(kDate ? row[kDate] : null);
         if (!d) return;
         var g = groups[d] || (groups[d] = { date: d, omzet: 0, trxSet: new Set(), cash: 0, qris: 0, tf: 0, skus: {} });
-        var tot = num(kTotal ? row[kTotal] : null) || 0;
+        var tot = revenue(kTotal ? row[kTotal] : null) || 0;
         g.omzet += tot;
         var tid = (kTrx && row[kTrx] ? String(row[kTrx]).trim() : '') || ('r' + idx);
         g.trxSet.add(tid);
@@ -1188,7 +1190,7 @@
       var d = parseDate(kDate3 ? row[kDate3] : null);
       if (!d) return;
       var g = groups3[d] || (groups3[d] = { date: d, omzet: 0, trx: 0, cash: 0, qris: 0, tf: 0, skus: [] });
-      var rev = num(kTotal3 ? row[kTotal3] : null);
+      var rev = revenue(kTotal3 ? row[kTotal3] : null);
       if (rev != null) g.omzet += rev;
       var tx = num(kTrx3 ? row[kTrx3] : null);
       if (tx != null) g.trx = Math.max(g.trx, tx);
