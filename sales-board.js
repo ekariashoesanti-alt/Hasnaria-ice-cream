@@ -1,1 +1,1 @@
-PLACEHOLDER_LOAD_FROM_FILE
+file:///workspace/hasnaria-sales/sales-board.js
