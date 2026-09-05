@@ -725,16 +725,24 @@
     }
 
     ensureView();
-    var active = selectedWindow(), prev = previousFor(active);
+    var active = selectedWindow();
+    // Tahunan: chart + Top/Worst use the full selected year, while KPI cards
+    // remain locked to the selected month exactly as requested.
+    var kpiWindow = (STATE.mode === 'monthly' && STATE.viewMonth)
+      ? { start: STATE.viewMonth + '-01', end: lastDayOfMonth(STATE.viewMonth) }
+      : active;
+    var prev = previousFor(kpiWindow);
     var ar = rangeRows(active), pr = rangeRows(prev);
+    var kpiRows = rangeRows(kpiWindow);
     var slicedRows = getSlicedRows(ar);
 
-    var aStats = statsFor(slicedRows.length ? slicedRows : ar);
+    var aStats = statsFor(getSlicedRows(kpiRows).length ? getSlicedRows(kpiRows) : kpiRows);
     var pStats = statsFor(pr);
     var trendData = groupTrend(ar, STATE.mode);
 
-    // SKUs
-    var allSkus = aggregateSku(slicedRows);
+    // SKUs: annual accumulation in Tahunan mode; monthly/weekly/daily keep their selected window.
+    var skuRows = (STATE.mode === 'monthly') ? ar : slicedRows;
+    var allSkus = aggregateSku(skuRows);
     var totalSkuQty = allSkus.reduce(function (s, x) { return s + x.qty; }, 0);
     var totalSkuRev = allSkus.reduce(function (s, x) { return s + x.rev; }, 0);
 
@@ -751,7 +759,7 @@
       return '<option value="' + ym + '"' + (STATE.viewMonth === ym ? ' selected' : '') + '>' + lab + '</option>';
     }).join('');
 
-    var vsLab = STATE.mode === 'monthly' ? 'vs tahun lalu' : 'vs bulan lalu';
+    var vsLab = 'vs bulan lalu';
     var trendLab = STATE.mode === 'monthly' ? (STATE.viewMonth ? 'Januari–Desember tahun yang sama' : 'Semua bulan dalam data') : (STATE.mode === 'weekly' ? 'Minggu 1–5 di bulan ' + monthOfView() : 'Harian di bulan ' + monthOfView());
 
     // Filter toolbar
@@ -765,7 +773,7 @@
       '</div>' +
       '<div class="sb-toggle">' +
       ['daily', 'weekly', 'monthly'].map(function (m) {
-        var t = m === 'daily' ? 'Harian' : m === 'weekly' ? 'Mingguan' : 'Bulanan';
+        var t = m === 'daily' ? 'Harian' : m === 'weekly' ? 'Mingguan' : 'Tahunan';
         return '<button type="button" class="' + (STATE.mode === m ? 'on' : '') + '" data-mode="' + m + '">' + t + '</button>';
       }).join('') +
       '</div>' +
@@ -792,13 +800,13 @@
       '</div>';
 
     // Main Grid: Trend Chart on Left, Stack of Top Seller & Worst Performer on Right
-    var skuSubLab = STATE.slice ? ('Slice: ' + STATE.slice.label) : (STATE.mode === 'daily' ? 'Bulan terpilih' : (STATE.mode === 'weekly' ? 'Bulan terpilih' : 'Tahun terpilih'));
+    var skuSubLab = STATE.slice ? ('Slice: ' + STATE.slice.label) : (STATE.mode === 'daily' ? 'Bulan terpilih' : (STATE.mode === 'weekly' ? 'Bulan terpilih' : 'Akumulasi tahun ' + (STATE.viewMonth ? STATE.viewMonth.slice(0,4) : 'terpilih')));
 
     html += '<div class="sb-grid-main">' +
       '<section class="sb-card sb-trend">' +
       '<div class="sb-card-head">' +
       '<div>' +
-      '<h3>Tren Omzet ' + (STATE.mode === 'daily' ? 'Harian' : (STATE.mode === 'weekly' ? 'Mingguan' : 'Bulanan')) + '</h3>' +
+      '<h3>Tren Omzet ' + (STATE.mode === 'daily' ? 'Harian' : (STATE.mode === 'weekly' ? 'Mingguan' : 'Tahunan')) + '</h3>' +
       '<span>' + esc(trendLab) + '</span>' +
       '</div>' +
       '</div>' +
