@@ -1641,6 +1641,11 @@
 
   function mount() {
     css();
+    if (!document.getElementById('sales-board-status-css')) {
+      var st = document.createElement('style'); st.id = 'sales-board-status-css';
+      st.textContent = '.sb-status-card{text-align:center;width:min(460px,calc(100vw - 32px));padding:30px 28px}.sb-status-icon{width:58px;height:58px;border-radius:50%;margin:0 auto 14px;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:900;background:#eef7f3;color:#176b55}.sb-status-icon.error{background:#fff1f2;color:#c62828}.sb-status-icon.progress{background:#e9f8fb;color:#079fc0}.sb-status-card h3{margin:0 0 8px;font-size:22px}.sb-status-main{font-weight:700;font-size:15px;margin:0;color:#10201b}.sb-status-detail{font-size:13px;color:#61716a;margin:8px 0 18px;line-height:1.5}.sb-status-track{height:10px;background:#e6eeea;border-radius:999px;overflow:hidden;margin:18px 0 7px}.sb-status-fill{height:100%;background:#176b55;border-radius:999px;transition:width .25s ease}.sb-status-percent{font-size:12px;font-weight:800;color:#176b55}';
+      document.head.appendChild(st);
+    }
     var h = document.getElementById('sales');
     if (!h) return;
     watch();
