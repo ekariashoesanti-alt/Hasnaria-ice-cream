@@ -85,7 +85,8 @@
     viewFrom: '',
     viewTo: '',
     viewMonth: '',
-    tooltip: null
+    tooltip: null,
+    importStatus: null
   };
 
   function jwtAlive(token) {
@@ -637,6 +638,25 @@
       '</div>';
   }
 
+  function renderImportStatusModal() {
+    var s = STATE.importStatus;
+    if (!s) return '';
+    var isError = s.type === 'error';
+    var isDone = s.type === 'success';
+    var icon = isError ? '✕' : (isDone ? '✓' : '↑');
+    var title = isError ? 'Upload Gagal' : (isDone ? 'Upload Selesai' : 'Upload Sedang Berjalan');
+    var cls = isError ? 'error' : (isDone ? 'success' : 'progress');
+    return '<div class="sb-modal-overlay sb-status-overlay" id="sbImportStatusOverlay">' +
+      '<div class="sb-modal-card sb-status-card">' +
+      '<div class="sb-status-icon ' + cls + '">' + icon + '</div>' +
+      '<h3>' + esc(title) + '</h3>' +
+      '<p class="sb-status-main">' + esc(s.message || '') + '</p>' +
+      (s.detail ? '<p class="sb-status-detail">' + esc(s.detail) + '</p>' : '') +
+      (s.type === 'progress' ? '<div class="sb-status-track"><div class="sb-status-fill" style="width:' + Math.max(3, Math.min(100, Number(s.percent || 0))) + '%"></div></div><div class="sb-status-percent">' + Math.round(Number(s.percent || 0)) + '%</div>' : '') +
+      (isDone || isError ? '<button type="button" class="sb-btn-modal-ok" id="sbImportStatusClose">' + (isDone ? 'Selesai' : 'Tutup') + '</button>' : '') +
+      '</div></div>';
+  }
+
   function renderFormatHelpModal() {
     if (!STATE.showHelp) return '';
     return '<div class="sb-modal-overlay" id="sbModalOverlay">' +
@@ -882,6 +902,16 @@
         draw();
       };
     });
+
+    // Upload status popup
+    var statusClose = host.querySelector('#sbImportStatusClose');
+    if (statusClose) statusClose.onclick = function () { STATE.importStatus = null; draw(); };
+    var statusOverlay = host.querySelector('#sbImportStatusOverlay');
+    if (statusOverlay) statusOverlay.onclick = function (e) {
+      if (e.target === statusOverlay && STATE.importStatus && STATE.importStatus.type !== 'progress') {
+        STATE.importStatus = null; draw();
+      }
+    };
 
     // Format Help Modal
     var btnFormat = host.querySelector('#sbBtnFormat');
@@ -1224,6 +1254,7 @@
     STATE.error = '';
     STATE.msg = '';
     STATE.importProgress = 'Membaca ' + files.length + ' file…';
+    STATE.importStatus = { type: 'progress', message: 'Upload dimulai', detail: files.length + ' file Majoo siap diproses.', percent: 3 };
     draw();
 
     try {
@@ -1233,6 +1264,7 @@
       for (var fi = 0; fi < files.length; fi++) {
         var file = files[fi];
         STATE.importProgress = 'Membaca file ' + (fi + 1) + '/' + files.length + ' (' + file.name + ')…';
+        STATE.importStatus = { type: 'progress', message: 'Membaca file ' + (fi + 1) + ' dari ' + files.length, detail: file.name, percent: Math.round((fi / files.length) * 25) + 5 };
         draw();
 
         var matrix = await readFileMatrix(file);
@@ -1286,6 +1318,7 @@
 
       // Fetch existing records safely using date range (prevents HTTP 414 URI Too Long for 365 days)
       STATE.importProgress = 'Mengecek data lama di Supabase…';
+      STATE.importStatus = { type: 'progress', message: 'Memeriksa data lama', detail: 'Membandingkan tanggal sebelum menyimpan agar data tidak dobel.', percent: 35 };
       draw();
 
       var oldMap = {};
@@ -1325,6 +1358,7 @@
         var processed = Math.min(payload.length, bi + chunk.length);
         var percent = Math.round((processed / payload.length) * 100);
         STATE.importProgress = 'Menyimpan ' + processed + ' / ' + payload.length + ' hari (' + percent + '%)…';
+        STATE.importStatus = { type: 'progress', message: 'Menyimpan data ke database', detail: processed + ' dari ' + payload.length + ' hari berhasil diproses.', percent: 35 + Math.round(percent * 0.6) };
         draw();
 
         try {
@@ -1372,6 +1406,7 @@
       STATE.stagedFileType = '';
       STATE.importing = false;
       STATE.importProgress = '';
+      STATE.importStatus = { type: 'success', message: 'Data berhasil ter-upload dan tersimpan.', detail: payload.length + ' tanggal (' + minDate + ' s/d ' + maxDate + ') dari ' + files.length + ' file Majoo telah masuk ke database.' };
       STATE.msg = '✓ Berhasil update ' + payload.length + ' tanggal (' + minDate + ' s/d ' + maxDate + ') dari ' + files.length + ' file Majoo!';
 
       // Adjust date filter: if multi-month, switch to monthly view for 12-month overview
@@ -1388,6 +1423,7 @@
     } catch (e) {
       STATE.importing = false;
       STATE.importProgress = '';
+      STATE.importStatus = { type: 'error', message: 'Data tidak selesai di-upload.', detail: e.message || 'Terjadi kesalahan saat membaca atau menyimpan data.' };
       STATE.error = 'Gagal upload: ' + e.message;
       STATE.msg = '';
       draw();
@@ -1467,6 +1503,17 @@
       STATE.error = 'Gagal memuat data contoh: ' + e.message;
       draw();
     }
+  }
+
+
+  function importStatusCss() {
+    return '<style>' +
+      '.sb-status-card{text-align:center;width:min(460px,calc(100vw - 32px));padding:30px 28px}' +
+      '.sb-status-icon{width:58px;height:58px;border-radius:50%;margin:0 auto 14px;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:900;background:#eef7f3;color:#176b55}' +
+      '.sb-status-icon.error{background:#fff1f2;color:#c62828}.sb-status-icon.progress{background:#e9f8fb;color:#079fc0}' +
+      '.sb-status-card h3{margin:0 0 8px;font-size:22px}.sb-status-main{font-weight:700;font-size:15px;margin:0;color:#10201b}.sb-status-detail{font-size:13px;color:#61716a;margin:8px 0 18px;line-height:1.5}' +
+      '.sb-status-track{height:10px;background:#e6eeea;border-radius:999px;overflow:hidden;margin:18px 0 7px}.sb-status-fill{height:100%;background:#176b55;border-radius:999px;transition:width .25s ease}.sb-status-percent{font-size:12px;font-weight:800;color:#176b55}' +
+      '</style>';
   }
 
   function css() {
