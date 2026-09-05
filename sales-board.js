@@ -1528,7 +1528,7 @@
       '.sb-bar-rank.worst{background:#fef3c7;color:#b45309}' +
       '.sb-bar-track{height:8px;background:#eef4f1;border-radius:99px;margin:6px 0 0 27px;overflow:hidden}' +
       '.sb-bar-fill{height:100%;background:#176b55;border-radius:99px}' +
-      '.sb-bar-fill.worst{background:#d97706}' +
+      '.sb-bar-fill.worst{background:#d97706}' + '.sb-top-seller .sb-bar-fill{background:#176b55!important}' + '.sb-worst-seller{border-color:#fecaca!important}' + '.sb-worst-seller .sb-bar-fill.worst{background:linear-gradient(90deg,#f87171,#dc2626)!important}' + '.sb-worst-seller .sb-bar-track{background:#fee2e2!important}' + '.sb-worst-seller .sb-bar-rank.worst{background:#fee2e2;color:#991b1b;border:1px solid #fca5a5}' +
       '.sb-empty,.sb-loading,.sb-empty-chart,.sb-empty-list{background:#fff;border:1px dashed #cbd8d1;border-radius:14px;padding:22px;text-align:center;color:#6e7d76}' +
       '.sb-empty{margin-top:14px}' +
       '.sb-empty-icon{font-size:32px;color:#176b55}' +
