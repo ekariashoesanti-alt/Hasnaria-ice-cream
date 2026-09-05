@@ -2,7 +2,7 @@
   'use strict';
   var CORE = 'https://cdn.jsdelivr.net/gh/ekariashoesanti-alt/Hasnaria-ice-cream@864e0349d18a56ef997216a89661deacf9a8c24a/app.js';
   var STOCK = '/stock-monitor.js?v=25';
-  var SALES = '/sales-board.js?v=28';
+  var SALES = '/sales-board.js?v=29';
   // Keep the sales module visible even if a later UI patch fails to load.
   var SALES_FALLBACK = true;
   var SALES_UI = '/sales-ui-patch.js?v=12';
