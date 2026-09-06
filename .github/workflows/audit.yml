@@ -85,6 +85,7 @@ jobs:
           test -s supabase/migrations/20260906161857_map_sale_items_to_product_master.sql
           test -s supabase/migrations/20260906162132_enforce_canonical_product_name_uniqueness.sql
           test -s supabase/migrations/20260906162322_fix_product_mapping_trigger_uuid_lookup.sql
+          test -s supabase/migrations/20260906162737_enforce_sales_numeric_integrity.sql
           grep -q '__HASNARIA_IMPORT_V2' sales-board.js
           grep -q 'void/refund' sales-import-v2.js
           grep -q 'item_name' sales-import-v2.js
@@ -114,3 +115,6 @@ jobs:
           grep -q 'private.map_sale_item_product' supabase/migrations/20260906161857_map_sale_items_to_product_master.sql
           grep -q 'products_brand_canonical_name_uidx' supabase/migrations/20260906162132_enforce_canonical_product_name_uniqueness.sql
           grep -q 'select id into v_product_id' supabase/migrations/20260906162322_fix_product_mapping_trigger_uuid_lookup.sql
+          grep -q 'sales_transaction_count_positive_check' supabase/migrations/20260906162737_enforce_sales_numeric_integrity.sql
+          grep -q 'sale_items_qty_positive_check' supabase/migrations/20260906162737_enforce_sales_numeric_integrity.sql
+          grep -q 'sales_import_batches_period_order_check' supabase/migrations/20260906162737_enforce_sales_numeric_integrity.sql
