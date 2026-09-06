@@ -263,7 +263,7 @@
     draw();
     try {
       await Promise.race([
-        addScript('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js'),
+        addScript('https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js'),
         new Promise(function (_, reject) { setTimeout(function () { reject(new Error('Pembaca Excel terlalu lama dimuat. Periksa koneksi internet lalu coba lagi.')); }, 20000); })
       ]);
     } catch (e) {
@@ -306,7 +306,7 @@
       STATE.importStatus = {type:'progress',message:'Memproses file Excel',detail:file.name,percent:15};
       STATE.importProgress = 'Memproses sheet…';
       draw();
-      var wb = XLSX.read(buf, { type: 'array', cellDates: true, raw: true });
+      var wb = XLSX.read(buf, { type: 'array', cellDates: true, raw: true, dense: true, cellStyles: false, cellHTML: false, cellFormula: false });
       var sh = wb.Sheets[wb.SheetNames[0]];
       return XLSX.utils.sheet_to_json(sh, { header: 1, defval: '', raw: false });
     }
