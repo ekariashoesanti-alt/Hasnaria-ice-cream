@@ -89,6 +89,18 @@
       if (!ch.classList.contains('sale-board')) ch.style.display = 'none';
     });
   }
+  function normalizeProductLabels() {
+    var host = document.getElementById('sales');
+    if (!host || host.classList.contains('hidden')) return;
+    Array.prototype.forEach.call(host.querySelectorAll('*'), function (el) {
+      if (el.children.length) return;
+      var text = (el.textContent || '').replace(/\s+/g, ' ').trim();
+      if (text === 'Produk Terjual (Qty)') el.textContent = 'Kemunculan Produk';
+      else if (el.matches && el.matches('[data-sku-metric="qty"]') && text === 'Qty') el.textContent = 'Kemunculan';
+      else if (/^\d[\d.]* SKU terdaftar$/.test(text)) el.textContent = text.replace(' SKU terdaftar', ' menu unik');
+      else if (/^\d[\d.]* pcs(?:\s|$|\()/.test(text)) el.textContent = text.replace(/ pcs\b/, '×');
+    });
+  }
   var scheduled = false;
   function run() {
     injectStyle();
@@ -96,6 +108,7 @@
     hideFooterOnly();
     hideLeftover();
     stackRight();
+    normalizeProductLabels();
   }
   function schedule() {
     if (scheduled) return;

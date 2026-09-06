@@ -74,10 +74,14 @@ jobs:
           test -s supabase/migrations/20260906150558_harden_sales_import_and_legacy_role_bridge.sql
           test -s supabase/migrations/20260906151734_move_rls_helpers_to_private_schema.sql
           test -s supabase/migrations/20260906151857_tighten_private_rls_helper_execute.sql
+          test -s supabase/migrations/20260906160812_normalize_historical_majoo_product_occurrences.sql
+          test -s supabase/migrations/20260906161001_enforce_sale_item_and_daily_sku_normalization.sql
+          test -s supabase/migrations/20260906161104_consolidate_permissive_rls_policies.sql
           grep -q '__HASNARIA_IMPORT_V2' sales-board.js
           grep -q 'void/refund' sales-import-v2.js
           grep -q 'item_name' sales-import-v2.js
           grep -q 'external_sku' sales-import-v2.js
+          grep -q 'Kemunculan Produk' sales-ui-patch.js
 
       - name: Prevent privileged-key leaks
         shell: bash
@@ -96,3 +100,6 @@ jobs:
           grep -qi 'revoke execute on function public.bootstrap_user_profile' supabase/migrations/20260906150558_harden_sales_import_and_legacy_role_bridge.sql
           grep -q 'private.sync_legacy_roster_to_profile' supabase/migrations/20260906150558_harden_sales_import_and_legacy_role_bridge.sql
           grep -q 'private.can_sales_write' supabase/migrations/20260906151734_move_rls_helpers_to_private_schema.sql
+          grep -q 'private.normalize_sale_item_list' supabase/migrations/20260906161001_enforce_sale_item_and_daily_sku_normalization.sql
+          grep -q 'private.normalize_daily_metric_sku' supabase/migrations/20260906161001_enforce_sale_item_and_daily_sku_normalization.sql
+          grep -q 'products_insert_authorized' supabase/migrations/20260906161104_consolidate_permissive_rls_policies.sql
