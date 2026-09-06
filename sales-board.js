@@ -1,15 +1,13 @@
-/* Hasnaria sales-board multipart loader v33 — Tahunan omzet key fix */
+/* Hasnaria sales-board multipart loader v34 — upload complete to 100% */
 (function () {
   var PARTS = [
-    '/sales-board.part0.js?v=33',
-    '/sales-board.part1.js?v=33',
-    '/sales-board.part2.js?v=33',
-    '/sales-board.part3.js?v=33',
-    '/sales-board.part4.js?v=33'
+    '/sales-board.part0.js?v=34',
+    '/sales-board.part1.js?v=34',
+    '/sales-board.part2.js?v=34',
+    '/sales-board.part3.js?v=34',
+    '/sales-board.part4.js?v=34'
   ];
-  function fail(e) {
-    console.error('Hasnaria sales-board load failed:', e);
-  }
+  function fail(e) { console.error('Hasnaria sales-board load failed:', e); }
   Promise.all(PARTS.map(function (u) {
     return fetch(u, { cache: 'no-cache' }).then(function (r) {
       if (!r.ok) throw new Error(u + ' HTTP ' + r.status);
