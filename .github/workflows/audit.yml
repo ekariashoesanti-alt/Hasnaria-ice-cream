@@ -52,6 +52,11 @@ jobs:
           fi
           grep -q "var SALES = '/sales-board.js?v=43'" app.js
           grep -q 'var SALES_FALLBACK = false' app.js
+          grep -q '@supabase/supabase-js@2.115.0' index.html
+          if grep -q '@supabase/supabase-js@2"' index.html; then
+            echo 'Floating Supabase JS major version is not allowed.' >&2
+            exit 1
+          fi
 
       - name: Vercel security config
         shell: bash
