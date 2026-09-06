@@ -47,6 +47,16 @@ jobs:
           grep -q "var SALES = '/sales-board.js?v=43'" app.js
           grep -q 'var SALES_FALLBACK = false' app.js
 
+      - name: Vercel security config
+        shell: bash
+        run: |
+          set -euo pipefail
+          node -e "JSON.parse(require('fs').readFileSync('vercel.json','utf8'));"
+          grep -q 'Content-Security-Policy' vercel.json
+          grep -q 'Permissions-Policy' vercel.json
+          grep -q "frame-ancestors 'none'" vercel.json
+          grep -q "connect-src 'self' https://bnnhmtkpdjlgehsvgoda.supabase.co" vercel.json
+
       - name: Required normalized-sales files
         shell: bash
         run: |
