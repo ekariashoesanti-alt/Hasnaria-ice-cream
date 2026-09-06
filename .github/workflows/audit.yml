@@ -52,6 +52,11 @@ jobs:
           fi
           grep -q "var SALES = '/sales-board.js?v=43'" app.js
           grep -q 'var SALES_FALLBACK = false' app.js
+          grep -q '@supabase/supabase-js@2.115.0' index.html
+          if grep -q '@supabase/supabase-js@2"' index.html; then
+            echo 'Floating Supabase JS major version is not allowed.' >&2
+            exit 1
+          fi
 
       - name: Vercel security config
         shell: bash
@@ -77,6 +82,9 @@ jobs:
           test -s supabase/migrations/20260906160812_normalize_historical_majoo_product_occurrences.sql
           test -s supabase/migrations/20260906161001_enforce_sale_item_and_daily_sku_normalization.sql
           test -s supabase/migrations/20260906161104_consolidate_permissive_rls_policies.sql
+          test -s supabase/migrations/20260906161857_map_sale_items_to_product_master.sql
+          test -s supabase/migrations/20260906162132_enforce_canonical_product_name_uniqueness.sql
+          test -s supabase/migrations/20260906162322_fix_product_mapping_trigger_uuid_lookup.sql
           grep -q '__HASNARIA_IMPORT_V2' sales-board.js
           grep -q 'void/refund' sales-import-v2.js
           grep -q 'item_name' sales-import-v2.js
@@ -103,3 +111,6 @@ jobs:
           grep -q 'private.normalize_sale_item_list' supabase/migrations/20260906161001_enforce_sale_item_and_daily_sku_normalization.sql
           grep -q 'private.normalize_daily_metric_sku' supabase/migrations/20260906161001_enforce_sale_item_and_daily_sku_normalization.sql
           grep -q 'products_insert_authorized' supabase/migrations/20260906161104_consolidate_permissive_rls_policies.sql
+          grep -q 'private.map_sale_item_product' supabase/migrations/20260906161857_map_sale_items_to_product_master.sql
+          grep -q 'products_brand_canonical_name_uidx' supabase/migrations/20260906162132_enforce_canonical_product_name_uniqueness.sql
+          grep -q 'select id into v_product_id' supabase/migrations/20260906162322_fix_product_mapping_trigger_uuid_lookup.sql
