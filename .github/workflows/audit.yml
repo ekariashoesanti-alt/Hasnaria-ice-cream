@@ -1,0 +1,98 @@
+name: Hasnaria Audit Gate
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - 'fix/**'
+
+permissions:
+  contents: read
+
+jobs:
+  static-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: JavaScript syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          while IFS= read -r -d '' file; do
+            echo "node --check $file"
+            node --check "$file"
+          done < <(find . -type f -name '*.js' \
+            -not -path './.git/*' \
+            -not -name 'sales-board.part*.js' \
+            -print0)
+
+          echo 'node --check assembled sales-board multipart source'
+          cat sales-board.part0.js sales-board.part1.js sales-board.part2.js sales-board.part3.js sales-board.part4.js > /tmp/hasnaria-sales-board-assembled.js
+          node --check /tmp/hasnaria-sales-board-assembled.js
+
+      - name: Majoo importer smoke test
+        shell: bash
+        run: |
+          set -euo pipefail
+          node tests/majoo-import-v2.test.js
+
+      - name: Runtime source integrity
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s core-app.js
+          test "$(git hash-object core-app.js)" = '91144a4adc626a5e6c04f0b767e0a0354ca35d96'
+          grep -q "var CORE = '/core-app.js" app.js
+          if grep -q 'cdn.jsdelivr.net/gh/ekariashoesanti-alt/Hasnaria-ice-cream' app.js; then
+            echo 'Remote historical application core is still active.' >&2
+            exit 1
+          fi
+          grep -q "var SALES = '/sales-board.js?v=43'" app.js
+          grep -q 'var SALES_FALLBACK = false' app.js
+
+      - name: Vercel security config
+        shell: bash
+        run: |
+          set -euo pipefail
+          node -e "JSON.parse(require('fs').readFileSync('vercel.json','utf8'));"
+          grep -q 'Content-Security-Policy' vercel.json
+          grep -q 'Permissions-Policy' vercel.json
+          grep -q "frame-ancestors 'none'" vercel.json
+          grep -q "connect-src 'self' https://bnnhmtkpdjlgehsvgoda.supabase.co" vercel.json
+
+      - name: Required normalized-sales files
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s sales-import-v2.js
+          test -s sales-board.js
+          test -s supabase/migrations/20260906133154_sales_import_foundation.sql
+          test -s supabase/migrations/20260906133258_sales_external_transaction_unique_constraint.sql
+          test -s supabase/migrations/20260906150558_harden_sales_import_and_legacy_role_bridge.sql
+          test -s supabase/migrations/20260906151734_move_rls_helpers_to_private_schema.sql
+          test -s supabase/migrations/20260906151857_tighten_private_rls_helper_execute.sql
+          grep -q '__HASNARIA_IMPORT_V2' sales-board.js
+          grep -q 'void/refund' sales-import-v2.js
+          grep -q 'item_name' sales-import-v2.js
+          grep -q 'external_sku' sales-import-v2.js
+
+      - name: Prevent privileged-key leaks
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -RInE --exclude-dir=.git --exclude='*.md' --exclude='audit.yml' '(service_role|sb_secret_[A-Za-z0-9_-]+)' .; then
+            echo 'Privileged Supabase credential marker found in repository.' >&2
+            exit 1
+          fi
+
+      - name: Validate migration safety markers
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -qi 'enable row level security' supabase/migrations/20260906133154_sales_import_foundation.sql
+          grep -qi 'revoke execute on function public.bootstrap_user_profile' supabase/migrations/20260906150558_harden_sales_import_and_legacy_role_bridge.sql
+          grep -q 'private.sync_legacy_roster_to_profile' supabase/migrations/20260906150558_harden_sales_import_and_legacy_role_bridge.sql
+          grep -q 'private.can_sales_write' supabase/migrations/20260906151734_move_rls_helpers_to_private_schema.sql

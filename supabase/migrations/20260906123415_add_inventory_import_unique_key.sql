@@ -1,0 +1,1 @@
+alter table public.inventory_items add constraint inventory_items_brand_period_category_name_key unique (brand_id, source_period, category, item_name);

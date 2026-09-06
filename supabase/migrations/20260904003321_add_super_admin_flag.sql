@@ -1,0 +1,2 @@
+alter table public.user_profiles add column if not exists is_super_admin boolean not null default false;
+update public.user_profiles set is_super_admin = true, role = 'owner', status = 'active', updated_at = now() where id = '603e5e45-0865-4bce-84fa-bebac9f5daec';

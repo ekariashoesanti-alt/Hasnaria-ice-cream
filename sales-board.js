@@ -1,4 +1,4 @@
-/* Hasnaria sales-board multipart loader v42 — correct Majoo monetary units + shared XLSX loader */
+/* Hasnaria sales-board multipart loader v43 — normalized Majoo importer */
 (function () {
   'use strict';
   var PARTS = [
@@ -28,23 +28,29 @@
   }
   function watchSalesTab(){var tries=0;function tick(){if(ensureSalesTab()||tries++>80)return;setTimeout(tick,100);}tick();try{var tabs=document.getElementById('tabs');if(tabs&&window.MutationObserver)new MutationObserver(function(){ensureSalesTab();}).observe(tabs,{childList:true});}catch(_){} }
   function patchSource(code){
-    // 1) Never infer x1,000 for legitimate rupiah values below Rp10.000.
     code=code.replace(
       /function revenue\(v\) \{ var n=num\(v\); if\(n==null\) return null; return \(n>0 && n<10000\) \? n\*1000 : n; \}/,
       'function revenue(v) { var n=num(v); return n==null ? null : n; }'
     );
-    // 2) Sales and Stock share the same XLSX parser promise. This removes the
-    // duplicate CDN load/race that made Excel uploads feel slow on first use.
     code=code.replace(
       "async function ensureXLSX() {\n    if (window.XLSX) return;",
       "async function ensureXLSX() {\n    if (window.XLSX) return;\n    if (window.__HASNARIA_XLSX_READY) { await window.__HASNARIA_XLSX_READY; if (window.XLSX) return; }"
     );
+    var importerPattern=/async function importFiles\(fileOrFiles\) \{[\s\S]*?\n  function importFile\(f\) \{ return importFiles\(f\); \}/;
+    if(!importerPattern.test(code))throw new Error('Legacy Majoo importer hook tidak ditemukan; hentikan load agar tidak menulis dengan parser lama.');
+    code=code.replace(importerPattern,
+      "async function importFiles(fileOrFiles) {\n    if (typeof window.__HASNARIA_IMPORT_V2 !== 'function') throw new Error('Importer Majoo v2 belum siap. Silakan refresh halaman.');\n    return window.__HASNARIA_IMPORT_V2(fileOrFiles, { STATE: STATE, BRAND: BRAND, SB: SB, KEY: KEY, setImportStatus: setImportStatus, draw: draw, getFileMatrix: getFileMatrix, loadMetrics: loadMetrics, getTok: getTok });\n  }\n\n  function importFile(f) { return importFiles(f); }");
     return code;
   }
-  Promise.all(PARTS.map(function(u){return fetch(u,{cache:'no-cache'}).then(function(r){if(!r.ok)throw new Error(u+' HTTP '+r.status);return r.text();});}))
+  Promise.all(PARTS.map(function(u){return fetch(u,{cache:'no-cache'}).then(function(r){if(!r.ok)throw new Error(u+' HTTP '+r.status);return r.text();});}).concat([
+    fetch('/sales-import-v2.js?v=2',{cache:'no-cache'}).then(function(r){if(!r.ok)throw new Error('/sales-import-v2.js HTTP '+r.status);return r.text();})
+  ]))
     .then(function(chunks){
+      var importer=chunks.pop();
       var code=chunks.join('');
       if(code.indexOf('Hasnaria Sales')<0)throw new Error('reassembled sales-board looks empty');
+      var is=document.createElement('script');is.text=importer;document.head.appendChild(is);
+      if(typeof window.__HASNARIA_IMPORT_V2!=='function')throw new Error('Importer Majoo v2 gagal diinisialisasi.');
       code=patchSource(code);
       var s=document.createElement('script');s.text=code;document.head.appendChild(s);watchSalesTab();
     }).catch(fail);

@@ -1,0 +1,14 @@
+CREATE TABLE IF NOT EXISTS public.offline_purchase_history (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), brand_id uuid NOT NULL REFERENCES public.brands(id), source_period date NOT NULL, source_file text NOT NULL, row_no integer NOT NULL, purchase_date date, item_name text, quantity_text text, unit_text text, unit_price numeric, total_amount numeric, payment_method text, notes text, raw_data jsonb NOT NULL DEFAULT '{}'::jsonb, created_at timestamptz NOT NULL DEFAULT now(), UNIQUE(brand_id,source_file,row_no));
+CREATE INDEX IF NOT EXISTS offline_purchase_history_brand_period_idx ON public.offline_purchase_history(brand_id,source_period);
+ALTER TABLE public.offline_purchase_history ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS offline_purchase_history_read_same_brand ON public.offline_purchase_history;
+DROP POLICY IF EXISTS offline_purchase_history_write_same_brand ON public.offline_purchase_history;
+CREATE POLICY offline_purchase_history_read_same_brand ON public.offline_purchase_history FOR SELECT TO authenticated USING (same_brand(brand_id));
+CREATE POLICY offline_purchase_history_write_same_brand ON public.offline_purchase_history FOR ALL TO authenticated USING (same_brand(brand_id)) WITH CHECK (same_brand(brand_id));
+CREATE TABLE IF NOT EXISTS public.offline_ops_history (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), brand_id uuid NOT NULL REFERENCES public.brands(id), source_period date NOT NULL, source_file text NOT NULL, section text NOT NULL, item_name text, amount numeric, quantity_text text, notes text, raw_data jsonb NOT NULL DEFAULT '{}'::jsonb, created_at timestamptz NOT NULL DEFAULT now(), UNIQUE(brand_id,source_file,section,item_name));
+CREATE INDEX IF NOT EXISTS offline_ops_history_brand_period_idx ON public.offline_ops_history(brand_id,source_period);
+ALTER TABLE public.offline_ops_history ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS offline_ops_history_read_same_brand ON public.offline_ops_history;
+DROP POLICY IF EXISTS offline_ops_history_write_same_brand ON public.offline_ops_history;
+CREATE POLICY offline_ops_history_read_same_brand ON public.offline_ops_history FOR SELECT TO authenticated USING (same_brand(brand_id));
+CREATE POLICY offline_ops_history_write_same_brand ON public.offline_ops_history FOR ALL TO authenticated USING (same_brand(brand_id)) WITH CHECK (same_brand(brand_id));

@@ -1,0 +1,1 @@
+ALTER TABLE public.inventory_items ADD COLUMN IF NOT EXISTS min_qty numeric; ALTER TABLE public.inventory_items ADD COLUMN IF NOT EXISTS order_qty numeric; ALTER TABLE public.inventory_items ADD COLUMN IF NOT EXISTS unit text;
