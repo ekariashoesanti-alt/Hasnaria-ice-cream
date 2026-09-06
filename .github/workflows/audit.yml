@@ -33,6 +33,12 @@ jobs:
           cat sales-board.part0.js sales-board.part1.js sales-board.part2.js sales-board.part3.js sales-board.part4.js > /tmp/hasnaria-sales-board-assembled.js
           node --check /tmp/hasnaria-sales-board-assembled.js
 
+      - name: Majoo importer smoke test
+        shell: bash
+        run: |
+          set -euo pipefail
+          node tests/majoo-import-v2.test.js
+
       - name: Runtime source integrity
         shell: bash
         run: |
