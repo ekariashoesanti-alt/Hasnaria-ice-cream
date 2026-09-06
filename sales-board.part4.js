@@ -133,8 +133,20 @@ tx: 6, skus: 'Es krim Turkiy=2|Topokki=2|ODENG TIPIS=2|Snack 3000=1|RABOKKI=1|SO
       '.sb-empty-icon{font-size:32px;color:#176b55}' +
       '.sb-error{margin-top:10px;background:#fef2f2;color:#991b1b;border:1px solid #fecaca;border-radius:10px;padding:10px 14px;font-size:12px;font-weight:600}' +
       '.sb-ok{margin-top:10px;background:#ecfdf5;color:#065f46;border:1px solid #a7f3d0;border-radius:10px;padding:10px 14px;font-size:12px;font-weight:600}' +
-      '.sb-modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(10,25,18,.5);z-index:9999;display:grid;place-items:center;padding:16px}' +
-      '.sb-modal-card{background:#fff;border-radius:18px;max-width:540px;width:100%;box-shadow:0 12px 36px rgba(0,0,0,.2);overflow:hidden}' +
+      '.sb-modal-overlay{position:fixed;inset:0;background:rgba(8,28,20,.42);backdrop-filter:blur(3px);z-index:9999;display:grid;place-items:center;padding:20px}' +
+      '.sb-modal-card{background:#fff;border:1px solid #dce8e2;border-radius:22px;max-width:560px;width:100%;box-shadow:0 24px 70px rgba(10,35,25,.22);overflow:hidden}' +
+      '.sb-status-card{max-width:430px;padding:0 0 22px;text-align:center}' +
+      '.sb-status-card .sb-status-icon{width:64px;height:64px;border-radius:50%;margin:28px auto 14px;display:flex;align-items:center;justify-content:center;font-size:30px;font-weight:900;background:#e8f7f1;color:#176b55}' +
+      '.sb-status-card .sb-status-icon.error{background:#fff0f1;color:#b42318}' +
+      '.sb-status-card .sb-status-icon.progress{background:#e8f7fb;color:#078fae}' +
+      '.sb-status-card h3{margin:0 26px 7px;font-size:20px;color:#102019;font-weight:800}' +
+      '.sb-status-card .sb-status-main{margin:0 26px;font-size:14px;color:#263a32;font-weight:700;line-height:1.45}' +
+      '.sb-status-card .sb-status-detail{margin:6px 26px 0;font-size:12px;color:#718079;line-height:1.5}' +
+      '.sb-status-card .sb-status-track{height:8px;margin:18px 30px 8px;background:#e9f0ed;border-radius:99px;overflow:hidden}' +
+      '.sb-status-card .sb-status-fill{height:100%;border-radius:99px;background:#176b55;transition:width .25s ease}' +
+      '.sb-status-card>b{font-size:12px;color:#176b55}' +
+      '.sb-status-card .sb-btn-modal-ok{margin-top:18px;min-width:120px;height:40px;border-radius:12px}' +
+      '.sb-modal-card{position:relative}' +
       '.sb-modal-head{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid #eef3f0}' +
       '.sb-modal-head h3{margin:0;font-size:16px;color:#101714;font-weight:800}' +
       '.sb-modal-close{background:transparent;border:0;font-size:18px;cursor:pointer;color:#7a8982;font-weight:700}' +
