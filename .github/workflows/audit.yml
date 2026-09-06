@@ -38,6 +38,7 @@ jobs:
         run: |
           set -euo pipefail
           test -s core-app.js
+          test "$(git hash-object core-app.js)" = '91144a4adc626a5e6c04f0b767e0a0354ca35d96'
           grep -q "var CORE = '/core-app.js" app.js
           if grep -q 'cdn.jsdelivr.net/gh/ekariashoesanti-alt/Hasnaria-ice-cream' app.js; then
             echo 'Remote historical application core is still active.' >&2
