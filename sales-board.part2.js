@@ -258,7 +258,18 @@
 
   async function ensureXLSX() {
     if (window.XLSX) return;
-    await addScript('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js');
+    STATE.importStatus = {type:'progress',message:'Menyiapkan pembaca Excel',detail:'Memuat komponen XLSX…',percent:7};
+    STATE.importProgress = 'Menyiapkan pembaca Excel…';
+    draw();
+    try {
+      await Promise.race([
+        addScript('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js'),
+        new Promise(function (_, reject) { setTimeout(function () { reject(new Error('Pembaca Excel terlalu lama dimuat. Periksa koneksi internet lalu coba lagi.')); }, 20000); })
+      ]);
+    } catch (e) {
+      throw new Error('Gagal memuat pembaca Excel. ' + (e && e.message ? e.message : 'Silakan coba lagi.'));
+    }
+    if (!window.XLSX) throw new Error('Pembaca Excel belum siap.');
   }
 
   function parseTextLines(text) {
@@ -288,7 +299,13 @@
     var ext = file.name.toLowerCase().split('.').pop();
     if (ext === 'xlsx' || ext === 'xls') {
       await ensureXLSX();
+      STATE.importStatus = {type:'progress',message:'Membaca file Excel',detail:file.name,percent:10};
+      STATE.importProgress = 'Membaca isi Excel…';
+      draw();
       var buf = await file.arrayBuffer();
+      STATE.importStatus = {type:'progress',message:'Memproses file Excel',detail:file.name,percent:15};
+      STATE.importProgress = 'Memproses sheet…';
+      draw();
       var wb = XLSX.read(buf, { type: 'array', cellDates: true });
       var sh = wb.Sheets[wb.SheetNames[0]];
       return XLSX.utils.sheet_to_json(sh, { header: 1, defval: '', raw: false });
