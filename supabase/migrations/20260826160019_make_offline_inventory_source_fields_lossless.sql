@@ -1,0 +1,1 @@
+ALTER TABLE public.inventory_items ALTER COLUMN stock_june TYPE text USING stock_june::text, ALTER COLUMN purchase_july TYPE text USING purchase_july::text, ALTER COLUMN sold_july TYPE text USING sold_july::text, ALTER COLUMN stock_august TYPE text USING stock_august::text, ALTER COLUMN discrepancy TYPE text USING discrepancy::text;
