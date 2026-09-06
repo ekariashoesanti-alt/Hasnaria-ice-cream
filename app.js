@@ -1,9 +1,9 @@
 (function () {
   'use strict';
-  var CORE = 'https://cdn.jsdelivr.net/gh/ekariashoesanti-alt/Hasnaria-ice-cream@864e0349d18a56ef997216a89661deacf9a8c24a/app.js';
+  var CORE = '/core-app.js?v=864e0349-local1';
   var STOCK = '/stock-monitor-fast.js?v=1';
-  var SALES = '/sales-board.js?v=42';
-  var SALES_FALLBACK = true;
+  var SALES = '/sales-board.js?v=43';
+  var SALES_FALLBACK = false;
   var SALES_UI = '/sales-ui-patch.js?v=12';
   var AUTH_URL = window.HASNARIA_SB;
   var AUTH_KEY = window.HASNARIA_KEY;
