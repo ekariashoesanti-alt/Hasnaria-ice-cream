@@ -1,11 +1,11 @@
-/* Hasnaria sales-board multipart loader v31 — Tahunan omzet key fix */
+/* Hasnaria sales-board multipart loader v32 — Tahunan omzet key fix */
 (function () {
   var PARTS = [
-    '/sales-board.part0.js?v=31',
-    '/sales-board.part1.js?v=31',
-    '/sales-board.part2.js?v=31',
-    '/sales-board.part3.js?v=31',
-    '/sales-board.part4.js?v=31'
+    '/sales-board.part0.js?v=32',
+    '/sales-board.part1.js?v=32',
+    '/sales-board.part2.js?v=32',
+    '/sales-board.part3.js?v=32',
+    '/sales-board.part4.js?v=32'
   ];
   function fail(e) {
     console.error('Hasnaria sales-board load failed:', e);
