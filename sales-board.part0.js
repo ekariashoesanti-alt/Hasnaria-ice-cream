@@ -457,4 +457,39 @@
       rows.forEach(function (r) {
         var date = String(r.metric_date || '');
         if (date.slice(0, 4) !== y) return;
-        var keyM = date.slice(0, 7); //
+        var keyM = date.slice(0, 7); // YYYY-MM — matches map keys
+        var g2 = mapM[keyM];
+        if (!g2) return;
+        g2.omzet += Number(r.cash_revenue || 0);
+        g2.trx += Number(r.transactions || 0);
+        g2.days += 1;
+      });
+      return Object.keys(mapM).sort().map(function (k) { return mapM[k]; });
+    }
+    // Mode Daily
+    var mapD = {};
+    rows.forEach(function (r) {
+      var keyD = r.metric_date;
+      if (!mapD[keyD]) {
+        mapD[keyD] = { key: keyD, type: 'day', label: keyD.slice(8, 10) + '/' + keyD.slice(5, 7), sub: keyD, omzet: 0, trx: 0, days: 0 };
+      }
+      mapD[keyD].omzet += r.cash_revenue; mapD[keyD].trx += r.transactions; mapD[keyD].days += 1;
+    });
+    return Object.keys(mapD).sort().map(function (k) { return mapD[k]; });
+  }
+
+  function kpiCard(title, value, sub, cls) {
+    return '<div class="sb-kpi"><div class="sb-kpi-label">' + title + '</div><div class="sb-kpi-value">' + value + '</div><div class="sb-kpi-sub ' + cls + '">' + sub + '</div></div>';
+  }
+
+  // Modern Interactive SVG Chart
+  function renderChart(data) {
+    if (!data.length) return '<div class="sb-empty-chart">Belum ada data pada periode ini.</div>';
+    var w = 760, h = 230, padL = 60, padR = 20, padT = 20, padB = 44;
+    var max = Math.max.apply(null, data.map(function (x) { return x.omzet; }).concat([1]));
+
+    if (STATE.mode === 'daily') {
+      var pts = data.map(function (x, i) {
+        var xx = padL + (data.length === 1 ? (w - padL - padR) / 2 : i * ((w - padL - padR) / (data.length - 1)));
+        var yy = padT + (h - padT - padB) * (1 - x.omzet / max);
+        var isSelected = STATE.sl
