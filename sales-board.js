@@ -1,11 +1,11 @@
-/* Hasnaria sales-board multipart loader v34 — upload complete to 100% */
+/* Hasnaria sales-board multipart loader v37 — upload complete to 100% */
 (function () {
   var PARTS = [
-    '/sales-board.part0.js?v=34',
-    '/sales-board.part1.js?v=34',
-    '/sales-board.part2.js?v=34',
-    '/sales-board.part3.js?v=34',
-    '/sales-board.part4.js?v=34'
+    '/sales-board.part0.js?v=37',
+    '/sales-board.part1.js?v=37',
+    '/sales-board.part2.js?v=37',
+    '/sales-board.part3.js?v=37',
+    '/sales-board.part4.js?v=37'
   ];
   function fail(e) { console.error('Hasnaria sales-board load failed:', e); }
   Promise.all(PARTS.map(function (u) {
