@@ -91,7 +91,7 @@
         STATE.importStatus = {type:'progress',message:'Membaca file '+(fi+1)+' dari '+files.length,detail:file.name,percent:5+Math.round((fi/files.length)*25)};
         draw();
 
-        var matrix = await readFileMatrix(file);
+        var matrix = await getFileMatrix(file);
         var fileRows = normalizeImport(matrix);
         totalParsed += fileRows.length;
 
