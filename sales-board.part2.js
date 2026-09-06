@@ -306,7 +306,7 @@
       STATE.importStatus = {type:'progress',message:'Memproses file Excel',detail:file.name,percent:15};
       STATE.importProgress = 'Memproses sheet…';
       draw();
-      var wb = XLSX.read(buf, { type: 'array', cellDates: true });
+      var wb = XLSX.read(buf, { type: 'array', cellDates: true, raw: true });
       var sh = wb.Sheets[wb.SheetNames[0]];
       return XLSX.utils.sheet_to_json(sh, { header: 1, defval: '', raw: false });
     }
@@ -332,8 +332,19 @@
     return { type: 'generic', headerRow: 0, label: 'File Majoo Standard' };
   }
 
-  async function previewFileType(file) {
+  // Cache parsed matrices by File object so preview and submit do not parse the
+  // same Excel workbook twice.
+  var fileMatrixCache = typeof WeakMap !== 'undefined' ? new WeakMap() : null;
+
+  async function getFileMatrix(file) {
+    if (fileMatrixCache && fileMatrixCache.has(file)) return fileMatrixCache.get(file);
     var matrix = await readFileMatrix(file);
+    if (fileMatrixCache) fileMatrixCache.set(file, matrix);
+    return matrix;
+  }
+
+  async function previewFileType(file) {
+    var matrix = await getFileMatrix(file);
     var det = detectMajooType(matrix);
     return { label: det.label, count: matrix.length - det.headerRow - 1 };
   }
