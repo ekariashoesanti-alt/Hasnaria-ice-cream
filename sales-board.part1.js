@@ -1,39 +1,4 @@
- YYYY-MM — matches map keys
-        var g2 = mapM[keyM];
-        if (!g2) return;
-        g2.omzet += Number(r.cash_revenue || 0);
-        g2.trx += Number(r.transactions || 0);
-        g2.days += 1;
-      });
-      return Object.keys(mapM).sort().map(function (k) { return mapM[k]; });
-    }
-    // Mode Daily
-    var mapD = {};
-    rows.forEach(function (r) {
-      var keyD = r.metric_date;
-      if (!mapD[keyD]) {
-        mapD[keyD] = { key: keyD, type: 'day', label: keyD.slice(8, 10) + '/' + keyD.slice(5, 7), sub: keyD, omzet: 0, trx: 0, days: 0 };
-      }
-      mapD[keyD].omzet += r.cash_revenue; mapD[keyD].trx += r.transactions; mapD[keyD].days += 1;
-    });
-    return Object.keys(mapD).sort().map(function (k) { return mapD[k]; });
-  }
-
-  function kpiCard(title, value, sub, cls) {
-    return '<div class="sb-kpi"><div class="sb-kpi-label">' + title + '</div><div class="sb-kpi-value">' + value + '</div><div class="sb-kpi-sub ' + cls + '">' + sub + '</div></div>';
-  }
-
-  // Modern Interactive SVG Chart
-  function renderChart(data) {
-    if (!data.length) return '<div class="sb-empty-chart">Belum ada data pada periode ini.</div>';
-    var w = 760, h = 230, padL = 60, padR = 20, padT = 20, padB = 44;
-    var max = Math.max.apply(null, data.map(function (x) { return x.omzet; }).concat([1]));
-
-    if (STATE.mode === 'daily') {
-      var pts = data.map(function (x, i) {
-        var xx = padL + (data.length === 1 ? (w - padL - padR) / 2 : i * ((w - padL - padR) / (data.length - 1)));
-        var yy = padT + (h - padT - padB) * (1 - x.omzet / max);
-        var isSelected = STATE.slice && STATE.slice.type === 'day' && STATE.slice.id === x.key;
+ice && STATE.slice.type === 'day' && STATE.slice.id === x.key;
         return { x: xx, y: yy, d: x, sel: isSelected };
       });
 
@@ -184,6 +149,51 @@
       '</div>';
   }
 
+
+  function paintImportStatus() {
+    var s = STATE.importStatus;
+    var host = document.getElementById('sales');
+    if (!host) return false;
+    var overlay = host.querySelector('#sbImportStatusOverlay');
+    if (!s) {
+      if (overlay && overlay.parentNode) overlay.parentNode.removeChild(overlay);
+      return true;
+    }
+    if (!overlay) return false;
+    var icon = overlay.querySelector('.sb-status-icon');
+    var h3 = overlay.querySelector('h3');
+    var main = overlay.querySelector('.sb-status-main');
+    var detail = overlay.querySelector('.sb-status-detail');
+    var fill = overlay.querySelector('.sb-status-fill');
+    var pctEl = overlay.querySelector('b');
+    var cls = s.type === 'error' ? 'error' : (s.type === 'success' ? 'success' : 'progress');
+    if (icon) { icon.className = 'sb-status-icon ' + cls; icon.textContent = s.type === 'error' ? '✕' : (s.type === 'success' ? '✓' : '↑'); }
+    if (h3) h3.textContent = s.type === 'error' ? 'Upload Gagal' : (s.type === 'success' ? 'Upload Selesai' : 'Upload Sedang Berjalan');
+    if (main) main.textContent = s.message || '';
+    if (detail) {
+      if (s.detail) { detail.style.display = ''; detail.textContent = s.detail; }
+      else detail.style.display = 'none';
+    }
+    if (s.type === 'progress') {
+      var pct = Math.max(3, Math.min(100, Number(s.percent) || 0));
+      if (fill) fill.style.width = pct + '%';
+      if (pctEl) pctEl.textContent = Math.round(pct) + '%';
+    }
+    var btn = host.querySelector('#sbBtnSubmit');
+    if (btn && STATE.importing) {
+      btn.innerHTML = '<span class="sb-spin">⏳</span> ' + esc(STATE.importProgress || 'Memproses…');
+      btn.disabled = true;
+      btn.className = 'sb-btn-submit';
+    }
+    return true;
+  }
+
+  function setImportStatus(type, message, detail, percent) {
+    STATE.importStatus = { type: type, message: message || '', detail: detail || '', percent: percent == null ? 0 : percent };
+    if (type === 'progress') STATE.importProgress = message + (detail ? ' — ' + detail : '');
+    if (!paintImportStatus()) draw();
+  }
+
   function renderImportStatusModal() {
     var s = STATE.importStatus; if (!s) return '';
     var cls=s.type==='error'?'error':(s.type==='success'?'success':'progress');
@@ -296,4 +306,23 @@
     var skuRows = (STATE.mode === 'monthly') ? ar : slicedRows;
     var allSkus = aggregateSku(skuRows);
     var totalSkuQty = allSkus.reduce(function (s, x) { return s + x.qty; }, 0);
-    var totalSkuRev 
+    var totalSkuRev = allSkus.reduce(function (s, x) { return s + x.rev; }, 0);
+
+    var metricKey = STATE.skuMetric === 'rev' ? 'rev' : 'qty';
+    var sortedSkus = allSkus.slice().sort(function (x, y) { return y[metricKey] - x[metricKey]; });
+    var top5 = sortedSkus.slice(0, 5);
+    var worst5 = sortedSkus.slice().filter(function (x) { return (x[metricKey] || 0) > 0; }).reverse().slice(0, 5);
+
+    var mm = dataMinMax();
+    var months = monthsInData();
+    var monthOpts = '<option value="">Semua</option>' + months.map(function (ym) {
+      var IDM = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+      var lab = IDM[Number(ym.slice(5, 7))] + ' ' + ym.slice(0, 4);
+      return '<option value="' + ym + '"' + (STATE.viewMonth === ym ? ' selected' : '') + '>' + lab + '</option>';
+    }).join('');
+
+    var vsLab = 'vs bulan lalu';
+    var trendLab = STATE.mode === 'monthly' ? (STATE.viewMonth ? 'Januari–Desember tahun yang sama' : 'Semua bulan dalam data') : (STATE.mode === 'weekly' ? 'Minggu 1–5 di bulan ' + monthOfView() : 'Harian di bulan ' + monthOfView());
+
+    // Filter toolbar
+    html += '<di
