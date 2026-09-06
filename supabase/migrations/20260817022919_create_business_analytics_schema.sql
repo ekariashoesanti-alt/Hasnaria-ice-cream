@@ -1,0 +1,15 @@
+create table if not exists public.brands (id uuid primary key default gen_random_uuid(), name text not null unique, created_at timestamptz not null default now());
+create table if not exists public.products (id uuid primary key default gen_random_uuid(), brand_id uuid not null references public.brands(id) on delete cascade, name text not null, selling_price numeric(12,2) not null default 0, cogs numeric(12,2) not null default 0, active boolean not null default true, created_at timestamptz not null default now());
+create table if not exists public.sales (id uuid primary key default gen_random_uuid(), brand_id uuid not null references public.brands(id) on delete cascade, sold_at date not null, transaction_count integer not null default 1, channel text, notes text, created_at timestamptz not null default now());
+create table if not exists public.sale_items (id uuid primary key default gen_random_uuid(), sale_id uuid not null references public.sales(id) on delete cascade, product_id uuid not null references public.products(id), qty integer not null default 1, unit_price numeric(12,2) not null default 0, unit_cogs numeric(12,2) not null default 0);
+create table if not exists public.social_contents (id uuid primary key default gen_random_uuid(), brand_id uuid not null references public.brands(id) on delete cascade, posted_at date not null, platform text not null, content_title text not null, views integer not null default 0, likes integer not null default 0, comments integer not null default 0, shares integer not null default 0, saves integer not null default 0, profile_visits integer not null default 0, attributed_transactions integer not null default 0, created_at timestamptz not null default now());
+create table if not exists public.expenses (id uuid primary key default gen_random_uuid(), brand_id uuid not null references public.brands(id) on delete cascade, expense_date date not null, category text not null, amount numeric(12,2) not null default 0, notes text, created_at timestamptz not null default now());
+create table if not exists public.daily_metrics (id uuid primary key default gen_random_uuid(), brand_id uuid not null references public.brands(id) on delete cascade, metric_date date not null, cash_revenue numeric(12,2) not null default 0, transactions integer not null default 0, notes text, created_at timestamptz not null default now(), unique(brand_id, metric_date));
+insert into public.brands(name) values ('NGODENG'),('Hasnaria') on conflict(name) do nothing;
+alter table public.brands enable row level security;
+alter table public.products enable row level security;
+alter table public.sales enable row level security;
+alter table public.sale_items enable row level security;
+alter table public.social_contents enable row level security;
+alter table public.expenses enable row level security;
+alter table public.daily_metrics enable row level security;
