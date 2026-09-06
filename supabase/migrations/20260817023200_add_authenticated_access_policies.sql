@@ -1,0 +1,12 @@
+create table if not exists public.user_profiles (id uuid primary key references auth.users(id) on delete cascade, display_name text, created_at timestamptz not null default now());
+alter table public.user_profiles enable row level security;
+create policy "authenticated users can read own profile" on public.user_profiles for select to authenticated using (id = auth.uid());
+create policy "authenticated users can insert own profile" on public.user_profiles for insert to authenticated with check (id = auth.uid());
+create policy "authenticated users can update own profile" on public.user_profiles for update to authenticated using (id = auth.uid()) with check (id = auth.uid());
+create policy "authenticated users can manage brands" on public.brands for all to authenticated using (true) with check (true);
+create policy "authenticated users can manage products" on public.products for all to authenticated using (true) with check (true);
+create policy "authenticated users can manage sales" on public.sales for all to authenticated using (true) with check (true);
+create policy "authenticated users can manage sale items" on public.sale_items for all to authenticated using (true) with check (true);
+create policy "authenticated users can manage social contents" on public.social_contents for all to authenticated using (true) with check (true);
+create policy "authenticated users can manage expenses" on public.expenses for all to authenticated using (true) with check (true);
+create policy "authenticated users can manage daily metrics" on public.daily_metrics for all to authenticated using (true) with check (true);
