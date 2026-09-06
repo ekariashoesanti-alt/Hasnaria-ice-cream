@@ -175,33 +175,58 @@
         };
       });
 
-      // Upsert in batches of 50 to guarantee smooth network transfer and avoid Supabase request timeouts
-      var BATCH_SIZE = 50;
-      for (var bi = 0; bi < payload.length; bi += BATCH_SIZE) {
-        var chunk = payload.slice(bi, bi + BATCH_SIZE);
-        var processed = Math.min(payload.length, bi + chunk.length);
-        var percent = Math.round((processed / payload.length) * 100);
-        STATE.importProgress = 'Menyimpan ' + processed + ' / ' + payload.length + ' hari (' + percent + '%)';
-        STATE.importStatus = {type:'progress',message:'Menyimpan data',detail:processed+' dari '+payload.length+' hari diproses.',percent:35+Math.round(percent*.6)};
+      // Fast path: one bulk upsert for the whole import. This avoids dozens of sequential
+      // network round-trips for a year of daily data.
+      STATE.importProgress = 'Menyimpan ' + payload.length + ' hari…';
+      STATE.importStatus = {type:'progress',message:'Menyimpan data',detail:'Mengirim satu paket aman ke database…',percent:70};
+      draw();
+
+      try {
+        await api('daily_metrics?on_conflict=brand_id,metric_date', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates,return=minimal' },
+          body: JSON.stringify(payload)
+        });
+        STATE.importStatus = {type:'progress',message:'Database menerima data',detail:payload.length+' hari berhasil dikirim. Menyegarkan dashboard…',percent:92};
+        STATE.importProgress = 'Menyegarkan dashboard…';
+        draw();
+      } catch (bulkErr) {
+        // Compatibility fallback: if the unique constraint is unavailable, do the minimum
+        // required reads once, then write records concurrently in small groups instead of
+        // making the user wait through hundreds of sequential requests.
+        console.warn('Bulk upsert failed; using compatibility fallback', bulkErr);
+        STATE.importStatus = {type:'progress',message:'Mode kompatibilitas',detail:'Bulk upload tidak tersedia; menyimpan dengan jalur cadangan…',percent:70};
         draw();
 
+        var existing = {};
         try {
-          await api('daily_metrics?on_conflict=brand_id,metric_date', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates,return=minimal' },
-            body: JSON.stringify(chunk)
-          });
-        } catch (chunkErr) {
-          // Fallback sequential if unique constraint was not yet indexed
-          for (var ci = 0; ci < chunk.length; ci++) {
-            var prow = chunk[ci];
-            var hit = await api('daily_metrics?brand_id=eq.' + encodeURIComponent(BRAND) + '&metric_date=eq.' + prow.metric_date + '&select=id');
-            if (hit && hit[0] && hit[0].id) {
-              await api('daily_metrics?id=eq.' + hit[0].id, { method: 'PATCH', headers: { 'Content-Type': 'application/json', Prefer: 'return=minimal' }, body: JSON.stringify(prow) });
+          var hits = await api('daily_metrics?brand_id=eq.' + encodeURIComponent(BRAND) + '&metric_date=gte.' + minDate + '&metric_date=lte.' + maxDate + '&limit=5000&select=id,metric_date');
+          (hits || []).forEach(function (x) { existing[x.metric_date] = x.id; });
+        } catch (eHits) {}
+
+        var CONCURRENCY = 8;
+        for (var start = 0; start < payload.length; start += CONCURRENCY) {
+          var group = payload.slice(start, start + CONCURRENCY);
+          await Promise.all(group.map(async function (prow) {
+            var id = existing[prow.metric_date];
+            if (id) {
+              await api('daily_metrics?id=eq.' + encodeURIComponent(id), {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+                body: JSON.stringify(prow)
+              });
             } else {
-              await api('daily_metrics', { method: 'POST', headers: { 'Content-Type': 'application/json', Prefer: 'return=minimal' }, body: JSON.stringify(prow) });
+              await api('daily_metrics', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+                body: JSON.stringify(prow)
+              });
             }
-          }
+          }));
+          var done = Math.min(payload.length, start + group.length);
+          var pct = Math.round(done / payload.length * 100);
+          STATE.importStatus = {type:'progress',message:'Menyimpan data',detail:done+' dari '+payload.length+' hari diproses.',percent:70+Math.round(pct*.25)};
+          draw();
         }
       }
 
