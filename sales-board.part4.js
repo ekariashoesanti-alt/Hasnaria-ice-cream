@@ -219,8 +219,10 @@ tx: 6, skus: 'Es krim Turkiy=2|Topokki=2|ODENG TIPIS=2|Snack 3000=1|RABOKKI=1|SO
     if (document.getElementById('sales') && (!STATE.fetched || !STATE.rows.length) && pickTokenFromStorage()) {
       loadMetrics();
     }
-    if ((!STATE.fetched || !STATE.rows.length) && tries++ < 80) {
-      setTimeout(wait, 400);
+    if (!STATE.fetched || !STATE.rows.length) {
+      tries++;
+      var delay = tries < 75 ? 400 : 3000;
+      setTimeout(wait, delay);
     }
   })();
 })();
