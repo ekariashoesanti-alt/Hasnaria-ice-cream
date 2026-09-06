@@ -1,35 +1,3 @@
-'', rangeEnd = '';
-      for (var mi = 0; mi < hi; mi++) {
-        var metaLine = (matrix[mi] || []).join(' ');
-        var mRange = metaLine.match(/(\d{1,2}\s+[A-Za-z]+\s+\d{4})\s*[-–]\s*(\d{1,2}\s+[A-Za-z]+\s+\d{4})/);
-        if (mRange) {
-          rangeStart = parseDate(mRange[1]); rangeEnd = parseDate(mRange[2]);
-          break;
-        }
-      }
-      if (!rangeStart) rangeStart = new Date().toISOString().slice(0, 10);
-      if (!rangeEnd) rangeEnd = rangeStart;
-
-      var parsedSkus = [];
-      rows.forEach(function (row) {
-        var p = kProdName ? String(row[kProdName] || '').trim() : '';
-        var q = num(kQty ? row[kQty] : null);
-        var r = num(kRev ? row[kRev] : null) || 0;
-        if (p && q != null && q > 0) {
-          parsedSkus.push({ name: p, qty: Math.round(q), rev: Math.round(r) });
-        }
-      });
-
-      // Distribute SKU proportionally onto the dates of this range
-      var outList = [];
-      var curDate = rangeStart;
-      while (curDate <= rangeEnd) {
-        outList.push({ date: curDate, omzet: 0, trx: 0, cash: 0, qris: 0, tf: 0, skus: [] });
-        curDate = addDays(curDate, 1);
-      }
-      // Put the products on the month
-      if (outList.length === 1) {
-        outList[0].skus = parsedSkus;
       } else {
         // Distribute or attach to days
         var nDays = outList.length;
@@ -77,8 +45,7 @@
     STATE.importing = true;
     STATE.error = '';
     STATE.msg = '';
-    STATE.importProgress = 'Membaca ' + files.length + ' file…';
-    STATE.importStatus = {type:'progress',message:'Upload dimulai',detail:files.length+' file siap diproses.',percent:3};
+    setImportStatus('progress', 'Menyiapkan upload', files.length + ' file dipilih', 4);
     draw();
 
     try {
@@ -87,9 +54,7 @@
 
       for (var fi = 0; fi < files.length; fi++) {
         var file = files[fi];
-        STATE.importProgress = 'Membaca file ' + (fi + 1) + '/' + files.length + ' (' + file.name + ')…';
-        STATE.importStatus = {type:'progress',message:'Membaca file '+(fi+1)+' dari '+files.length,detail:file.name,percent:5+Math.round((fi/files.length)*25)};
-        draw();
+        setImportStatus('progress', 'Membaca file ' + (fi + 1) + '/' + files.length, file.name, 6 + Math.round((fi / files.length) * 24));
 
         var matrix = await getFileMatrix(file);
         var fileRows = normalizeImport(matrix);
@@ -141,9 +106,7 @@
       var maxDate = sortedDates[sortedDates.length - 1];
 
       // Fetch existing records safely using date range (prevents HTTP 414 URI Too Long for 365 days)
-      STATE.importProgress = 'Mengecek data lama di Supabase…';
-      STATE.importStatus = {type:'progress',message:'Validasi data',detail:'Memeriksa tanggal, duplikasi, dan kelengkapan data.',percent:35};
-      draw();
+      setImportStatus('progress', 'Cek data lama', 'Memeriksa catatan yang sudah ada di database…', 35);
 
       var oldMap = {};
       try {
@@ -175,66 +138,98 @@
         };
       });
 
-      // Fast path: one bulk upsert for the whole import. This avoids dozens of sequential
-      // network round-trips for a year of daily data.
-      STATE.importProgress = 'Menyimpan ' + payload.length + ' hari…';
-      STATE.importStatus = {type:'progress',message:'Menyimpan data',detail:'Mengirim satu paket aman ke database…',percent:70};
-      draw();
+      // Chunked upsert with timeout — avoids hanging on one giant request.
+      var BATCH_SIZE = 80;
+      var totalBatches = Math.max(1, Math.ceil(payload.length / BATCH_SIZE));
+      var importTok = await getTok();
+      if (!importTok) throw new Error('Sesi login belum siap. Silakan masuk kembali.');
 
-      try {
-        await api('daily_metrics?on_conflict=brand_id,metric_date', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates,return=minimal' },
-          body: JSON.stringify(payload)
+      function withTimeout(promise, ms, label) {
+        return new Promise(function (resolve, reject) {
+          var done = false;
+          var t = setTimeout(function () {
+            if (done) return;
+            done = true;
+            reject(new Error((label || 'Request') + ' timeout setelah ' + Math.round(ms / 1000) + 's'));
+          }, ms);
+          promise.then(function (v) {
+            if (done) return;
+            done = true;
+            clearTimeout(t);
+            resolve(v);
+          }, function (e) {
+            if (done) return;
+            done = true;
+            clearTimeout(t);
+            reject(e);
+          });
         });
-        STATE.importStatus = {type:'progress',message:'Database menerima data',detail:payload.length+' hari berhasil dikirim. Menyegarkan dashboard…',percent:92};
-        STATE.importProgress = 'Menyegarkan dashboard…';
-        draw();
-      } catch (bulkErr) {
-        // Compatibility fallback: if the unique constraint is unavailable, do the minimum
-        // required reads once, then write records concurrently in small groups instead of
-        // making the user wait through hundreds of sequential requests.
-        console.warn('Bulk upsert failed; using compatibility fallback', bulkErr);
-        STATE.importStatus = {type:'progress',message:'Mode kompatibilitas',detail:'Bulk upload tidak tersedia; menyimpan dengan jalur cadangan…',percent:70};
-        draw();
+      }
 
-        var existing = {};
+      async function apiImport(path, opts) {
+        var cfg = opts || {};
+        cfg.headers = Object.assign({ apikey: KEY, Authorization: 'Bearer ' + importTok }, cfg.headers || {});
+        var fetchPromise = fetch(SB + '/rest/v1/' + path, cfg).then(async function (r) {
+          if (!r.ok) {
+            var tx = await r.text();
+            throw new Error(tx || ('Supabase error ' + r.status));
+          }
+          var ct = r.headers.get('content-type') || '';
+          return ct.indexOf('application/json') >= 0 ? r.json() : null;
+        });
+        return withTimeout(fetchPromise, 45000, 'Simpan ke database');
+      }
+
+      for (var bi = 0; bi < payload.length; bi += BATCH_SIZE) {
+        var chunk = payload.slice(bi, bi + BATCH_SIZE);
+        var batchNo = Math.floor(bi / BATCH_SIZE) + 1;
+        var beforePct = 40 + Math.round(((batchNo - 1) / totalBatches) * 55);
+        setImportStatus('progress', 'Menyimpan batch ' + batchNo + '/' + totalBatches, 'Mengirim ' + chunk.length + ' hari…', beforePct);
+
         try {
-          var hits = await api('daily_metrics?brand_id=eq.' + encodeURIComponent(BRAND) + '&metric_date=gte.' + minDate + '&metric_date=lte.' + maxDate + '&limit=5000&select=id,metric_date');
-          (hits || []).forEach(function (x) { existing[x.metric_date] = x.id; });
-        } catch (eHits) {}
-
-        var CONCURRENCY = 8;
-        for (var start = 0; start < payload.length; start += CONCURRENCY) {
-          var group = payload.slice(start, start + CONCURRENCY);
-          await Promise.all(group.map(async function (prow) {
-            var id = existing[prow.metric_date];
-            if (id) {
-              await api('daily_metrics?id=eq.' + encodeURIComponent(id), {
+          await apiImport('daily_metrics?on_conflict=brand_id,metric_date', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates,return=minimal' },
+            body: JSON.stringify(chunk)
+          });
+        } catch (chunkErr) {
+          var em = String(chunkErr && chunkErr.message ? chunkErr.message : chunkErr);
+          // Row fallback only for conflict/constraint; otherwise fail fast (no endless hang).
+          if (!/conflict|duplicate|unique|23505|on_conflict/i.test(em)) throw chunkErr;
+          setImportStatus('progress', 'Mode cadangan batch ' + batchNo + '/' + totalBatches, 'Menyimpan per baris…', beforePct);
+          for (var ci = 0; ci < chunk.length; ci++) {
+            var prow = chunk[ci];
+            var hit = await apiImport('daily_metrics?brand_id=eq.' + encodeURIComponent(BRAND) + '&metric_date=eq.' + prow.metric_date + '&select=id');
+            if (hit && hit[0] && hit[0].id) {
+              await apiImport('daily_metrics?id=eq.' + hit[0].id, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json', Prefer: 'return=minimal' },
                 body: JSON.stringify(prow)
               });
             } else {
-              await api('daily_metrics', {
+              await apiImport('daily_metrics', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', Prefer: 'return=minimal' },
                 body: JSON.stringify(prow)
               });
             }
-          }));
-          var done = Math.min(payload.length, start + group.length);
-          var pct = Math.round(done / payload.length * 100);
-          STATE.importStatus = {type:'progress',message:'Menyimpan data',detail:done+' dari '+payload.length+' hari diproses.',percent:70+Math.round(pct*.25)};
-          draw();
+            if ((ci + 1) % 10 === 0 || ci === chunk.length - 1) {
+              setImportStatus('progress', 'Mode cadangan batch ' + batchNo + '/' + totalBatches, (ci + 1) + '/' + chunk.length + ' baris', beforePct + Math.round(((ci + 1) / chunk.length) * (55 / totalBatches)));
+            }
+          }
         }
+
+        var processed = Math.min(payload.length, bi + chunk.length);
+        setImportStatus('progress', 'Batch ' + batchNo + '/' + totalBatches + ' OK', processed + ' / ' + payload.length + ' hari tersimpan', 40 + Math.round((processed / payload.length) * 55));
       }
+
+      setImportStatus('progress', 'Hampir selesai', 'Menyegarkan dashboard…', 96);
 
       STATE.stagedFiles = [];
       STATE.stagedFileType = '';
       STATE.importing = false;
       STATE.importProgress = '';
-      STATE.importStatus = {type:'success',message:'Data berhasil ter-upload.',detail:payload.length+' tanggal ('+minDate+' s/d '+maxDate+') tersimpan di database.'};
+      setImportStatus('success', 'Upload selesai (100%)', payload.length + ' tanggal (' + minDate + ' s/d ' + maxDate + ') tersimpan di database.', 100);
       STATE.msg = '✓ Berhasil update ' + payload.length + ' tanggal (' + minDate + ' s/d ' + maxDate + ') dari ' + files.length + ' file Majoo!';
 
       // Adjust date filter: if multi-month, switch to monthly view for 12-month overview
@@ -251,7 +246,7 @@
     } catch (e) {
       STATE.importing = false;
       STATE.importProgress = '';
-      STATE.importStatus = {type:'error',message:'Upload gagal.',detail:e.message||'Terjadi kesalahan saat memproses data.'};
+      setImportStatus('error', 'Upload gagal', (e && e.message) ? e.message : 'Terjadi kesalahan saat memproses data.');
       STATE.error = 'Gagal upload: ' + e.message;
       STATE.msg = '';
       draw();
@@ -287,4 +282,7 @@
       { d: '2026-01-16', rev: 247000, tx: 14, skus: 'ICE CREAM BOWL=1|KUAH ODENG=2|ODENG=3|DUMPLING CHEESE=3|Snack 3000=1|AIR MINERAL BESAR=1|Topokki=3|ODENG TIPIS=3|RABOKKI=3|CHIKUWA=1|DUMPLING AYAM=1|SALMON STICK=1|SOSIS AYAM=1|ICE LEMON TEA=1|JASMINE TEA=1|Mie Pedas=1|SIOMAY=1|BAKSO IKAN=4|CRAB STICK=2|FISHROLL=2|FISH TOFU=4|KUAH TOMYAM=4|SCALLOP=4|SHRIMP TAIL=4|MIE KUNING=2|Es Krim Turkiy Mix rasa=1|Choco Pandan=1', cash: 235000, qris: 12000, tf: 0 },
       { d: '2026-01-17', rev: 184000, tx: 15, skus: 'KUAH ODENG=4|ODENG=4|SOSIS AYAM=3|CHIKUWA=5|DUMPLING AYAM=3|SALMON STICK=3|Es Krim Potong Cokelat=2|KUAH TOMYAM=1|SHRIMP TAIL=2|BAKSO IKAN=2|FISH TOFU=1|SCALLOP=3|MIE KUNING=2|Mie Pedas=2|SIOMAY=3|Es krim Turkiy=1|Topokki=2|ODENG TIPIS=3|DUMPLING CHEESE=3|CRAB STICK=2|FISHROLL=3|Snack 3000=1|NASI AYAM KATSU=1|BAKSO UDANG=1', cash: 125500, qris: 18000, tf: 40500 },
       { d: '2026-01-18', rev: 152000, tx: 7, skus: 'MIX PLATER=1|ROTI BAKAR COKELAT KEJU=1|AIR MINERAL BESAR=1|Topokki=5|ODENG TIPIS=4|NASI AYAM KATSU=2|MATCHA LATTE=3', cash: 128000, qris: 24000, tf: 0 },
-      { d: '2026-01-19', rev: 78000, 
+      { d: '2026-01-19', rev: 78000, tx: 6, skus: 'Es krim Turkiy=2|Topokki=2|ODENG TIPIS=2|Snack 3000=1|RABOKKI=1|SOSIS AYAM=1|POP MIE=1|BAKSO UDANG=1|CHIKUWA=1|DUMPLING CHEESE=1|SCALLOP=1|KUAH ODENG=1', cash: 66000, qris: 12000, tf: 0 },
+      { d: '2026-01-20', rev: 112000, tx: 8, skus: 'Topokki=3|ODENG TIPIS=2|Es krim Turkiy=1|RABOKKI=3|SIOMAY=1|Mie Pedas=1|CHIKUWA=1|DUMPLING AYAM=1|KUAH ODENG=1|ODENG=2|SALMON STICK=1|SOSIS AYAM=1', cash: 97000, qris: 15000, tf: 0 },
+      { d: '2026-01-21', rev: 150000, tx: 9, skus: 'Topokki=7|ODENG TIPIS=4|DUMPLING CHEESE=1|ODENG=1|SHRIMP TAIL=1|FISHROLL=1|CRAB STICK=1|Snack 3000=1|JASMINE TEA=1|RABOKKI=2', cash: 108000, qris: 0, tf: 42000 },
+      { d: '2026-01-22', rev: 132000, tx: 7, skus: 'MOCCACINO=1|ICE LEMON TEA=1|Es Krim Potong Neopolitan=1|RABOKKI=1|Mie Pedas=1|SIOMAY=1|DUMPLING CH
