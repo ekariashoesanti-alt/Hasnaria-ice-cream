@@ -155,7 +155,19 @@ EESE=2|ODENG TIPIS=2|Topokki=5|BAKSO UDANG=1|CHIKUWA=1|KUAH ODENG=2|SCALLOP=1|IC
       '.sb-modal-foot{padding:12px 20px;background:#f8faf9;border-top:1px solid #eef3f0;text-align:right}' +
       '.sb-btn-modal-ok{background:#176b55;color:#fff;border:0;border-radius:10px;padding:8px 20px;font-size:13px;font-weight:700;cursor:pointer}' +
       '@media(max-width:980px){.sb-kpis{grid-template-columns:1fr 1fr}.sb-grid-main{grid-template-columns:1fr}}' +
-      '@media(max-width:640px){.sb-wrap{padding:14px}.sb-kpis{grid-template-columns:1fr}.sb-head h2{font-size:20px}}';
+      '@media(max-width:640px){.sb-wrap{padding:14px}.sb-kpis{grid-template-columns:1fr}.sb-head h2{font-size:20px}}' +
+      '.sb-status-card{text-align:center;padding:22px 20px 18px;max-width:420px}' +
+      '.sb-status-icon{width:48px;height:48px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;margin:0 auto 10px}' +
+      '.sb-status-icon.progress{background:#ecfdf5;color:#176b55}' +
+      '.sb-status-icon.success{background:#dcfce7;color:#15803d}' +
+      '.sb-status-icon.error{background:#fee2e2;color:#b91c1c}' +
+      '.sb-status-main{font-size:14px;font-weight:700;color:#1f2a25;margin:0 0 4px}' +
+      '.sb-status-detail{font-size:12px;color:#6e7d76;margin:0 0 12px;word-break:break-word}' +
+      '.sb-status-track{height:8px;background:#e8f0ec;border-radius:999px;overflow:hidden;margin:8px 0 6px}' +
+      '.sb-status-fill{height:100%;background:linear-gradient(90deg,#176b55,#22c55e);border-radius:999px;transition:width .25s ease}' +
+      '.sb-status-card b{display:block;font-size:13px;color:#176b55;margin-bottom:4px}' +
+      '.sb-spin{display:inline-block;animation:sb-spin 1s linear infinite}' +
+      '@keyframes sb-spin{to{transform:rotate(360deg)}}';
     document.head.appendChild(s);
   }
 
