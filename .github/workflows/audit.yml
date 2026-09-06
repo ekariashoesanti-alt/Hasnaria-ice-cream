@@ -79,6 +79,20 @@ jobs:
           grep -q 'item_name' sales-import-v2.js
           grep -q 'external_sku' sales-import-v2.js
 
+      - name: Production migration coverage
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s supabase/migrations/20260906160812_normalize_historical_majoo_product_occurrences.sql
+          test -s supabase/migrations/20260906161001_enforce_sale_item_and_daily_sku_normalization.sql
+          test -s supabase/migrations/20260906161104_consolidate_permissive_rls_policies.sql
+          test -s supabase/migrations/20260906161857_map_sale_items_to_product_master.sql
+          test -s supabase/migrations/20260906162132_enforce_canonical_product_name_uniqueness.sql
+          test "$(find supabase/migrations -maxdepth 1 -type f -name '*.sql' | wc -l | tr -d ' ')" -ge 29
+          grep -q 'private.normalize_sale_item_list' supabase/migrations/20260906161001_enforce_sale_item_and_daily_sku_normalization.sql
+          grep -q 'private.map_sale_item_product' supabase/migrations/20260906161857_map_sale_items_to_product_master.sql
+          grep -q 'products_brand_canonical_name_uidx' supabase/migrations/20260906162132_enforce_canonical_product_name_uniqueness.sql
+
       - name: Prevent privileged-key leaks
         shell: bash
         run: |
