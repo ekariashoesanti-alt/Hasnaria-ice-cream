@@ -1,7 +1,7 @@
 (function () {
   'use strict';
   var CORE = '/core-app.js?v=3';
-  var STOCK = '/stock-monitor-fast.js?v=1';
+  var STOCK = '/stock-monitor.js?v=26';
   var SALES = '/sales-board.js?v=43';
   var SALES_FALLBACK = false;
   var SALES_UI = '/sales-ui-patch.js?v=12';
