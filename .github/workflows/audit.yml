@@ -98,6 +98,7 @@ jobs:
           test -s supabase/migrations/20260906162322_fix_product_mapping_trigger_uuid_lookup.sql
           test -s supabase/migrations/20260906162737_enforce_sales_numeric_integrity.sql
           test -s supabase/migrations/20260907013055_add_canonical_client_roster_rpc.sql
+          test -s supabase/migrations/20260907013655_retire_legacy_product_user_registry.sql
           grep -q '__HASNARIA_IMPORT_V2' sales-board.js
           grep -q 'void/refund' sales-import-v2.js
           grep -q 'item_name' sales-import-v2.js
@@ -132,3 +133,7 @@ jobs:
           grep -q 'sales_import_batches_period_order_check' supabase/migrations/20260906162737_enforce_sales_numeric_integrity.sql
           grep -q 'function public.client_roster_rows' supabase/migrations/20260907013055_add_canonical_client_roster_rpc.sql
           grep -q 'grant execute on function public.client_roster_rows() to authenticated' supabase/migrations/20260907013055_add_canonical_client_roster_rpc.sql
+          grep -q 'drop trigger if exists trg_sync_legacy_roster_to_profile' supabase/migrations/20260907013655_retire_legacy_product_user_registry.sql
+          grep -q 'drop function if exists private.sync_legacy_roster_to_profile' supabase/migrations/20260907013655_retire_legacy_product_user_registry.sql
+          grep -q 'products_no_legacy_user_registry_check' supabase/migrations/20260907013655_retire_legacy_product_user_registry.sql
+          grep -q "name like 'HASNARIA_USER|%'" supabase/migrations/20260907013655_retire_legacy_product_user_registry.sql
