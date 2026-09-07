@@ -18,6 +18,7 @@ try {
   if (!runtime.includes('.sb-w-100{width:100%}')) throw new Error('Sales width utility classes missing');
   if (!runtime.includes("' sb-w-' + Math.max(0, Math.min(100, Math.round(barWidth)))")) throw new Error('SKU bar width class patch missing');
   if (!runtime.includes("sb-status-fill sb-w-'+Math.max(3,Math.min(100,Math.round(Number(s.percent)||0)))")) throw new Error('import progress width class patch missing');
+  if (runtime.includes('style="width:')) throw new Error('inline Sales width style survived canonical compilation');
 
   const forbidden = [
     'sales-board.part0.js',
