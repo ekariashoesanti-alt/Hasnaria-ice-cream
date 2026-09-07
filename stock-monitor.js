@@ -202,9 +202,11 @@
     if (!r.ok) throw Error('Gagal menyimpan inventory (' + r.status + ')');
   }
   async function upsertParsed(rows) {
-    var byNorm = {}, i, rec, ex, body, keys, ki, k;
-    S.items.forEach(function (x) { byNorm[normName(x.item_name)] = x; });
-    keys = ['item_name', 'category', 'stock_june', 'purchase_july', 'sold_july', 'stock_august', 'discrepancy'];
+    var byKey = {}, i, rec, body, keys = ['item_name','category','stock_june','purchase_july','sold_july','stock_august','discrepancy'], ki, k;
+    S.items.forEach(function (x) {
+      byKey[String(x.category || '').toUpperCase() + '|' + normName(x.item_name)] = x;
+    });
+    var inserts = [], updates = [];
     for (i = 0; i < rows.length; i++) {
       rec = rows[i];
       body = {};
@@ -212,16 +214,46 @@
         k = keys[ki];
         if (rec[k] != null && rec[k] !== '') body[k] = rec[k];
       }
-      ex = byNorm[normName(rec.item_name)];
+      var key = String(rec.category || '').toUpperCase() + '|' + normName(rec.item_name);
+      var ex = byKey[key];
       if (ex && ex.id) {
-        await restWrite('PATCH', 'inventory_items?id=eq.' + encodeURIComponent(ex.id), body);
-      } else if (!ex) {
+        body.id = ex.id;
+        updates.push(body);
+      } else {
         body.brand_id = BRAND;
         body.source_period = '2026-07-01';
         body.unit = 'pcs';
-        await restWrite('POST', 'inventory_items', body);
-        byNorm[normName(rec.item_name)] = { item_name: rec.item_name };
+        inserts.push(body);
       }
+    }
+
+    var t = tok();
+    if (!t) throw Error('Session belum tersedia. Silakan login kembali.');
+
+    async function batch(path, method, data) {
+      if (!data.length) return;
+      var r = await fetch(SB + '/rest/v1/' + path, {
+        method: method,
+        headers: {
+          apikey: KEY,
+          Authorization: 'Bearer ' + t,
+          'Content-Type': 'application/json',
+          Prefer: 'resolution=merge-duplicates,return=minimal'
+        },
+        body: JSON.stringify(data)
+      });
+      if (!r.ok) {
+        var tx = await r.text();
+        throw Error('Gagal menyimpan inventory (' + r.status + '): ' + tx);
+      }
+    }
+
+    var B = 80;
+    for (i = 0; i < updates.length; i += B) {
+      await batch('inventory_items?on_conflict=id', 'POST', updates.slice(i, i + B));
+    }
+    for (i = 0; i < inserts.length; i += B) {
+      await batch('inventory_items?on_conflict=brand_id,source_period,category,item_name', 'POST', inserts.slice(i, i + B));
     }
   }
   function setUploadMsg(text, err) {
