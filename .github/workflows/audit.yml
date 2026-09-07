@@ -100,6 +100,7 @@ jobs:
           test -s supabase/migrations/20260907013055_add_canonical_client_roster_rpc.sql
           test -s supabase/migrations/20260907013655_retire_legacy_product_user_registry.sql
           test -s supabase/migrations/20260907013955_make_client_roster_rpc_security_invoker.sql
+          test -s supabase/migrations/20260907014442_harden_profile_authority_and_last_owner.sql
           grep -q '__HASNARIA_IMPORT_V2' sales-board.js
           grep -q 'void/refund' sales-import-v2.js
           grep -q 'item_name' sales-import-v2.js
@@ -140,3 +141,6 @@ jobs:
           grep -q "name like 'HASNARIA_USER|%'" supabase/migrations/20260907013655_retire_legacy_product_user_registry.sql
           grep -qi '^security invoker$' supabase/migrations/20260907013955_make_client_roster_rpc_security_invoker.sql
           grep -q 'revoke all on function public.client_roster_rows() from public, anon' supabase/migrations/20260907013955_make_client_roster_rpc_security_invoker.sql
+          grep -q 'new.is_super_admin := old.is_super_admin' supabase/migrations/20260907014442_harden_profile_authority_and_last_owner.sql
+          grep -q 'private.guard_last_active_owner' supabase/migrations/20260907014442_harden_profile_authority_and_last_owner.sql
+          grep -q 'Cannot remove or demote the last active Owner' supabase/migrations/20260907014442_harden_profile_authority_and_last_owner.sql
