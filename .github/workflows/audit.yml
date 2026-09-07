@@ -77,11 +77,14 @@ jobs:
             exit 1
           fi
 
-      - name: Vercel security config
+      - name: Vercel security and build config
         shell: bash
         run: |
           set -euo pipefail
           node -e "JSON.parse(require('fs').readFileSync('vercel.json','utf8'));"
+          test -s scripts/vercel-build-check.js
+          grep -q '"buildCommand": "node scripts/vercel-build-check.js"' vercel.json
+          grep -q '"outputDirectory": "dist"' vercel.json
           grep -q 'Content-Security-Policy' vercel.json
           grep -q 'Permissions-Policy' vercel.json
           grep -q "frame-ancestors 'none'" vercel.json
