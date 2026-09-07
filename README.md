@@ -41,6 +41,8 @@ Role aplikasi:
 
 `public.user_profiles` adalah satu-satunya authority runtime untuk role, status, brand, email, dan identitas user. Runtime tidak lagi membaca atau menulis synthetic roster `HASNARIA_USER|...` pada `products`, dan tidak memakai email hardcoded untuk menentukan Owner.
 
+Compatibility `user-profile-bridge.js` dan RPC `client_roster_rows()` sudah dipensiunkan. Migration historis yang pernah membuat/menutup bridge tersebut tetap disimpan sebagai audit trail dan tidak boleh dihapus dari history.
+
 User baru bootstrap sebagai `pending` dan menunggu aktivasi Owner. Perubahan role/status/brand dilindungi oleh RLS/trigger database. Owner aktif terakhir juga tidak dapat didemote, dinonaktifkan, dipindah brand, atau dihapus sebelum ada Owner aktif pengganti.
 
 ## Import Majoo
@@ -62,6 +64,7 @@ Sebelum perubahan importer dipromosikan ke production, lakukan rekonsiliasi satu
 - syntax seluruh JavaScript;
 - syntax sales multipart setelah lima file digabung;
 - native `user_profiles` authority dan ketiadaan marker authority legacy di runtime;
+- compatibility user-profile bridge sudah tidak ada di runtime repository;
 - importer normalized dan migration wajib;
 - kebocoran credential privileged;
 - marker hardening migration;
