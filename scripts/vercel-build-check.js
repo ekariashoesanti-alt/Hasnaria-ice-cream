@@ -4,6 +4,7 @@ const os = require('os');
 const { spawnSync } = require('child_process');
 const { buildCanonicalSalesRuntime } = require('./build-sales-runtime');
 const { buildStrictIndexRuntime } = require('./build-index-runtime');
+const { inventoryStyleBlocks } = require('./style-csp-inventory');
 
 const ROOT = process.cwd();
 const PARTS = [0, 1, 2, 3, 4].map((n) => `sales-board.part${n}.js`);
@@ -80,9 +81,13 @@ function getCspValue() {
   return String(csp.value);
 }
 
+function directive(csp, name) {
+  return csp.split(';').map((x) => x.trim()).find((x) => new RegExp(`^${name}\\b`, 'i').test(x)) || '';
+}
+
 function assertStrictScriptCsp(dist) {
   const csp = getCspValue();
-  const scriptDirective = csp.split(';').map((x) => x.trim()).find((x) => /^script-src\b/i.test(x));
+  const scriptDirective = directive(csp, 'script-src');
   if (!scriptDirective) fail('script-src directive missing from CSP');
   if (/'unsafe-inline'/.test(scriptDirective)) fail("script-src still allows 'unsafe-inline'");
 
@@ -93,6 +98,30 @@ function assertStrictScriptCsp(dist) {
   if (!html.includes('/password-reset-bootstrap.js')) fail('production index missing password reset bootstrap');
 
   console.log('Strict script CSP production gate: PASS');
+}
+
+function assertHashedStyleCsp() {
+  const csp = getCspValue();
+  const styleDirective = directive(csp, 'style-src');
+  const styleAttrDirective = directive(csp, 'style-src-attr');
+  if (!styleDirective) fail('style-src directive missing from CSP');
+  if (/'unsafe-inline'/.test(styleDirective)) fail("style-src still allows 'unsafe-inline'");
+  if (!/style-src-attr\s+'unsafe-inline'/.test(styleAttrDirective)) {
+    fail("style-src-attr must explicitly carry temporary 'unsafe-inline' compatibility");
+  }
+
+  const blocks = inventoryStyleBlocks(ROOT);
+  const expected = new Set(blocks.map((x) => x.hash));
+  const declared = new Set(styleDirective.match(/'sha256-[A-Za-z0-9+/=]+'/g) || []);
+  for (const hash of expected) {
+    if (!declared.has(hash)) fail(`style-src missing required hash: ${hash}`);
+  }
+  for (const hash of declared) {
+    if (!expected.has(hash)) fail(`style-src contains stale/untracked hash: ${hash}`);
+  }
+  if (declared.size !== expected.size) fail('style-src hash inventory size mismatch');
+
+  console.log(`Hashed style element CSP gate: PASS (${expected.size} hashes)`);
 }
 
 function assertCanonicalSalesRuntime(dist) {
@@ -152,6 +181,7 @@ function assertRuntimeArtifactClosure(dist) {
   }
 
   assertStrictScriptCsp(dist);
+  assertHashedStyleCsp();
   assertCanonicalSalesRuntime(dist);
   console.log('Runtime artifact closure: PASS');
 }
@@ -176,6 +206,7 @@ run(process.execPath, ['tests/native-user-profiles.test.js']);
 run(process.execPath, ['tests/password-policy.test.js']);
 run(process.execPath, ['tests/canonical-sales-runtime.test.js']);
 run(process.execPath, ['tests/strict-index-runtime.test.js']);
+run(process.execPath, ['tests/style-csp-inventory.test.js']);
 
 const dist = path.join(ROOT, 'dist');
 fs.rmSync(dist, { recursive: true, force: true });
