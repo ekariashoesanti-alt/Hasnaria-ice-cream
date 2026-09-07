@@ -105,6 +105,14 @@ jobs:
           test ! -e dist/supabase
           test ! -e dist/.github
 
+      - name: Retain validated production artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-dist-${{ github.sha }}
+          path: dist
+          if-no-files-found: error
+          retention-days: 1
+
       - name: Required normalized-sales files
         shell: bash
         run: |
