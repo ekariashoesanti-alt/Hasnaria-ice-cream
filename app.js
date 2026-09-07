@@ -12,6 +12,29 @@
     try {
       var originalCreateClient = supabase.createClient.bind(supabase);
       var sharedAuthClient = originalCreateClient(AUTH_URL, AUTH_KEY, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, flowType: 'pkce', storageKey: 'hasnaria-auth-v2' } });
+      var passwordPolicy = window.__HASNARIA_PASSWORD_POLICY;
+      function passwordPolicyError(password) {
+        if (!passwordPolicy || typeof passwordPolicy.validate !== 'function') return null;
+        var result = passwordPolicy.validate(password);
+        if (result && !result.ok) {
+          var err = new Error(result.message || 'Password baru tidak memenuhi kebijakan keamanan.');
+          err.name = 'HasnariaPasswordPolicyError';
+          return err;
+        }
+        return null;
+      }
+      var originalSignUp = sharedAuthClient.auth.signUp.bind(sharedAuthClient.auth);
+      sharedAuthClient.auth.signUp = function (credentials) {
+        var err = credentials && Object.prototype.hasOwnProperty.call(credentials, 'password') ? passwordPolicyError(credentials.password) : null;
+        if (err) return Promise.resolve({ data: { user: null, session: null }, error: err });
+        return originalSignUp(credentials);
+      };
+      var originalUpdateUser = sharedAuthClient.auth.updateUser.bind(sharedAuthClient.auth);
+      sharedAuthClient.auth.updateUser = function (attributes, options) {
+        var err = attributes && Object.prototype.hasOwnProperty.call(attributes, 'password') ? passwordPolicyError(attributes.password) : null;
+        if (err) return Promise.resolve({ data: { user: null }, error: err });
+        return originalUpdateUser(attributes, options);
+      };
       var nativeFetch = window.fetch.bind(window);
       var authRefreshPromise = null;
       function isSupabaseRestRequest(input) {
