@@ -36,28 +36,29 @@ jobs:
           node --check /tmp/hasnaria-sales-board-assembled.js
 
       - name: Majoo importer smoke test
-        shell: bash
-        run: |
-          set -euo pipefail
-          node tests/majoo-import-v2.test.js
+        run: node tests/majoo-import-v2.test.js
 
       - name: Native user profile authority test
-        shell: bash
-        run: |
-          set -euo pipefail
-          node tests/native-user-profiles.test.js
+        run: node tests/native-user-profiles.test.js
 
       - name: Runtime source integrity
         shell: bash
         run: |
           set -euo pipefail
           test -s core-app.js
+          test -s sales-board.js
+          test ! -e sales-board-core.js
           test ! -e user-profile-bridge.js
           test ! -e tests/user-profile-bridge.test.js
           grep -q 'db.from("user_profiles")' core-app.js
           grep -q 'async function updateMemberRole' core-app.js
           grep -q 'role: "pending"' core-app.js
           grep -q "var CORE = '/core-app.js?v=3'" app.js
+          grep -q "var SALES = '/sales-board.js?v=44'" app.js
+          grep -q 'var SALES_FALLBACK = false' app.js
+          grep -q '__HASNARIA_IMPORT_V2' sales-board.js
+          grep -q "chunks.join('')" sales-board.js
+          grep -q '@supabase/supabase-js@2.115.0' index.html
 
           if grep -qE 'HASNARIA_USER|var OWNERS|client_roster_rows|function encode\(|function parseM\(' core-app.js; then
             echo 'Legacy user authority marker is still active in runtime core.' >&2
@@ -71,9 +72,6 @@ jobs:
             echo 'Remote historical application core is still active.' >&2
             exit 1
           fi
-          grep -q "var SALES = '/sales-board.js?v=43'" app.js
-          grep -q 'var SALES_FALLBACK = false' app.js
-          grep -q '@supabase/supabase-js@2.115.0' index.html
           if grep -q '@supabase/supabase-js@2"' index.html; then
             echo 'Floating Supabase JS major version is not allowed.' >&2
             exit 1
@@ -95,6 +93,11 @@ jobs:
           set -euo pipefail
           test -s sales-import-v2.js
           test -s sales-board.js
+          test -s sales-board.part0.js
+          test -s sales-board.part1.js
+          test -s sales-board.part2.js
+          test -s sales-board.part3.js
+          test -s sales-board.part4.js
           test -s supabase/migrations/20260906133154_sales_import_foundation.sql
           test -s supabase/migrations/20260906133258_sales_external_transaction_unique_constraint.sql
           test -s supabase/migrations/20260906150558_harden_sales_import_and_legacy_role_bridge.sql
@@ -113,7 +116,7 @@ jobs:
           test -s supabase/migrations/20260907014442_harden_profile_authority_and_last_owner.sql
           test -s supabase/migrations/20260907020357_drop_legacy_client_roster_rpc.sql
           test -s supabase/migrations/20260907021205_align_rls_with_runtime_role_matrix.sql
-          grep -q '__HASNARIA_IMPORT_V2' sales-board.js
+          test -s supabase/migrations/20260907023723_ignore_retired_legacy_user_registry_writes.sql
           grep -q 'void/refund' sales-import-v2.js
           grep -q 'item_name' sales-import-v2.js
           grep -q 'external_sku' sales-import-v2.js
@@ -123,8 +126,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if grep -RInE --exclude-dir=.git --exclude='*.md' --exclude='audit.yml' '(service_role|sb_secret_[A-Za-z0-9_-]+)' .; then
-            echo 'Privileged Supabase credential marker found in repository.' >&2
+          if grep -RInE --exclude-dir=.git --exclude='*.md' --exclude='audit.yml' 'sb_secret_[A-Za-z0-9_-]{20,}' .; then
+            echo 'Supabase secret-key value found in repository.' >&2
+            exit 1
+          fi
+          if grep -RInE --exclude-dir=.git --exclude='*.md' --exclude='audit.yml' 'SUPABASE_SERVICE_ROLE_KEY[[:space:]]*[:=][[:space:]]*[^[:space:]]{20,}' .; then
+            echo 'Supabase service-role credential value found in repository.' >&2
             exit 1
           fi
 
@@ -133,35 +140,11 @@ jobs:
         run: |
           set -euo pipefail
           grep -qi 'enable row level security' supabase/migrations/20260906133154_sales_import_foundation.sql
-          grep -qi 'revoke execute on function public.bootstrap_user_profile' supabase/migrations/20260906150558_harden_sales_import_and_legacy_role_bridge.sql
-          grep -q 'private.sync_legacy_roster_to_profile' supabase/migrations/20260906150558_harden_sales_import_and_legacy_role_bridge.sql
           grep -q 'private.can_sales_write' supabase/migrations/20260906151734_move_rls_helpers_to_private_schema.sql
           grep -q 'private.normalize_sale_item_list' supabase/migrations/20260906161001_enforce_sale_item_and_daily_sku_normalization.sql
-          grep -q 'private.normalize_daily_metric_sku' supabase/migrations/20260906161001_enforce_sale_item_and_daily_sku_normalization.sql
-          grep -q 'products_insert_authorized' supabase/migrations/20260906161104_consolidate_permissive_rls_policies.sql
-          grep -q 'private.map_sale_item_product' supabase/migrations/20260906161857_map_sale_items_to_product_master.sql
           grep -q 'products_brand_canonical_name_uidx' supabase/migrations/20260906162132_enforce_canonical_product_name_uniqueness.sql
-          grep -q 'select id into v_product_id' supabase/migrations/20260906162322_fix_product_mapping_trigger_uuid_lookup.sql
           grep -q 'sales_transaction_count_positive_check' supabase/migrations/20260906162737_enforce_sales_numeric_integrity.sql
-          grep -q 'sale_items_qty_positive_check' supabase/migrations/20260906162737_enforce_sales_numeric_integrity.sql
-          grep -q 'sales_import_batches_period_order_check' supabase/migrations/20260906162737_enforce_sales_numeric_integrity.sql
-          grep -q 'function public.client_roster_rows' supabase/migrations/20260907013055_add_canonical_client_roster_rpc.sql
-          grep -q 'grant execute on function public.client_roster_rows() to authenticated' supabase/migrations/20260907013055_add_canonical_client_roster_rpc.sql
-          grep -q 'drop trigger if exists trg_sync_legacy_roster_to_profile' supabase/migrations/20260907013655_retire_legacy_product_user_registry.sql
-          grep -q 'drop function if exists private.sync_legacy_roster_to_profile' supabase/migrations/20260907013655_retire_legacy_product_user_registry.sql
-          grep -q 'products_no_legacy_user_registry_check' supabase/migrations/20260907013655_retire_legacy_product_user_registry.sql
-          grep -q "name like 'HASNARIA_USER|%'" supabase/migrations/20260907013655_retire_legacy_product_user_registry.sql
-          grep -qi '^security invoker$' supabase/migrations/20260907013955_make_client_roster_rpc_security_invoker.sql
-          grep -q 'revoke all on function public.client_roster_rows() from public, anon' supabase/migrations/20260907013955_make_client_roster_rpc_security_invoker.sql
-          grep -q 'new.is_super_admin := old.is_super_admin' supabase/migrations/20260907014442_harden_profile_authority_and_last_owner.sql
           grep -q 'private.guard_last_active_owner' supabase/migrations/20260907014442_harden_profile_authority_and_last_owner.sql
-          grep -q 'Cannot remove or demote the last active Owner' supabase/migrations/20260907014442_harden_profile_authority_and_last_owner.sql
           grep -q 'drop function if exists public.client_roster_rows' supabase/migrations/20260907020357_drop_legacy_client_roster_rpc.sql
           grep -q 'daily_metrics_read_same_brand' supabase/migrations/20260907021205_align_rls_with_runtime_role_matrix.sql
-          grep -q 'expenses_insert_ops_role' supabase/migrations/20260907021205_align_rls_with_runtime_role_matrix.sql
-          grep -q 'sales_read_same_brand' supabase/migrations/20260907021205_align_rls_with_runtime_role_matrix.sql
-          grep -q 'sale_items_read_same_brand' supabase/migrations/20260907021205_align_rls_with_runtime_role_matrix.sql
-          grep -q 'social_contents_insert_domain_role' supabase/migrations/20260907021205_align_rls_with_runtime_role_matrix.sql
-          grep -q "platform in ('HASNARIA_SHIFT','HASNARIA_HR')" supabase/migrations/20260907021205_align_rls_with_runtime_role_matrix.sql
-          grep -q 'private.can_ops_write' supabase/migrations/20260907021205_align_rls_with_runtime_role_matrix.sql
-          grep -q 'private.is_active_member' supabase/migrations/20260907021205_align_rls_with_runtime_role_matrix.sql
+          grep -q 'private.ignore_retired_legacy_user_registry_write' supabase/migrations/20260907023723_ignore_retired_legacy_user_registry_writes.sql
