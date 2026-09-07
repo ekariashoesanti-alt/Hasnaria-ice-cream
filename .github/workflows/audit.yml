@@ -99,6 +99,7 @@ jobs:
           test -s supabase/migrations/20260906162737_enforce_sales_numeric_integrity.sql
           test -s supabase/migrations/20260907013055_add_canonical_client_roster_rpc.sql
           test -s supabase/migrations/20260907013655_retire_legacy_product_user_registry.sql
+          test -s supabase/migrations/20260907013955_make_client_roster_rpc_security_invoker.sql
           grep -q '__HASNARIA_IMPORT_V2' sales-board.js
           grep -q 'void/refund' sales-import-v2.js
           grep -q 'item_name' sales-import-v2.js
@@ -137,3 +138,5 @@ jobs:
           grep -q 'drop function if exists private.sync_legacy_roster_to_profile' supabase/migrations/20260907013655_retire_legacy_product_user_registry.sql
           grep -q 'products_no_legacy_user_registry_check' supabase/migrations/20260907013655_retire_legacy_product_user_registry.sql
           grep -q "name like 'HASNARIA_USER|%'" supabase/migrations/20260907013655_retire_legacy_product_user_registry.sql
+          grep -qi '^security invoker$' supabase/migrations/20260907013955_make_client_roster_rpc_security_invoker.sql
+          grep -q 'revoke all on function public.client_roster_rows() from public, anon' supabase/migrations/20260907013955_make_client_roster_rpc_security_invoker.sql
