@@ -39,9 +39,9 @@ Role aplikasi:
 - Pelaksana
 - Pending
 
-`public.user_profiles` adalah authority role/status/brand di database. Record legacy `HASNARIA_USER|...` pada `products` hanya bridge kompatibilitas untuk UI lama dan tidak boleh menjadi sumber authority baru.
+`public.user_profiles` adalah satu-satunya authority runtime untuk role, status, brand, email, dan identitas user. Runtime tidak lagi membaca atau menulis synthetic roster `HASNARIA_USER|...` pada `products`, dan tidak memakai email hardcoded untuk menentukan Owner.
 
-User baru masuk sebagai `pending` dan menunggu aktivasi Owner. Perubahan role/status/brand dilindungi oleh RLS/trigger database.
+User baru bootstrap sebagai `pending` dan menunggu aktivasi Owner. Perubahan role/status/brand dilindungi oleh RLS/trigger database. Owner aktif terakhir juga tidak dapat didemote, dinonaktifkan, dipindah brand, atau dihapus sebelum ada Owner aktif pengganti.
 
 ## Import Majoo
 
@@ -61,7 +61,7 @@ Sebelum perubahan importer dipromosikan ke production, lakukan rekonsiliasi satu
 
 - syntax seluruh JavaScript;
 - syntax sales multipart setelah lima file digabung;
-- integritas snapshot `core-app.js`;
+- native `user_profiles` authority dan ketiadaan marker authority legacy di runtime;
 - importer normalized dan migration wajib;
 - kebocoran credential privileged;
 - marker hardening migration;
