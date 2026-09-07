@@ -2,9 +2,11 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const { spawnSync } = require('child_process');
+const { buildCanonicalSalesRuntime } = require('./build-sales-runtime');
 
 const ROOT = process.cwd();
 const PARTS = [0, 1, 2, 3, 4].map((n) => `sales-board.part${n}.js`);
+const SOURCE_ONLY_FILES = new Set([...PARTS, 'sales-import-v2.js']);
 const SKIP_DIRS = new Set(['.git', '.github', 'node_modules', 'dist']);
 const DEV_ONLY_DIRS = new Set(['.git', '.github', 'docs', 'supabase', 'tests', 'scripts', 'dist', 'node_modules']);
 const DEV_ONLY_FILES = new Set(['README.md', 'vercel.json']);
@@ -16,9 +18,7 @@ const REQUIRED_RUNTIME_FILES = [
   'stock-monitor.js',
   'sales-board.js',
   'sales-ui-patch.js',
-  'xlsx-preload.js',
-  'sales-import-v2.js',
-  ...PARTS
+  'xlsx-preload.js'
 ];
 const TEXT_RUNTIME_RE = /\.(?:html?|js|css)$/i;
 const STATIC_ASSET_RE = /\.(?:html?|js|css|json|svg|png|jpe?g|webp|gif|ico|woff2?|ttf|map)$/i;
@@ -64,12 +64,36 @@ function collectRootRelativeStaticRefs(text) {
   return refs;
 }
 
+function assertCanonicalSalesRuntime(dist) {
+  const salesPath = path.join(dist, 'sales-board.js');
+  const sales = fs.readFileSync(salesPath, 'utf8');
+  const forbidden = [
+    'sales-board.part0.js',
+    'sales-board.part1.js',
+    'sales-board.part2.js',
+    'sales-board.part3.js',
+    'sales-board.part4.js',
+    "chunks.join('')",
+    'function patchSource(',
+    "fetch('/sales-import-v2.js"
+  ];
+  for (const marker of forbidden) {
+    if (sales.includes(marker)) fail(`legacy Sales runtime marker leaked into production: ${marker}`);
+  }
+  if (!sales.includes('window.__HASNARIA_IMPORT_V2')) fail('canonical Sales runtime is missing Majoo importer v2');
+  if (!sales.includes('return window.__HASNARIA_IMPORT_V2(fileOrFiles')) fail('canonical Sales runtime is not delegating to importer v2');
+  console.log('Canonical Sales production artifact: PASS');
+}
+
 function assertRuntimeArtifactClosure(dist) {
   for (const rel of REQUIRED_RUNTIME_FILES) {
     const target = path.join(dist, rel);
     if (!fs.existsSync(target) || !fs.statSync(target).isFile()) fail(`dist missing required runtime file: ${rel}`);
   }
   if (fs.existsSync(path.join(dist, 'sales-board-core.js'))) fail('obsolete sales-board-core.js leaked into dist');
+  for (const sourceOnly of SOURCE_ONLY_FILES) {
+    if (fs.existsSync(path.join(dist, sourceOnly))) fail(`source-only Sales file leaked into dist: ${sourceOnly}`);
+  }
 
   const files = walk(dist, []);
   for (const file of files) {
@@ -96,6 +120,7 @@ function assertRuntimeArtifactClosure(dist) {
     }
   }
 
+  assertCanonicalSalesRuntime(dist);
   console.log('Runtime artifact closure: PASS');
 }
 
@@ -117,6 +142,7 @@ run(process.execPath, ['--check', assembledPath]);
 run(process.execPath, ['tests/majoo-import-v2.test.js']);
 run(process.execPath, ['tests/native-user-profiles.test.js']);
 run(process.execPath, ['tests/password-policy.test.js']);
+run(process.execPath, ['tests/canonical-sales-runtime.test.js']);
 
 const dist = path.join(ROOT, 'dist');
 fs.rmSync(dist, { recursive: true, force: true });
@@ -124,11 +150,14 @@ fs.mkdirSync(dist, { recursive: true });
 
 for (const entry of fs.readdirSync(ROOT, { withFileTypes: true })) {
   if (entry.name.startsWith('.') && entry.name !== '.well-known') continue;
-  if (DEV_ONLY_DIRS.has(entry.name) || DEV_ONLY_FILES.has(entry.name)) continue;
+  if (DEV_ONLY_DIRS.has(entry.name) || DEV_ONLY_FILES.has(entry.name) || SOURCE_ONLY_FILES.has(entry.name)) continue;
   const src = path.join(ROOT, entry.name);
   const dst = path.join(dist, entry.name);
   fs.cpSync(src, dst, { recursive: true });
 }
+
+buildCanonicalSalesRuntime(ROOT, path.join(dist, 'sales-board.js'));
+run(process.execPath, ['--check', path.join(dist, 'sales-board.js')]);
 
 if (!fs.existsSync(path.join(dist, 'index.html'))) fail('dist/index.html was not produced');
 assertRuntimeArtifactClosure(dist);
