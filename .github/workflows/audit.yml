@@ -57,7 +57,7 @@ jobs:
           grep -q 'db.from("user_profiles")' core-app.js
           grep -q 'async function updateMemberRole' core-app.js
           grep -q 'role: "pending"' core-app.js
-          grep -q "var CORE = '/core-app.js?v=2'" app.js
+          grep -q "var CORE = '/core-app.js?v=3'" app.js
 
           if grep -qE 'HASNARIA_USER|var OWNERS|client_roster_rows|function encode\(|function parseM\(' core-app.js; then
             echo 'Legacy user authority marker is still active in runtime core.' >&2
