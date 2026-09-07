@@ -90,6 +90,21 @@ jobs:
           grep -q "frame-ancestors 'none'" vercel.json
           grep -q "connect-src 'self' https://bnnhmtkpdjlgehsvgoda.supabase.co" vercel.json
 
+      - name: Production artifact parity
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/vercel-build-check.js
+          test -s dist/index.html
+          test -s dist/app.js
+          test -s dist/core-app.js
+          test -s dist/sales-board.js
+          test ! -e dist/sales-board-core.js
+          test ! -e dist/tests
+          test ! -e dist/scripts
+          test ! -e dist/supabase
+          test ! -e dist/.github
+
       - name: Required normalized-sales files
         shell: bash
         run: |
