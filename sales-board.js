@@ -1,4 +1,4 @@
-/* Hasnaria sales-board multipart loader v43 — normalized Majoo importer */
+/* Hasnaria Sales loader v45 — canonical core + Majoo importer v2 */
 (function () {
   'use strict';
   var PARTS = [
