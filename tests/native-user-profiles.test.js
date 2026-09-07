@@ -21,7 +21,7 @@ assert(!core.includes('client_roster_rows'), 'runtime core must not depend on co
 assert(!core.includes('function encode('), 'legacy roster encoder must be removed');
 assert(!core.includes('function parseM('), 'legacy roster parser must be removed');
 
-assert.match(app, /var CORE = '\/core-app\.js\?v=2'/, 'loader must cache-bust native core');
+assert.match(app, /var CORE = '\/core-app\.js\?v=3'/, 'loader must cache-bust native core');
 assert(!app.includes('user-profile-bridge.js'), 'loader must not load compatibility profile bridge');
 assert(!app.includes('__HASNARIA_PROFILE_AUTHORITY'), 'loader must not depend on bridge sentinel');
 
