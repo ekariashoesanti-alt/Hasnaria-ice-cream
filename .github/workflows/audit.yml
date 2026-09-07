@@ -117,6 +117,7 @@ jobs:
           test -s supabase/migrations/20260907020357_drop_legacy_client_roster_rpc.sql
           test -s supabase/migrations/20260907021205_align_rls_with_runtime_role_matrix.sql
           test -s supabase/migrations/20260907023723_ignore_retired_legacy_user_registry_writes.sql
+          test -s supabase/migrations/20260907071242_revoke_profile_authority_trigger_execute.sql
           grep -q 'void/refund' sales-import-v2.js
           grep -q 'item_name' sales-import-v2.js
           grep -q 'external_sku' sales-import-v2.js
@@ -148,3 +149,4 @@ jobs:
           grep -q 'drop function if exists public.client_roster_rows' supabase/migrations/20260907020357_drop_legacy_client_roster_rpc.sql
           grep -q 'daily_metrics_read_same_brand' supabase/migrations/20260907021205_align_rls_with_runtime_role_matrix.sql
           grep -q 'private.ignore_retired_legacy_user_registry_write' supabase/migrations/20260907023723_ignore_retired_legacy_user_registry_writes.sql
+          grep -qi 'revoke execute on function private.guard_profile_authority' supabase/migrations/20260907071242_revoke_profile_authority_trigger_execute.sql
