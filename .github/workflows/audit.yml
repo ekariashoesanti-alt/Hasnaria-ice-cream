@@ -7,6 +7,7 @@ on:
       - main
       - 'fix/**'
       - 'refactor/**'
+      - 'cleanup/**'
 
 permissions:
   contents: read
@@ -51,6 +52,8 @@ jobs:
         run: |
           set -euo pipefail
           test -s core-app.js
+          test ! -e user-profile-bridge.js
+          test ! -e tests/user-profile-bridge.test.js
           grep -q 'db.from("user_profiles")' core-app.js
           grep -q 'async function updateMemberRole' core-app.js
           grep -q 'role: "pending"' core-app.js
@@ -108,6 +111,7 @@ jobs:
           test -s supabase/migrations/20260907013655_retire_legacy_product_user_registry.sql
           test -s supabase/migrations/20260907013955_make_client_roster_rpc_security_invoker.sql
           test -s supabase/migrations/20260907014442_harden_profile_authority_and_last_owner.sql
+          test -s supabase/migrations/20260907020357_drop_legacy_client_roster_rpc.sql
           grep -q '__HASNARIA_IMPORT_V2' sales-board.js
           grep -q 'void/refund' sales-import-v2.js
           grep -q 'item_name' sales-import-v2.js
@@ -151,3 +155,4 @@ jobs:
           grep -q 'new.is_super_admin := old.is_super_admin' supabase/migrations/20260907014442_harden_profile_authority_and_last_owner.sql
           grep -q 'private.guard_last_active_owner' supabase/migrations/20260907014442_harden_profile_authority_and_last_owner.sql
           grep -q 'Cannot remove or demote the last active Owner' supabase/migrations/20260907014442_harden_profile_authority_and_last_owner.sql
+          grep -q 'drop function if exists public.client_roster_rows' supabase/migrations/20260907020357_drop_legacy_client_roster_rpc.sql
