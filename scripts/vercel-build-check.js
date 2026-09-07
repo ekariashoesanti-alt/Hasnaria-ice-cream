@@ -11,6 +11,7 @@ const DEV_ONLY_FILES = new Set(['README.md', 'vercel.json']);
 const REQUIRED_RUNTIME_FILES = [
   'index.html',
   'app.js',
+  'password-policy.js',
   'core-app.js',
   'stock-monitor.js',
   'sales-board.js',
@@ -115,6 +116,7 @@ run(process.execPath, ['--check', assembledPath]);
 
 run(process.execPath, ['tests/majoo-import-v2.test.js']);
 run(process.execPath, ['tests/native-user-profiles.test.js']);
+run(process.execPath, ['tests/password-policy.test.js']);
 
 const dist = path.join(ROOT, 'dist');
 fs.rmSync(dist, { recursive: true, force: true });
