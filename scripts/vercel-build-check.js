@@ -207,6 +207,7 @@ run(process.execPath, ['tests/password-policy.test.js']);
 run(process.execPath, ['tests/canonical-sales-runtime.test.js']);
 run(process.execPath, ['tests/strict-index-runtime.test.js']);
 run(process.execPath, ['tests/style-csp-inventory.test.js']);
+run(process.execPath, ['tests/style-attr-csp-inventory.test.js']);
 
 const dist = path.join(ROOT, 'dist');
 fs.rmSync(dist, { recursive: true, force: true });
