@@ -2,7 +2,6 @@
   var URL = window.HASNARIA_SB;
   var KEY = window.HASNARIA_KEY;
   var BRAND = "a36d4b4f-3ccc-4a78-8aeb-b868f0407ea4";
-  var OWNERS = ["harisnu@gmail.com"];
   var ROLE_L = { pending: "Menunggu persetujuan", owner: "Owner", head_store: "Head of Store", marketing: "Marketing", pic: "PIC Shift", pelaksana: "Pelaksana" };
   var LIM = { owner: { p: 1 / 0, k: 1 / 0 }, head_store: { p: 1500000, k: 50000 }, marketing: { p: 0, k: 0 }, pic: { p: 0, k: 15000 }, pelaksana: { p: 0, k: 0 } };
   var TAG = { recorded: "⟦H:recorded⟧", pending_approval: "⟦H:pending_approval⟧", approved: "⟦H:approved⟧", rejected: "⟦H:rejected⟧" };
@@ -66,12 +65,21 @@
   }
   function canAppr(r) { return r === "owner" || r === "head_store"; }
   function canStock(r) { return r === "owner" || r === "head_store" || r === "pic"; }
-  function encode(m) { return "HASNARIA_USER|" + m.userId + "|" + m.role + "|" + m.email + "|" + (m.name || "").replace(/\|/g, "/"); }
-  function parseM(name) {
-    if (!name || name.indexOf("HASNARIA_USER|") !== 0) return null;
-    var p = name.split("|");
-    if (p.length < 5) return null;
-    return { userId: p[1], role: p[2], email: p[3], name: p.slice(4).join("|"), prodId: null };
+  function cleanProfileName(row) {
+    var display = String(row && row.display_name || "");
+    var pos = display.indexOf("::");
+    if (pos >= 0) display = display.slice(pos + 2);
+    return (row && row.full_name) || display || String(row && row.email || "").split("@")[0] || "User";
+  }
+  function profileMember(row) {
+    return {
+      userId: row.id,
+      role: row.status === "active" ? row.role : "pending",
+      email: row.email || "",
+      name: cleanProfileName(row),
+      status: row.status || "pending",
+      brandId: row.brand_id || null
+    };
   }
   function parsePar(name, qty) {
     if (!name || name.indexOf("HASNARIA_PAR|") !== 0) return null;
@@ -99,25 +107,22 @@
   }
 
   async function loadRoster() {
-    var r = await db.from("products").select("id,name").eq("brand_id", BRAND).like("name", "HASNARIA_USER|%");
+    var r = await db.from("user_profiles")
+      .select("id,email,full_name,display_name,role,status,brand_id")
+      .eq("brand_id", BRAND)
+      .order("full_name", { ascending: true });
     if (r.error) throw r.error;
-    roster = (r.data || []).map(function (row) {
-      var m = parseM(row.name);
-      if (m) m.prodId = row.id;
-      return m;
-    }).filter(Boolean);
+    roster = (r.data || []).map(profileMember);
   }
-  async function upsertMember(m) {
-    var name = encode(m);
-    var hit = roster.find(function (x) { return x.userId === m.userId; });
-    if (hit && hit.prodId) {
-      var u = await db.from("products").update({ name: name }).eq("id", hit.prodId);
-      if (u.error) throw u.error;
-    } else {
-      var i = await db.from("products").insert({ brand_id: BRAND, name: name, selling_price: 0, cogs: 0, active: true });
-      if (i.error) throw i.error;
-    }
-    await db.from("user_profiles").upsert({ id: m.userId, display_name: m.role + "::" + m.name });
+  async function updateMemberRole(m) {
+    var u = await db.from("user_profiles")
+      .update({ role: m.role })
+      .eq("id", m.userId)
+      .eq("brand_id", BRAND)
+      .select("id")
+      .maybeSingle();
+    if (u.error) throw u.error;
+    if (!u.data) throw new Error("Role tidak diperbarui. Periksa wewenang akun.");
   }
   async function seedPar() {
     var r = await db.from("products").select("id").eq("brand_id", BRAND).like("name", "HASNARIA_PAR|%").limit(1);
@@ -129,26 +134,31 @@
     await db.from("products").insert(rows);
   }
   async function bootstrap(user) {
-    await loadRoster();
     var email = (user.email || "").toLowerCase();
-    var full = (user.user_metadata && (user.user_metadata.full_name || user.user_metadata.name)) || email.split("@")[0];
-    var existing = roster.find(function (x) { return x.userId === user.id; });
-    if (existing) {
-      if (OWNERS.indexOf(email) >= 0 && existing.role !== "owner") {
-        existing = { userId: existing.userId, role: "owner", email: email, name: full, prodId: existing.prodId };
-        await upsertMember(existing);
-      }
-      me = existing; role = existing.role;
-      if (role === "owner") await seedPar();
-      return;
+    var full = (user.user_metadata && (user.user_metadata.full_name || user.user_metadata.name)) || email.split("@")[0] || "User";
+    var q = await db.from("user_profiles")
+      .select("id,email,full_name,display_name,role,status,brand_id")
+      .eq("id", user.id)
+      .maybeSingle();
+    if (q.error) throw q.error;
+    if (!q.data) {
+      var created = await db.from("user_profiles").insert({
+        id: user.id,
+        email: email,
+        full_name: full,
+        display_name: full,
+        brand_id: BRAND,
+        role: "pending",
+        status: "active"
+      }).select("id,email,full_name,display_name,role,status,brand_id").single();
+      if (created.error) throw created.error;
+      q.data = created.data;
     }
-    var hasOwner = roster.some(function (x) { return x.role === "owner" || OWNERS.indexOf((x.email || "").toLowerCase()) >= 0; });
-    var r = (OWNERS.indexOf(email) >= 0 || !hasOwner) ? "owner" : "pending";
-    me = { userId: user.id, email: email, name: full, role: r };
-    role = r;
-    await upsertMember(me);
+    if (q.data.brand_id !== BRAND) throw new Error("Profil akun tidak terhubung ke brand Hasnaria.");
+    me = profileMember(q.data);
+    role = me.role;
     await loadRoster();
-    if (r === "owner") await seedPar();
+    if (role === "owner") await seedPar();
   }
   async function loadAll() {
     var from = new Date(); from.setDate(from.getDate() - 89);
@@ -420,7 +430,7 @@
     });
 
     var leaves = social.filter(function (x) { return x.platform === "HASNARIA_HR"; });
-    $("team").innerHTML = '<div class="card"><h2>Tim & wewenang</h2><p class="small" style="margin-bottom:10px">User baru = menunggu. Karyawan tidak menjadikan Owner sebagai supervisor.</p><table><thead><tr><th>Nama</th><th>Email</th><th>Role</th></tr></thead><tbody>' +
+    $("team").innerHTML = '<div class="card"><h2>Tim & wewenang</h2><p class="small" style="margin-bottom:10px">User baru = menunggu. Karyawan tidak menjadikan Owner sebagai supervisor.</p><p class="small" id="teamMsg"></p><table><thead><tr><th>Nama</th><th>Email</th><th>Role</th></tr></thead><tbody>' +
       roster.map(function (m) {
         return "<tr><td>" + esc(m.name) + (m.userId === me.userId ? " (Anda)" : "") + "</td><td>" + esc(m.email) + '</td><td><select data-user="' + m.userId + '" ' + (m.userId === me.userId ? "disabled" : "") + ">" +
           Object.keys(ROLE_L).map(function (rr) { return '<option value="' + rr + '" ' + (m.role === rr ? "selected" : "") + ">" + ROLE_L[rr] + "</option>"; }).join("") + "</select></td></tr>";
@@ -440,10 +450,20 @@
     document.querySelectorAll("[data-user]").forEach(function (sel) {
       sel.addEventListener("change", async function () {
         var m = roster.find(function (x) { return x.userId === sel.getAttribute("data-user"); });
+        if (!m) return;
+        var oldRole = m.role;
+        var msg = $("teamMsg");
         m.role = sel.value;
-        await upsertMember(m);
-        await loadRoster();
-        render();
+        if (msg) msg.textContent = "Menyimpan role…";
+        try {
+          await updateMemberRole(m);
+          await loadRoster();
+          render();
+        } catch (e) {
+          m.role = oldRole;
+          sel.value = oldRole;
+          if (msg) msg.textContent = e && e.message ? e.message : String(e);
+        }
       });
     });
     if ($("lzSave")) $("lzSave").addEventListener("click", async function () {
