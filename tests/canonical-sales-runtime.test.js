@@ -15,6 +15,9 @@ try {
   if (!runtime.includes('return n==null ? null : n;')) throw new Error('revenue normalization patch missing');
   if (!runtime.includes('window.__HASNARIA_XLSX_READY')) throw new Error('XLSX preload coordination patch missing');
   if (!runtime.includes('return window.__HASNARIA_IMPORT_V2(fileOrFiles')) throw new Error('importFiles v2 delegation missing');
+  if (!runtime.includes('.sb-w-100{width:100%}')) throw new Error('Sales width utility classes missing');
+  if (!runtime.includes("' sb-w-' + Math.max(0, Math.min(100, Math.round(barWidth)))")) throw new Error('SKU bar width class patch missing');
+  if (!runtime.includes("sb-status-fill sb-w-'+Math.max(3,Math.min(100,Math.round(Number(s.percent)||0)))")) throw new Error('import progress width class patch missing');
 
   const forbidden = [
     'sales-board.part0.js',
@@ -23,10 +26,12 @@ try {
     'sales-board.part3.js',
     'sales-board.part4.js',
     "chunks.join('')",
-    'function patchSource('
+    'function patchSource(',
+    "style=\"width:' + barWidth.toFixed(1)",
+    "style=\"width:'+Math.max(3,Math.min(100,s.percent||0))"
   ];
   for (const marker of forbidden) {
-    if (runtime.includes(marker)) throw new Error(`runtime loader marker leaked: ${marker}`);
+    if (runtime.includes(marker)) throw new Error(`runtime marker leaked: ${marker}`);
   }
 
   if (runtime.includes('return (n>0 && n<10000) ? n*1000 : n;')) {
