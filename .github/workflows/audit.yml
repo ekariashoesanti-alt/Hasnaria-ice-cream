@@ -6,6 +6,7 @@ on:
     branches:
       - main
       - 'fix/**'
+      - 'refactor/**'
 
 permissions:
   contents: read
@@ -39,24 +40,30 @@ jobs:
           set -euo pipefail
           node tests/majoo-import-v2.test.js
 
-      - name: User profile authority bridge test
+      - name: Native user profile authority test
         shell: bash
         run: |
           set -euo pipefail
-          node tests/user-profile-bridge.test.js
+          node tests/native-user-profiles.test.js
 
       - name: Runtime source integrity
         shell: bash
         run: |
           set -euo pipefail
           test -s core-app.js
-          test "$(git hash-object core-app.js)" = '91144a4adc626a5e6c04f0b767e0a0354ca35d96'
-          test -s user-profile-bridge.js
-          grep -q "var CORE = '/core-app.js" app.js
-          grep -q "var PROFILE_AUTH = '/user-profile-bridge.js?v=1'" app.js
-          grep -q "__HASNARIA_PROFILE_AUTHORITY!=='user_profiles'" app.js
-          grep -q "client_roster_rows" user-profile-bridge.js
-          grep -q "role: 'pending'" user-profile-bridge.js
+          grep -q 'db.from("user_profiles")' core-app.js
+          grep -q 'async function updateMemberRole' core-app.js
+          grep -q 'role: "pending"' core-app.js
+          grep -q "var CORE = '/core-app.js?v=2'" app.js
+
+          if grep -qE 'HASNARIA_USER|var OWNERS|client_roster_rows|function encode\(|function parseM\(' core-app.js; then
+            echo 'Legacy user authority marker is still active in runtime core.' >&2
+            exit 1
+          fi
+          if grep -qE 'user-profile-bridge\.js|__HASNARIA_PROFILE_AUTHORITY' app.js; then
+            echo 'Compatibility user-profile bridge is still loaded by runtime.' >&2
+            exit 1
+          fi
           if grep -q 'cdn.jsdelivr.net/gh/ekariashoesanti-alt/Hasnaria-ice-cream' app.js; then
             echo 'Remote historical application core is still active.' >&2
             exit 1
