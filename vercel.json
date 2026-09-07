@@ -11,7 +11,7 @@
         { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
         { "key": "Permissions-Policy", "value": "camera=(), microphone=(), geolocation=(), payment=()" },
         { "key": "X-Permitted-Cross-Domain-Policies", "value": "none" },
-        { "key": "Content-Security-Policy", "value": "default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://cdn.sheetjs.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://bnnhmtkpdjlgehsvgoda.supabase.co wss://bnnhmtkpdjlgehsvgoda.supabase.co; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; upgrade-insecure-requests" },
+        { "key": "Content-Security-Policy", "value": "default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://cdn.sheetjs.com; style-src 'self' 'sha256-fR+fCo2ya/gjN0W4DP28yW2SIsVEMHV8NwhIABEC2dc=' 'sha256-c6rGyC/FRu/hTe1Dymn8vNj5zXclBhYcIBk7zg2hQmg=' 'sha256-m92dNsqWHyOnUisX6dt7yhBW3MHSMvmercWyNMtyIQg=' 'sha256-pOguy+IUaX5cdsCCysMYml2qOqQIYd7/h+0VVb7VAvU=' 'sha256-JxrF3ogdVeWdljOJJKGc9S3un893VEqiiS+d4bv7xb8=' 'sha256-LDbr/Zb/hd0hnsNYMJbh3ojgdyYl4qlEkKP1JUEzzjU='; style-src-attr 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://bnnhmtkpdjlgehsvgoda.supabase.co wss://bnnhmtkpdjlgehsvgoda.supabase.co; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; upgrade-insecure-requests" },
         { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }
       ]
     }
