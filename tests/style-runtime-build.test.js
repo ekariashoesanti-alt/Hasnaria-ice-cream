@@ -17,13 +17,19 @@ try {
   for (const name of ['sales-ui-patch.js', 'stock-monitor.js']) {
     const file = path.join(tmp, name);
     const source = fs.readFileSync(file, 'utf8');
-    const textIndex = source.indexOf('s.textContent =');
-    const appendIndex = source.indexOf('document.head.appendChild(s);', textIndex);
-    if (textIndex < 0 || appendIndex < 0 || appendIndex < textIndex) {
-      throw new Error(`${name}: style attachment order is not CSP-safe`);
+    const textNodeIndex = source.indexOf('s.appendChild(document.createTextNode(');
+    const appendIndex = source.indexOf('document.head.appendChild(s);', textNodeIndex);
+    if (textNodeIndex < 0 || appendIndex < 0 || appendIndex < textNodeIndex) {
+      throw new Error(`${name}: style text node is not attached before the style element`);
     }
-    if (/document\.head\.appendChild\(s\);\s*\}\s*s\.textContent\s*=/.test(source)) {
-      throw new Error(`${name}: empty style element can still be attached before CSS assignment`);
+    if (!source.includes('if (s) return;')) {
+      throw new Error(`${name}: static style is not single-shot`);
+    }
+    if (source.includes('s.textContent =')) {
+      throw new Error(`${name}: connected style textContent rewrite survived build hardening`);
+    }
+    if (/document\.head\.appendChild\(s\);\s*\}\s*s\.(?:textContent|appendChild)/.test(source)) {
+      throw new Error(`${name}: style element can still be attached before CSS is populated`);
     }
     const checked = spawnSync(process.execPath, ['--check', file], { encoding: 'utf8' });
     if (checked.status !== 0) throw new Error(checked.stderr || checked.stdout || `${name} syntax check failed`);
