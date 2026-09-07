@@ -39,13 +39,24 @@ jobs:
           set -euo pipefail
           node tests/majoo-import-v2.test.js
 
+      - name: User profile authority bridge test
+        shell: bash
+        run: |
+          set -euo pipefail
+          node tests/user-profile-bridge.test.js
+
       - name: Runtime source integrity
         shell: bash
         run: |
           set -euo pipefail
           test -s core-app.js
           test "$(git hash-object core-app.js)" = '91144a4adc626a5e6c04f0b767e0a0354ca35d96'
+          test -s user-profile-bridge.js
           grep -q "var CORE = '/core-app.js" app.js
+          grep -q "var PROFILE_AUTH = '/user-profile-bridge.js?v=1'" app.js
+          grep -q "__HASNARIA_PROFILE_AUTHORITY!=='user_profiles'" app.js
+          grep -q "client_roster_rows" user-profile-bridge.js
+          grep -q "role: 'pending'" user-profile-bridge.js
           if grep -q 'cdn.jsdelivr.net/gh/ekariashoesanti-alt/Hasnaria-ice-cream' app.js; then
             echo 'Remote historical application core is still active.' >&2
             exit 1
@@ -86,6 +97,7 @@ jobs:
           test -s supabase/migrations/20260906162132_enforce_canonical_product_name_uniqueness.sql
           test -s supabase/migrations/20260906162322_fix_product_mapping_trigger_uuid_lookup.sql
           test -s supabase/migrations/20260906162737_enforce_sales_numeric_integrity.sql
+          test -s supabase/migrations/20260907013055_add_canonical_client_roster_rpc.sql
           grep -q '__HASNARIA_IMPORT_V2' sales-board.js
           grep -q 'void/refund' sales-import-v2.js
           grep -q 'item_name' sales-import-v2.js
@@ -118,3 +130,5 @@ jobs:
           grep -q 'sales_transaction_count_positive_check' supabase/migrations/20260906162737_enforce_sales_numeric_integrity.sql
           grep -q 'sale_items_qty_positive_check' supabase/migrations/20260906162737_enforce_sales_numeric_integrity.sql
           grep -q 'sales_import_batches_period_order_check' supabase/migrations/20260906162737_enforce_sales_numeric_integrity.sql
+          grep -q 'function public.client_roster_rows' supabase/migrations/20260907013055_add_canonical_client_roster_rpc.sql
+          grep -q 'grant execute on function public.client_roster_rows() to authenticated' supabase/migrations/20260907013055_add_canonical_client_roster_rpc.sql
