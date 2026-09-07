@@ -130,7 +130,7 @@ jobs:
             echo 'Supabase secret-key value found in repository.' >&2
             exit 1
           fi
-          if grep -RInE --exclude-dir=.git --exclude='*.md' --exclude='audit.yml' 'SUPABASE_SERVICE_ROLE_KEY[[:space:]]*[:=][[:space:]]*["'"'][^"'"']{20,}' .; then
+          if grep -RInE --exclude-dir=.git --exclude='*.md' --exclude='audit.yml' 'SUPABASE_SERVICE_ROLE_KEY[[:space:]]*[:=][[:space:]]*[^[:space:]]{20,}' .; then
             echo 'Supabase service-role credential value found in repository.' >&2
             exit 1
           fi
