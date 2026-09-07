@@ -3,6 +3,7 @@ const os = require('os');
 const path = require('path');
 const { spawnSync } = require('child_process');
 const { buildStrictIndexRuntime } = require('../scripts/build-index-runtime');
+const { inventoryStyleBlocks } = require('../scripts/style-csp-inventory');
 
 const root = path.resolve(__dirname, '..');
 const out = fs.mkdtempSync(path.join(os.tmpdir(), 'hasnaria-strict-index-'));
@@ -30,7 +31,12 @@ try {
   const reset = fs.readFileSync(path.join(out, 'password-reset-bootstrap.js'), 'utf8');
   if (!reset.includes('resetPasswordForEmail')) throw new Error('password reset flow missing');
 
+  const styleBlocks = inventoryStyleBlocks(root);
+  if (styleBlocks.length < 6) throw new Error(`expected at least 6 unique inline style blocks, found ${styleBlocks.length}`);
+
   console.log('strict index runtime test: PASS');
+  console.log('style CSP hash inventory:');
+  for (const block of styleBlocks) console.log(`${block.hash}  ${block.source}#${block.index}`);
 } finally {
   fs.rmSync(out, { recursive: true, force: true });
 }
