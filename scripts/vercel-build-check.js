@@ -3,6 +3,7 @@ const path = require('path');
 const os = require('os');
 const { spawnSync } = require('child_process');
 const { buildCanonicalSalesRuntime } = require('./build-sales-runtime');
+const { buildStrictIndexRuntime } = require('./build-index-runtime');
 
 const ROOT = process.cwd();
 const PARTS = [0, 1, 2, 3, 4].map((n) => `sales-board.part${n}.js`);
@@ -12,6 +13,8 @@ const DEV_ONLY_DIRS = new Set(['.git', '.github', 'docs', 'supabase', 'tests', '
 const DEV_ONLY_FILES = new Set(['README.md', 'vercel.json']);
 const REQUIRED_RUNTIME_FILES = [
   'index.html',
+  'auth-bootstrap.js',
+  'password-reset-bootstrap.js',
   'app.js',
   'password-policy.js',
   'core-app.js',
@@ -62,6 +65,34 @@ function collectRootRelativeStaticRefs(text) {
     if (ref) refs.add(ref);
   }
   return refs;
+}
+
+function getCspValue() {
+  let config;
+  try {
+    config = JSON.parse(fs.readFileSync(path.join(ROOT, 'vercel.json'), 'utf8'));
+  } catch (e) {
+    fail(`invalid vercel.json: ${e.message}`);
+  }
+  const headers = (config.headers || []).flatMap((rule) => rule.headers || []);
+  const csp = headers.find((header) => String(header.key || '').toLowerCase() === 'content-security-policy');
+  if (!csp || !csp.value) fail('Content-Security-Policy header missing from vercel.json');
+  return String(csp.value);
+}
+
+function assertStrictScriptCsp(dist) {
+  const csp = getCspValue();
+  const scriptDirective = csp.split(';').map((x) => x.trim()).find((x) => /^script-src\b/i.test(x));
+  if (!scriptDirective) fail('script-src directive missing from CSP');
+  if (/'unsafe-inline'/.test(scriptDirective)) fail("script-src still allows 'unsafe-inline'");
+
+  const html = fs.readFileSync(path.join(dist, 'index.html'), 'utf8');
+  if (/<script\b(?![^>]*\bsrc\s*=)[^>]*>/i.test(html)) fail('inline script leaked into production index.html');
+  if (/\son[a-z]+\s*=/i.test(html)) fail('inline event handler leaked into production index.html');
+  if (!html.includes('/auth-bootstrap.js')) fail('production index missing auth bootstrap');
+  if (!html.includes('/password-reset-bootstrap.js')) fail('production index missing password reset bootstrap');
+
+  console.log('Strict script CSP production gate: PASS');
 }
 
 function assertCanonicalSalesRuntime(dist) {
@@ -120,6 +151,7 @@ function assertRuntimeArtifactClosure(dist) {
     }
   }
 
+  assertStrictScriptCsp(dist);
   assertCanonicalSalesRuntime(dist);
   console.log('Runtime artifact closure: PASS');
 }
@@ -143,6 +175,7 @@ run(process.execPath, ['tests/majoo-import-v2.test.js']);
 run(process.execPath, ['tests/native-user-profiles.test.js']);
 run(process.execPath, ['tests/password-policy.test.js']);
 run(process.execPath, ['tests/canonical-sales-runtime.test.js']);
+run(process.execPath, ['tests/strict-index-runtime.test.js']);
 
 const dist = path.join(ROOT, 'dist');
 fs.rmSync(dist, { recursive: true, force: true });
@@ -156,6 +189,9 @@ for (const entry of fs.readdirSync(ROOT, { withFileTypes: true })) {
   fs.cpSync(src, dst, { recursive: true });
 }
 
+buildStrictIndexRuntime(path.join(ROOT, 'index.html'), dist);
+run(process.execPath, ['--check', path.join(dist, 'auth-bootstrap.js')]);
+run(process.execPath, ['--check', path.join(dist, 'password-reset-bootstrap.js')]);
 buildCanonicalSalesRuntime(ROOT, path.join(dist, 'sales-board.js'));
 run(process.execPath, ['--check', path.join(dist, 'sales-board.js')]);
 
