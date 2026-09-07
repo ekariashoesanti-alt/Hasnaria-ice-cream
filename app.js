@@ -12,9 +12,14 @@
     try {
       var originalCreateClient = supabase.createClient.bind(supabase);
       var sharedAuthClient = originalCreateClient(AUTH_URL, AUTH_KEY, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, flowType: 'pkce', storageKey: 'hasnaria-auth-v2' } });
-      var passwordPolicy = window.__HASNARIA_PASSWORD_POLICY;
+      var passwordPolicy = window.__HASNARIA_PASSWORD_POLICY || {
+        validate: function (password) {
+          var value = String(password || '');
+          var ok = value.length >= 12 && /[a-z]/.test(value) && /[A-Z]/.test(value) && /[0-9]/.test(value) && /[^A-Za-z0-9]/.test(value);
+          return { ok: ok, message: ok ? '' : 'Password baru minimal 12 karakter dan wajib memuat huruf kecil, huruf besar, angka, serta simbol.' };
+        }
+      };
       function passwordPolicyError(password) {
-        if (!passwordPolicy || typeof passwordPolicy.validate !== 'function') return null;
         var result = passwordPolicy.validate(password);
         if (result && !result.ok) {
           var err = new Error(result.message || 'Password baru tidak memenuhi kebijakan keamanan.');
