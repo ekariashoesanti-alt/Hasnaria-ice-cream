@@ -12,6 +12,35 @@
     try {
       var originalCreateClient = supabase.createClient.bind(supabase);
       var sharedAuthClient = originalCreateClient(AUTH_URL, AUTH_KEY, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, flowType: 'pkce', storageKey: 'hasnaria-auth-v2' } });
+      var nativeFetch = window.fetch.bind(window);
+      var authRefreshPromise = null;
+      function isSupabaseRestRequest(input) {
+        try { return String(typeof input === 'string' ? input : (input && input.url) || '').indexOf(String(AUTH_URL) + '/rest/v1/') === 0; } catch (_) { return false; }
+      }
+      function refreshAuthSession() {
+        if (authRefreshPromise) return authRefreshPromise;
+        authRefreshPromise = sharedAuthClient.auth.refreshSession().then(function (res) {
+          if (res && res.error) throw res.error;
+          return res && res.data && res.data.session ? res.data.session : null;
+        }).finally(function () { authRefreshPromise = null; });
+        return authRefreshPromise;
+      }
+      window.fetch = async function(input, init) {
+        var res = await nativeFetch(input, init);
+        if (!isSupabaseRestRequest(input) || res.ok) return res;
+        var body = '';
+        try { body = await res.clone().text(); } catch (_) {}
+        if (!/PGREST303|JWT issued at future/i.test(body)) return res;
+        try {
+          var session = await refreshAuthSession();
+          if (!session || !session.access_token) return res;
+          var retryInit = Object.assign({}, init || {});
+          var headers = new Headers((init && init.headers) || {});
+          headers.set('Authorization', 'Bearer ' + session.access_token);
+          retryInit.headers = headers;
+          return await nativeFetch(input, retryInit);
+        } catch (_) { return res; }
+      };
       try { if (/[?&]password-activation=1(?:&|$)/.test(location.search) || /type=recovery/i.test(location.hash || '')) window.__HASNARIA_PASSWORD_ACTIVATION = true; } catch (_) {}
       sharedAuthClient.auth.onAuthStateChange(function (ev) { if (ev === 'PASSWORD_RECOVERY') window.__HASNARIA_PASSWORD_ACTIVATION = true; });
       var originalOnAuthStateChange = sharedAuthClient.auth.onAuthStateChange.bind(sharedAuthClient.auth), lastSignedInAt = 0;
