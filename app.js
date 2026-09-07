@@ -1,6 +1,6 @@
 (function () {
   'use strict';
-  var CORE = '/core-app.js?v=2';
+  var CORE = '/core-app.js?v=3';
   var STOCK = '/stock-monitor-fast.js?v=1';
   var SALES = '/sales-board.js?v=43';
   var SALES_FALLBACK = false;
