@@ -4,6 +4,7 @@ const os = require('os');
 const { spawnSync } = require('child_process');
 const { buildCanonicalSalesRuntime } = require('./build-sales-runtime');
 const { buildStrictIndexRuntime } = require('./build-index-runtime');
+const { hardenRuntimeStyleAttachment } = require('./build-style-runtime');
 const { inventoryStyleBlocks } = require('./style-csp-inventory');
 const { inventoryStyleAttributes } = require('./style-attr-csp-inventory');
 
@@ -188,6 +189,9 @@ function assertRuntimeArtifactClosure(dist) {
     const text = fs.readFileSync(file, 'utf8');
     if (/setAttribute\(\s*['"]style['"]/.test(text)) fail(`runtime uses blocked setAttribute('style') in ${path.relative(dist, file)}`);
     if (/\.style\.cssText\s*=/.test(text)) fail(`runtime uses blocked style.cssText assignment in ${path.relative(dist, file)}`);
+    if (/document\.head\.appendChild\(s\);\s*\}\s*s\.textContent\s*=/.test(text)) {
+      fail(`runtime attaches empty style element before CSS assignment in ${path.relative(dist, file)}`);
+    }
     for (const ref of collectRootRelativeStaticRefs(text)) {
       const target = path.resolve(dist, ref);
       const distRoot = path.resolve(dist) + path.sep;
@@ -226,6 +230,7 @@ run(process.execPath, ['tests/canonical-sales-runtime.test.js']);
 run(process.execPath, ['tests/strict-index-runtime.test.js']);
 run(process.execPath, ['tests/style-csp-inventory.test.js']);
 run(process.execPath, ['tests/style-attr-csp-inventory.test.js']);
+run(process.execPath, ['tests/style-runtime-build.test.js']);
 
 const dist = path.join(ROOT, 'dist');
 fs.rmSync(dist, { recursive: true, force: true });
@@ -244,6 +249,9 @@ run(process.execPath, ['--check', path.join(dist, 'auth-bootstrap.js')]);
 run(process.execPath, ['--check', path.join(dist, 'password-reset-bootstrap.js')]);
 buildCanonicalSalesRuntime(ROOT, path.join(dist, 'sales-board.js'));
 run(process.execPath, ['--check', path.join(dist, 'sales-board.js')]);
+hardenRuntimeStyleAttachment(dist);
+run(process.execPath, ['--check', path.join(dist, 'sales-ui-patch.js')]);
+run(process.execPath, ['--check', path.join(dist, 'stock-monitor.js')]);
 
 if (!fs.existsSync(path.join(dist, 'index.html'))) fail('dist/index.html was not produced');
 assertRuntimeArtifactClosure(dist);
