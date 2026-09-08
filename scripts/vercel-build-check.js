@@ -4,7 +4,9 @@ const os = require('os');
 const { spawnSync } = require('child_process');
 const { buildCanonicalSalesRuntime } = require('./build-sales-runtime');
 const { buildStrictIndexRuntime } = require('./build-index-runtime');
+const { hardenRuntimeStyleAttachment } = require('./build-style-runtime');
 const { inventoryStyleBlocks } = require('./style-csp-inventory');
+const { inventoryStyleAttributes } = require('./style-attr-csp-inventory');
 
 const ROOT = process.cwd();
 const PARTS = [0, 1, 2, 3, 4].map((n) => `sales-board.part${n}.js`);
@@ -105,23 +107,35 @@ function assertHashedStyleCsp() {
   const styleDirective = directive(csp, 'style-src');
   const styleAttrDirective = directive(csp, 'style-src-attr');
   if (!styleDirective) fail('style-src directive missing from CSP');
+  if (!styleAttrDirective) fail('style-src-attr directive missing from CSP');
   if (/'unsafe-inline'/.test(styleDirective)) fail("style-src still allows 'unsafe-inline'");
-  if (!/style-src-attr\s+'unsafe-inline'/.test(styleAttrDirective)) {
-    fail("style-src-attr must explicitly carry temporary 'unsafe-inline' compatibility");
-  }
+  if (/'unsafe-inline'/.test(styleAttrDirective)) fail("style-src-attr still allows 'unsafe-inline'");
+  if (!/'unsafe-hashes'/.test(styleAttrDirective)) fail("style-src-attr must use 'unsafe-hashes' for approved static style attributes");
 
   const blocks = inventoryStyleBlocks(ROOT);
-  const expected = new Set(blocks.map((x) => x.hash));
-  const declared = new Set(styleDirective.match(/'sha256-[A-Za-z0-9+/=]+'/g) || []);
-  for (const hash of expected) {
-    if (!declared.has(hash)) fail(`style-src missing required hash: ${hash}`);
+  const expectedBlocks = new Set(blocks.map((x) => x.hash));
+  const declaredBlocks = new Set(styleDirective.match(/'sha256-[A-Za-z0-9+/=]+'/g) || []);
+  for (const hash of expectedBlocks) {
+    if (!declaredBlocks.has(hash)) fail(`style-src missing required hash: ${hash}`);
   }
-  for (const hash of declared) {
-    if (!expected.has(hash)) fail(`style-src contains stale/untracked hash: ${hash}`);
+  for (const hash of declaredBlocks) {
+    if (!expectedBlocks.has(hash)) fail(`style-src contains stale/untracked hash: ${hash}`);
   }
-  if (declared.size !== expected.size) fail('style-src hash inventory size mismatch');
+  if (declaredBlocks.size !== expectedBlocks.size) fail('style-src hash inventory size mismatch');
 
-  console.log(`Hashed style element CSP gate: PASS (${expected.size} hashes)`);
+  const attrs = inventoryStyleAttributes(ROOT);
+  const expectedAttrs = new Set(attrs.map((x) => x.hash));
+  const declaredAttrs = new Set(styleAttrDirective.match(/'sha256-[A-Za-z0-9+/=]+'/g) || []);
+  for (const hash of expectedAttrs) {
+    if (!declaredAttrs.has(hash)) fail(`style-src-attr missing required hash: ${hash}`);
+  }
+  for (const hash of declaredAttrs) {
+    if (!expectedAttrs.has(hash)) fail(`style-src-attr contains stale/untracked hash: ${hash}`);
+  }
+  if (declaredAttrs.size !== expectedAttrs.size) fail('style-src-attr hash inventory size mismatch');
+
+  console.log(`Hashed style element CSP gate: PASS (${expectedBlocks.size} hashes)`);
+  console.log(`Hashed style attribute CSP gate: PASS (${expectedAttrs.size} hashes)`);
 }
 
 function assertCanonicalSalesRuntime(dist) {
@@ -135,13 +149,16 @@ function assertCanonicalSalesRuntime(dist) {
     'sales-board.part4.js',
     "chunks.join('')",
     'function patchSource(',
-    "fetch('/sales-import-v2.js"
+    "fetch('/sales-import-v2.js",
+    "style=\"width:' + barWidth.toFixed(1)",
+    "style=\"width:'+Math.max(3,Math.min(100,s.percent||0))"
   ];
   for (const marker of forbidden) {
     if (sales.includes(marker)) fail(`legacy Sales runtime marker leaked into production: ${marker}`);
   }
   if (!sales.includes('window.__HASNARIA_IMPORT_V2')) fail('canonical Sales runtime is missing Majoo importer v2');
   if (!sales.includes('return window.__HASNARIA_IMPORT_V2(fileOrFiles')) fail('canonical Sales runtime is not delegating to importer v2');
+  if (!sales.includes('.sb-w-100{width:100%}')) fail('canonical Sales runtime is missing width utility classes');
   console.log('Canonical Sales production artifact: PASS');
 }
 
@@ -170,6 +187,11 @@ function assertRuntimeArtifactClosure(dist) {
   for (const file of files) {
     if (!TEXT_RUNTIME_RE.test(file)) continue;
     const text = fs.readFileSync(file, 'utf8');
+    if (/setAttribute\(\s*['"]style['"]/.test(text)) fail(`runtime uses blocked setAttribute('style') in ${path.relative(dist, file)}`);
+    if (/\.style\.cssText\s*=/.test(text)) fail(`runtime uses blocked style.cssText assignment in ${path.relative(dist, file)}`);
+    if (/document\.head\.appendChild\(s\);\s*\}\s*s\.textContent\s*=/.test(text)) {
+      fail(`runtime attaches empty style element before CSS assignment in ${path.relative(dist, file)}`);
+    }
     for (const ref of collectRootRelativeStaticRefs(text)) {
       const target = path.resolve(dist, ref);
       const distRoot = path.resolve(dist) + path.sep;
@@ -207,6 +229,8 @@ run(process.execPath, ['tests/password-policy.test.js']);
 run(process.execPath, ['tests/canonical-sales-runtime.test.js']);
 run(process.execPath, ['tests/strict-index-runtime.test.js']);
 run(process.execPath, ['tests/style-csp-inventory.test.js']);
+run(process.execPath, ['tests/style-attr-csp-inventory.test.js']);
+run(process.execPath, ['tests/style-runtime-build.test.js']);
 
 const dist = path.join(ROOT, 'dist');
 fs.rmSync(dist, { recursive: true, force: true });
@@ -225,6 +249,9 @@ run(process.execPath, ['--check', path.join(dist, 'auth-bootstrap.js')]);
 run(process.execPath, ['--check', path.join(dist, 'password-reset-bootstrap.js')]);
 buildCanonicalSalesRuntime(ROOT, path.join(dist, 'sales-board.js'));
 run(process.execPath, ['--check', path.join(dist, 'sales-board.js')]);
+hardenRuntimeStyleAttachment(dist);
+run(process.execPath, ['--check', path.join(dist, 'sales-ui-patch.js')]);
+run(process.execPath, ['--check', path.join(dist, 'stock-monitor.js')]);
 
 if (!fs.existsSync(path.join(dist, 'index.html'))) fail('dist/index.html was not produced');
 assertRuntimeArtifactClosure(dist);

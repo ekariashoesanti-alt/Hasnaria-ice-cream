@@ -1,12 +1,12 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const { buildCanonicalSalesRuntime } = require('./build-sales-runtime');
 
 const STYLE_JS_FILES = [
   'sales-ui-patch.js',
   'nav-patch.js',
-  'stock-monitor.js',
-  'sales-board.part4.js'
+  'stock-monitor.js'
 ];
 
 function sha256Source(text) {
@@ -53,29 +53,37 @@ function evaluateStaticString(expression, file) {
   return value;
 }
 
+function extractJsStyleBlocksFromSource(source, rel) {
+  const blocks = [];
+  const re = /([A-Za-z_$][\w$]*)\s*=\s*document\.createElement\((['"])style\2\)/g;
+  let match;
+  let count = 0;
+  while ((match = re.exec(source))) {
+    const variable = match[1];
+    const assignRe = new RegExp(`${variable.replace(/[$]/g, '\\$&')}\\.textContent\\s*=`, 'g');
+    assignRe.lastIndex = re.lastIndex;
+    const assign = assignRe.exec(source);
+    if (!assign || assign.index - match.index > 3000) {
+      throw new Error(`${rel}: style element has no nearby static textContent assignment`);
+    }
+    const exprStart = assign.index + assign[0].length;
+    const parsed = readExpression(source, exprStart);
+    const css = evaluateStaticString(parsed.expression, rel);
+    blocks.push({ source: rel, index: count, css, hash: sha256Source(css) });
+    count += 1;
+  }
+  if (!count) throw new Error(`${rel}: expected at least one style element`);
+  return blocks;
+}
+
 function extractJsStyleBlocks(root) {
   const blocks = [];
   for (const rel of STYLE_JS_FILES) {
     const source = fs.readFileSync(path.join(root, rel), 'utf8');
-    const re = /([A-Za-z_$][\w$]*)\s*=\s*document\.createElement\((['"])style\2\)/g;
-    let match;
-    let count = 0;
-    while ((match = re.exec(source))) {
-      const variable = match[1];
-      const assignRe = new RegExp(`${variable.replace(/[$]/g, '\\$&')}\\.textContent\\s*=`, 'g');
-      assignRe.lastIndex = re.lastIndex;
-      const assign = assignRe.exec(source);
-      if (!assign || assign.index - match.index > 3000) {
-        throw new Error(`${rel}: style element has no nearby static textContent assignment`);
-      }
-      const exprStart = assign.index + assign[0].length;
-      const parsed = readExpression(source, exprStart);
-      const css = evaluateStaticString(parsed.expression, rel);
-      blocks.push({ source: rel, index: count, css, hash: sha256Source(css) });
-      count += 1;
-    }
-    if (!count) throw new Error(`${rel}: expected at least one style element`);
+    blocks.push(...extractJsStyleBlocksFromSource(source, rel));
   }
+  const canonicalSales = buildCanonicalSalesRuntime(root);
+  blocks.push(...extractJsStyleBlocksFromSource(canonicalSales, 'sales-board.js'));
   return blocks;
 }
 
