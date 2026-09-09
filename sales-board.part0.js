@@ -71,6 +71,7 @@
     slice: null, // null or { type: 'day'|'week'|'month', id: string, label: string }
     skuMetric: 'qty', // 'qty' | 'rev'
     rows: [],
+    hourlySales: [],
     loading: false,
     fetched: false,
     importing: false,
@@ -363,6 +364,9 @@
           transactions: Number(r.transactions || 0)
         });
       });
+      var minDate = STATE.rows.length ? STATE.rows[0].metric_date : '';
+      var maxDate = STATE.rows.length ? STATE.rows[STATE.rows.length - 1].metric_date : '';
+      STATE.hourlySales = minDate && maxDate ? (await api('sales?brand_id=eq.' + encodeURIComponent(BRAND) + '&sold_at=gte.' + encodeURIComponent(minDate) + '&sold_at=lte.' + encodeURIComponent(maxDate) + '&select=sold_at,sold_hour,transaction_count&limit=50000&order=sold_at.asc') || []) : [];
       STATE.loading = false; STATE.fetched = true; STATE.error = '';
       if (!STATE.viewFrom) ensureView();
       draw();
@@ -476,6 +480,58 @@
       mapD[keyD].omzet += r.cash_revenue; mapD[keyD].trx += r.transactions; mapD[keyD].days += 1;
     });
     return Object.keys(mapD).sort().map(function (k) { return mapD[k]; });
+  }
+
+
+  function daysInMonth(ym) {
+    if (!ym) return 0;
+    return Number(lastDayOfMonth(ym).slice(8, 10));
+  }
+
+  function hourlyAverageData(ym) {
+    var sums = Array(24).fill(0);
+    var hasHourData = false;
+    (STATE.hourlySales || []).forEach(function (r) {
+      if (!r || r.sold_hour == null) return;
+      var d = String(r.sold_at || '');
+      if (d.slice(0, 7) !== ym) return;
+      var h = Number(r.sold_hour);
+      if (h < 0 || h > 23) return;
+      hasHourData = true;
+      sums[h] += Number(r.transaction_count || 0);
+    });
+    var denominator = daysInMonth(ym);
+    return { data: sums.map(function (v, h) { return { hour: h, avg: denominator ? v / denominator : 0 }; }), hasHourData: hasHourData, days: denominator };
+  }
+
+  function renderHourlyAverageChart(ym) {
+    var result = hourlyAverageData(ym);
+    if (!result.hasHourData) {
+      return '<div class="sb-empty-chart sb-hourly-empty">Data jam transaksi belum tersedia untuk bulan ini.<br><small>Data jam akan terbentuk dari <b>Detail Transaksi Majoo</b> pada import berikutnya.</small></div>';
+    }
+    var data = result.data, w = 760, h = 220, padL = 52, padR = 18, padT = 24, padB = 40;
+    var max = Math.max.apply(null, data.map(function (x) { return x.avg; }).concat([1]));
+    var peak = data.reduce(function (a, b) { return b.avg > a.avg ? b : a; }, data[0]);
+    var innerW = w - padL - padR, innerH = h - padT - padB;
+    var pts = data.map(function (x, i) {
+      return { x: padL + i * (innerW / 23), y: padT + innerH * (1 - x.avg / max), d: x };
+    });
+    var path = pts.map(function (p, i) { return (i ? 'L' : 'M') + p.x.toFixed(1) + ' ' + p.y.toFixed(1); }).join(' ');
+    var grid = [0, .25, .5, .75, 1].map(function (q) {
+      var y = padT + innerH * (1 - q);
+      var val = (max * q).toFixed(1);
+      return '<line x1="' + padL + '" y1="' + y + '" x2="' + (w-padR) + '" y2="' + y + '" class="grid-line"/><text x="' + (padL-8) + '" y="' + (y+3) + '" text-anchor="end" class="ylabel">' + val + '</text>';
+    }).join('');
+    var labels = pts.map(function (p, i) {
+      if (i % 2 !== 0) return '';
+      return '<text x="' + p.x + '" y="' + (h-14) + '" text-anchor="middle" class="x-label">' + String(p.d.hour).padStart(2,'0') + ':00</text>';
+    }).join('');
+    var dots = pts.map(function (p) {
+      var isPeak = p.d.hour === peak.hour;
+      return '<circle cx="' + p.x + '" cy="' + p.y + '" r="' + (isPeak ? 5 : 3) + '" class="sb-hour-point' + (isPeak ? ' peak' : '') + '"/>';
+    }).join('');
+    var peakLabel = '<g><rect x="' + Math.max(padL, Math.min(w-padR-130, pts[peak.hour].x-65)) + '" y="' + Math.max(3, pts[peak.hour].y-34) + '" width="130" height="25" rx="8" class="sb-hour-peak-label"/><text x="' + pts[peak.hour].x + '" y="' + Math.max(19, pts[peak.hour].y-17) + '" text-anchor="middle" class="sb-hour-peak-text">Paling ramai: ' + String(peak.hour).padStart(2,'0') + ':00 · ' + peak.avg.toFixed(1) + ' trx/hari</text></g>';
+    return '<div class="sb-chart-wrap sb-hourly-wrap"><svg class="sb-chart sb-hourly-chart" viewBox="0 0 ' + w + ' ' + h + '" role="img" aria-label="Rata-rata transaksi per jam">' + grid + '<path d="' + path + '" class="sb-hour-trend"/>' + dots + peakLabel + labels + '</svg><div class="sb-chart-hint">Rata-rata dari seluruh ' + result.days + ' hari pada bulan terpilih · puncak ditandai otomatis</div></div>';
   }
 
   function kpiCard(title, value, sub, cls) {
