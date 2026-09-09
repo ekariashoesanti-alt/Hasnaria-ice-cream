@@ -53,6 +53,6 @@
       if(typeof window.__HASNARIA_IMPORT_V2!=='function')throw new Error('Importer Majoo v2 gagal diinisialisasi.');
       code=patchSource(code);
       var s=document.createElement('script');s.text=code;document.head.appendChild(s);watchSalesTab();
-      var hourly=document.createElement('script');hourly.src='/sales-hourly-chart.js?v=1';hourly.async=true;document.head.appendChild(hourly);
+      var hourly=document.createElement('script');hourly.src='/sales-hourly-chart.js?v=2';hourly.async=true;document.head.appendChild(hourly);
     }).catch(fail);
 })();
