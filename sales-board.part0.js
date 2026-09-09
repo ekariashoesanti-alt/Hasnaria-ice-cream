@@ -528,10 +528,10 @@
     }).join('');
     var dots = pts.map(function (p) {
       var isPeak = p.d.hour === peak.hour;
-      return '<circle cx="' + p.x + '" cy="' + p.y + '" r="' + (isPeak ? 5 : 3) + '" class="sb-hour-point' + (isPeak ? ' peak' : '') + '"/>';
+      return '<circle cx="' + p.x + '" cy="' + p.y + '" r="' + (isPeak ? 5 : 3) + '" class="sb-chart-point"/>';
     }).join('');
-    var peakLabel = '<g><rect x="' + Math.max(padL, Math.min(w-padR-130, pts[peak.hour].x-65)) + '" y="' + Math.max(3, pts[peak.hour].y-34) + '" width="130" height="25" rx="8" class="sb-hour-peak-label"/><text x="' + pts[peak.hour].x + '" y="' + Math.max(19, pts[peak.hour].y-17) + '" text-anchor="middle" class="sb-hour-peak-text">Paling ramai: ' + String(peak.hour).padStart(2,'0') + ':00 · ' + peak.avg.toFixed(1) + ' trx/hari</text></g>';
-    return '<div class="sb-chart-wrap sb-hourly-wrap"><svg class="sb-chart sb-hourly-chart" viewBox="0 0 ' + w + ' ' + h + '" role="img" aria-label="Rata-rata transaksi per jam">' + grid + '<path d="' + path + '" class="sb-hour-trend"/>' + dots + peakLabel + labels + '</svg><div class="sb-chart-hint">Rata-rata dari seluruh ' + result.days + ' hari pada bulan terpilih · puncak ditandai otomatis</div></div>';
+    var peakLabel = '<g><rect x="' + Math.max(padL, Math.min(w-padR-130, pts[peak.hour].x-65)) + '" y="' + Math.max(3, pts[peak.hour].y-34) + '" width="130" height="25" rx="8" /><text x="' + pts[peak.hour].x + '" y="' + Math.max(19, pts[peak.hour].y-17) + '" text-anchor="middle" class="x-label-bold">Paling ramai: ' + String(peak.hour).padStart(2,'0') + ':00 · ' + peak.avg.toFixed(1) + ' trx/hari</text></g>';
+    return '<div class="sb-chart-wrap sb-hourly-wrap"><svg class="sb-chart sb-hourly-chart" viewBox="0 0 ' + w + ' ' + h + '" role="img" aria-label="Rata-rata transaksi per jam">' + grid + '<path d="' + path + '" class="trend"/>' + dots + peakLabel + labels + '</svg><div class="sb-chart-hint">Rata-rata dari seluruh ' + result.days + ' hari pada bulan terpilih · puncak ditandai otomatis</div></div>';
   }
 
   function kpiCard(title, value, sub, cls) {
