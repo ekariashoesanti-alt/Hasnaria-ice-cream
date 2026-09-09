@@ -38,7 +38,6 @@ v class="sb-period">' +
     var skuSubLab = STATE.slice ? ('Slice: ' + STATE.slice.label) : (STATE.mode === 'daily' ? 'Bulan terpilih' : (STATE.mode === 'weekly' ? 'Bulan terpilih' : 'Akumulasi tahun ' + (STATE.viewMonth ? STATE.viewMonth.slice(0,4) : 'terpilih')));
 
     html += '<div class="sb-grid-main">' +
-      '<div class="sb-left-stack">' +
       '<section class="sb-card sb-trend">' +
       '<div class="sb-card-head">' +
       '<div>' +
@@ -48,11 +47,6 @@ v class="sb-period">' +
       '</div>' +
       renderChart(trendData) +
       '</section>' +
-      '<section class="sb-card sb-hourly-average">' +
-      '<div class="sb-card-head"><div><h3>Rata-rata Jam Penjualan Bulanan</h3><span>' + esc(monthOfView() ? ('Bulan ' + monthOfView()) : 'Bulan terpilih') + ' · rata-rata transaksi per jam</span></div></div>' +
-      renderHourlyAverageChart(monthOfView()) +
-      '</section>' +
-      '</div>' +
       '<div class="sales-right-stack">' +
       // Top 5 Seller Card
       '<section class="sb-card sb-top-seller">' +
