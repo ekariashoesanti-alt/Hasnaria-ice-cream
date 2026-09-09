@@ -1,4 +1,4 @@
-/* Hasnaria — Rata-rata Jam Penjualan Bulanan UI patch */
+/* Hasnaria — Rata-rata Jam Penjualan Bulanan UI patch v2 */
 (function () {
   'use strict';
 
@@ -24,6 +24,11 @@
     if (el && /^\d{4}-\d{2}$/.test(el.value)) return el.value;
     var from = document.getElementById('sbFrom');
     return from && /^\d{4}-\d{2}-\d{2}$/.test(from.value) ? from.value.slice(0, 7) : '';
+  }
+  function isDailyMode() {
+    var el = document.querySelector('#sales [data-mode].on');
+    if (el) return el.getAttribute('data-mode') === 'daily';
+    return true;
   }
   function moneyNumber(v) { var n = Number(v); return isFinite(n) ? n : 0; }
 
@@ -57,7 +62,7 @@
     var max = Math.max.apply(Math, avgs);
     var peak = avgs.indexOf(max);
     if (!has) {
-      return '<div class="sb-empty-chart sb-hourly-empty">Data jam transaksi belum tersedia untuk bulan ini.<br><small>Import <b>Detail Transaksi Majoo</b> yang memiliki waktu transaksi untuk mengisi kurva ini.</small></div>';
+      return '<div class="sb-empty-chart sb-hourly-empty">Belum ada data jam transaksi untuk <b>' + esc(ym) + '</b>.<br><small>Kurva akan terisi otomatis setelah import <b>Detail Transaksi Majoo</b> yang memiliki waktu transaksi.</small></div>';
     }
 
     var W = 960, H = 290, L = 54, R = 20, T = 24, B = 48;
@@ -79,8 +84,8 @@
       if (i % 2 === 0 || i === 23) labels += '<text x="' + p.x.toFixed(1) + '" y="' + (H-18) + '" text-anchor="middle" fill="currentColor" opacity=".68">' + String(i).padStart(2,'0') + ':00</text>';
     });
     var dots = pts.map(function (p) {
-      var cls = p.h === peak && max > 0 ? ' sb-chart-point sb-hourly-peak' : ' sb-chart-point';
-      return '<circle class="' + cls.trim() + '" cx="' + p.x.toFixed(1) + '" cy="' + p.y.toFixed(1) + '" r="' + (p.h === peak && max > 0 ? '5' : '3') + '" data-hour="' + p.h + '" />';
+      var peakCls = p.h === peak && max > 0 ? ' sb-hourly-peak' : '';
+      return '<circle class="sb-chart-point' + peakCls + '" cx="' + p.x.toFixed(1) + '" cy="' + p.y.toFixed(1) + '" r="' + (p.h === peak && max > 0 ? '5' : '3') + '" data-hour="' + p.h + '" />';
     }).join('');
     var peakText = max > 0 ? ('<div class="sb-hourly-peak-label">Jam tersibuk: <b>' + String(peak).padStart(2,'0') + ':00</b> · rata-rata <b>' + max.toFixed(1) + ' transaksi/hari</b></div>') : '';
     return '<div class="sb-chart-wrap sb-hourly-chart-wrap">' +
@@ -91,20 +96,32 @@
   }
 
   async function render() {
-    if (!host || !document.getElementById('sales')) return;
-    if (host.querySelector('.sb-hourly-average')) return;
+    host = document.getElementById('sales');
+    if (!host || !host.isConnected) return;
+    if (!isDailyMode()) return;
+
     var grid = host.querySelector('.sb-grid-main');
     var trend = grid && grid.querySelector('.sb-trend');
-    var stack = grid && grid.querySelector('.sales-right-stack');
-    if (!grid || !trend || !stack) return;
-    if ((document.querySelector('[data-mode].on') || {}).getAttribute && document.querySelector('[data-mode].on').getAttribute('data-mode') !== 'daily') return;
+    if (!grid || !trend) return;
 
     var ym = selectedMonth();
     if (!ym) return;
+
+    var existing = grid.querySelector('.sb-hourly-average');
+    if (existing) {
+      var existingYm = existing.getAttribute('data-hourly-month');
+      if (existingYm === ym) return;
+      existing.remove();
+    }
+
     var card = document.createElement('section');
     card.className = 'sb-card sb-hourly-average';
+    card.setAttribute('data-hourly-month', ym);
     card.innerHTML = '<div class="sb-card-head"><div><h3>Rata-rata Jam Penjualan Bulanan</h3><span>' + esc(ym) + ' · rata-rata transaksi per jam</span></div></div><div class="sb-hourly-body"><div class="sb-empty-chart">Memuat data jam transaksi…</div></div>';
+
+    /* Append as the third grid item: naturally places it directly below the trend card. */
     grid.appendChild(card);
+
     try {
       var rows = await loadHourly(ym);
       if (!card.isConnected) return;
@@ -119,16 +136,12 @@
 
   function schedule() {
     clearTimeout(timer);
-    timer = setTimeout(function () {
-      var old = host && host.querySelector('.sb-hourly-average');
-      if (old && !old.isConnected) old = null;
-      render();
-    }, 60);
+    timer = setTimeout(function () { render(); }, 80);
   }
 
   function init() {
     host = document.getElementById('sales');
-    if (!host) { setTimeout(init, 100); return; }
+    if (!host) { setTimeout(init, 150); return; }
     if (observer) observer.disconnect();
     observer = new MutationObserver(schedule);
     observer.observe(host, { childList: true, subtree: true });
