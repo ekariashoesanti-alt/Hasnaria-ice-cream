@@ -5,7 +5,7 @@
   var KEY = window.HASNARIA_KEY;
   var BRAND = 'a36d4b4f-3ccc-4a78-8aeb-b868f0407ea4';
   var PAGE = 10;
-  var S = { items: [], buys: {}, selected: null, page: 1, mode: 'period', view: 'buy', loading: false, buyDate: null };
+  var S = { items: [], buys: {}, selected: null, page: 1, mode: 'period', view: 'buy', loading: false, buyDate: null, history: [], historyPeriod: null, historyDate: null };
 
   function tok() {
     for (var i = 0; i < localStorage.length; i++) {
@@ -41,6 +41,17 @@
     return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
   }
   function buyDate() { return S.buyDate || isoToday(); }
+  async function saveHistory(rows) {
+    var data=(rows||[]).map(function(r){return {brand_id:BRAND,source_period:'2026-07-01',input_date:isoToday(),item_name:r.item_name,category:r.category,unit:'pcs',stock_awal:r.stock_june==null?null:String(r.stock_june),pembelian:r.purchase_july==null?null:String(r.purchase_july),terjual:r.sold_july==null?null:String(r.sold_july),penyesuaian:r.discrepancy==null?null:String(r.discrepancy),stock_akhir:r.stock_august==null?null:String(r.stock_august)};});
+    var t=tok(); if(!t) throw Error('Session belum tersedia.');
+    for(var i=0;i<data.length;i+=80){var r=await fetch(SB+'/rest/v1/inventory_stock_history?on_conflict=brand_id,source_period,input_date,category,item_name',{method:'POST',headers:{apikey:KEY,Authorization:'Bearer '+t,'Content-Type':'application/json',Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(data.slice(i,i+80))});if(!r.ok)throw Error('Gagal menyimpan histori stok ('+r.status+'): '+await r.text());}
+  }
+  async function loadHistory() { return await get('inventory_stock_history',{brand_id:'eq.'+BRAND,select:'id,item_name,category,unit,source_period,input_date,stock_awal,pembelian,terjual,penyesuaian,stock_akhir',order:'category.asc,item_name.asc',limit:10000})||[]; }
+  function historyPeriods(rows){var p={};(rows||[]).forEach(function(r){if(r.source_period)p[r.source_period]=1;});return Object.keys(p).sort().reverse();}
+  function historyDates(rows,period){var p={};(rows||[]).forEach(function(r){if(!period||r.source_period===period){if(r.input_date)p[r.input_date]=1;}});return Object.keys(p).sort().reverse();}
+  function periodLabel(v){if(!v)return '-';var p=String(v).split('-'),d=new Date(Number(p[0]),Number(p[1])-1,1);return d.toLocaleDateString('id-ID',{month:'long',year:'numeric'});}
+  function dateLabel(v){if(!v)return '-';var p=String(v).split('-'),d=new Date(Number(p[0]),Number(p[1])-1,Number(p[2]));return d.toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'});}
+
   function todayLabel() {
     var p = buyDate().split('-');
     var mon = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
@@ -277,6 +288,7 @@
       }
       setUploadMsg('Menyimpan ' + rows.length + ' item ke Perbandingan Stok...');
       await upsertParsed(rows);
+      await saveHistory(rows);
       S.view = 'cmp';
       S.page = 1;
       await load();
@@ -304,6 +316,8 @@
         order: 'item_name.asc'
       });
       S.items = (rows || []).map(enrich);
+      S.history = await loadHistory();
+      var hp=historyPeriods(S.history); if(!S.historyPeriod && hp.length) S.historyPeriod=hp[0]; var hd=historyDates(S.history,S.historyPeriod); if(!S.historyDate || hd.indexOf(S.historyDate)<0) S.historyDate=hd[0]||null;
       if (!S.buyDate) S.buyDate = isoToday();
       var logs = await get('inventory_purchase_log', {
         brand_id: 'eq.' + BRAND,
@@ -498,32 +512,16 @@
       setTimeout(function () { S.drawing = false; }, 0);
       return;
     }
-    html += '<div class="stk-pane"><div class="stk-grid"><div class="stk-left">' +
-      '<div class="stk-filters"><div><label>Lihat berdasarkan</label><div class="stk-seg"><button type="button" class="' + (S.mode === 'period' ? 'on' : '') + '" data-mode="period">Periode</button><button type="button" class="' + (S.mode === 'date' ? 'on' : '') + '" data-mode="date">Per Tanggal</button></div></div>' +
-      '<div><label>Periode</label><select id="stkPeriod" class="stk-period"><option value="2026-07">Juli 2026</option></select></div>' +
-      '<button type="button" class="stk-xls" id="stkExport">Export Excel</button></div><div class="stk-scroll"><table class="stk-table"><thead><tr>' +
-      '<th>No</th><th>Produk</th><th>Satuan</th><th>Stok Awal<span class="stk-thsub">Juni 2026</span></th><th>Pembelian<span class="stk-thsub">Juli 2026</span></th><th>Terpakai<span class="stk-thsub">Juli 2026</span></th><th>Stok Akhir<span class="stk-thsub">Awal Ags 2026</span></th><th>Selisih</th><th>Status</th></tr></thead><tbody>';
-    var start = (S.page - 1) * PAGE;
-    S.items.slice(start, start + PAGE).forEach(function (x, i) {
-      html += '<tr><td>' + (start + i + 1) + '</td><td>' + esc(x.display) + '</td><td>' + esc(unit(x)) + '</td><td>' + n(x.awal) + '</td><td>' + n(x.beli) + '</td><td>' + n(x.pakai) + '</td><td>' + n(x.akhir) + '</td><td>' + signed(x.disc) + '</td><td>' + chip(level(x)) + '</td></tr>';
-    });
-    html += '</tbody></table></div><div class="stk-pager"><span>Menampilkan ' + (S.items.length ? start + 1 : 0) + '-' + Math.min(start + PAGE, S.items.length) + ' dari ' + S.items.length + ' item</span><div class="stk-pages">' +
-      '<button type="button" data-pg="' + Math.max(1, S.page - 1) + '">&lt;</button>';
-    pages().forEach(function (p) {
-      if (p === '...') html += '<button type="button" class="dots" disabled>...</button>';
-      else html += '<button type="button" class="' + (p === S.page ? 'on' : '') + '" data-pg="' + p + '">' + p + '</button>';
-    });
-    html += '<button type="button" data-pg="' + Math.min(last, S.page + 1) + '">&gt;</button></div></div>' +
-      '</div>';
-    var orderPct = st.total ? ((st.order / st.total) * 100).toFixed(1) : '0.0';
-    var critPct = st.total ? ((st.crit / st.total) * 100).toFixed(1) : '0.0';
-    html += '<div class="stk-gauge-card"><h3>Kecukupan Stok (PAR)</h3>' + gauge(st.pct) +
-      '<div class="stk-score"><strong>' + st.pct.toFixed(1) + '%</strong><div class="lab">' + (st.pct >= 75 ? 'Aman' : st.pct >= 50 ? 'Waspada' : 'Kritis') + '</div><small>' + st.ok + ' dari ' + st.total + ' item di atas minimum</small></div>' +
-      '<div class="stk-legend"><div class="stk-leg"><span><i class="stk-dot" style="background:#22c55e"></i>Aman (&gt;= Min)</span><b>' + st.ok + ' item (' + st.pct.toFixed(1) + '%)</b></div>' +
-      '<div class="stk-leg"><span><i class="stk-dot" style="background:#f59e0b"></i>Perlu Order</span><b>' + st.order + ' item (' + orderPct + '%)</b></div>' +
-      '<div class="stk-leg"><span><i class="stk-dot" style="background:#ef4444"></i>Kritis</span><b>' + st.crit + ' item (' + critPct + '%)</b></div></div>' +
-      '</div></div></div></div>';
-    host.innerHTML = html;
+    if (view === 'cmp') {
+      var hp=historyPeriods(S.history), hd=historyDates(S.history,S.historyPeriod);
+      var hrows=(S.history||[]).filter(function(r){return (!S.historyPeriod||r.source_period===S.historyPeriod)&&(!S.historyDate||r.input_date===S.historyDate);});
+      html += '<section class="stk-history-card"><div class="stk-history-head"><div><h3>Riwayat Hasil Input Stok</h3><p>Seluruh stok yang tersimpan berdasarkan periode dan tanggal input</p></div><div class="stk-history-filters"><div><label>Periode</label><select id="stkHistoryPeriod">'+hp.map(function(v){return '<option value="'+esc(v)+'" '+(v===S.historyPeriod?'selected':'')+'>'+esc(periodLabel(v))+'</option>';}).join('')+'</select></div><div><label>Tanggal Input</label><select id="stkHistoryDate">'+hd.map(function(v){return '<option value="'+esc(v)+'" '+(v===S.historyDate?'selected':'')+'>'+esc(dateLabel(v))+'</option>';}).join('')+'</select></div></div></div><div class="stk-history-summary"><b>'+n(hrows.length)+'</b> item · <span>'+esc(periodLabel(S.historyPeriod))+'</span> · <span>'+esc(dateLabel(S.historyDate))+'</span></div><div class="stk-history-scroll"><table class="stk-history-table"><thead><tr><th>No</th><th>Produk</th><th>Kategori</th><th>Stok Awal</th><th>Pembelian</th><th>Terjual</th><th>Penyesuaian</th><th>Stok Akhir</th><th>Satuan</th></tr></thead><tbody>';
+      hrows.forEach(function(r,i){html+='<tr><td>'+(i+1)+'</td><td><b>'+esc(name(r))+'</b></td><td>'+esc(r.category||'-')+'</td><td>'+esc(r.stock_awal==null?'-':r.stock_awal)+'</td><td>'+esc(r.pembelian==null?'-':r.pembelian)+'</td><td>'+esc(r.terjual==null?'-':r.terjual)+'</td><td>'+esc(r.penyesuaian==null?'-':r.penyesuaian)+'</td><td><b>'+esc(r.stock_akhir==null?'-':r.stock_akhir)+'</b></td><td>'+esc(r.unit||'pcs')+'</td></tr>';});
+      if(!hrows.length) html+='<tr><td colspan="9" class="stk-history-empty">Belum ada hasil input stok pada pilihan ini.</td></tr>';
+      html += '</tbody></table></div></section>';
+      html += '<div class="stk-history-note">Setiap upload/input stok dicatat sebagai histori tersendiri. Data sebelumnya tidak dihapus.</div>';
+      html += '</div></div></div>';
+    }    host.innerHTML = html;
     bind();
     setTimeout(function () { S.drawing = false; }, 0);
   }
@@ -534,6 +532,8 @@
         render();
       };
     });
+    var hp = document.getElementById('stkHistoryPeriod'); if(hp) hp.onchange=function(){S.historyPeriod=this.value;var ds=historyDates(S.history,S.historyPeriod);S.historyDate=ds[0]||null;render();};
+    var hd = document.getElementById('stkHistoryDate'); if(hd) hd.onchange=function(){S.historyDate=this.value;render();};
     var up = document.getElementById('stkFile');
     if (up) up.onchange = function () {
       var f = this.files && this.files[0];
