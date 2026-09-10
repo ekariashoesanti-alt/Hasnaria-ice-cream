@@ -1,4 +1,4 @@
-/* Hasnaria — Rata-rata Jam Penjualan Bulanan UI patch v2 */
+/* Hasnaria — Rata-rata Jam Penjualan Bulanan UI patch v3 */
 (function () {
   'use strict';
 
@@ -50,19 +50,24 @@
   }
 
   function buildChart(rows, ym) {
-    var sums = Array(24).fill(0), has = false;
+    var sums = Array(24).fill(0), validCount = 0;
     (rows || []).forEach(function (r) {
       var h = Number(r && r.sold_hour);
       if (!isFinite(h) || h < 0 || h > 23) return;
-      has = true;
+      validCount++;
       sums[h] += moneyNumber(r.transaction_count);
     });
     var denominator = daysInMonth(ym);
     var avgs = sums.map(function (v) { return denominator ? v / denominator : 0; });
     var max = Math.max.apply(Math, avgs);
     var peak = avgs.indexOf(max);
-    if (!has) {
-      return '<div class="sb-empty-chart sb-hourly-empty">Belum ada data jam transaksi untuk <b>' + esc(ym) + '</b>.<br><small>Kurva akan terisi otomatis setelah import <b>Detail Transaksi Majoo</b> yang memiliki waktu transaksi.</small></div>';
+
+    if (!validCount) {
+      return '<div class="sb-empty-chart sb-hourly-empty">' +
+        '<b>Data jam transaksi belum tersedia</b>' +
+        '<br><small>' + (rows || []).length.toLocaleString('id-ID') + ' transaksi untuk <b>' + esc(ym) + '</b> sudah tersimpan, tetapi belum memiliki waktu transaksi asli (<code>sold_hour</code>).</small>' +
+        '<br><small>Grafik tidak akan menggunakan <code>created_at</code> atau membuat jam berdasarkan asumsi.</small>' +
+        '</div>';
     }
 
     var W = 960, H = 290, L = 54, R = 20, T = 24, B = 48;
@@ -99,11 +104,9 @@
     host = document.getElementById('sales');
     if (!host || !host.isConnected) return;
     if (!isDailyMode()) return;
-
     var grid = host.querySelector('.sb-grid-main');
     var trend = grid && grid.querySelector('.sb-trend');
     if (!grid || !trend) return;
-
     var ym = selectedMonth();
     if (!ym) return;
 
@@ -118,8 +121,6 @@
     card.className = 'sb-card sb-hourly-average';
     card.setAttribute('data-hourly-month', ym);
     card.innerHTML = '<div class="sb-card-head"><div><h3>Rata-rata Jam Penjualan Bulanan</h3><span>' + esc(ym) + ' · rata-rata transaksi per jam</span></div></div><div class="sb-hourly-body"><div class="sb-empty-chart">Memuat data jam transaksi…</div></div>';
-
-    /* Append as the third grid item: naturally places it directly below the trend card. */
     grid.appendChild(card);
 
     try {
