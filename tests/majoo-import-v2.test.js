@@ -118,7 +118,7 @@ global.fetch = async function mockFetch(url, options = {}) {
   assert.strictEqual(salesPost.body[0].external_transaction_id, 'TRX-001');
   assert.strictEqual(salesPost.body[0].total_amount, 50000);
   assert.strictEqual(salesPost.body[0].cash_amount, 50000);
-  assert.strictEqual(salesPost.body[0].sold_at, '2026-09-01T13:47:22+07:00', 'sold_at must come from Waktu Order');
+  assert.strictEqual(salesPost.body[0].sold_at, '2026-09-01', 'sold_at must keep the transaction date from Waktu Order');
   assert.strictEqual(salesPost.body[0].sold_hour, 13, 'sold_hour must come from Waktu Order, not Waktu Bayar');
 
   const itemsPost = calls.find(c => c.method === 'POST' && c.pathname.endsWith('/sale_items'));
