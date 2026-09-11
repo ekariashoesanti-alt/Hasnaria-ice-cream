@@ -27,6 +27,8 @@ function file(name, matrix) {
 
 const header = [
   'No Transaksi',
+  'Waktu Order',
+  'Waktu Bayar',
   'Tanggal',
   'Produk',
   'SKU',
@@ -39,16 +41,16 @@ const header = [
 
 const matrixA = [
   header,
-  ['TRX-001', '2026-09-01', 'Odeng', 'OD-01', 2, 50000, 'Cash', 'Paid', 20000],
-  ['TRX-001', '2026-09-01', 'Topokki', 'TP-01', 1, 50000, 'Cash', 'Paid', 10000],
-  ['TRX-VOID', '2026-09-01', 'Sosis', 'SS-01', 1, 30000, 'QRIS', 'Refund', 30000]
+  ['TRX-001', '01-09-2026 13:47:22', '01-09-2026 14:02:00', '2026-09-01', 'Odeng', 'OD-01', 2, 50000, 'Cash', 'Paid', 20000],
+  ['TRX-001', '01-09-2026 13:47:22', '01-09-2026 14:02:00', '2026-09-01', 'Topokki', 'TP-01', 1, 50000, 'Cash', 'Paid', 10000],
+  ['TRX-VOID', '01-09-2026 15:10:00', '01-09-2026 15:20:00', '2026-09-01', 'Sosis', 'SS-01', 1, 30000, 'QRIS', 'Refund', 30000]
 ];
 
 // Same transaction appears in a second overlapping export. It must not double-count.
 const matrixB = [
   header,
-  ['TRX-001', '2026-09-01', 'Odeng', 'OD-01', 2, 50000, 'Cash', 'Paid', 20000],
-  ['TRX-001', '2026-09-01', 'Topokki', 'TP-01', 1, 50000, 'Cash', 'Paid', 10000]
+  ['TRX-001', '01-09-2026 13:47:22', '01-09-2026 14:02:00', '2026-09-01', 'Odeng', 'OD-01', 2, 50000, 'Cash', 'Paid', 20000],
+  ['TRX-001', '01-09-2026 13:47:22', '01-09-2026 14:02:00', '2026-09-01', 'Topokki', 'TP-01', 1, 50000, 'Cash', 'Paid', 10000]
 ];
 
 const calls = [];
@@ -116,6 +118,8 @@ global.fetch = async function mockFetch(url, options = {}) {
   assert.strictEqual(salesPost.body[0].external_transaction_id, 'TRX-001');
   assert.strictEqual(salesPost.body[0].total_amount, 50000);
   assert.strictEqual(salesPost.body[0].cash_amount, 50000);
+  assert.strictEqual(salesPost.body[0].sold_at, '2026-09-01T13:47:22+07:00', 'sold_at must come from Waktu Order');
+  assert.strictEqual(salesPost.body[0].sold_hour, 13, 'sold_hour must come from Waktu Order, not Waktu Bayar');
 
   const itemsPost = calls.find(c => c.method === 'POST' && c.pathname.endsWith('/sale_items'));
   assert(itemsPost, 'sale_items insert must happen');
