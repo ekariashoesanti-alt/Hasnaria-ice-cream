@@ -1,3 +1,7 @@
+body #app #sales > .card{
+  display:none!important;
+}
+
 @media (min-width:981px){
   #sales:has([data-mode="daily"].on) .sb-grid-main{
     grid-template-rows:repeat(2,minmax(0,1fr))!important;
