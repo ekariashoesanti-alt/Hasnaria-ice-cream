@@ -85,6 +85,15 @@
 `;
   }
 
+  function ensureTrendAlignCss() {
+    if (document.getElementById('hasnaria-sales-trend-align-css')) return;
+    var l = document.createElement('link');
+    l.id = 'hasnaria-sales-trend-align-css';
+    l.rel = 'stylesheet';
+    l.href = '/sales-trend-align.css?v=1';
+    document.head.appendChild(l);
+  }
+
   function hideSalesPanels() {
     var host = document.getElementById('sales');
     if (!host || host.classList.contains('hidden')) return;
@@ -159,6 +168,7 @@
   var scheduled = false;
   function run() {
     injectStyle();
+    ensureTrendAlignCss();
     hideSalesPanels();
     hideFooterOnly();
     hideLeftover();
