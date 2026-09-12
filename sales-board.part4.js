@@ -154,6 +154,28 @@ EESE=2|ODENG TIPIS=2|Topokki=5|BAKSO UDANG=1|CHIKUWA=1|KUAH ODENG=2|SCALLOP=1|IC
       '.sb-fmt-box small{font-size:11px;color:#7a8982}' +
       '.sb-modal-foot{padding:12px 20px;background:#f8faf9;border-top:1px solid #eef3f0;text-align:right}' +
       '.sb-btn-modal-ok{background:#176b55;color:#fff;border:0;border-radius:10px;padding:8px 20px;font-size:13px;font-weight:700;cursor:pointer}' +
+      '#sales{height:calc(100vh - 92px)!important;max-height:calc(100vh - 92px)!important;overflow:hidden!important}' +
+      '.sb-wrap{padding:9px 12px 10px!important;margin-bottom:6px!important;overflow:hidden}' +
+      '.sb-head h2{font-size:19px!important}' +
+      '.sb-period{margin-top:6px!important;gap:6px!important}' +
+      '.sb-kpis{gap:6px!important;margin-top:6px!important}' +
+      '.sb-kpi{padding:6px 9px!important}' +
+      '.sb-kpi-value{font-size:17px!important;margin-top:1px!important}' +
+      '.sb-kpi-sub{font-size:10px!important;margin-top:2px!important}' +
+      '.sb-grid-main{gap:7px!important;margin-top:6px!important;align-items:start!important}' +
+      '.sb-card{padding:8px 10px!important;border-radius:10px!important}' +
+      '.sb-card-head{margin-bottom:3px!important}' +
+      '.sb-card h3{font-size:13.5px!important}' +
+      '.sb-card-head span{font-size:10px!important}' +
+      '.sb-chart{margin-top:0!important}' +
+      '.sb-chart-hint{font-size:9px!important;margin-top:2px!important}' +
+      '.sales-right-stack{gap:6px!important}' +
+      '.sb-bars{margin-top:3px!important}' +
+      '.sb-bar-row{margin:4px 0!important}' +
+      '.sb-bar-track{height:5px!important;margin-top:2px!important}' +
+      '.sb-hourly-average{grid-column:1 / -1!important;margin-top:0!important;padding-bottom:6px!important}' +
+      '.sb-hourly-average .sb-hourly-chart{max-height:145px!important}' +
+      '.sb-hourly-average .sb-card-head{margin-bottom:2px!important}' +
       '@media(max-width:980px){.sb-kpis{grid-template-columns:1fr 1fr}.sb-grid-main{grid-template-columns:1fr}}' +
       '@media(max-width:640px){.sb-wrap{padding:14px}.sb-kpis{grid-template-columns:1fr}.sb-head h2{font-size:20px}}' +
       '.sb-status-card{text-align:center;padding:22px 20px 18px;max-width:420px}' +
