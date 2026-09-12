@@ -3,7 +3,7 @@
   var CORE = '/core-app.js?v=3';
   var STOCK = '/stock-monitor.js?v=26';
   var SALES = '/sales-board.js?v=44';
-  var SALES_HOURLY = '/sales-hourly-chart.js?v=3';
+  var SALES_HOURLY = '/sales-hourly-chart.js?v=4';
   var SALES_FALLBACK = false;
   var SALES_UI = '/sales-ui-patch.js?v=12';
   var AUTH_URL = window.HASNARIA_SB;
