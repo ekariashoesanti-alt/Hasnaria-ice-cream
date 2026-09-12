@@ -88,7 +88,7 @@
         '</div>';
     }
 
-    var W = 960, H = 290, L = 54, R = 20, T = 24, B = 48;
+    var W = 960, H = 175, L = 54, R = 20, T = 18, B = 34;
     var pw = W - L - R, ph = H - T - B;
     var ymax = max > 0 ? Math.ceil(max * 1.15 * 10) / 10 : 1;
     var pts = avgs.map(function (v, i) {
