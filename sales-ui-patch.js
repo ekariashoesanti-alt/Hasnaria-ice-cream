@@ -1,6 +1,7 @@
 (function () {
   'use strict';
   var HIDDEN = ['Omzet + kas harian', 'Data terbaru'];
+
   function injectStyle() {
     var s = document.getElementById('hasnaria-sales-layout-style');
     if (!s) { s = document.createElement('style'); s.id = 'hasnaria-sales-layout-style'; document.head.appendChild(s); }
@@ -26,6 +27,54 @@
 #sales .sb-trend{padding:12px 14px!important}
 #sales .sb-trend .sb-chart{width:100%!important;max-width:100%!important;height:auto!important;min-height:180px;margin:0!important}
 #sales .sb-import{display:none!important}
+@media(min-width:981px){
+  #app:has(#sales:not(.hidden)){height:100dvh;overflow:hidden}
+  #app:has(#sales:not(.hidden)) > header{height:80px;overflow:hidden}
+  #app:has(#sales:not(.hidden)) > main.wrap{height:calc(100dvh - 80px);max-height:calc(100dvh - 80px);display:flex;flex-direction:column;overflow:hidden;padding-top:6px!important;padding-bottom:8px!important}
+  #app:has(#sales:not(.hidden)) > main.wrap > .tabs{flex:0 0 40px;margin-bottom:6px!important}
+  #sales{flex:1 1 auto;min-height:0!important;overflow:hidden!important}
+  #sales .sale-board,#sales .sb-wrap{height:100%!important;min-height:0!important;overflow:hidden!important}
+  #sales .sb-wrap{padding:7px 12px 8px!important}
+  #sales .sb-head{gap:6px!important;min-height:34px}
+  #sales .sb-head h2{font-size:18px!important;line-height:1.1}
+  #sales .sb-head p{font-size:10.5px!important;line-height:1.15}
+  #sales .sb-eyebrow{font-size:9px!important}
+  #sales .sb-upload-wrap{gap:5px!important}
+  #sales .sb-btn-upload,#sales .sb-btn-submit,#sales .sb-btn-format{min-height:30px!important;padding:0 9px!important;font-size:10.5px!important}
+  #sales .sb-period{margin-top:5px!important;gap:5px!important}
+  #sales .sb-cal{gap:5px!important}
+  #sales .sb-cal label,#sales .sb-cal b,#sales .sb-cal span{font-size:10px!important}
+  #sales .sb-cal select,#sales .sb-cal input[type=date]{min-height:28px!important;padding:2px 6px!important;font-size:10px!important}
+  #sales .sb-toggle button{min-height:27px!important;padding:0 9px!important;font-size:10px!important}
+  #sales .sb-kpis{margin-top:5px!important;gap:6px!important}
+  #sales .sb-kpi{padding:6px 9px!important;border-radius:10px!important}
+  #sales .sb-kpi-label{font-size:9.5px!important}
+  #sales .sb-kpi-value{font-size:15px!important;margin-top:1px!important;line-height:1.1}
+  #sales .sb-kpi-sub{font-size:9px!important;margin-top:1px!important;line-height:1.1}
+  #sales .sb-grid-main{flex:1 1 auto;min-height:0!important;grid-template-columns:minmax(0,1.72fr) minmax(260px,.9fr)!important;grid-template-rows:minmax(0,1fr)!important;gap:7px!important;margin-top:6px!important;overflow:hidden}
+  #sales:has([data-mode="daily"].on) .sb-grid-main{grid-template-rows:minmax(0,1fr) clamp(116px,18vh,158px)!important}
+  #sales .sb-trend{grid-column:1;grid-row:1;min-height:0!important;padding:8px 10px!important;display:flex;flex-direction:column}
+  #sales .sb-card-head{margin-bottom:3px!important}
+  #sales .sb-card h3{font-size:12.5px!important;line-height:1.15}
+  #sales .sb-card-head span{font-size:9px!important;line-height:1.1}
+  #sales .sb-trend .sb-chart-wrap{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
+  #sales .sb-trend .sb-chart{width:100%!important;max-width:100%!important;min-height:0!important;height:100%!important;flex:1 1 auto;margin:0!important}
+  #sales .sb-chart-hint{font-size:8.5px!important;line-height:1.1;margin-top:1px!important}
+  #sales .sales-right-stack{grid-column:2;grid-row:1;min-height:0!important;gap:7px!important}
+  #sales .sales-right-stack .sb-card{flex:1 1 0;min-height:0!important;padding:7px 9px!important;overflow:hidden!important;display:flex;flex-direction:column}
+  #sales .sb-sku-metric-toggle button{padding:1px 6px!important;font-size:9px!important}
+  #sales .sb-bars{margin-top:2px!important;flex:1 1 auto;min-height:0;display:grid;grid-template-rows:repeat(5,minmax(0,1fr));align-content:stretch}
+  #sales .sb-bar-row{margin:1px 0!important;min-height:0}
+  #sales .sb-bar-label{font-size:9.5px!important;line-height:1.05;gap:4px!important}
+  #sales .sb-bar-label span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:58%}
+  #sales .sb-share{font-size:8px!important}
+  #sales .sb-bar-rank{width:15px!important;height:15px!important;font-size:8px!important;margin-right:5px!important}
+  #sales .sb-bar-track{height:4px!important;margin:2px 0 0 20px!important}
+  #sales .sb-hourly-average{grid-column:1 / -1!important;grid-row:2!important;min-height:0!important;height:auto!important;padding:6px 10px!important;overflow:hidden!important;display:flex;flex-direction:column}
+  #sales .sb-hourly-average .sb-hourly-body,#sales .sb-hourly-average .sb-hourly-chart-wrap{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
+  #sales .sb-hourly-average .sb-hourly-chart{width:100%!important;max-width:100%!important;height:100%!important;min-height:0!important;max-height:none!important;flex:1 1 auto}
+  #sales .sb-hourly-peak-label{font-size:8.5px!important;line-height:1.1;margin-top:0!important}
+}
 @media(max-width:980px){
   #sales .sb-grid-main{grid-template-columns:1fr!important}
   #sales .sb-kpis{grid-template-columns:1fr 1fr!important}
@@ -35,6 +84,7 @@
 }
 `;
   }
+
   function hideSalesPanels() {
     var host = document.getElementById('sales');
     if (!host || host.classList.contains('hidden')) return;
@@ -48,11 +98,13 @@
       });
     });
   }
+
   function hideFooterOnly() {
     var host = document.getElementById('sales');
     if (!host) return;
     host.querySelectorAll('.sb-live-note,.sb-legacy-note,.sb-import').forEach(function (el) { el.style.display = 'none'; });
   }
+
   function stackRight() {
     var host = document.getElementById('sales');
     if (!host || host.classList.contains('hidden')) return;
@@ -82,6 +134,7 @@
       if (!grid.querySelector('.sb-trend') && !grid.querySelector('.sales-right-stack')) grid.style.display = 'none';
     });
   }
+
   function hideLeftover() {
     var host = document.getElementById('sales');
     if (!host) return;
@@ -89,6 +142,7 @@
       if (!ch.classList.contains('sale-board')) ch.style.display = 'none';
     });
   }
+
   function normalizeProductLabels() {
     var host = document.getElementById('sales');
     if (!host || host.classList.contains('hidden')) return;
@@ -101,6 +155,7 @@
       else if (/^\d[\d.]* pcs(?:\s|$|\()/.test(text)) el.textContent = text.replace(/ pcs\b/, '×');
     });
   }
+
   var scheduled = false;
   function run() {
     injectStyle();
