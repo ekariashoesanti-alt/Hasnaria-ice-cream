@@ -541,7 +541,7 @@
   // Modern Interactive SVG Chart
   function renderChart(data) {
     if (!data.length) return '<div class="sb-empty-chart">Belum ada data pada periode ini.</div>';
-    var w = 760, h = 230, padL = 60, padR = 20, padT = 20, padB = 44;
+    var w = 760, h = 170, padL = 60, padR = 20, padT = 16, padB = 36;
     var max = Math.max.apply(null, data.map(function (x) { return x.omzet; }).concat([1]));
 
     if (STATE.mode === 'daily') {
