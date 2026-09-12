@@ -1,9 +1,44 @@
 @media (min-width:981px){
+  #sales:has([data-mode="daily"].on) .sb-grid-main{
+    grid-template-rows:repeat(2,minmax(0,1fr))!important;
+    align-items:stretch!important;
+  }
+
+  #sales .sales-right-stack{
+    display:contents!important;
+  }
+
   #sales .sb-trend{
-    align-self:start!important;
-    height:calc((100% - 7px)/2)!important;
-    max-height:calc((100% - 7px)/2)!important;
+    grid-column:1!important;
+    grid-row:1!important;
+    align-self:stretch!important;
+    height:auto!important;
+    max-height:none!important;
     min-height:0!important;
     overflow:hidden!important;
+  }
+
+  #sales .sb-top-seller{
+    grid-column:2!important;
+    grid-row:1!important;
+    min-height:0!important;
+    align-self:stretch!important;
+  }
+
+  #sales .sb-worst-seller{
+    grid-column:2!important;
+    grid-row:2!important;
+    min-height:0!important;
+    align-self:stretch!important;
+  }
+
+  #sales .sb-hourly-average{
+    grid-column:1!important;
+    grid-row:2!important;
+    align-self:stretch!important;
+    height:auto!important;
+    max-height:none!important;
+    min-height:0!important;
+    margin:0!important;
   }
 }
