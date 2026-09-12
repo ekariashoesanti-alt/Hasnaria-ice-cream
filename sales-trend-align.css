@@ -48,7 +48,7 @@ body #app #sales > .card{
 }
 
 /* Compact desktop fit: keeps the complete Sales dashboard inside a 100% browser view. */
-@media (min-width:981px) and (max-height:1180px){
+@media (min-width:981px) and (max-height:950px){
   #app:has(#sales:not(.hidden)){
     height:100dvh!important;
     max-height:100dvh!important;
