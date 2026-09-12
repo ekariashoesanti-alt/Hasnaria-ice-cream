@@ -33,16 +33,34 @@
   function moneyNumber(v) { var n = Number(v); return isFinite(n) ? n : 0; }
 
   async function loadHourly(ym) {
-    var base = apiBase();
-    if (!base || !apiKey() || !ym) return [];
+    if (!ym) return [];
     var first = ym + '-01';
     var last = ym + '-' + String(daysInMonth(ym)).padStart(2, '0');
+    /* Prefer the shared Supabase client so the hourly chart uses the same
+       project/session/RLS context as the rest of the Sales dashboard. */
+    try {
+      if (window.__HASNARIA_DB && window.__HASNARIA_DB.from) {
+        var q = await window.__HASNARIA_DB.from('sales')
+          .select('sold_at,sold_hour,transaction_count')
+          .eq('brand_id', BRAND)
+          .gte('sold_at', first)
+          .lte('sold_at', last)
+          .order('sold_at', { ascending: true })
+          .limit(50000);
+        if (q && q.error) throw q.error;
+        return (q && q.data) || [];
+      }
+    } catch (e) {
+      console.warn('Hourly chart shared client query failed; using REST fallback.', e);
+    }
+    var base = apiBase(), key = apiKey();
+    if (!base || !key) throw new Error('Supabase connection is not ready.');
     var url = base + '/rest/v1/sales?brand_id=eq.' + encodeURIComponent(BRAND) +
       '&sold_at=gte.' + encodeURIComponent(first) +
       '&sold_at=lte.' + encodeURIComponent(last) +
       '&select=sold_at,sold_hour,transaction_count&limit=50000&order=sold_at.asc';
     var r = await fetch(url, {
-      headers: { apikey: apiKey(), Authorization: 'Bearer ' + apiKey() },
+      headers: { apikey: key, Authorization: 'Bearer ' + key },
       cache: 'no-store'
     });
     if (!r.ok) throw new Error('Hourly sales HTTP ' + r.status);
