@@ -10,6 +10,22 @@
 
   function chip(l) { return l; }
 
+  function localToday() {
+    var d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+
+  function guardFutureDates() {
+    function apply(el) {
+      if (!el || (el.id !== 'srBuyDate' && el.id !== 'srOpnameDate')) return;
+      var max = localToday();
+      el.max = max;
+      if (el.value && el.value > max) el.value = max;
+    }
+    document.addEventListener('focusin', function (e) { apply(e.target); }, true);
+    document.addEventListener('change', function (e) { apply(e.target); }, true);
+  }
+
   function loadReconciliation() {
     if (window.__HASNARIA_STOCK_RECONCILE_LOADING) return;
     window.__HASNARIA_STOCK_RECONCILE_LOADING = true;
@@ -25,5 +41,6 @@
   }
 
   css();
+  guardFutureDates();
   loadReconciliation();
 })();
