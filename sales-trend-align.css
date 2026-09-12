@@ -1,0 +1,9 @@
+@media (min-width:981px){
+  #sales .sb-trend{
+    align-self:start!important;
+    height:calc((100% - 7px)/2)!important;
+    max-height:calc((100% - 7px)/2)!important;
+    min-height:0!important;
+    overflow:hidden!important;
+  }
+}
