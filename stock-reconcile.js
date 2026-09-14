@@ -1,1 +1,1 @@
-LOAD_FROM_DISK:/workspace/Hasnaria-ice-cream/stock-reconcile.js
+(function(){ /* probe */ })();
