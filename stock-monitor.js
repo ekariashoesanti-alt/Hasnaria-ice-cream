@@ -30,12 +30,16 @@
     if (window.__HASNARIA_STOCK_RECONCILE_LOADING) return;
     window.__HASNARIA_STOCK_RECONCILE_LOADING = true;
     var s = document.createElement('script');
-    s.src = '/stock-reconcile.js?v=1';
+    s.src = '/stock-reconcile.js?v=2';
     s.async = false;
     s.onload = function () { window.__HASNARIA_STOCK_RECONCILE_READY = true; };
     s.onerror = function () {
       window.__HASNARIA_STOCK_RECONCILE_LOADING = false;
       console.error('Hasnaria Stock reconciliation module gagal dimuat.');
+      var host = document.getElementById('stok');
+      if (host && !host.querySelector('.sr-shell')) {
+        host.innerHTML = '<div class="card"><h2>Stok</h2><p class="msg">Modul rekonsiliasi stok gagal dimuat. Refresh halaman atau coba lagi nanti.</p></div>';
+      }
     };
     document.head.appendChild(s);
   }
