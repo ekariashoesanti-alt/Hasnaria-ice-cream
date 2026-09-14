@@ -1,1 +1,1 @@
-PLACEHOLDER_LOAD_FROM_/home/box/.cursor/projects/workspace/agent-tools/mcp-restore-part1.json
+LOAD_FROM_DISK:/workspace/PART1_CONTENT.js
