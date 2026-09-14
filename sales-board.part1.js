@@ -288,17 +288,13 @@ ice && STATE.slice.type === 'day' && STATE.slice.id === x.key;
 
     ensureView();
     var active = selectedWindow();
-    // Tahunan: chart + Top/Worst use the full selected year, while KPI cards
-    // remain locked to the selected month exactly as requested.
-    var kpiWindow = (STATE.mode === 'monthly' && STATE.viewMonth)
-      ? { start: STATE.viewMonth + '-01', end: lastDayOfMonth(STATE.viewMonth) }
-      : active;
-    var prev = previousFor(kpiWindow);
+    // Tahunan: KPI cards use the same year window as the annual chart bars
+    // (and honor an active month/week/day slice). No leftover selected-month lock.
+    var prev = previousFor(active);
     var ar = rangeRows(active), pr = rangeRows(prev);
-    var kpiRows = rangeRows(kpiWindow);
     var slicedRows = getSlicedRows(ar);
 
-    var aStats = statsFor(getSlicedRows(kpiRows).length ? getSlicedRows(kpiRows) : kpiRows);
+    var aStats = statsFor(slicedRows);
     var pStats = statsFor(pr);
     var trendData = groupTrend(ar, STATE.mode);
 
@@ -321,7 +317,10 @@ ice && STATE.slice.type === 'day' && STATE.slice.id === x.key;
       return '<option value="' + ym + '"' + (STATE.viewMonth === ym ? ' selected' : '') + '>' + lab + '</option>';
     }).join('');
 
-    var vsLab = 'vs bulan lalu';
+    var yearKey = (STATE.viewMonth || STATE.viewFrom || active.start || '').slice(0, 4);
+    var vsLab = STATE.mode === 'monthly'
+      ? (pStats.days ? 'vs tahun lalu' : ('Akumulasi tahun ' + (yearKey || 'terpilih')))
+      : 'vs bulan lalu';
     var trendLab = STATE.mode === 'monthly' ? (STATE.viewMonth ? 'Januari–Desember tahun yang sama' : 'Semua bulan dalam data') : (STATE.mode === 'weekly' ? 'Minggu 1–5 di bulan ' + monthOfView() : 'Harian di bulan ' + monthOfView());
 
     // Filter toolbar

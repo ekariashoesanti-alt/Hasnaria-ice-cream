@@ -157,6 +157,16 @@
     S.loading = true;
     S.error = '';
     render();
+    var timedOut = false;
+    var loadWatch = setTimeout(function () {
+      if (!S.loading) return;
+      timedOut = true;
+      S.loading = false;
+      if (!S.loaded) {
+        S.error = 'Memuat stok terlalu lama atau gagal. Periksa koneksi lalu tap Refresh.';
+        render();
+      }
+    }, 20000);
     try {
       var items = await request('inventory_stock_reconciliation?' + qs({
         brand_id: 'eq.' + BRAND,
@@ -182,10 +192,13 @@
       S.opnames = opnames || [];
       S.loaded = true;
     } catch (e) {
-      S.error = e && e.message ? e.message : String(e);
+      if (!timedOut) S.error = e && e.message ? e.message : String(e);
     } finally {
-      S.loading = false;
-      render();
+      clearTimeout(loadWatch);
+      if (!timedOut) {
+        S.loading = false;
+        render();
+      }
     }
   }
 
@@ -244,7 +257,7 @@
       var phys = x.last_physical_qty === null || x.last_physical_qty === undefined ? '<span class="sr-muted">-</span>' : '<strong>' + fmt(x.last_physical_qty) + '</strong><small>' + dateLabel(x.last_opname_date) + '</small>';
       return '<tr><td class="sr-item"><strong>' + esc(x.item_name) + '</strong><small>' + esc(x.unit || 'pcs') + '</small></td><td>' + esc(x.category || '-') + '</td><td class="sr-num">' + fmt(x.baseline_qty) + '</td><td class="sr-num sr-plus">+' + fmt(x.purchase_qty) + '</td><td class="sr-num sr-minus">-' + fmt(x.sales_usage_qty) + '</td><td class="sr-num"><strong>' + fmt(x.system_qty) + '</strong></td><td class="sr-num sr-physical">' + phys + '</td><td class="sr-num">' + varianceHtml(x.last_variance) + '</td><td class="sr-num">' + fmt(x.min_qty) + '</td><td>' + chip(x.status) + '</td></tr>';
     }).join('');
-    return renderFilters(true) + '<div class="sr-table-card"><div class="sr-table-head"><div><strong>Daftar Stok</strong><span>Stok Sistem = Baseline + Pembelian − Pemakaian Penjualan</span></div><span>' + rows.length + ' item</span></div><div class="sr-table-wrap"><table class="sr-table"><thead><tr><th>Item</th><th>Kategori</th><th>Baseline</th><th>+ Pembelian</th><th>- Penjualan</th><th>Stok Sistem</th><th>Fisik Terakhir</th><th>Selisih</th><th>Min.</th><th>Status</th></tr></thead><tbody>' + (body || '<tr><td colspan="10" class="sr-empty">Tidak ada item sesuai filter.</td></tr>') + '</tbody></table></div>' + renderPager(rows.length, totalPages) + '</div>' +
+    return renderFilters(true) + '<div class="sr-table-card"><div class="sr-table-head"><div><strong>Daftar Stok</strong><span>Stok Sistem = Baseline + Pembelian \u2212 Pemakaian Penjualan</span></div><span>' + rows.length + ' item</span></div><div class="sr-table-wrap"><table class="sr-table"><thead><tr><th>Item</th><th>Kategori</th><th>Baseline</th><th>+ Pembelian</th><th>- Penjualan</th><th>Stok Sistem</th><th>Fisik Terakhir</th><th>Selisih</th><th>Min.</th><th>Status</th></tr></thead><tbody>' + (body || '<tr><td colspan="10" class="sr-empty">Tidak ada item sesuai filter.</td></tr>') + '</tbody></table></div>' + renderPager(rows.length, totalPages) + '</div>' +
       '<p class="sr-note">Tracking otomatis mulai setelah Stock Opname pertama pada item. Sesudah baseline fisik terbentuk, Pembelian menambah stok dan Penjualan mengurangi stok sesuai mapping resep/BOM yang aktif.</p>';
   }
 
@@ -252,15 +265,15 @@
     if (pages <= 1) return '<div class="sr-pager"><span>Menampilkan ' + count + ' item</span></div>';
     var buttons = [], from = Math.max(1, S.page - 2), to = Math.min(pages, S.page + 2);
     if (from > 1) buttons.push('<button type="button" data-sr-page="1">1</button>');
-    if (from > 2) buttons.push('<span>…</span>');
+    if (from > 2) buttons.push('<span>\u2026</span>');
     for (var p = from; p <= to; p++) buttons.push('<button type="button" data-sr-page="' + p + '" class="' + (p === S.page ? 'on' : '') + '">' + p + '</button>');
-    if (to < pages - 1) buttons.push('<span>…</span>');
+    if (to < pages - 1) buttons.push('<span>\u2026</span>');
     if (to < pages) buttons.push('<button type="button" data-sr-page="' + pages + '">' + pages + '</button>');
     return '<div class="sr-pager"><span>Halaman ' + S.page + ' dari ' + pages + '</span><div>' + buttons.join('') + '</div></div>';
   }
 
   function purchaseItemOptions() {
-    return '<option value="">Pilih item</option>' + S.items.map(function (x) { return '<option value="' + esc(x.inventory_item_id) + '">' + esc(x.item_name) + ' — ' + esc(x.unit || 'pcs') + '</option>'; }).join('');
+    return '<option value="">Pilih item</option>' + S.items.map(function (x) { return '<option value="' + esc(x.inventory_item_id) + '">' + esc(x.item_name) + ' \u2014 ' + esc(x.unit || 'pcs') + '</option>'; }).join('');
   }
 
   function renderPurchase() {
@@ -281,7 +294,7 @@
       var last = x.last_physical_qty === null || x.last_physical_qty === undefined ? '-' : fmt(x.last_physical_qty) + ' (' + dateLabel(x.last_opname_date) + ')';
       return '<tr><td class="sr-item"><strong>' + esc(x.item_name) + '</strong><small>' + esc(x.category || '') + '</small></td><td>' + esc(x.unit || 'pcs') + '</td><td class="sr-num"><strong>' + fmt(x.system_qty) + '</strong></td><td class="sr-num sr-muted">' + last + '</td><td><input class="sr-opname-input" data-sr-opname="' + esc(x.inventory_item_id) + '" type="number" min="0" step="0.01" value="' + esc(draft) + '" placeholder="Hitung fisik"></td><td class="sr-num"><span data-sr-preview="' + esc(x.inventory_item_id) + '">' + preview + '</span></td><td><button type="button" class="sr-mini" data-sr-save-opname="' + esc(x.inventory_item_id) + '">Simpan</button></td></tr>';
     }).join('');
-    return '<div class="sr-opname-bar"><div><strong>Stock Opname Fisik</strong><span>Opname pertama menjadi baseline nyata. Selisih = Fisik − Stok Sistem.</span></div><label>Tanggal Opname<input id="srOpnameDate" type="date" value="' + esc(S.opnameDate || today()) + '"></label></div>' + renderFilters(false) + '<div class="sr-table-card"><div class="sr-table-wrap sr-opname-table"><table class="sr-table"><thead><tr><th>Item</th><th>Satuan</th><th>Stok Sistem</th><th>Fisik Terakhir</th><th>Input Fisik</th><th>Selisih</th><th>Aksi</th></tr></thead><tbody>' + (body || '<tr><td colspan="7" class="sr-empty">Tidak ada item.</td></tr>') + '</tbody></table></div></div>';
+    return '<div class="sr-opname-bar"><div><strong>Stock Opname Fisik</strong><span>Opname pertama menjadi baseline nyata. Selisih = Fisik \u2212 Stok Sistem.</span></div><label>Tanggal Opname<input id="srOpnameDate" type="date" value="' + esc(S.opnameDate || today()) + '"></label></div>' + renderFilters(false) + '<div class="sr-table-card"><div class="sr-table-wrap sr-opname-table"><table class="sr-table"><thead><tr><th>Item</th><th>Satuan</th><th>Stok Sistem</th><th>Fisik Terakhir</th><th>Input Fisik</th><th>Selisih</th><th>Aksi</th></tr></thead><tbody>' + (body || '<tr><td colspan="7" class="sr-empty">Tidak ada item.</td></tr>') + '</tbody></table></div></div>';
   }
 
   function renderHistory() {
@@ -300,7 +313,7 @@
     ensureCss();
     host.__srRendering = true;
     var alert = S.error ? '<div class="sr-alert">' + esc(S.error) + '</div>' : '';
-    var loading = S.loading ? '<div class="sr-loading">Memuat data stok…</div>' : '';
+    var loading = S.loading ? '<div class="sr-loading">Memuat data stok\u2026</div>' : '';
     host.innerHTML = '<div class="sr-shell">' + renderHeader() + alert + loading + (!S.loading || S.loaded ? '<div class="sr-content">' + renderContent() + '</div>' : '') + '</div>';
     bind(host);
     host.__srRendering = false;

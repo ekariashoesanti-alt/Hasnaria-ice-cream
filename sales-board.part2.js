@@ -26,12 +26,18 @@ v class="sb-period">' +
         '</div>';
     }
 
-    // KPIs
+    // KPIs — year mode uses year-appropriate compare text (not "vs bulan lalu")
+    function kpiCmpSub(curr, prevVal) {
+      if (STATE.mode === 'monthly' && !pStats.days) return vsLab;
+      var pct = percent(curr, prevVal);
+      if (STATE.mode === 'monthly' && pct === 'Baru' && !pStats.days) return vsLab;
+      return pct + ' ' + vsLab;
+    }
     html += '<div class="sb-kpis">' +
-      kpiCard('Omzet Terpilih', money(aStats.omzet), percent(aStats.omzet, pStats.omzet) + ' ' + vsLab, pctClass(aStats.omzet, pStats.omzet)) +
-      kpiCard('Jumlah Transaksi', aStats.trx.toLocaleString('id-ID'), percent(aStats.trx, pStats.trx) + ' ' + vsLab, pctClass(aStats.trx, pStats.trx)) +
-      kpiCard('ATV / Rata-rata Struk', money(aStats.atv), percent(aStats.atv, pStats.atv) + ' ' + vsLab, pctClass(aStats.atv, pStats.atv)) +
-      kpiCard('Produk Terjual (Qty)', totalSkuQty ? (totalSkuQty.toLocaleString('id-ID') + ' pcs') : (aStats.days + ' hari'), totalSkuQty ? (allSkus.length + ' SKU terdaftar') : 'pembanding: ' + pStats.days + ' hari', '') +
+      kpiCard('Omzet Terpilih', money(aStats.omzet), kpiCmpSub(aStats.omzet, pStats.omzet), pctClass(aStats.omzet, pStats.omzet)) +
+      kpiCard('Jumlah Transaksi', aStats.trx.toLocaleString('id-ID'), kpiCmpSub(aStats.trx, pStats.trx), pctClass(aStats.trx, pStats.trx)) +
+      kpiCard('ATV / Rata-rata Struk', money(aStats.atv), kpiCmpSub(aStats.atv, pStats.atv), pctClass(aStats.atv, pStats.atv)) +
+      kpiCard('Produk Terjual (Qty)', totalSkuQty ? (totalSkuQty.toLocaleString('id-ID') + ' pcs') : (aStats.days + ' hari'), totalSkuQty ? (allSkus.length + ' SKU terdaftar') : (STATE.mode === 'monthly' ? ('Akumulasi tahun ' + (yearKey || 'terpilih')) : ('pembanding: ' + pStats.days + ' hari')), '') +
       '</div>';
 
     // Main Grid: Trend Chart on Left, Stack of Top Seller & Worst Performer on Right
