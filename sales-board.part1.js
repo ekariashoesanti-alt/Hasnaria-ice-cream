@@ -1,1 +1,1 @@
-@file:///tmp/cou_part1_content.js
+PLACEHOLDER_LOAD_FROM_/home/box/.cursor/projects/workspace/agent-tools/mcp-restore-part1.json
