@@ -220,12 +220,9 @@
 
   function renderHeader() {
     var k = kpis();
-    var purchaseQty = S.purchases.reduce(function (a, p) { return a + num(p.qty); }, 0);
-    var salesUsage = S.items.reduce(function (a, x) { return a + num(x.sales_usage_qty); }, 0);
     return '' +
-      '<div class="sr-head"><div><div class="sr-eyebrow">OPERASIONAL · STOK</div><h2>Stok &amp; Persediaan</h2><p>Satu sumber untuk melihat stok, dampak penjualan, pembelian, dan hasil opname.</p></div>' +
+      '<div class="sr-head"><div><div class="sr-eyebrow">OPERASIONAL · STOK</div><h2>Stok &amp; Persediaan</h2><p>Satu sumber untuk memantau saldo stok dan hasil opname.</p></div>' +
       '<div class="sr-actions"><button type="button" class="sr-btn sr-btn-soft" data-sr-action="refresh">↻ Refresh</button><button type="button" class="sr-btn sr-btn-soft" data-sr-action="export">Export CSV</button></div></div>' +
-      '<div class="sr-flow"><div class="sr-flow-step"><span class="sr-flow-icon">①</span><div><strong>Penjualan</strong><small>' + fmt(salesUsage) + ' unit pemakaian tercatat</small></div><button type="button" data-sr-jump="sales">Buka</button></div><div class="sr-flow-arrow">→</div><div class="sr-flow-step"><span class="sr-flow-icon">②</span><div><strong>Stok</strong><small>Saldo sistem &amp; kebutuhan order</small></div><span class="sr-flow-current">Anda di sini</span></div><div class="sr-flow-arrow">→</div><div class="sr-flow-step"><span class="sr-flow-icon">③</span><div><strong>Keuangan</strong><small>' + fmt(purchaseQty) + ' unit pembelian tercatat</small></div><button type="button" data-sr-jump="finance">Buka</button></div></div>' +
       '<div class="sr-kpis"><div class="sr-kpi"><span>Item Stok</span><strong>' + fmt(k.total) + '</strong><small>' + fmt(k.untracked) + ' belum opname awal</small></div><div class="sr-kpi sr-kpi-warn"><span>Perlu Tindakan</span><strong>' + fmt(k.need) + '</strong><small>' + fmt(k.critical) + ' kritis / habis</small></div><div class="sr-kpi sr-kpi-diff"><span>Selisih Opname</span><strong>' + fmt(k.diff) + '</strong><small>item berbeda dari stok sistem</small></div></div>' +
       '<div class="sr-tabs">' + tabButton('stock', 'Daftar Stok') + tabButton('purchase', 'Pembelian') + tabButton('opname', 'Stock Opname') + tabButton('history', 'Riwayat Opname') + '</div>';
   }
