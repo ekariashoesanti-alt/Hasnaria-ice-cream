@@ -30,7 +30,7 @@
     if (window.__HASNARIA_STOCK_RECONCILE_LOADING) return;
     window.__HASNARIA_STOCK_RECONCILE_LOADING = true;
     var s = document.createElement('script');
-    s.src = '/stock-reconcile.js?v=3';
+    s.src = '/stock-reconcile-v2.js?v=1';
     s.async = false;
     s.onload = function () { window.__HASNARIA_STOCK_RECONCILE_READY = true; };
     s.onerror = function () {
