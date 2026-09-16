@@ -7,6 +7,7 @@
   var TAG = { recorded: "⟦H:recorded⟧", pending_approval: "⟦H:pending_approval⟧", approved: "⟦H:approved⟧", rejected: "⟦H:rejected⟧" };
   var CAT = { pembelian: "Operasional / Stok", investasi: "Investasi & Aset", administrasi: "Administrasi", kepegawaian: "Kepegawaian", waste: "Waste", kompensasi: "Kompensasi", lainnya: "Lainnya" };
   var TARGET = 1500000;
+  var purchaseImportRows = [];
   var OPENING = ["Kebersihan area","Peralatan siap","Bahan lengkap","Stok dicek vs PAR","Uang kas awal","Area pelanggan rapi","Produk siap jual","Freezer normal","Gas / listrik / air"];
   var HANDOVER = ["Stok diserahkan","Kas diserahkan","Pre-order dicatat","Masalah tamu","Bahan hampir habis","Pekerjaan belum selesai"];
   var CLOSING = ["Omzet diinput","Kas dihitung","Transaksi dicocokkan","Stok akhir","Waste dicatat","Kebersihan tutup","Alat dimatikan","Listrik / gas aman","Masalah hari ini + tindakan"];
@@ -174,6 +175,8 @@
       var p = parseNotes(x.notes);
       return Object.assign({}, x, { amount: Number(x.amount || 0), status: p.status, displayNotes: p.notes });
     });
+    r = await db.from("offline_purchase_history").select("*").eq("brand_id", BRAND).order("purchase_date", { ascending: false }).limit(5000);
+    if (!r.error) purchaseImportRows = r.data || [];
     r = await db.from("social_contents").select("*").eq("brand_id", BRAND).gte("posted_at", f).order("posted_at", { ascending: false });
     if (r.error) throw r.error;
     social = r.data || [];
