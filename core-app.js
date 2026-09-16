@@ -320,7 +320,6 @@
     var pAdmin = pRows.filter(function(x){return x.category==="administrasi" && x.status!=="rejected";}).reduce(function(a,x){return a+x.amount;},0);
     var pHr = pRows.filter(function(x){return x.category==="kepegawaian" && x.status!=="rejected";}).reduce(function(a,x){return a+x.amount;},0);
     var purchaseImportRows = [];
-    try { var pir = await db.from("offline_purchase_history").select("*").eq("brand_id", BRAND).order("purchase_date",{ascending:false}).limit(5000); purchaseImportRows = (pir && !pir.error && pir.data) ? pir.data : []; } catch(e) {}
     var purchaseMonth = {}; purchaseImportRows.forEach(function(x){ var m=String(x.purchase_date||x.source_period||"").slice(0,7); if(m) purchaseMonth[m]=(purchaseMonth[m]||0)+Number(x.total_amount||0); });
     var purchaseMonths=Object.keys(purchaseMonth).sort().slice(-12), purchaseMax=purchaseMonths.reduce(function(a,m){return Math.max(a,purchaseMonth[m]);},0);
     var purchaseExtra = '<div class="card"><h2>Upload Pembelian</h2><p class="small">Upload Excel/CSV tanpa template fixed. Seluruh sheet dibaca dan dibuat preview sebelum disimpan.</p><input id="purchaseFile" type="file" accept=".xlsx,.xls,.csv" style="display:none"><button class="primary" id="purchaseUploadBtn">Upload dari Excel</button> <span id="purchaseFileName" class="small"></span><div id="purchaseUploadStatus" class="small" style="margin-top:8px"></div><div id="purchasePreview" style="margin-top:8px"></div></div>';
