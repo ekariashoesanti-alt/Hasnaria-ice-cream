@@ -1,6 +1,6 @@
 (function () {
   'use strict';
-  var LABELS = { dashboard: 'Hari Ini', sales: 'Penjualan', ops: 'Keuangan', stok: 'Stok', shift: 'HR', social: 'Medsos' };
+  var LABELS = { dashboard: 'Hari Ini', sales: 'Penjualan', pembelian: 'Pembelian', ops: 'Keuangan', stok: 'Stok', shift: 'HR', social: 'Medsos' };
 
   function moveNav() {
     var app=document.getElementById('app'),header=app&&app.querySelector('header'),head=header&&header.querySelector('.head'),tabs=document.getElementById('tabs');
