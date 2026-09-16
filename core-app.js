@@ -196,7 +196,7 @@
   }
   function tabs() {
     var pend = expenses.filter(function (x) { return x.status === "pending_approval"; }).length;
-    var items = [["dashboard", "Hari ini"], ["sales", "Penjualan"], ["pembelian", "Pembelian"], ["ops", "Keuangan"], ["stok", "Stok"], ["shift", "Shift"], ["social", "Medsos"]];
+    var items = [["dashboard", "Hari ini"], ["ops", "Keuangan"], ["sales", "Penjualan"], ["pembelian", "Pembelian"], ["stok", "Stok"], ["shift", "Shift"], ["social", "Medsos"]];
     if (canAppr(role)) items.push(["approval", "Putusan" + (pend ? " (" + pend + ")" : "")]);
     if (canTeam(role)) items.push(["team", "Tim"]);
     items.push(["sistem", "Sistem"]);
