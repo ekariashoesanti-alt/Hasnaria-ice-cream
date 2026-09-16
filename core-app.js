@@ -62,6 +62,7 @@
     if (r !== "head_store") return false;
     if (cat === "pembelian") return amt <= 1500000;
     if (cat === "kompensasi") return amt <= 50000;
+    if (cat === "investasi" || cat === "administrasi" || cat === "kepegawaian") return false;
     return amt <= 500000;
   }
   function canAppr(r) { return r === "owner" || r === "head_store"; }
@@ -208,7 +209,8 @@
   function redInbox() {
     var out = [];
     expenses.filter(function (x) { return x.status === "pending_approval"; }).forEach(function (x) {
-      var red = x.category === "pembelian" && x.amount > 1500000 || x.amount >= 50000 && x.category !== "waste";
+      var ownerOnly = ["investasi","administrasi","kepegawaian"].indexOf(x.category) >= 0;
+      var red = ownerOnly || (x.category === "pembelian" && x.amount > 1500000) || x.amount >= 50000 && x.category !== "waste";
       out.push({ lv: red && role === "owner" ? "merah" : "kuning", t: (CAT[x.category] || x.category) + " " + rp(x.amount), d: x.displayNotes || x.expense_date });
     });
     stock.forEach(function (p) {
@@ -329,9 +331,9 @@
     if($("pAmt")){$("pAmt").addEventListener("input",purchaseHint);$("pCat").addEventListener("change",purchaseHint);}
     if($("pSave"))$("pSave").addEventListener("click",async function(){if(!canOps(role))return;var cat=$("pCat").value,amt=Number($("pAmt").value||0),d=decide(role,cat,amt);if(!(amt>0)){ $("pMsg").textContent="Nominal harus lebih dari 0.";return;} $("pMsg").textContent="Menyimpan…";try{var note=($("pVendor").value||"").trim();if($("pNotes").value)note+=(note?" · ":"")+$("pNotes").value.trim();var r=await db.from("expenses").insert({brand_id:BRAND,expense_date:$("pDate").value,category:cat,amount:amt,notes:wrap(d.status,note)});if(r.error)throw r.error;$("pMsg").textContent=d.status==="pending_approval"?"Diajukan. Menunggu persetujuan.":"Transaksi tercatat.";await loadAll();render();}catch(e){$("pMsg").textContent=e.message;}});
     $("ops").innerHTML = '<div class="warnbox"><b>Pagar wewenang (' + (ROLE_L[role] || role) + ')</b><br>Di atas batas tidak final — naik ke atasan. Owner tidak menerima pertanyaan yang sudah ada aturannya.</div>' +
-      '<div class="card"><h2>Pembelian · waste · kompensasi</h2>' + (canOps(role) ? "" : '<p class="small" style="color:var(--d)">Bukan wewenang Anda.</p>') +
+      '<div class="card"><h2>Pengeluaran Operasional & Koreksi</h2>' + (canOps(role) ? "" : '<p class="small" style="color:var(--d)">Bukan wewenang Anda.</p>') +
       '<div class="form"><div><label>Tanggal</label><input id="oDate" type="date" value="' + today() + '"></div>' +
-      '<div><label>Jenis</label><select id="oCat"><option value="pembelian">Pembelian bahan</option><option value="waste">Waste</option><option value="kompensasi">Kompensasi</option><option value="lainnya">Lainnya</option></select></div>' +
+      '<div><label>Jenis</label><select id="oCat"><option value="waste">Waste</option><option value="kompensasi">Kompensasi</option><option value="lainnya">Lainnya</option></select></div>' +
       '<div><label>Nominal</label><input id="oAmt" type="number"></div>' +
       '<div><label>Keterangan + solusi</label><input id="oNotes" placeholder="Stok odeng minimum, order 50 pcs"></div></div>' +
       '<p class="small" id="oHint" style="margin-top:10px"></p>' +
