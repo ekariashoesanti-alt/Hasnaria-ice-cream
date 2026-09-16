@@ -8,6 +8,11 @@
   var CAT = { pembelian: "Operasional / Stok", investasi: "Investasi & Aset", administrasi: "Administrasi", kepegawaian: "Kepegawaian", waste: "Waste", kompensasi: "Kompensasi", lainnya: "Lainnya" };
   var TARGET = 1500000;
   var purchaseImportRows = [];
+    function renderPurchaseChart(){
+      var box=document.getElementById("purchaseMonthlyChart"); if(!box)return;
+      var ms=Object.keys(purchaseMonth).sort().slice(-12), max=ms.reduce(function(a,m){return Math.max(a,Number(purchaseMonth[m]||0));},0);
+      box.innerHTML=ms.length?ms.map(function(m){var v=Number(purchaseMonth[m]||0),h=max?Math.max(8,Math.round(v/max*150)):8;return '<div class="purchase-bar" title="'+m+' · '+rp(v)+'"><div class="small">'+rp(v)+'</div><div class="purchase-bar-fill" style="height:'+h+'px"></div><div class="small">'+m+'</div></div>';}).join(""):'<div class="small">Belum ada data pembelian.</div>';
+    }
   var OPENING = ["Kebersihan area","Peralatan siap","Bahan lengkap","Stok dicek vs PAR","Uang kas awal","Area pelanggan rapi","Produk siap jual","Freezer normal","Gas / listrik / air"];
   var HANDOVER = ["Stok diserahkan","Kas diserahkan","Pre-order dicatat","Masalah tamu","Bahan hampir habis","Pekerjaan belum selesai"];
   var CLOSING = ["Omzet diinput","Kas dihitung","Transaksi dicocokkan","Stok akhir","Waste dicatat","Kebersihan tutup","Alat dimatikan","Listrik / gas aman","Masalah hari ini + tindakan"];
@@ -324,7 +329,8 @@
     var purchaseMonths=Object.keys(purchaseMonth).sort().slice(-12), purchaseMax=purchaseMonths.reduce(function(a,m){return Math.max(a,purchaseMonth[m]);},0);
     var purchaseExtra = '<div class="card"><h2>Upload Pembelian</h2><p class="small">Upload Excel/CSV tanpa template fixed. Seluruh sheet dibaca dan dibuat preview sebelum disimpan.</p><input id="purchaseFile" type="file" accept=".xlsx,.xls,.csv" style="display:none"><button class="primary" id="purchaseUploadBtn">Upload dari Excel</button> <span id="purchaseFileName" class="small"></span><div id="purchaseUploadStatus" class="small" style="margin-top:8px"></div><div id="purchasePreview" style="margin-top:8px"></div></div>';
     $("pembelian").insertAdjacentHTML("afterbegin", purchaseExtra);
-    $("pembelian").insertAdjacentHTML("afterbegin", '<div class="card"><h2>Grafik Pembelian Bulanan</h2><div style="display:flex;align-items:flex-end;gap:10px;height:210px">'+(purchaseMonths.map(function(m){var v=purchaseMonth[m]||0,h=purchaseMax?Math.max(6,Math.round(v/purchaseMax*160)):6;return '<div style="flex:1;text-align:center;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center"><div class="small">'+rp(v)+'</div><div style="width:65%;max-width:55px;height:'+h+'px;background:var(--p);border-radius:6px 6px 2px 2px"></div><div class="small">'+m.slice(5)+'</div></div>';}).join("")||'<div class="small">Belum ada data.</div>')+'</div></div>');
+    $("pembelian").insertAdjacentHTML("afterbegin", '<div class="card"><h2>Grafik Pembelian Bulanan</h2><div id="purchaseMonthlyChart" style="display:flex;align-items:flex-end;gap:10px;height:210px;overflow-x:auto"></div></div>';}).join("")||'<div class="small">Belum ada data.</div>')+'</div></div>');
+    renderPurchaseChart();
     function purchaseParseNumber(v){if(typeof v==="number")return isFinite(v)?v:0;var z=String(v||"").replace(/rp\.?/ig,"").replace(/\s/g,"").replace(/\./g,"").replace(",",".").replace(/[^0-9.-]/g,"");var n=Number(z);return isFinite(n)?n:0;}
     function purchaseParseDate(v){if(v instanceof Date&&!isNaN(v))return v.getFullYear()+"-"+String(v.getMonth()+1).padStart(2,"0")+"-"+String(v.getDate()).padStart(2,"0");var z=String(v||""),m=z.match(/(\d{4})[-\/]([01]?\d)[-\/]([0-3]?\d)/);if(m)return m[1]+"-"+String(m[2]).padStart(2,"0")+"-"+String(m[3]).padStart(2,"0");m=z.match(/([0-3]?\d)[-\/]([01]?\d)[-\/](\d{4})/);return m?m[3]+"-"+String(m[2]).padStart(2,"0")+"-"+String(m[1]).padStart(2,"0"):null;}
     function purchaseCol(h,rx){for(var j=0;j<h.length;j++)for(var k=0;k<rx.length;k++)if(rx[k].test(String(h[j]||"").toLowerCase()))return j;return -1;}
