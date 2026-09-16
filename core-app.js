@@ -318,7 +318,7 @@
     var pHr = pRows.filter(function(x){return x.category==="kepegawaian" && x.status!=="rejected";}).reduce(function(a,x){return a+x.amount;},0);
     $("pembelian").innerHTML =
       '<div class="card"><h2>Pembelian & Pengadaan</h2><p class="small">Semua transaksi pengadaan dicatat di sini: operasional/stok, investasi & aset, administrasi, dan kepegawaian. Dampak nominalnya tetap masuk ke Keuangan.</p>' +
-      '<div class="grid-3" style="margin-top:12px"><div><div class="label">Total pengadaan</div><div class="metric">' + rp(pTotal) + '</div></div><div><div class="label">Investasi & aset</div><div class="metric">' + rp(pInv) + '</div></div><div><div class="label">Admin + Kepegawaian</div><div class="metric">' + rp(pAdmin + pHr) + '</div></div></div></div>' +
+      '<div class="grid-3" style="margin-top:12px"><div><div class="label">Total pengadaan · 90 hari</div><div class="metric">' + rp(pTotal) + '</div></div><div><div class="label">Investasi & aset</div><div class="metric">' + rp(pInv) + '</div></div><div><div class="label">Admin + Kepegawaian</div><div class="metric">' + rp(pAdmin + pHr) + '</div></div></div></div>' +
       '<div class="card"><h2>Catat transaksi</h2>' + (canOps(role) ? "" : '<p class="small" style="color:var(--d)">Role Anda tidak memiliki hak input transaksi pengadaan.</p>') +
       '<div class="form"><div><label>Tanggal</label><input id="pDate" type="date" value="' + today() + '"></div>' +
       '<div><label>Jenis transaksi</label><select id="pCat"><option value="pembelian">Operasional / Stok</option><option value="investasi">Investasi & Aset</option><option value="administrasi">Administrasi</option><option value="kepegawaian">Kepegawaian</option><option value="lainnya">Lainnya</option></select></div>' +
