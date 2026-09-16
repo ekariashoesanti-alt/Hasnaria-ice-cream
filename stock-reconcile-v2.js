@@ -224,7 +224,7 @@
       '<div class="sr-head"><div><div class="sr-eyebrow">OPERASIONAL · STOK</div><h2>Stok &amp; Persediaan</h2><p>Satu sumber untuk memantau saldo stok dan hasil opname.</p></div>' +
       '<div class="sr-actions"><button type="button" class="sr-btn sr-btn-soft" data-sr-action="refresh">↻ Refresh</button><button type="button" class="sr-btn sr-btn-soft" data-sr-action="export">Export CSV</button></div></div>' +
       '<div class="sr-kpis"><div class="sr-kpi"><span>Item Stok</span><strong>' + fmt(k.total) + '</strong><small>' + fmt(k.untracked) + ' belum opname awal</small></div><div class="sr-kpi sr-kpi-warn"><span>Perlu Tindakan</span><strong>' + fmt(k.need) + '</strong><small>' + fmt(k.critical) + ' kritis / habis</small></div><div class="sr-kpi sr-kpi-diff"><span>Selisih Opname</span><strong>' + fmt(k.diff) + '</strong><small>item berbeda dari stok sistem</small></div></div>' +
-      '<div class="sr-tabs">' + tabButton('stock', 'Daftar Stok') + tabButton('purchase', 'Pembelian') + tabButton('opname', 'Stock Opname') + tabButton('history', 'Riwayat Opname') + '</div>';
+      '<div class="sr-tabs">' + tabButton('stock', 'Daftar Stok') + tabButton('opname', 'Stock Opname') + tabButton('history', 'Riwayat Opname') + '</div>';
   }
 
   function tabButton(id, label) {
