@@ -5,7 +5,7 @@
   var ROLE_L = { pending: "Menunggu persetujuan", owner: "Owner", head_store: "Head of Store", marketing: "Marketing", pic: "PIC Shift", pelaksana: "Pelaksana" };
   var LIM = { owner: { p: 1 / 0, k: 1 / 0 }, head_store: { p: 1500000, k: 50000 }, marketing: { p: 0, k: 0 }, pic: { p: 0, k: 15000 }, pelaksana: { p: 0, k: 0 } };
   var TAG = { recorded: "⟦H:recorded⟧", pending_approval: "⟦H:pending_approval⟧", approved: "⟦H:approved⟧", rejected: "⟦H:rejected⟧" };
-  var CAT = { pembelian: "Pembelian", waste: "Waste", kompensasi: "Kompensasi", lainnya: "Lainnya" };
+  var CAT = { pembelian: "Operasional / Stok", investasi: "Investasi & Aset", administrasi: "Administrasi", kepegawaian: "Kepegawaian", waste: "Waste", kompensasi: "Kompensasi", lainnya: "Lainnya" };
   var TARGET = 1500000;
   var OPENING = ["Kebersihan area","Peralatan siap","Bahan lengkap","Stok dicek vs PAR","Uang kas awal","Area pelanggan rapi","Produk siap jual","Freezer normal","Gas / listrik / air"];
   var HANDOVER = ["Stok diserahkan","Kas diserahkan","Pre-order dicatat","Masalah tamu","Bahan hampir habis","Pekerjaan belum selesai"];
@@ -45,6 +45,7 @@
       if (!lim.p) return { status: "pending_approval", msg: "Pembelian bukan wewenang Anda. Diajukan ke atasan." };
       if (amt > lim.p) return { status: "pending_approval", msg: "Melebihi batas " + rp(lim.p) + ". Diajukan ke Owner." };
     }
+    if (cat === "investasi" || cat === "administrasi" || cat === "kepegawaian") { return { status: "pending_approval", msg: "Transaksi " + (CAT[cat] || cat) + " memerlukan persetujuan Owner." }; }
     if (cat === "kompensasi") {
       if (!lim.k) return { status: "pending_approval", msg: "Kompensasi bukan wewenang Anda." };
       if (amt > lim.k) return { status: "pending_approval", msg: "Melebihi batas " + rp(lim.k) + ". Diajukan ke atasan." };
@@ -188,13 +189,13 @@
   function show(id) { ["auth", "pending", "app"].forEach(function (x) { $(x).classList.toggle("hidden", x !== id); }); }
   function setTab(id) {
     tab = id;
-    ["dashboard", "sales", "ops", "stok", "shift", "social", "approval", "team", "sistem"].forEach(function (x) { $(x).classList.toggle("hidden", x !== id); });
+    ["dashboard", "sales", "pembelian", "ops", "stok", "shift", "social", "approval", "team", "sistem"].forEach(function (x) { $(x).classList.toggle("hidden", x !== id); });
     document.querySelectorAll(".tab").forEach(function (b) { b.classList.toggle("on", b.getAttribute("data-tab") === id); });
     render();
   }
   function tabs() {
     var pend = expenses.filter(function (x) { return x.status === "pending_approval"; }).length;
-    var items = [["dashboard", "Hari ini"], ["sales", "Penjualan"], ["ops", "Uang & ops"], ["stok", "Stok"], ["shift", "Shift"], ["social", "Medsos"]];
+    var items = [["dashboard", "Hari ini"], ["sales", "Penjualan"], ["pembelian", "Pembelian"], ["ops", "Keuangan"], ["stok", "Stok"], ["shift", "Shift"], ["social", "Medsos"]];
     if (canAppr(role)) items.push(["approval", "Putusan" + (pend ? " (" + pend + ")" : "")]);
     if (canTeam(role)) items.push(["team", "Tim"]);
     items.push(["sistem", "Sistem"]);
@@ -308,6 +309,25 @@
       } catch (e) { $("sMsg").textContent = e.message; }
     });
 
+    var pRows = expenses.filter(function (x) { return ["pembelian","investasi","administrasi","kepegawaian","lainnya"].indexOf(x.category) >= 0 && (x.status === "recorded" || x.status === "approved" || x.status === "pending_approval"); });
+    var pTotal = pRows.filter(function (x) { return x.status !== "rejected"; }).reduce(function (a,x){return a+x.amount;},0);
+    var pInv = pRows.filter(function(x){return x.category==="investasi" && x.status!=="rejected";}).reduce(function(a,x){return a+x.amount;},0);
+    var pAdmin = pRows.filter(function(x){return x.category==="administrasi" && x.status!=="rejected";}).reduce(function(a,x){return a+x.amount;},0);
+    var pHr = pRows.filter(function(x){return x.category==="kepegawaian" && x.status!=="rejected";}).reduce(function(a,x){return a+x.amount;},0);
+    $("pembelian").innerHTML =
+      '<div class="card"><h2>Pembelian & Pengadaan</h2><p class="small">Semua transaksi pengadaan dicatat di sini: operasional/stok, investasi & aset, administrasi, dan kepegawaian. Dampak nominalnya tetap masuk ke Keuangan.</p>' +
+      '<div class="grid-3" style="margin-top:12px"><div><div class="label">Total pengadaan</div><div class="metric">' + rp(pTotal) + '</div></div><div><div class="label">Investasi & aset</div><div class="metric">' + rp(pInv) + '</div></div><div><div class="label">Admin + Kepegawaian</div><div class="metric">' + rp(pAdmin + pHr) + '</div></div></div></div>' +
+      '<div class="card"><h2>Catat transaksi</h2>' + (canOps(role) ? "" : '<p class="small" style="color:var(--d)">Role Anda tidak memiliki hak input transaksi pengadaan.</p>') +
+      '<div class="form"><div><label>Tanggal</label><input id="pDate" type="date" value="' + today() + '"></div>' +
+      '<div><label>Jenis transaksi</label><select id="pCat"><option value="pembelian">Operasional / Stok</option><option value="investasi">Investasi & Aset</option><option value="administrasi">Administrasi</option><option value="kepegawaian">Kepegawaian</option><option value="lainnya">Lainnya</option></select></div>' +
+      '<div><label>Nominal</label><input id="pAmt" type="number" min="0" step="1000" placeholder="0"></div><div><label>Vendor / penerima</label><input id="pVendor" placeholder="Contoh: supplier, toko, karyawan"></div>' +
+      '<div style="grid-column:1/-1"><label>Keterangan</label><input id="pNotes" placeholder="Contoh: bahan baku, freezer, ATK, insentif"></div></div>' +
+      '<p class="small" id="pHint" style="margin-top:10px"></p><button class="primary" id="pSave" ' + (canOps(role) ? "" : "disabled") + '>Simpan transaksi</button><p class="small" id="pMsg"></p></div>' +
+      '<div class="card"><h2>Riwayat pengadaan</h2><div style="overflow:auto"><table><thead><tr><th>Tanggal</th><th>Jenis</th><th>Nominal</th><th>Status</th><th>Vendor / Keterangan</th></tr></thead><tbody>' +
+      (pRows.slice(0,80).map(function(x){return "<tr><td>"+x.expense_date+"</td><td>"+(CAT[x.category]||x.category)+"</td><td>"+rp(x.amount)+"</td><td>"+(x.status==="pending_approval"?"Menunggu persetujuan":x.status==="approved"?"Disetujui":x.status==="rejected"?"Ditolak":"Tercatat")+"</td><td>"+esc(x.displayNotes||"—")+"</td></tr>";}).join("") || '<tr><td colspan="5" class="small">Belum ada transaksi pengadaan.</td></tr>') + "</tbody></table></div></div>";
+    function purchaseHint(){ if(!$("pCat")||!$("pAmt")||!$("pHint")||!$("pSave"))return; var d=decide(role,$("pCat").value,Number($("pAmt").value||0)); $("pHint").textContent=d.msg; $("pSave").textContent=d.status==="pending_approval"?"Ajukan ke atasan":"Simpan transaksi"; }
+    if($("pAmt")){$("pAmt").addEventListener("input",purchaseHint);$("pCat").addEventListener("change",purchaseHint);}
+    if($("pSave"))$("pSave").addEventListener("click",async function(){if(!canOps(role))return;var cat=$("pCat").value,amt=Number($("pAmt").value||0),d=decide(role,cat,amt);if(!(amt>0)){ $("pMsg").textContent="Nominal harus lebih dari 0.";return;} $("pMsg").textContent="Menyimpan…";try{var note=($("pVendor").value||"").trim();if($("pNotes").value)note+=(note?" · ":"")+$("pNotes").value.trim();var r=await db.from("expenses").insert({brand_id:BRAND,expense_date:$("pDate").value,category:cat,amount:amt,notes:wrap(d.status,note)});if(r.error)throw r.error;$("pMsg").textContent=d.status==="pending_approval"?"Diajukan. Menunggu persetujuan.":"Transaksi tercatat.";await loadAll();render();}catch(e){$("pMsg").textContent=e.message;}});
     $("ops").innerHTML = '<div class="warnbox"><b>Pagar wewenang (' + (ROLE_L[role] || role) + ')</b><br>Di atas batas tidak final — naik ke atasan. Owner tidak menerima pertanyaan yang sudah ada aturannya.</div>' +
       '<div class="card"><h2>Pembelian · waste · kompensasi</h2>' + (canOps(role) ? "" : '<p class="small" style="color:var(--d)">Bukan wewenang Anda.</p>') +
       '<div class="form"><div><label>Tanggal</label><input id="oDate" type="date" value="' + today() + '"></div>' +
