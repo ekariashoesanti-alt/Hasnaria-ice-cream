@@ -53,8 +53,8 @@ jobs:
           grep -q 'db.from("user_profiles")' core-app.js
           grep -q 'async function updateMemberRole' core-app.js
           grep -q 'role: "pending"' core-app.js
-          grep -q "var CORE = '/core-app.js?v=3'" app.js
-          grep -q "var SALES = '/sales-board.js?v=44'" app.js
+          grep -q "var CORE = '/core-app.js?v=7'" app.js
+          grep -q "var SALES = '/sales-board.js?v=45'" app.js
           grep -q 'var SALES_FALLBACK = false' app.js
           grep -q '__HASNARIA_IMPORT_V2' sales-board.js
           grep -q "chunks.join('')" sales-board.js
