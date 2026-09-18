@@ -82,4 +82,11 @@ grant select, insert, update, delete on public.outlets to authenticated;
 comment on table public.outlets is
   'ERP outlet/store master. Existing data remains brand-scoped until outlet_id is introduced module-by-module.';
 
+-- Bootstrap the current Hasnaria operation without hard-coding a generated brand UUID.
+insert into public.outlets (brand_id, code, name, timezone, active)
+select b.id, 'MAIN', 'Hasnaria Main', 'Asia/Jakarta', true
+from public.brands b
+where lower(btrim(b.name)) = 'hasnaria'
+on conflict (brand_id, lower(btrim(code))) do nothing;
+
 commit;
