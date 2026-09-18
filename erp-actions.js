@@ -8,7 +8,9 @@
     'selling_price_confirmation',
     'inventory_baseline_confirmation',
     'financing_payment_review',
-    'invalid_purchase_qty'
+    'invalid_purchase_qty',
+    'unmatched_purchase',
+    'unverified_inventory'
   ]);
 
   const esc = value => String(value == null ? '' : value).replace(/[&<>"']/g, c => ({
@@ -48,6 +50,36 @@
     const meta = action && action.metadata || {};
     const type = action && action.action_type;
     if (!canHandle(type)) throw new Error('Action type belum didukung oleh form ERP.');
+
+    if (type === 'unmatched_purchase' || type === 'unverified_inventory') {
+      const sourceName = String(values.source_name || action.subject || '').trim();
+      if (!sourceName) throw new Error('Nama sumber pembelian tidak tersedia.');
+      const ruleType = type === 'unverified_inventory' ? 'inventory_alias' : String(values.rule_type || '');
+      if (!['inventory_alias','expense_candidate','payment_candidate','exclude'].includes(ruleType)) throw new Error('Pilih klasifikasi pembelian.');
+      let inventoryItemId = null;
+      let expenseCategory = null;
+      let qtyMultiplier = null;
+      if (ruleType === 'inventory_alias') {
+        inventoryItemId = String(values.inventory_item_id || '').trim();
+        if (!inventoryItemId) throw new Error('Pilih inventory item tujuan.');
+        qtyMultiplier = positive(values.qty_multiplier, 'Quantity multiplier');
+      } else if (ruleType === 'expense_candidate') {
+        expenseCategory = String(values.expense_category || '').trim();
+        if (!expenseCategory) throw new Error('Kategori biaya wajib diisi.');
+      }
+      return {
+        rpc: 'resolve_purchase_item_rule',
+        params: {
+          p_source_name: sourceName,
+          p_rule_type: ruleType,
+          p_inventory_item_id: inventoryItemId,
+          p_expense_category: expenseCategory,
+          p_qty_multiplier: qtyMultiplier,
+          p_reason: reason(values.reason),
+          p_post: values.post === true || values.post === 'on' || values.post === 'true'
+        }
+      };
+    }
 
     if (type === 'invalid_purchase_qty') {
       const sourceHistoryId = values.source_history_id || meta.source_history_id;
@@ -203,6 +235,49 @@
     form.onsubmit = event => { event.preventDefault(); submit(action, form, dialog); };
   }
 
+  function inventoryOptions(rows) {
+    return '<option value="">Pilih inventory item…</option>' + rows.map(row => '<option value="' + esc(row.inventory_item_id) + '">' + esc(row.item_name + ' · ' + (row.unit || 'tanpa satuan')) + '</option>').join('');
+  }
+
+  async function openPurchaseRule(action, dialog) {
+    dialog.innerHTML = commonHeader(action) + '<p class="erp-note warn">Klasifikasi ini adalah keputusan bisnis manual. Tidak ada pilihan yang diterapkan otomatis.</p><p role="status">Memuat master inventory…</p>';
+    dialog.showModal();
+    const result = await db().from('ui_inventory_items').select('inventory_item_id,item_name,unit,category,brand_id').eq('brand_id', context().brandId).order('item_name', {ascending:true}).limit(500).abortSignal(AbortSignal.timeout(30000));
+    if (result.error) throw result.error;
+    const inventory = result.data || [];
+    const fixedInventory = action.action_type === 'unverified_inventory';
+    dialog.innerHTML = commonHeader(action) + '<p class="erp-note warn">' + (fixedInventory ? 'Konfirmasi inventory item dan multiplier. Jangan gunakan multiplier 1 kecuali benar sesuai unit pembelian.' : 'Pilih klasifikasi untuk nama sumber ini. Khusus item ambigu seperti PINES, jangan pilih inventory/expense tanpa bukti sumber.') + '</p>' +
+      '<form id="erp-action-form" class="erp-form"><input type="hidden" name="source_name" value="' + esc(action.subject) + '">' +
+      (fixedInventory ? '<input type="hidden" name="rule_type" value="inventory_alias"><div class="erp-wide erp-note"><b>Klasifikasi:</b> Inventory alias (perlu dikonfirmasi)</div>' : '<label>Klasifikasi<select name="rule_type" required><option value="">Pilih…</option><option value="inventory_alias">Inventory alias</option><option value="expense_candidate">Expense candidate</option><option value="payment_candidate">Payment candidate</option><option value="exclude">Exclude</option></select></label>') +
+      '<div id="erp-rule-inventory" class="erp-wide" ' + (fixedInventory ? '' : 'hidden') + '><div class="erp-form"><label>Inventory item<select name="inventory_item_id">' + inventoryOptions(inventory) + '</select></label><label>Quantity multiplier<input name="qty_multiplier" type="number" min="0.000001" step="any" placeholder="Wajib untuk inventory alias"></label></div><p class="erp-note">Multiplier mengubah quantity sumber menjadi unit inventory. Jangan menebak.</p></div>' +
+      '<label id="erp-rule-expense" class="erp-wide" hidden>Kategori biaya<input name="expense_category" placeholder="Contoh: store_supplies"></label>' +
+      '<label class="erp-wide erp-check"><input name="post" type="checkbox"> Posting transaksi historis setelah rule tersimpan <small>Default tidak aktif. Aktifkan hanya jika mapping/unit sudah benar.</small></label>' +
+      '<label class="erp-wide">Alasan / catatan audit<textarea name="reason" rows="3" required placeholder="Tuliskan dasar klasifikasi"></textarea></label>' +
+      '<p id="erp-action-message" class="erp-wide erp-message" role="status"></p><div class="erp-form-actions erp-wide"><button type="button" data-erp-action-close>Tutup</button><button class="primary" type="submit">Simpan klasifikasi</button></div></form>';
+    const form = dialog.querySelector('#erp-action-form');
+    const close = dialog.querySelector('[data-erp-action-close]');
+    if (close) close.onclick = () => dialog.close();
+    const rule = form.elements.rule_type;
+    const inventoryBlock = dialog.querySelector('#erp-rule-inventory');
+    const expenseField = dialog.querySelector('#erp-rule-expense');
+    const sync = () => {
+      const value = fixedInventory ? 'inventory_alias' : rule.value;
+      if (inventoryBlock) inventoryBlock.hidden = value !== 'inventory_alias';
+      if (expenseField) expenseField.hidden = value !== 'expense_candidate';
+      const inv = form.elements.inventory_item_id;
+      const mult = form.elements.qty_multiplier;
+      const exp = form.elements.expense_category;
+      if (inv) inv.required = value === 'inventory_alias';
+      if (mult) mult.required = value === 'inventory_alias';
+      if (exp) exp.required = value === 'expense_candidate';
+      if (value !== 'inventory_alias') { if (inv) inv.value=''; if (mult) mult.value=''; }
+      if (value !== 'expense_candidate' && exp) exp.value='';
+    };
+    if (rule && !fixedInventory) rule.onchange = sync;
+    sync();
+    form.onsubmit = event => { event.preventDefault(); submit(action, form, dialog); };
+  }
+
   function formHtml(action) {
     const meta = action.metadata || {};
     const type = action.action_type;
@@ -279,6 +354,14 @@
     requireOwner();
     if (!dialog) throw new Error('Dialog ERP tidak tersedia.');
     if (!canHandle(action && action.action_type)) throw new Error('Action type belum didukung oleh form ERP.');
+    if (action.action_type === 'unmatched_purchase' || action.action_type === 'unverified_inventory') {
+      openPurchaseRule(action, dialog).catch(error => {
+        dialog.innerHTML = commonHeader(action) + '<p class="erp-note error">' + esc(error && error.message ? error.message : error) + '</p><div class="erp-form-actions"><button type="button" data-erp-action-close>Tutup</button></div>';
+        const close = dialog.querySelector('[data-erp-action-close]');
+        if (close) close.onclick = () => dialog.close();
+      });
+      return;
+    }
     if (action.action_type === 'invalid_purchase_qty') {
       openInvalidQuantity(action, dialog).catch(error => {
         dialog.innerHTML = commonHeader(action) + '<p class="erp-note error">' + esc(error && error.message ? error.message : error) + '</p><div class="erp-form-actions"><button type="button" data-erp-action-close>Tutup</button></div>';
