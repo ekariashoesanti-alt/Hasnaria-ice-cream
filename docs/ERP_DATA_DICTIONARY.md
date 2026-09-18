@@ -32,15 +32,21 @@ Current Hasnaria default outlet: `MAIN / Hasnaria Main / Asia/Jakarta`.
 
 | Entity / view | Purpose |
 |---|---|
-| sales | Canonical sales header |
+| sales | Canonical sales header; now includes optional outlet_id and customer_id |
 | sale_items | Canonical sales detail |
 | sales_import_batches | Existing normalized Majoo import provenance |
 | import_jobs | Shared ERP import/provenance layer for future module migration |
 | import_job_errors | Row/field validation errors |
 | sales_daily_kpis | Daily revenue, trx, units, COGS coverage, margin |
 | sales_anomaly_summary | Latest 7-day revenue comparison |
+| sales_daily_outlet_kpis | Outlet-scoped daily sales KPI |
+| sales_payment_method_daily | Cash/QRIS/transfer daily normalization |
+| sales_product_performance | Monthly product performance |
+| sales_channel_mix_monthly | Monthly channel mix |
+| sales_target_performance | Outlet/brand target achievement |
+| sales_import_reconciliation | Batch expected-vs-posted reconciliation |
 
-Sales remain brand-scoped today; outlet-level sales attribution is a future migration.
+Hasnaria sales history is now outlet-scoped to MAIN; new sales default to the single active outlet when unambiguous.
 
 ## Purchasing & AP
 
