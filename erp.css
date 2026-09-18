@@ -24,3 +24,4 @@
 @media(min-width:761px){#sales .sb-wrap{height:auto!important;max-height:none!important;overflow:visible!important}#sales .sb-grid-main{overflow:visible!important;min-height:430px!important}}
 @media(max-width:760px){#app>header .head{max-height:none}#app>header .hasnaria-header-nav{min-width:0}#app>header .brand-logo{max-width:150px!important}.erp-top h1{line-height:1.2}.erp-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.erp-kpi{padding:16px}.erp-kpi .value{font-size:23px}.erp-panels{display:block}}
 @media(max-width:420px){.erp-kpis{grid-template-columns:1fr}}
+#app>header .brand-logo{background:transparent;padding:0}.erp-chart{justify-content:space-around}.erp-day{max-width:60px}.erp-panel .erp-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}@media(max-width:550px){.erp-panel .erp-kpis{grid-template-columns:1fr}}

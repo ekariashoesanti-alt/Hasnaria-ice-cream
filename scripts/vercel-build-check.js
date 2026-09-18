@@ -232,6 +232,7 @@ run(process.execPath, ['tests/style-csp-inventory.test.js']);
 run(process.execPath, ['tests/style-attr-csp-inventory.test.js']);
 run(process.execPath, ['tests/style-runtime-build.test.js']);
 run(process.execPath, ['tests/erp-tracker.test.js']);
+run(process.execPath, ['tests/erp-ui.test.js']);
 
 const dist = path.join(ROOT, 'dist');
 fs.rmSync(dist, { recursive: true, force: true });
