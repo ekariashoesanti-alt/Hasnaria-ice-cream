@@ -13,7 +13,7 @@ const PARTS = [0, 1, 2, 3, 4].map((n) => `sales-board.part${n}.js`);
 const SOURCE_ONLY_FILES = new Set([...PARTS, 'sales-import-v2.js']);
 const SKIP_DIRS = new Set(['.git', '.github', 'node_modules', 'dist']);
 const DEV_ONLY_DIRS = new Set(['.git', '.github', 'docs', 'supabase', 'tests', 'scripts', 'dist', 'node_modules']);
-const DEV_ONLY_FILES = new Set(['README.md', 'vercel.json']);
+const DEV_ONLY_FILES = new Set(['README.md', 'vercel.json', 'AGENTS.md', 'HASNARIA_ERP_MASTERPLAN.md']);
 const REQUIRED_RUNTIME_FILES = [
   'index.html',
   'auth-bootstrap.js',
@@ -231,6 +231,7 @@ run(process.execPath, ['tests/strict-index-runtime.test.js']);
 run(process.execPath, ['tests/style-csp-inventory.test.js']);
 run(process.execPath, ['tests/style-attr-csp-inventory.test.js']);
 run(process.execPath, ['tests/style-runtime-build.test.js']);
+run(process.execPath, ['tests/erp-tracker.test.js']);
 
 const dist = path.join(ROOT, 'dist');
 fs.rmSync(dist, { recursive: true, force: true });
