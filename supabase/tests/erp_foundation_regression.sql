@@ -115,7 +115,7 @@ begin
   if bad<>0 then
     raise exception 'Executive COGS guard regression: % rows show profit with incomplete costing',bad;
   end if;
-end $;
+end $$;
 
 -- Canonical executive/operational views must resolve.
 do $$
@@ -132,6 +132,6 @@ begin
   if missing<>0 then
     raise exception 'Missing ERP reporting views: %',missing;
   end if;
-end $;
+end $$;
 
 rollback;
