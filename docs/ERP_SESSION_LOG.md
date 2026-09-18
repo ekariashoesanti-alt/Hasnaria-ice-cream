@@ -2,6 +2,26 @@
 
 Append-only working journal. Newest session goes at the top.
 
+## 2026-09-18 — Sales outlet scope, analytics and rollback controls
+
+**Live changes**
+- Added `outlet_id` to Sales and Sales import batches.
+- Backfilled all 6,472 current Hasnaria sales rows to the MAIN outlet; no Hasnaria sales row remained without an outlet at verification time.
+- New sales/batches default to the sole active outlet when unambiguous.
+- Cash close and QRIS/transfer settlement now calculate expected values per outlet.
+- Added outlet daily KPI, payment-method normalization, product performance, channel mix and target-performance views.
+- Added controlled sales import rollback with reason, period-close protection, audit trail and inventory-consumption cascade cleanup.
+- Added batch reconciliation view and fixed an initial join-overcount bug found during live verification.
+
+**Data-quality finding**
+- Current historical sales batch lineage contains legacy batches marked `completed` with no attached sales, while another batch for the same period (often marked `replaced`) holds the matching transactions/revenue.
+- Transaction totals for the live attached batches reconcile, but historical batch status lineage is inconsistent.
+- HSN-213 therefore remains REVIEW; do not rewrite these historical statuses automatically until importer replacement semantics are fully reconciled.
+
+**Verification**
+- 6,472/6,472 current Hasnaria sales rows have an outlet.
+- ERP foundation regression suite still passes after the Sales migration.
+
 ## 2026-09-18 — HR, CRM, close controls, delegation and automation registry
 
 **Live foundations added**
