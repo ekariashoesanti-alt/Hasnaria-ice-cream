@@ -32,8 +32,12 @@ daily as (
   group by s.brand_id,s.sold_at
 )
 select
-  d.*,
-  case when d.units_sold>0 then d.cogs_known_units/d.units_sold*100 else 100 end as cogs_coverage_pct,
+  d.brand_id,
+  d.metric_date,
+  d.revenue,
+  d.transactions,
+  d.units_sold,
+  d.cogs,
   case
     when d.units_sold=0 or d.cogs_known_units>=d.units_sold
       then d.revenue-d.cogs
@@ -43,7 +47,13 @@ select
     when d.revenue>0 and (d.units_sold=0 or d.cogs_known_units>=d.units_sold)
       then (d.revenue-d.cogs)/d.revenue*100
     else null
-  end as gross_margin_pct
+  end as gross_margin_pct,
+  d.cash_revenue,
+  d.qris_revenue,
+  d.transfer_revenue,
+  d.last_updated_at,
+  d.cogs_known_units,
+  case when d.units_sold>0 then d.cogs_known_units/d.units_sold*100 else 100 end as cogs_coverage_pct
 from daily d;
 
 grant select on public.sales_daily_kpis to authenticated;
@@ -77,8 +87,7 @@ select
   d.brand_id,
   d.metric_date,
   coalesce(s.revenue,0) as revenue,
-  coalesce(s.cogs,0) as cogs_recorded,
-  coalesce(s.cogs_coverage_pct,0) as cogs_coverage_pct,
+  coalesce(s.cogs,0) as cogs,
   s.gross_profit,
   s.gross_margin_pct,
   coalesce(o.operating_expense,0) as operating_expense,
@@ -87,7 +96,8 @@ select
   coalesce(s.cash_revenue,0)+coalesce(s.qris_revenue,0)+coalesce(s.transfer_revenue,0) as sales_cash_in,
   coalesce(sc.supplier_payments,0) as supplier_payments,
   coalesce(s.cash_revenue,0)+coalesce(s.qris_revenue,0)+coalesce(s.transfer_revenue,0)
-    -coalesce(o.operating_expense,0)-coalesce(sc.supplier_payments,0) as net_cash_movement
+    -coalesce(o.operating_expense,0)-coalesce(sc.supplier_payments,0) as net_cash_movement,
+  coalesce(s.cogs_coverage_pct,0) as cogs_coverage_pct
 from days d
 left join sales s on s.brand_id=d.brand_id and s.metric_date=d.metric_date
 left join opex o on o.brand_id=d.brand_id and o.metric_date=d.metric_date
@@ -176,9 +186,7 @@ select
   coalesce(sm.transactions,0) as transactions_mtd,
   case when coalesce(sm.transactions,0)>0
     then coalesce(sm.revenue,0)/sm.transactions else 0 end as average_transaction_value,
-  coalesce(sm.cogs_recorded,0) as cogs_recorded_mtd,
-  case when coalesce(sm.units_sold,0)>0
-    then coalesce(sm.cogs_known_units,0)/sm.units_sold*100 else 100 end as cogs_coverage_pct,
+  coalesce(sm.cogs_recorded,0) as cogs_mtd,
   case
     when coalesce(sm.units_sold,0)=0 or coalesce(sm.cogs_known_units,0)>=sm.units_sold
       then coalesce(sm.revenue,0)-coalesce(sm.cogs_recorded,0)
@@ -206,6 +214,8 @@ select
   coalesce(ap.ap_outstanding,0) as accounts_payable_outstanding,
   coalesce(ap.ap_overdue,0) as accounts_payable_overdue,
   sm.sales_updated_at,
+  case when coalesce(sm.units_sold,0)>0
+    then coalesce(sm.cogs_known_units,0)/sm.units_sold*100 else 100 end as cogs_coverage_pct,
   case when sm.sales_updated_at is null then null
        else p.today-sm.sales_updated_at::date end as sales_data_age_days
 from brand_scope b
