@@ -27,13 +27,27 @@ create policy finance_accounts_read_same_brand
 on public.finance_accounts for select to authenticated
 using ((select private.same_brand(finance_accounts.brand_id)));
 
-create policy finance_accounts_owner_write
-on public.finance_accounts for all to authenticated
+create policy finance_accounts_owner_insert
+on public.finance_accounts for insert to authenticated
+with check (
+  (select private.same_brand(finance_accounts.brand_id))
+  and (select private.has_capability('settings.manage'))
+);
+
+create policy finance_accounts_owner_update
+on public.finance_accounts for update to authenticated
 using (
   (select private.same_brand(finance_accounts.brand_id))
   and (select private.has_capability('settings.manage'))
 )
 with check (
+  (select private.same_brand(finance_accounts.brand_id))
+  and (select private.has_capability('settings.manage'))
+);
+
+create policy finance_accounts_owner_delete
+on public.finance_accounts for delete to authenticated
+using (
   (select private.same_brand(finance_accounts.brand_id))
   and (select private.has_capability('settings.manage'))
 );
@@ -88,8 +102,23 @@ create policy business_targets_read_same_brand
 on public.business_targets for select to authenticated
 using ((select private.same_brand(business_targets.brand_id)));
 
-create policy business_targets_write_management
-on public.business_targets for all to authenticated
+create policy business_targets_insert_management
+on public.business_targets for insert to authenticated
+with check (
+  (select private.same_brand(business_targets.brand_id))
+  and (select private.has_role(array['owner','head_store']))
+  and (
+    business_targets.outlet_id is null
+    or exists (
+      select 1 from public.outlets o
+      where o.id=business_targets.outlet_id
+        and o.brand_id=business_targets.brand_id
+    )
+  )
+);
+
+create policy business_targets_update_management
+on public.business_targets for update to authenticated
 using (
   (select private.same_brand(business_targets.brand_id))
   and (select private.has_role(array['owner','head_store']))
@@ -105,6 +134,13 @@ with check (
         and o.brand_id=business_targets.brand_id
     )
   )
+);
+
+create policy business_targets_delete_management
+on public.business_targets for delete to authenticated
+using (
+  (select private.same_brand(business_targets.brand_id))
+  and (select private.has_role(array['owner','head_store']))
 );
 
 grant select,insert,update,delete on public.business_targets to authenticated;
