@@ -470,7 +470,7 @@
       "id": "HSN-202",
       "milestone": "M2",
       "priority": "P0",
-      "status": "TODO",
+      "status": "DONE",
       "title": "Sales batch rollback",
       "dependencies": [
         "HSN-200"
@@ -483,7 +483,7 @@
       "id": "HSN-203",
       "milestone": "M2",
       "priority": "P0",
-      "status": "REVIEW",
+      "status": "DONE",
       "title": "Normalized sales header/detail contract",
       "dependencies": [
         "HSN-200"
@@ -509,7 +509,7 @@
       "id": "HSN-205",
       "milestone": "M2",
       "priority": "P0",
-      "status": "REVIEW",
+      "status": "DONE",
       "title": "Sales daily KPI service",
       "dependencies": [
         "HSN-203"
@@ -535,7 +535,7 @@
       "id": "HSN-207",
       "milestone": "M2",
       "priority": "P1",
-      "status": "TODO",
+      "status": "REVIEW",
       "title": "Product/category performance",
       "dependencies": [
         "HSN-203"
@@ -561,7 +561,7 @@
       "id": "HSN-209",
       "milestone": "M2",
       "priority": "P1",
-      "status": "REVIEW",
+      "status": "DONE",
       "title": "Sales target vs actual",
       "dependencies": [
         "HSN-113",
@@ -601,7 +601,7 @@
       "id": "HSN-212",
       "milestone": "M2",
       "priority": "P2",
-      "status": "TODO",
+      "status": "DONE",
       "title": "Channel mix reporting",
       "dependencies": [
         "HSN-203"
@@ -614,7 +614,7 @@
       "id": "HSN-213",
       "milestone": "M2",
       "priority": "P0",
-      "status": "TODO",
+      "status": "REVIEW",
       "title": "Sales reconciliation test pack",
       "dependencies": [
         "HSN-200",
@@ -1713,7 +1713,7 @@
       "id": "HSN-807",
       "milestone": "M8",
       "priority": "P1",
-      "status": "TODO",
+      "status": "REVIEW",
       "title": "Outlet selector / consolidated view",
       "dependencies": [
         "HSN-102"
