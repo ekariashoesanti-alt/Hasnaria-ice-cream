@@ -42,11 +42,11 @@ function assertActionContracts() {
   vm.runInNewContext(actionSource, {window,document:{},Date,console,AbortSignal,FormData:function(){},CustomEvent:function(){}});
   const api = window.HasnariaERPActions;
   assert.ok(api, 'ERP action module exports API');
-  for (const type of ['pack_conversion','recipe_verification','sale_item_mapping','selling_price_confirmation','inventory_baseline_confirmation','financing_payment_review','invalid_purchase_qty','unmatched_purchase','unverified_inventory','zero_amount_purchase']) {
+  for (const type of ['pack_conversion','recipe_verification','sale_item_mapping','selling_price_confirmation','inventory_baseline_confirmation','financing_payment_review','invalid_purchase_qty','unmatched_purchase','unverified_inventory','zero_amount_purchase','untracked_stock']) {
     assert.equal(api.canHandle(type), true, `${type} is directly resolvable`);
   }
-  for (const type of ['missing_recipe','missing_component_cost','untracked_stock']) {
-    assert.equal(api.canHandle(type), false, `${type} stays manual until row-specific safe input exists`);
+  for (const type of ['missing_recipe','missing_component_cost']) {
+    assert.equal(api.canHandle(type), false, `${type} stays manual until temporal safety or source cost is available`);
   }
   const request = (action, values) => JSON.parse(JSON.stringify(api._buildRequest(action, values)));
   assert.deepEqual(request({action_type:'pack_conversion',metadata:{conversion_id:'c1'}},{units_per_purchase_unit:'50',reason:'Kemasan supplier'}), {rpc:'resolve_inventory_conversion',params:{p_conversion_id:'c1',p_units_per_purchase_unit:50,p_reason:'Kemasan supplier'}});
@@ -62,9 +62,12 @@ function assertActionContracts() {
   assert.deepEqual(request({action_type:'unverified_inventory',subject:'ODENG',metadata:{}},{inventory_item_id:'i2',qty_multiplier:'30',reason:'Kemasan 30 pcs',post:false}), {rpc:'resolve_purchase_item_rule',params:{p_source_name:'ODENG',p_rule_type:'inventory_alias',p_inventory_item_id:'i2',p_expense_category:null,p_qty_multiplier:30,p_reason:'Kemasan 30 pcs',p_post:false}});
   assert.deepEqual(request({action_type:'zero_amount_purchase',metadata:{source_history_id:'z1'}},{resolution:'actual_amount',effective_amount:'45000',reason:'Nota pembelian'}), {rpc:'resolve_zero_amount_purchase_candidate',params:{p_source_history_id:'z1',p_resolution:'actual_amount',p_effective_amount:45000,p_reason:'Nota pembelian'}});
   assert.deepEqual(request({action_type:'zero_amount_purchase',metadata:{source_history_id:'z2'}},{resolution:'exclude',reason:'Baris bukan transaksi pembelian'}), {rpc:'resolve_zero_amount_purchase_candidate',params:{p_source_history_id:'z2',p_resolution:'exclude',p_effective_amount:null,p_reason:'Baris bukan transaksi pembelian'}});
+  assert.deepEqual(request({action_type:'untracked_stock',metadata:{inventory_item_id:'i3'}},{physical_qty:'0',opname_date:'2026-09-18',reason:'Hitung fisik outlet'}), {rpc:'resolve_physical_stock_opname',params:{p_inventory_item_id:'i3',p_physical_qty:0,p_opname_date:'2026-09-18',p_reason:'Hitung fisik outlet'}});
+  assert.deepEqual(request({action_type:'untracked_stock',metadata:{inventory_item_id:'i4'}},{physical_qty:'12.5',opname_date:'2026-09-18',reason:'Hitung fisik outlet'}), {rpc:'resolve_physical_stock_opname',params:{p_inventory_item_id:'i4',p_physical_qty:12.5,p_opname_date:'2026-09-18',p_reason:'Hitung fisik outlet'}});
   assert.ok(actionSource.includes('ui_invalid_quantity_queue'), 'invalid quantity resolution loads source rows before mutation');
   assert.ok(actionSource.includes("from('ui_inventory_items')"), 'purchase rule forms load inventory master instead of guessing');
   assert.ok(actionSource.includes('resolve_zero_amount_purchase_candidate'), 'zero amount action uses audited backend resolution');
+  assert.ok(actionSource.includes('resolve_physical_stock_opname'), 'untracked stock action uses audited physical opname RPC');
   assert.throws(()=>api._buildRequest({action_type:'pack_conversion',metadata:{conversion_id:'c1'}},{units_per_purchase_unit:'0',reason:'x'}),/lebih dari 0/);
   assert.throws(()=>api._buildRequest({action_type:'financing_payment_review',metadata:{source_history_id:'h4'}},{resolution:'cash_paid',reason:'x'}),/Tanggal pembayaran kas/);
   assert.throws(()=>api._buildRequest({action_type:'invalid_purchase_qty',metadata:{}},{source_history_id:'',effective_qty:'3',reason:'x'}),/Pilih baris pembelian/);
@@ -74,6 +77,8 @@ function assertActionContracts() {
   assert.throws(()=>api._buildRequest({action_type:'unmatched_purchase',subject:'ITEM A',metadata:{}},{rule_type:'expense_candidate',expense_category:'',reason:'x'}),/Kategori biaya/);
   assert.throws(()=>api._buildRequest({action_type:'zero_amount_purchase',metadata:{source_history_id:'z3'}},{resolution:'actual_amount',effective_amount:'0',reason:'x'}),/lebih dari 0/);
   assert.throws(()=>api._buildRequest({action_type:'zero_amount_purchase',metadata:{source_history_id:'z4'}},{resolution:'',reason:'x'}),/Pilih keputusan/);
+  assert.throws(()=>api._buildRequest({action_type:'untracked_stock',metadata:{inventory_item_id:'i5'}},{physical_qty:'-1',opname_date:'2026-09-18',reason:'x'}),/0 atau lebih/);
+  assert.throws(()=>api._buildRequest({action_type:'untracked_stock',metadata:{inventory_item_id:'i5'}},{physical_qty:'1',opname_date:'2099-01-01',reason:'x'}),/masa depan/);
   console.log('ERP action RPC contracts and safety gates: PASS');
 }
 
