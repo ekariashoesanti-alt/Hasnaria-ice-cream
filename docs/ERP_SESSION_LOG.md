@@ -2,6 +2,34 @@
 
 Append-only working journal. Newest session goes at the top.
 
+## 2026-09-18 — HR, CRM, close controls, delegation and automation registry
+
+**Live foundations added**
+- Canonical UOM, business categories and optional customer master.
+- Financial close enforcement on sales, expenses, supplier invoices/payments, goods receipts, cash/settlement and stock opname/manual movements when a matching period is closed.
+- Approval queue with SLA age/status.
+- Sensitive-action reasons for rejection, waste/adjustment and period reopen.
+- Time-bounded approval delegation with audit trail.
+- Automation job/run registry with seeded alert/digest/SLA jobs.
+- HR employee, shift roster, attendance, leave approval, overtime, training and payroll-input views.
+- Marketing campaigns, metrics, promotions, sale attribution, feedback and customer-repeat views.
+- CEO snapshot extended with workforce and marketing metrics.
+
+**Live verification**
+- Financial close guard regression: PASS.
+- HR check-in/check-out + leave submission smoke flow: PASS in rollback transaction.
+- Marketing campaign/metric/promo/sale-attribution ROAS smoke flow: PASS in rollback transaction.
+- Expanded ERP foundation regression suite: PASS.
+- Supabase Security Advisor: only account-level leaked-password protection warning remains.
+- Performance Advisor: only unused-index INFO notices remain after FK/RLS cleanup.
+
+**Important operational gaps kept visible**
+- ChatGPT Site frontend parity/integration is still pending HSN-010.
+- No live COGS/item cost coverage yet, so profit/margin remains intentionally NULL.
+- Marketing spend is analytical and is not yet posted as accounting expense truth.
+- Automation registry exists, but trusted scheduler execution is still pending.
+- Existing Sales data is still brand-level; outlet-specific sales/cash attribution remains a later migration.
+
 ## 2026-09-18 — Procurement, inventory, finance, controls & CEO backend expanded
 
 **Live Supabase implementations**
