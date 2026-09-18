@@ -126,3 +126,38 @@ COGS/profit reporting is guarded by `cogs_coverage_pct`. Incomplete costing retu
 - Imported data preserves provenance.
 - Summary/KPI views never replace transaction truth.
 - Browser/UI is never the security boundary; RLS/database controls are final.
+
+
+## HR & workforce
+
+| Entity / view | Purpose |
+|---|---|
+| employees | Employee master with optional linked app user |
+| shift_templates | Reusable shift times |
+| shift_roster | Employee schedule per date/outlet |
+| attendance | Controlled check-in/out |
+| leave_requests | Leave workflow integrated with generic approval |
+| overtime_records | Overtime inputs |
+| training_records | Training/compliance records |
+| workforce_daily_kpis | Daily attendance/worked-hour productivity |
+| payroll_input_summary | Attendance/overtime payroll inputs |
+| workforce_mtd_summary | Executive workforce summary |
+
+Employee/attendance/leave data is protected by self-or-HR RLS. Salary fields are not made broadly visible.
+
+## Marketing & CRM
+
+| Entity / view | Purpose |
+|---|---|
+| customers | Optional lightweight CRM customer master |
+| marketing_campaigns | Campaign objective/channel/period/budget |
+| campaign_metrics | Spend/reach/impression/engagement/click/lead metrics |
+| promotions | Promotion registry and guardrails |
+| sale_attributions | Single-touch sale-to-campaign/promo attribution |
+| feedback_cases | Customer feedback/complaint workflow |
+| marketing_campaign_performance | Spend, attributed revenue, ROAS and engagement |
+| promotion_performance | Promotion attributed transactions/revenue |
+| customer_repeat_summary | Repeat-customer indicator where customer identity exists |
+| marketing_mtd_summary | Executive marketing summary |
+
+Sales customer identity remains optional; walk-in POS transactions stay valid.
