@@ -166,7 +166,7 @@ Rule-driven approvals, immutable audit, self-approval prevention, exception mode
 | HSN-010 | M0 | P0 | TODO | Parity checklist ChatGPT Site vs repository | HSN-009 |
 | HSN-100 | M1 | P0 | TODO | Tetapkan ERP source-of-truth architecture | HSN-010 |
 | HSN-101 | M1 | P0 | TODO | Organization/brand boundary model | HSN-100 |
-| HSN-102 | M1 | P0 | TODO | Outlet master model | HSN-101 |
+| HSN-102 | M1 | P0 | REVIEW | Outlet master model | HSN-101 |
 | HSN-103 | M1 | P0 | TODO | Default outlet bootstrap untuk Hasnaria | HSN-102 |
 | HSN-104 | M1 | P0 | REVIEW | User profile authority hardening | HSN-101 |
 | HSN-105 | M1 | P0 | TODO | Role capability matrix service | HSN-104 |
@@ -180,7 +180,8 @@ Rule-driven approvals, immutable audit, self-approval prevention, exception mode
 | HSN-113 | M1 | P0 | TODO | ERP settings registry | HSN-101 |
 | HSN-114 | M1 | P1 | TODO | Business calendar / period model | HSN-113 |
 | HSN-115 | M1 | P0 | TODO | Migration naming & rollback runbook | HSN-100 |
-| HSN-116 | M1 | P0 | TODO | Data dictionary | HSN-106, HSN-107 |
+| HSN-116 | M1 | P0 | REVIEW | Data dictionary | HSN-106, HSN-107 |
+| HSN-117 | M1 | P0 | DONE | ERP project tracker and Codex governance | — |
 | HSN-200 | M2 | P0 | REVIEW | Majoo sales import baseline | HSN-111 |
 | HSN-201 | M2 | P0 | TODO | Sales import validation report | HSN-200 |
 | HSN-202 | M2 | P0 | TODO | Sales batch rollback | HSN-200 |
