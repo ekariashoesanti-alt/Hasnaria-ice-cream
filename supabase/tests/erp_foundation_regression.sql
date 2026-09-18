@@ -12,7 +12,14 @@ begin
     ('outlets'),('import_jobs'),('approval_rules'),('approval_requests'),
     ('audit_logs'),('exception_events'),('suppliers'),('purchase_requests'),
     ('purchase_orders'),('goods_receipts'),('purchase_invoices'),
-    ('purchase_payments'),('inventory_movements')
+    ('purchase_payments'),('inventory_movements'),('business_settings'),
+    ('accounting_periods'),('cash_sessions'),('payment_settlements'),('budgets'),
+    ('approval_delegations'),('automation_jobs'),('automation_runs'),
+    ('units_of_measure'),('master_categories'),('customers'),
+    ('employees'),('shift_templates'),('shift_roster'),('attendance'),
+    ('leave_requests'),('overtime_records'),('training_records'),
+    ('marketing_campaigns'),('campaign_metrics'),('promotions'),
+    ('sale_attributions'),('feedback_cases')
   ) v(name)
   where to_regclass('public.'||v.name) is null;
 
@@ -83,7 +90,11 @@ begin
       'decide_approval_request','create_approval_request',
       'submit_purchase_request','create_purchase_order_from_request',
       'issue_purchase_order','post_goods_receipt',
-      'create_purchase_invoice_from_po','post_inventory_movement'
+      'create_purchase_invoice_from_po','post_inventory_movement',
+      'open_cash_session','close_cash_session','reconcile_payment_settlement',
+      'close_accounting_period','reopen_accounting_period',
+      'create_approval_delegation','revoke_approval_delegation',
+      'attendance_check_in','attendance_check_out','submit_leave_request'
     )
     and p.prosecdef;
 
@@ -91,5 +102,36 @@ begin
     raise exception 'Public ERP RPC must not be SECURITY DEFINER: %',bad;
   end if;
 end $$;
+
+-- Incomplete COGS must never produce false profit precision.
+do $
+declare bad integer;
+begin
+  select count(*) into bad
+  from public.executive_kpi_snapshot
+  where cogs_coverage_pct<99.9
+    and (gross_profit_mtd is not null or gross_margin_pct is not null or operating_profit_mtd is not null);
+
+  if bad<>0 then
+    raise exception 'Executive COGS guard regression: % rows show profit with incomplete costing',bad;
+  end if;
+end $;
+
+-- Canonical executive/operational views must resolve.
+do $
+declare missing integer;
+begin
+  select count(*) into missing
+  from (values
+    ('inventory_ledger_balance'),('accounts_payable_aging'),
+    ('business_alerts'),('approval_queue'),('executive_dashboard_snapshot'),
+    ('workforce_mtd_summary'),('marketing_mtd_summary')
+  ) v(name)
+  where to_regclass('public.'||v.name) is null;
+
+  if missing<>0 then
+    raise exception 'Missing ERP reporting views: %',missing;
+  end if;
+end $;
 
 rollback;
