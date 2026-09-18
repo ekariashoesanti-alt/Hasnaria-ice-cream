@@ -59,10 +59,10 @@ function assertActionContracts() {
   const api = window.HasnariaERPActions;
   assert.ok(api, 'ERP action module exports API');
 
-  for (const type of ['pack_conversion','recipe_verification','sale_item_mapping','selling_price_confirmation','inventory_baseline_confirmation','financing_payment_review']) {
+  for (const type of ['pack_conversion','recipe_verification','sale_item_mapping','selling_price_confirmation','inventory_baseline_confirmation','financing_payment_review','invalid_purchase_qty']) {
     assert.equal(api.canHandle(type), true, `${type} is directly resolvable`);
   }
-  for (const type of ['invalid_purchase_qty','unmatched_purchase','unverified_inventory','zero_amount_purchase','missing_recipe','missing_component_cost','untracked_stock']) {
+  for (const type of ['unmatched_purchase','unverified_inventory','zero_amount_purchase','missing_recipe','missing_component_cost','untracked_stock']) {
     assert.equal(api.canHandle(type), false, `${type} stays manual until row-specific safe input exists`);
   }
 
@@ -88,8 +88,14 @@ function assertActionContracts() {
   assert.deepEqual(request({action_type:'financing_payment_review',metadata:{source_history_id:'h3'}},{resolution:'cash_paid',cash_date:'2026-09-18',cash_amount:'82000',reason:'Mutasi bank terverifikasi'}), {
     rpc:'resolve_financing_payment_candidate',params:{p_source_history_id:'h3',p_resolution:'cash_paid',p_cash_date:'2026-09-18',p_cash_amount:82000,p_reason:'Mutasi bank terverifikasi'}
   });
+  assert.deepEqual(request({action_type:'invalid_purchase_qty',metadata:{}},{source_history_id:'h5',effective_qty:'3',reason:'Dokumen sumber'}), {
+    rpc:'resolve_purchase_quantity_override',params:{p_source_history_id:'h5',p_effective_qty:3,p_reason:'Dokumen sumber'}
+  });
+  assert.ok(actionSource.includes('ui_invalid_quantity_queue'), 'invalid quantity resolution loads source rows before mutation');
   assert.throws(()=>api._buildRequest({action_type:'pack_conversion',metadata:{conversion_id:'c1'}},{units_per_purchase_unit:'0',reason:'x'}),/lebih dari 0/);
   assert.throws(()=>api._buildRequest({action_type:'financing_payment_review',metadata:{source_history_id:'h4'}},{resolution:'cash_paid',reason:'x'}),/Tanggal pembayaran kas/);
+  assert.throws(()=>api._buildRequest({action_type:'invalid_purchase_qty',metadata:{}},{source_history_id:'',effective_qty:'3',reason:'x'}),/Pilih baris pembelian/);
+  assert.throws(()=>api._buildRequest({action_type:'invalid_purchase_qty',metadata:{}},{source_history_id:'h5',effective_qty:'0',reason:'x'}),/lebih dari 0/);
   console.log('ERP action RPC contracts and safety gates: PASS');
 }
 
