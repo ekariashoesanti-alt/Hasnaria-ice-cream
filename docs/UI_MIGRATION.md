@@ -20,6 +20,7 @@ Action Center sekarang dapat menyelesaikan workflow berikut melalui RPC Supabase
 - pack conversion → `resolve_inventory_conversion`
 - missing recipe draft → `save_product_recipe_draft`
 - recipe verification + `effective_from` → `resolve_product_recipe_verification_v2`
+- missing component cost → `resolve_inventory_item_cost_verification`
 - sale-item mapping → `resolve_sale_item_product_mapping`
 - selling-price confirmation → `resolve_product_selling_price`
 - historical inventory baseline → `resolve_inventory_baseline_candidate`
@@ -47,9 +48,13 @@ Kontrol keselamatan:
 - Recipe yang sudah verified hanya menghasilkan `SALE_CONSUMPTION` dan verified COGS untuk transaksi pada/ setelah `effective_from`.
 - Perubahan komponen recipe otomatis membuka kembali status menjadi draft dan membersihkan derived COGS/inventory consumption yang tidak lagi valid.
 - Sebanyak 2.694 legacy `SALE_CONSUMPTION` rows yang berasal dari recipe belum verified dibersihkan secara deterministik saat temporal rule diaktifkan; transaksi penjualan sumber tidak diubah.
+- Missing component cost diselesaikan per **inventory item**, bukan per produk. Satu verified cost dapat membuka beberapa produk yang memakai komponen yang sama.
+- Verified component cost tersimpan sebagai histori temporal (`unit_cost`, `effective_from`, `source_reference`, verifier). Workflow ini tidak mengubah quantity stok maupun raw purchase history.
+- Histori harga pembelian yang belum trusted hanya ditampilkan sebagai **referensi** dan tidak diprefill sebagai verified cost. Saat implementasi, item yang masih butuh input Owner adalah `MIE KUNING`, `BERAS`, dan `SAUS GOCHUJANG`; belum ada manual cost verification yang dibuat otomatis.
+- HPP temporal memilih cost terverifikasi terakhir yang berlaku pada tanggal transaksi. Valuasi inventory memakai latest verified cost sampai hari ini.
 - Setelah RPC sukses, bootstrap/action queue dimuat ulang.
 
-Action yang masih diarahkan ke workflow manual/lanjutan: **missing component cost**. Cost hanya boleh dibuka setelah ada sumber cost atau unit conversion yang dapat diverifikasi; UI tidak membuat fallback cost.
+Semua tipe blocker utama di Action Center sekarang memiliki workflow resolusi aman. Namun data bisnis masih tetap menunggu input Owner untuk item yang membutuhkan bukti; implementasi UI/RPC tidak berarti blocker tersebut sudah diselesaikan.
 
 Write bisnis hanya terjadi jika Owner yang sudah login secara eksplisit mengirim form action; backend RLS/RPC tetap menjadi enforcement utama.
 
@@ -57,9 +62,9 @@ Write bisnis hanya terjadi jika Owner yang sudah login secara eksplisit mengirim
 
 Jalankan `node scripts/vercel-build-check.js`. Gate meliputi syntax, importer, authority `user_profiles`, password policy, canonical runtime, CSP, tracker, integrasi shell ERP, dan kontrak parameter RPC Action Center.
 
-Regression test menjaga modul existing Penjualan/Pembelian/Keuangan/Stok tetap tersedia, memvalidasi parameter RPC, memastikan recipe draft terpisah dari verification, dan menolak duplicate component atau qty <= 0.
+Regression test menjaga modul existing Penjualan/Pembelian/Keuangan/Stok tetap tersedia, memvalidasi parameter RPC, memastikan recipe draft terpisah dari verification, menolak duplicate component/qty <= 0, dan menolak verified cost tanpa nominal positif, tanggal berlaku valid, serta sumber bukti.
 
-Preview harus diverifikasi sebelum merge. Automated gate dan Vercel preview harus hijau. Pemeriksaan authenticated Owner tetap dilakukan read-only terlebih dahulu; jangan mengirim impor, konfirmasi biaya, recipe, stock opname, atau transaksi percobaan hanya untuk smoke test.
+Preview harus diverifikasi sebelum merge. Automated gate dan Vercel preview harus hijau. Pemeriksaan authenticated Owner tetap dilakukan read-only terlebih dahulu; jangan mengirim impor, konfirmasi biaya, recipe, verified cost, stock opname, atau transaksi percobaan hanya untuk smoke test.
 
 ## Pengembangan selanjutnya
 
