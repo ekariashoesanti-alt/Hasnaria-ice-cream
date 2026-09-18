@@ -184,18 +184,18 @@ Rule-driven approvals, immutable audit, self-approval prevention, exception mode
 | HSN-117 | M1 | P0 | DONE | ERP project tracker and Codex governance | — |
 | HSN-200 | M2 | P0 | REVIEW | Majoo sales import baseline | HSN-111 |
 | HSN-201 | M2 | P0 | TODO | Sales import validation report | HSN-200 |
-| HSN-202 | M2 | P0 | TODO | Sales batch rollback | HSN-200 |
-| HSN-203 | M2 | P0 | REVIEW | Normalized sales header/detail contract | HSN-200 |
+| HSN-202 | M2 | P0 | DONE | Sales batch rollback | HSN-200 |
+| HSN-203 | M2 | P0 | DONE | Normalized sales header/detail contract | HSN-200 |
 | HSN-204 | M2 | P0 | REVIEW | Payment method normalization | HSN-203 |
-| HSN-205 | M2 | P0 | REVIEW | Sales daily KPI service | HSN-203 |
+| HSN-205 | M2 | P0 | DONE | Sales daily KPI service | HSN-203 |
 | HSN-206 | M2 | P0 | REVIEW | Sales MTD/MoM/YoY service | HSN-205 |
-| HSN-207 | M2 | P1 | TODO | Product/category performance | HSN-203 |
+| HSN-207 | M2 | P1 | REVIEW | Product/category performance | HSN-203 |
 | HSN-208 | M2 | P1 | REVIEW | Hourly sales analysis | HSN-203 |
-| HSN-209 | M2 | P1 | REVIEW | Sales target vs actual | HSN-113, HSN-205 |
+| HSN-209 | M2 | P1 | DONE | Sales target vs actual | HSN-113, HSN-205 |
 | HSN-210 | M2 | P1 | TODO | Refund/void dashboard | HSN-203 |
 | HSN-211 | M2 | P1 | DONE | Sales anomaly rules | HSN-206 |
-| HSN-212 | M2 | P2 | TODO | Channel mix reporting | HSN-203 |
-| HSN-213 | M2 | P0 | TODO | Sales reconciliation test pack | HSN-200, HSN-203 |
+| HSN-212 | M2 | P2 | DONE | Channel mix reporting | HSN-203 |
+| HSN-213 | M2 | P0 | REVIEW | Sales reconciliation test pack | HSN-200, HSN-203 |
 | HSN-300 | M3 | P0 | REVIEW | Purchase file upload UX baseline | HSN-111 |
 | HSN-301 | M3 | P0 | TODO | Purchase import validation | HSN-300 |
 | HSN-302 | M3 | P0 | TODO | Purchase import batch model | HSN-111, HSN-301 |
@@ -276,7 +276,7 @@ Rule-driven approvals, immutable audit, self-approval prevention, exception mode
 | HSN-804 | M8 | P0 | REVIEW | Owner Decision Center | HSN-901, HSN-910 |
 | HSN-805 | M8 | P0 | REVIEW | Critical alert prioritization | HSN-910 |
 | HSN-806 | M8 | P1 | TODO | Period selector MTD/QTD/YTD/custom | HSN-114 |
-| HSN-807 | M8 | P1 | TODO | Outlet selector / consolidated view | HSN-102 |
+| HSN-807 | M8 | P1 | REVIEW | Outlet selector / consolidated view | HSN-102 |
 | HSN-808 | M8 | P1 | TODO | Executive drill-down | HSN-801 |
 | HSN-809 | M8 | P1 | TODO | CEO insight narrative | HSN-801, HSN-803 |
 | HSN-810 | M8 | P1 | TODO | Daily owner digest | HSN-804, HSN-809 |
