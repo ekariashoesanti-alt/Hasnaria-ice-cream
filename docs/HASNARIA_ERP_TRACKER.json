@@ -237,7 +237,7 @@
       "id": "HSN-102",
       "milestone": "M1",
       "priority": "P0",
-      "status": "REVIEW",
+      "status": "DONE",
       "title": "Outlet master model",
       "dependencies": [
         "HSN-101"
@@ -250,7 +250,7 @@
       "id": "HSN-103",
       "milestone": "M1",
       "priority": "P0",
-      "status": "TODO",
+      "status": "DONE",
       "title": "Default outlet bootstrap untuk Hasnaria",
       "dependencies": [
         "HSN-102"
@@ -276,7 +276,7 @@
       "id": "HSN-105",
       "milestone": "M1",
       "priority": "P0",
-      "status": "TODO",
+      "status": "DONE",
       "title": "Role capability matrix service",
       "dependencies": [
         "HSN-104"
@@ -354,7 +354,7 @@
       "id": "HSN-111",
       "milestone": "M1",
       "priority": "P0",
-      "status": "TODO",
+      "status": "DONE",
       "title": "Import job model",
       "dependencies": [
         "HSN-101"
@@ -367,7 +367,7 @@
       "id": "HSN-112",
       "milestone": "M1",
       "priority": "P0",
-      "status": "TODO",
+      "status": "DONE",
       "title": "File provenance and duplicate protection",
       "dependencies": [
         "HSN-111"
@@ -1807,7 +1807,7 @@
       "id": "HSN-900",
       "milestone": "M9",
       "priority": "P0",
-      "status": "TODO",
+      "status": "DONE",
       "title": "Approval rule data model",
       "dependencies": [
         "HSN-105",
@@ -1821,7 +1821,7 @@
       "id": "HSN-901",
       "milestone": "M9",
       "priority": "P0",
-      "status": "TODO",
+      "status": "REVIEW",
       "title": "Generic approval request engine",
       "dependencies": [
         "HSN-900"
@@ -1834,7 +1834,7 @@
       "id": "HSN-902",
       "milestone": "M9",
       "priority": "P0",
-      "status": "TODO",
+      "status": "REVIEW",
       "title": "Approval history immutable log",
       "dependencies": [
         "HSN-901"
@@ -1847,7 +1847,7 @@
       "id": "HSN-903",
       "milestone": "M9",
       "priority": "P0",
-      "status": "TODO",
+      "status": "DONE",
       "title": "Self-approval prevention",
       "dependencies": [
         "HSN-901"
@@ -1860,7 +1860,7 @@
       "id": "HSN-904",
       "milestone": "M9",
       "priority": "P0",
-      "status": "TODO",
+      "status": "DONE",
       "title": "Audit log foundation",
       "dependencies": [
         "HSN-100"
@@ -1873,7 +1873,7 @@
       "id": "HSN-905",
       "milestone": "M9",
       "priority": "P0",
-      "status": "TODO",
+      "status": "DONE",
       "title": "Audit immutability controls",
       "dependencies": [
         "HSN-904"
@@ -1925,7 +1925,7 @@
       "id": "HSN-909",
       "milestone": "M9",
       "priority": "P0",
-      "status": "TODO",
+      "status": "DONE",
       "title": "Exception event model",
       "dependencies": [
         "HSN-100"
