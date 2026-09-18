@@ -635,7 +635,662 @@
       ],
       "acceptance": "Control satu baris: pilih/upload, filename, tahun; state jelas.",
       "owner": "Codex/ChatGPT",
-      "updated_at…4946 tokens truncated…    "id": "HSN-602",
+      "updated_at": "2026-09-18"
+    },
+    {
+      "id": "HSN-301",
+      "milestone": "M3",
+      "priority": "P0",
+      "status": "TODO",
+      "title": "Purchase import validation",
+      "dependencies": [
+        "HSN-300"
+      ],
+      "acceptance": "Rows invalid, date carry-forward, amount parsing dan duplicates terlihat sebelum commit.",
+      "owner": "Codex/ChatGPT",
+      "updated_at": "2026-09-18"
+    },
+    {
+      "id": "HSN-302",
+      "milestone": "M3",
+      "priority": "P0",
+      "status": "TODO",
+      "title": "Purchase import batch model",
+      "dependencies": [
+        "HSN-111",
+        "HSN-301"
+      ],
+      "acceptance": "Pembelian final dapat dilacak ke batch/file/row asal.",
+      "owner": "Codex/ChatGPT",
+      "updated_at": "2026-09-18"
+    },
+    {
+      "id": "HSN-303",
+      "milestone": "M3",
+      "priority": "P0",
+      "status": "TODO",
+      "title": "Supplier mapping during import",
+      "dependencies": [
+        "HSN-107",
+        "HSN-301"
+      ],
+      "acceptance": "Nama supplier dapat dipetakan tanpa merusak raw source.",
+      "owner": "Codex/ChatGPT",
+      "updated_at": "2026-09-18"
+    },
+    {
+      "id": "HSN-304",
+      "milestone": "M3",
+      "priority": "P0",
+      "status": "DONE",
+      "title": "Purchase Request workflow",
+      "dependencies": [
+        "HSN-107",
+        "HSN-105"
+      ],
+      "acceptance": "User berwenang membuat PR dengan item, qty, estimate, reason.",
+      "owner": "Codex/ChatGPT",
+      "updated_at": "2026-09-18"
+    },
+    {
+      "id": "HSN-305",
+      "milestone": "M3",
+      "priority": "P0",
+      "status": "DONE",
+      "title": "Purchase approval threshold",
+      "dependencies": [
+        "HSN-304",
+        "HSN-900"
+      ],
+      "acceptance": "PR naik ke approver sesuai rule/nominal dan role.",
+      "owner": "Codex/ChatGPT",
+      "updated_at": "2026-09-18"
+    },
+    {
+      "id": "HSN-306",
+      "milestone": "M3",
+      "priority": "P0",
+      "status": "DONE",
+      "title": "Purchase Order lifecycle",
+      "dependencies": [
+        "HSN-305"
+      ],
+      "acceptance": "Approved PR dapat menjadi PO bernomor dengan status lifecycle.",
+      "owner": "Codex/ChatGPT",
+      "updated_at": "2026-09-18"
+    },
+    {
+      "id": "HSN-307",
+      "milestone": "M3",
+      "priority": "P0",
+      "status": "DONE",
+      "title": "Goods Receipt",
+      "dependencies": [
+        "HSN-306"
+      ],
+      "acceptance": "Receipt mencatat qty diterima, partial receipt, date, receiver.",
+      "owner": "Codex/ChatGPT",
+      "updated_at": "2026-09-18"
+    },
+    {
+      "id": "HSN-308",
+      "milestone": "M3",
+      "priority": "P0",
+      "status": "DONE",
+      "title": "Purchase invoice",
+      "dependencies": [
+        "HSN-307"
+      ],
+      "acceptance": "Invoice supplier terkait PO/receipt dan memiliki due date/status.",
+      "owner": "Codex/ChatGPT",
+      "updated_at": "2026-09-18"
+    },
+    {
+      "id": "HSN-309",
+      "milestone": "M3",
+      "priority": "P0",
+      "status": "DONE",
+      "title": "Purchase payment status",
+      "dependencies": [
+        "HSN-308",
+        "HSN-503"
+      ],
+      "acceptance": "Paid/partial/unpaid sinkron dengan Finance/AP.",
+      "owner": "Codex/ChatGPT",
+      "updated_at": "2026-09-18"
+    },
+    {
+      "id": "HSN-310",
+      "milestone": "M3",
+      "priority": "P1",
+      "status": "DONE",
+      "title": "Supplier spend analysis",
+      "dependencies": [
+        "HSN-302",
+        "HSN-303"
+      ],
+      "acceptance": "Spend by supplier/month/category tersedia.",
+      "owner": "Codex/ChatGPT",
+      "updated_at": "2026-09-18"
+    },
+    {
+      "id": "HSN-311",
+      "milestone": "M3",
+      "priority": "P1",
+      "status": "DONE",
+      "title": "Purchase price variance",
+      "dependencies": [
+        "HSN-302",
+        "HSN-303"
+      ],
+      "acceptance": "Harga item dibanding historis dan kenaikan signifikan diberi alert.",
+      "owner": "Codex/ChatGPT",
+      "updated_at": "2026-09-18"
+    },
+    {
+      "id": "HSN-312",
+      "milestone": "M3",
+      "priority": "P1",
+      "status": "TODO",
+      "title": "Purchase trend annual chart",
+      "dependencies": [
+        "HSN-302"
+      ],
+      "acceptance": "Jan–Des konsisten, missing month kosong/zero sesuai definisi.",
+      "owner": "Codex/ChatGPT",
+      "updated_at": "2026-09-18"
+    },
+    {
+      "id": "HSN-313",
+      "milestone": "M3",
+      "priority": "P1",
+      "status": "REVIEW",
+      "title": "Open PO / overdue receipt dashboard",
+      "dependencies": [
+        "HSN-306",
+        "HSN-307"
+      ],
+      "acceptance": "PO outstanding terlihat dan aging dihitung.",
+      "owner": "Codex/ChatGPT",
+      "updated_at": "2026-09-18"
+    },
+    {
+      "id": "HSN-314",
+      "milestone": "M3",
+      "priority": "P0",
+      "status": "REVIEW",
+      "title": "Purchase regression tests",
+      "dependencies": [
+        "HSN-300",
+        "HSN-302"
+      ],
+      "acceptance": "Select file, filename, upload, year, duplicate, commit dan refresh teruji.",
+      "owner": "Codex/ChatGPT",
+      "updated_at": "2026-09-18"
+    },
+    {
+      "id": "HSN-400",
+      "milestone": "M4",
+      "priority": "P0",
+      "status": "REVIEW",
+      "title": "Inventory item master baseline",
+      "dependencies": [
+        "HSN-109"
+      ],
+      "acceptance": "Item stok punya category, unit, min, reorder qty, active.",
+      "owner": "Codex/ChatGPT",
+      "updated_at": "2026-09-18"
+    },
+    {
+      "id": "HSN-401",
+      "milestone": "M4",
+      "priority": "P0",
+      "status": "REVIEW",
+      "title": "Recipe/BOM mapping baseline",
+      "dependencies": [
+        "HSN-106",
+        "HSN-400"
+      ],
+      "acceptance": "Produk penjualan memetakan konsumsi inventory item.",
+      "owner": "Codex/ChatGPT",
+      "updated_at": "2026-09-18"
+    },
+    {
+      "id": "HSN-402",
+      "milestone": "M4",
+      "priority": "P0",
+      "status": "REVIEW",
+      "title": "Stock reconciliation view baseline",
+      "dependencies": [
+        "HSN-401"
+      ],
+      "acceptance": "System stock = baseline + purchase - usage dengan latest opname baseline.",
+      "owner": "Codex/ChatGPT",
+      "updated_at": "2026-09-18"
+    },
+    {
+      "id": "HSN-403",
+      "milestone": "M4",
+      "priority": "P0",
+      "status": "DONE",
+      "title": "Canonical inventory movement ledger",
+      "dependencies": [
+        "HSN-402"
+      ],
+      "acceptance": "Semua movement memiliki type, qty, reference, actor, timestamp.",
+      "owner": "Codex/ChatGPT",
+      "updated_at": "2026-09-18"
+    },
+    {
+      "id": "HSN-404",
+      "milestone": "M4",
+      "priority": "P0",
+      "status": "DONE",
+      "title": "Purchase receipt posts stock movement",
+      "dependencies": [
+        "HSN-307",
+        "HSN-403"
+      ],
+      "acceptance": "Goods receipt otomatis menambah stok, idempotent.",
+      "owner": "Codex/ChatGPT",
+      "updated_at": "2026-09-18"
+    },
+    {
+      "id": "HSN-405",
+      "milestone": "M4",
+      "priority": "P0",
+      "status": "DONE",
+      "title": "Sales posts consumption movement",
+      "dependencies": [
+        "HSN-203",
+        "HSN-401",
+        "HSN-403"
+      ],
+      "acceptance": "Sales consumption konsisten dengan recipe dan tidak double-post.",
+      "owner": "Codex/ChatGPT",
+      "updated_at": "2026-09-18"
+    },
+    {
+      "id": "HSN-406",
+      "milestone": "M4",
+      "priority": "P0",
+      "status": "DONE",
+      "title": "Waste movement",
+      "dependencies": [
+        "HSN-403"
+      ],
+      "acceptance": "Waste mengurangi stock dengan category/reason/actor.",
+      "owner": "Codex/ChatGPT",
+      "updated_at": "2026-09-18"
+    },
+    {
+      "id": "HSN-407",
+      "milestone": "M4",
+      "priority": "P0",
+      "status": "DONE",
+      "title": "Adjustment movement",
+      "dependencies": [
+        "HSN-403"
+      ],
+      "acceptance": "Adjustment membutuhkan reason dan authority.",
+      "owner": "Codex/ChatGPT",
+      "updated_at": "2026-09-18"
+    },
+    {
+      "id": "HSN-408",
+      "milestone": "M4",
+      "priority": "P0",
+      "status": "DONE",
+      "title": "Physical stock opname",
+      "dependencies": [
+        "HSN-402"
+      ],
+      "acceptance": "Opname menyimpan system vs physical dan variance auditable.",
+      "owner": "Codex/ChatGPT",
+      "updated_at": "2026-09-18"
+    },
+    {
+      "id": "HSN-409",
+      "milestone": "M4",
+      "priority": "P0",
+      "status": "REVIEW",
+      "title": "Stock valuation",
+      "dependencies": [
+        "HSN-403"
+      ],
+      "acceptance": "Inventory value menggunakan costing rule terdokumentasi.",
+      "owner": "Codex/ChatGPT",
+      "updated_at": "2026-09-18"
+    },
+    {
+      "id": "HSN-410",
+      "milestone": "M4",
+      "priority": "P1",
+      "status": "TODO",
+      "title": "Reorder recommendation",
+      "dependencies": [
+        "HSN-403"
+      ],
+      "acceptance": "Recommendation berdasarkan min/reorder dan consumption.",
+      "owner": "Codex/ChatGPT",
+      "updated_at": "2026-09-18"
+    },
+    {
+      "id": "HSN-411",
+      "milestone": "M4",
+      "priority": "P1",
+      "status": "TODO",
+      "title": "Days of inventory",
+      "dependencies": [
+        "HSN-403",
+        "HSN-205"
+      ],
+      "acceptance": "Coverage days dihitung dari consumption trend.",
+      "owner": "Codex/ChatGPT",
+      "updated_at": "2026-09-18"
+    },
+    {
+      "id": "HSN-412",
+      "milestone": "M4",
+      "priority": "P1",
+      "status": "TODO",
+      "title": "Slow-moving / dead stock",
+      "dependencies": [
+        "HSN-403"
+      ],
+      "acceptance": "Item tanpa movement sesuai threshold teridentifikasi.",
+      "owner": "Codex/ChatGPT",
+      "updated_at": "2026-09-18"
+    },
+    {
+      "id": "HSN-413",
+      "milestone": "M4",
+      "priority": "P1",
+      "status": "TODO",
+      "title": "Inventory variance dashboard",
+      "dependencies": [
+        "HSN-408"
+      ],
+      "acceptance": "Variance opname per item/periode dan root cause notes terlihat.",
+      "owner": "Codex/ChatGPT",
+      "updated_at": "2026-09-18"
+    },
+    {
+      "id": "HSN-414",
+      "milestone": "M4",
+      "priority": "P0",
+      "status": "REVIEW",
+      "title": "Negative stock prevention policy",
+      "dependencies": [
+        "HSN-403"
+      ],
+      "acceptance": "Posting yang membuat stock negatif mengikuti rule eksplisit/exception.",
+      "owner": "Codex/ChatGPT",
+      "updated_at": "2026-09-18"
+    },
+    {
+      "id": "HSN-415",
+      "milestone": "M4",
+      "priority": "P0",
+      "status": "DONE",
+      "title": "Inventory reconciliation test pack",
+      "dependencies": [
+        "HSN-403",
+        "HSN-408"
+      ],
+      "acceptance": "Known opening+purchase-sales-opname menghasilkan system qty yang benar.",
+      "owner": "Codex/ChatGPT",
+      "updated_at": "2026-09-18"
+    },
+    {
+      "id": "HSN-500",
+      "milestone": "M5",
+      "priority": "P0",
+      "status": "DONE",
+      "title": "Chart of accounts minimal",
+      "dependencies": [
+        "HSN-100"
+      ],
+      "acceptance": "COA sederhana mendukung revenue, COGS, opex, cash, payable.",
+      "owner": "Codex/ChatGPT",
+      "updated_at": "2026-09-18"
+    },
+    {
+      "id": "HSN-501",
+      "milestone": "M5",
+      "priority": "P0",
+      "status": "DONE",
+      "title": "Cash session opening/closing",
+      "dependencies": [
+        "HSN-105"
+      ],
+      "acceptance": "Shift/session menyimpan opening, expected, actual, variance.",
+      "owner": "Codex/ChatGPT",
+      "updated_at": "2026-09-18"
+    },
+    {
+      "id": "HSN-502",
+      "milestone": "M5",
+      "priority": "P0",
+      "status": "DONE",
+      "title": "Cash/QRIS/transfer settlement model",
+      "dependencies": [
+        "HSN-204"
+      ],
+      "acceptance": "Settlement status per payment method dapat direkonsiliasi.",
+      "owner": "Codex/ChatGPT",
+      "updated_at": "2026-09-18"
+    },
+    {
+      "id": "HSN-503",
+      "milestone": "M5",
+      "priority": "P0",
+      "status": "DONE",
+      "title": "Accounts Payable ledger",
+      "dependencies": [
+        "HSN-308"
+      ],
+      "acceptance": "Supplier invoice, due, payment, aging tersedia.",
+      "owner": "Codex/ChatGPT",
+      "updated_at": "2026-09-18"
+    },
+    {
+      "id": "HSN-504",
+      "milestone": "M5",
+      "priority": "P1",
+      "status": "TODO",
+      "title": "Bank transaction import",
+      "dependencies": [
+        "HSN-111"
+      ],
+      "acceptance": "Bank/settlement file dapat diimport batch dengan duplicate protection.",
+      "owner": "Codex/ChatGPT",
+      "updated_at": "2026-09-18"
+    },
+    {
+      "id": "HSN-505",
+      "milestone": "M5",
+      "priority": "P1",
+      "status": "TODO",
+      "title": "Bank reconciliation",
+      "dependencies": [
+        "HSN-502",
+        "HSN-504"
+      ],
+      "acceptance": "Transaksi bank dicocokkan dengan settlement/payment.",
+      "owner": "Codex/ChatGPT",
+      "updated_at": "2026-09-18"
+    },
+    {
+      "id": "HSN-506",
+      "milestone": "M5",
+      "priority": "P0",
+      "status": "TODO",
+      "title": "Expense classification hardening",
+      "dependencies": [
+        "HSN-110"
+      ],
+      "acceptance": "Expense categories konsisten dan approval tetap authoritative.",
+      "owner": "Codex/ChatGPT",
+      "updated_at": "2026-09-18"
+    },
+    {
+      "id": "HSN-507",
+      "milestone": "M5",
+      "priority": "P0",
+      "status": "REVIEW",
+      "title": "COGS calculation contract",
+      "dependencies": [
+        "HSN-409",
+        "HSN-205"
+      ],
+      "acceptance": "COGS memiliki formula konsisten dan traceable.",
+      "owner": "Codex/ChatGPT",
+      "updated_at": "2026-09-18"
+    },
+    {
+      "id": "HSN-508",
+      "milestone": "M5",
+      "priority": "P0",
+      "status": "REVIEW",
+      "title": "Gross profit and gross margin",
+      "dependencies": [
+        "HSN-205",
+        "HSN-507"
+      ],
+      "acceptance": "GP dan GM tersedia harian/bulanan/outlet.",
+      "owner": "Codex/ChatGPT",
+      "updated_at": "2026-09-18"
+    },
+    {
+      "id": "HSN-509",
+      "milestone": "M5",
+      "priority": "P0",
+      "status": "REVIEW",
+      "title": "Operating expense summary",
+      "dependencies": [
+        "HSN-506"
+      ],
+      "acceptance": "Opex per kategori/periode tersedia.",
+      "owner": "Codex/ChatGPT",
+      "updated_at": "2026-09-18"
+    },
+    {
+      "id": "HSN-510",
+      "milestone": "M5",
+      "priority": "P0",
+      "status": "REVIEW",
+      "title": "Operating profit",
+      "dependencies": [
+        "HSN-508",
+        "HSN-509"
+      ],
+      "acceptance": "Operating profit = GP - Opex sesuai period.",
+      "owner": "Codex/ChatGPT",
+      "updated_at": "2026-09-18"
+    },
+    {
+      "id": "HSN-511",
+      "milestone": "M5",
+      "priority": "P0",
+      "status": "REVIEW",
+      "title": "Cashflow report",
+      "dependencies": [
+        "HSN-501",
+        "HSN-503",
+        "HSN-506"
+      ],
+      "acceptance": "Cash inflow/outflow dan net cash movement tersedia.",
+      "owner": "Codex/ChatGPT",
+      "updated_at": "2026-09-18"
+    },
+    {
+      "id": "HSN-512",
+      "milestone": "M5",
+      "priority": "P1",
+      "status": "DONE",
+      "title": "Budget model",
+      "dependencies": [
+        "HSN-113",
+        "HSN-500"
+      ],
+      "acceptance": "Budget per kategori/periode/outlet tersedia.",
+      "owner": "Codex/ChatGPT",
+      "updated_at": "2026-09-18"
+    },
+    {
+      "id": "HSN-513",
+      "milestone": "M5",
+      "priority": "P1",
+      "status": "DONE",
+      "title": "Budget vs actual",
+      "dependencies": [
+        "HSN-512",
+        "HSN-509"
+      ],
+      "acceptance": "Variance dan over-budget alert tersedia.",
+      "owner": "Codex/ChatGPT",
+      "updated_at": "2026-09-18"
+    },
+    {
+      "id": "HSN-514",
+      "milestone": "M5",
+      "priority": "P0",
+      "status": "DONE",
+      "title": "Financial close checklist",
+      "dependencies": [
+        "HSN-114",
+        "HSN-510",
+        "HSN-511"
+      ],
+      "acceptance": "Period close mencegah perubahan tanpa controlled reopen.",
+      "owner": "Codex/ChatGPT",
+      "updated_at": "2026-09-18"
+    },
+    {
+      "id": "HSN-515",
+      "milestone": "M5",
+      "priority": "P0",
+      "status": "REVIEW",
+      "title": "Finance reconciliation test pack",
+      "dependencies": [
+        "HSN-508",
+        "HSN-510",
+        "HSN-511"
+      ],
+      "acceptance": "Known dataset menghasilkan revenue/COGS/GP/Opex/profit/cashflow yang benar.",
+      "owner": "Codex/ChatGPT",
+      "updated_at": "2026-09-18"
+    },
+    {
+      "id": "HSN-600",
+      "milestone": "M6",
+      "priority": "P0",
+      "status": "DONE",
+      "title": "Employee master",
+      "dependencies": [
+        "HSN-101"
+      ],
+      "acceptance": "Karyawan terhubung ke user bila ada, outlet, role pekerjaan, status.",
+      "owner": "Codex/ChatGPT",
+      "updated_at": "2026-09-18"
+    },
+    {
+      "id": "HSN-601",
+      "milestone": "M6",
+      "priority": "P0",
+      "status": "DONE",
+      "title": "Shift template and roster",
+      "dependencies": [
+        "HSN-600",
+        "HSN-102"
+      ],
+      "acceptance": "Jadwal shift per outlet/date tersedia.",
+      "owner": "Codex/ChatGPT",
+      "updated_at": "2026-09-18"
+    },
+    {
+      "id": "HSN-602",
       "milestone": "M6",
       "priority": "P0",
       "status": "DONE",
