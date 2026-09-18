@@ -2,6 +2,40 @@
 
 Append-only working journal. Newest session goes at the top.
 
+## 2026-09-18 — Procurement, inventory, finance, controls & CEO backend expanded
+
+**Live Supabase implementations**
+- Supplier master and Purchase Request workflow.
+- Rule-driven approval creation/routing; direct client mutation of approval queue revoked.
+- Purchase Order lifecycle, Goods Receipt, supplier invoice and payment/AP.
+- Canonical inventory movement ledger with purchase/sales/opname synchronization.
+- Goods Receipt posts idempotent stock movements.
+- Manual Waste/Adjustment/Transfer movements use controlled RPCs and audit logging.
+- Minimal Chart of Accounts, targets, budgets, AP aging, supplier spend and price variance.
+- Cash opening/closing and QRIS/transfer settlement reconciliation.
+- Accounting period open/close lifecycle.
+- Business settings and alert thresholds.
+- Business alerts: SALES_DROP, LOW_STOCK, HIGH_WASTE, OVER_BUDGET, PRICE_INCREASE, LATE_APPROVAL, CASH_VARIANCE, SETTLEMENT_VARIANCE.
+- Executive KPI, Decision Center and consolidated CEO snapshot backend.
+
+**Verification evidence**
+- Full PR → PO → GR → Inventory → Invoice → Partial Payment → Paid smoke flow: PASS in rollback transaction.
+- Cash close + variance alert + settlement variance + period close/reopen smoke flow: PASS in rollback transaction.
+- Inventory ledger reconciled 101/101 items to existing inventory reconciliation with 0 mismatches.
+- ERP foundation regression SQL passes.
+- Public privileged RPCs are SECURITY INVOKER wrappers around private validated functions.
+- Current Supabase security advisor has no ERP schema/RLS critical warning. Remaining warning is Auth leaked-password protection disabled at project setting level.
+- Performance advisor currently only reports unused-index informational notices; newly-created indexes have not yet accumulated workload statistics.
+
+**Executive data-quality guard**
+- Live sales COGS coverage is currently incomplete, so Gross Profit, Gross Margin and Operating Profit intentionally return NULL instead of a misleading 100% margin.
+- Inventory valuation also exposes cost-coverage percentage.
+- Sales freshness and untracked-stock warnings feed the Owner Decision Center.
+
+**Frontend status**
+- Backend is live in Supabase and repository.
+- ChatGPT Site UI parity/integration is still pending HSN-010 and must not be claimed complete until Work/Codex can edit/verify the Site.
+
 ## 2026-09-18 — Core ERP foundations applied to live Supabase
 
 **Applied & verified**
