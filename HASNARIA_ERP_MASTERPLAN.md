@@ -166,17 +166,17 @@ Rule-driven approvals, immutable audit, self-approval prevention, exception mode
 | HSN-010 | M0 | P0 | TODO | Parity checklist ChatGPT Site vs repository | HSN-009 |
 | HSN-100 | M1 | P0 | TODO | Tetapkan ERP source-of-truth architecture | HSN-010 |
 | HSN-101 | M1 | P0 | TODO | Organization/brand boundary model | HSN-100 |
-| HSN-102 | M1 | P0 | REVIEW | Outlet master model | HSN-101 |
-| HSN-103 | M1 | P0 | TODO | Default outlet bootstrap untuk Hasnaria | HSN-102 |
+| HSN-102 | M1 | P0 | DONE | Outlet master model | HSN-101 |
+| HSN-103 | M1 | P0 | DONE | Default outlet bootstrap untuk Hasnaria | HSN-102 |
 | HSN-104 | M1 | P0 | REVIEW | User profile authority hardening | HSN-101 |
-| HSN-105 | M1 | P0 | TODO | Role capability matrix service | HSN-104 |
+| HSN-105 | M1 | P0 | DONE | Role capability matrix service | HSN-104 |
 | HSN-106 | M1 | P0 | REVIEW | Product master canonicalization | HSN-101 |
 | HSN-107 | M1 | P0 | TODO | Supplier master | HSN-101 |
 | HSN-108 | M1 | P1 | TODO | Customer master lightweight | HSN-101 |
 | HSN-109 | M1 | P0 | TODO | Units of measure master | HSN-106 |
 | HSN-110 | M1 | P0 | TODO | Category master produk/pembelian/expense | HSN-106 |
-| HSN-111 | M1 | P0 | TODO | Import job model | HSN-101 |
-| HSN-112 | M1 | P0 | TODO | File provenance and duplicate protection | HSN-111 |
+| HSN-111 | M1 | P0 | DONE | Import job model | HSN-101 |
+| HSN-112 | M1 | P0 | DONE | File provenance and duplicate protection | HSN-111 |
 | HSN-113 | M1 | P0 | TODO | ERP settings registry | HSN-101 |
 | HSN-114 | M1 | P1 | TODO | Business calendar / period model | HSN-113 |
 | HSN-115 | M1 | P0 | TODO | Migration naming & rollback runbook | HSN-100 |
@@ -283,16 +283,16 @@ Rule-driven approvals, immutable audit, self-approval prevention, exception mode
 | HSN-811 | M8 | P1 | TODO | Weekly management review pack | HSN-801 |
 | HSN-812 | M8 | P0 | TODO | Executive data freshness indicator | HSN-801 |
 | HSN-813 | M8 | P0 | TODO | CEO dashboard regression & reconciliation | HSN-801, HSN-804 |
-| HSN-900 | M9 | P0 | TODO | Approval rule data model | HSN-105, HSN-113 |
-| HSN-901 | M9 | P0 | TODO | Generic approval request engine | HSN-900 |
-| HSN-902 | M9 | P0 | TODO | Approval history immutable log | HSN-901 |
-| HSN-903 | M9 | P0 | TODO | Self-approval prevention | HSN-901 |
-| HSN-904 | M9 | P0 | TODO | Audit log foundation | HSN-100 |
-| HSN-905 | M9 | P0 | TODO | Audit immutability controls | HSN-904 |
+| HSN-900 | M9 | P0 | DONE | Approval rule data model | HSN-105, HSN-113 |
+| HSN-901 | M9 | P0 | REVIEW | Generic approval request engine | HSN-900 |
+| HSN-902 | M9 | P0 | REVIEW | Approval history immutable log | HSN-901 |
+| HSN-903 | M9 | P0 | DONE | Self-approval prevention | HSN-901 |
+| HSN-904 | M9 | P0 | DONE | Audit log foundation | HSN-100 |
+| HSN-905 | M9 | P0 | DONE | Audit immutability controls | HSN-904 |
 | HSN-906 | M9 | P0 | TODO | Sensitive action reason requirement | HSN-904 |
 | HSN-907 | M9 | P1 | TODO | Approval delegation/out-of-office | HSN-901 |
 | HSN-908 | M9 | P1 | TODO | Approval SLA/aging | HSN-901 |
-| HSN-909 | M9 | P0 | TODO | Exception event model | HSN-100 |
+| HSN-909 | M9 | P0 | DONE | Exception event model | HSN-100 |
 | HSN-910 | M9 | P0 | TODO | Business alert rules | HSN-909 |
 | HSN-911 | M9 | P1 | TODO | Alert acknowledge/resolve workflow | HSN-909 |
 | HSN-912 | M9 | P1 | TODO | Automation jobs registry | HSN-111 |
