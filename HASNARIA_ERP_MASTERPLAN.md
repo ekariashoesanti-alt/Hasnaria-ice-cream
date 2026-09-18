@@ -172,14 +172,14 @@ Rule-driven approvals, immutable audit, self-approval prevention, exception mode
 | HSN-105 | M1 | P0 | DONE | Role capability matrix service | HSN-104 |
 | HSN-106 | M1 | P0 | REVIEW | Product master canonicalization | HSN-101 |
 | HSN-107 | M1 | P0 | DONE | Supplier master | HSN-101 |
-| HSN-108 | M1 | P1 | TODO | Customer master lightweight | HSN-101 |
-| HSN-109 | M1 | P0 | TODO | Units of measure master | HSN-106 |
-| HSN-110 | M1 | P0 | TODO | Category master produk/pembelian/expense | HSN-106 |
+| HSN-108 | M1 | P1 | DONE | Customer master lightweight | HSN-101 |
+| HSN-109 | M1 | P0 | DONE | Units of measure master | HSN-106 |
+| HSN-110 | M1 | P0 | DONE | Category master produk/pembelian/expense | HSN-106 |
 | HSN-111 | M1 | P0 | DONE | Import job model | HSN-101 |
 | HSN-112 | M1 | P0 | DONE | File provenance and duplicate protection | HSN-111 |
 | HSN-113 | M1 | P0 | DONE | ERP settings registry | HSN-101 |
 | HSN-114 | M1 | P1 | DONE | Business calendar / period model | HSN-113 |
-| HSN-115 | M1 | P0 | TODO | Migration naming & rollback runbook | HSN-100 |
+| HSN-115 | M1 | P0 | DONE | Migration naming & rollback runbook | HSN-100 |
 | HSN-116 | M1 | P0 | DONE | Data dictionary | HSN-106, HSN-107 |
 | HSN-117 | M1 | P0 | DONE | ERP project tracker and Codex governance | — |
 | HSN-200 | M2 | P0 | REVIEW | Majoo sales import baseline | HSN-111 |
@@ -241,34 +241,34 @@ Rule-driven approvals, immutable audit, self-approval prevention, exception mode
 | HSN-511 | M5 | P0 | REVIEW | Cashflow report | HSN-501, HSN-503, HSN-506 |
 | HSN-512 | M5 | P1 | DONE | Budget model | HSN-113, HSN-500 |
 | HSN-513 | M5 | P1 | DONE | Budget vs actual | HSN-512, HSN-509 |
-| HSN-514 | M5 | P0 | REVIEW | Financial close checklist | HSN-114, HSN-510, HSN-511 |
+| HSN-514 | M5 | P0 | DONE | Financial close checklist | HSN-114, HSN-510, HSN-511 |
 | HSN-515 | M5 | P0 | REVIEW | Finance reconciliation test pack | HSN-508, HSN-510, HSN-511 |
-| HSN-600 | M6 | P0 | TODO | Employee master | HSN-101 |
-| HSN-601 | M6 | P0 | TODO | Shift template and roster | HSN-600, HSN-102 |
-| HSN-602 | M6 | P0 | TODO | Attendance check-in/out | HSN-601 |
-| HSN-603 | M6 | P1 | TODO | Late/absence rules | HSN-602 |
-| HSN-604 | M6 | P0 | TODO | Leave request workflow | HSN-600, HSN-900 |
+| HSN-600 | M6 | P0 | DONE | Employee master | HSN-101 |
+| HSN-601 | M6 | P0 | DONE | Shift template and roster | HSN-600, HSN-102 |
+| HSN-602 | M6 | P0 | DONE | Attendance check-in/out | HSN-601 |
+| HSN-603 | M6 | P1 | REVIEW | Late/absence rules | HSN-602 |
+| HSN-604 | M6 | P0 | DONE | Leave request workflow | HSN-600, HSN-900 |
 | HSN-605 | M6 | P0 | REVIEW | Shift opening/handover/closing baseline | HSN-601 |
-| HSN-606 | M6 | P1 | TODO | Overtime records | HSN-602 |
-| HSN-607 | M6 | P1 | TODO | Payroll summary inputs | HSN-602, HSN-606 |
+| HSN-606 | M6 | P1 | DONE | Overtime records | HSN-602 |
+| HSN-607 | M6 | P1 | DONE | Payroll summary inputs | HSN-602, HSN-606 |
 | HSN-608 | M6 | P1 | TODO | Labor cost KPI | HSN-607 |
-| HSN-609 | M6 | P1 | TODO | Sales per employee/hour KPI | HSN-205, HSN-602 |
-| HSN-610 | M6 | P1 | TODO | Training/compliance record | HSN-600 |
+| HSN-609 | M6 | P1 | REVIEW | Sales per employee/hour KPI | HSN-205, HSN-602 |
+| HSN-610 | M6 | P1 | DONE | Training/compliance record | HSN-600 |
 | HSN-611 | M6 | P2 | TODO | Employee document metadata | HSN-600 |
-| HSN-612 | M6 | P0 | TODO | HR role privacy controls | HSN-105, HSN-600 |
-| HSN-613 | M6 | P0 | TODO | HR regression tests | HSN-602, HSN-604 |
+| HSN-612 | M6 | P0 | DONE | HR role privacy controls | HSN-105, HSN-600 |
+| HSN-613 | M6 | P0 | REVIEW | HR regression tests | HSN-602, HSN-604 |
 | HSN-700 | M7 | P0 | REVIEW | Content calendar baseline | HSN-105 |
-| HSN-701 | M7 | P0 | TODO | Campaign master | HSN-101 |
-| HSN-702 | M7 | P1 | TODO | Campaign spend | HSN-701, HSN-506 |
-| HSN-703 | M7 | P1 | TODO | Reach/engagement metrics | HSN-701 |
-| HSN-704 | M7 | P1 | TODO | Attributed transactions/revenue | HSN-203, HSN-701 |
-| HSN-705 | M7 | P1 | TODO | ROAS/CAC metrics | HSN-702, HSN-704 |
-| HSN-706 | M7 | P1 | TODO | Promotion registry | HSN-701 |
-| HSN-707 | M7 | P1 | TODO | Promo performance | HSN-706, HSN-203 |
-| HSN-708 | M7 | P2 | TODO | Customer repeat indicator | HSN-108, HSN-203 |
-| HSN-709 | M7 | P2 | TODO | Feedback/complaint log | HSN-108 |
-| HSN-710 | M7 | P1 | TODO | Marketing executive summary | HSN-705, HSN-707 |
-| HSN-711 | M7 | P0 | TODO | Marketing regression tests | HSN-701, HSN-704 |
+| HSN-701 | M7 | P0 | DONE | Campaign master | HSN-101 |
+| HSN-702 | M7 | P1 | REVIEW | Campaign spend | HSN-701, HSN-506 |
+| HSN-703 | M7 | P1 | DONE | Reach/engagement metrics | HSN-701 |
+| HSN-704 | M7 | P1 | DONE | Attributed transactions/revenue | HSN-203, HSN-701 |
+| HSN-705 | M7 | P1 | REVIEW | ROAS/CAC metrics | HSN-702, HSN-704 |
+| HSN-706 | M7 | P1 | DONE | Promotion registry | HSN-701 |
+| HSN-707 | M7 | P1 | DONE | Promo performance | HSN-706, HSN-203 |
+| HSN-708 | M7 | P2 | DONE | Customer repeat indicator | HSN-108, HSN-203 |
+| HSN-709 | M7 | P2 | DONE | Feedback/complaint log | HSN-108 |
+| HSN-710 | M7 | P1 | REVIEW | Marketing executive summary | HSN-705, HSN-707 |
+| HSN-711 | M7 | P0 | REVIEW | Marketing regression tests | HSN-701, HSN-704 |
 | HSN-800 | M8 | P0 | REVIEW | CEO dashboard information architecture | HSN-205, HSN-508, HSN-511, HSN-403 |
 | HSN-801 | M8 | P0 | REVIEW | Executive KPI snapshot | HSN-800 |
 | HSN-802 | M8 | P0 | TODO | Revenue/profit trend toggle | HSN-801 |
@@ -290,12 +290,12 @@ Rule-driven approvals, immutable audit, self-approval prevention, exception mode
 | HSN-904 | M9 | P0 | DONE | Audit log foundation | HSN-100 |
 | HSN-905 | M9 | P0 | DONE | Audit immutability controls | HSN-904 |
 | HSN-906 | M9 | P0 | REVIEW | Sensitive action reason requirement | HSN-904 |
-| HSN-907 | M9 | P1 | TODO | Approval delegation/out-of-office | HSN-901 |
-| HSN-908 | M9 | P1 | REVIEW | Approval SLA/aging | HSN-901 |
+| HSN-907 | M9 | P1 | DONE | Approval delegation/out-of-office | HSN-901 |
+| HSN-908 | M9 | P1 | DONE | Approval SLA/aging | HSN-901 |
 | HSN-909 | M9 | P0 | DONE | Exception event model | HSN-100 |
 | HSN-910 | M9 | P0 | DONE | Business alert rules | HSN-909 |
 | HSN-911 | M9 | P1 | DONE | Alert acknowledge/resolve workflow | HSN-909 |
-| HSN-912 | M9 | P1 | TODO | Automation jobs registry | HSN-111 |
+| HSN-912 | M9 | P1 | REVIEW | Automation jobs registry | HSN-111 |
 | HSN-913 | M9 | P0 | REVIEW | Controls regression tests | HSN-901, HSN-904, HSN-910 |
 | HSN-1000 | M10 | P0 | TODO | Production architecture review | HSN-813, HSN-913 |
 | HSN-1001 | M10 | P0 | TODO | RLS full matrix test suite | HSN-105 |
