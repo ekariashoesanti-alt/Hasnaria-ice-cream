@@ -27,7 +27,7 @@ create table if not exists public.inventory_movements (
     )
   ),
   constraint inventory_movements_qty_nonzero check (
-    qty_delta <> 0 or movement_type = 'BASELINE'
+    qty_delta <> 0 or movement_type in ('BASELINE','OPNAME_CORRECTION')
   ),
   constraint inventory_movements_unit_cost_nonnegative check (
     unit_cost is null or unit_cost >= 0
@@ -175,13 +175,20 @@ begin
     and reference_id = p_sale_item_id
     and system_generated;
 
-  select si.*, s.brand_id, s.sold_at
-    into v_sale_item, v_brand_id, v_sold_at
-  from public.sale_items si
-  join public.sales s on s.id = si.sale_id
-  where si.id = p_sale_item_id;
+  select * into v_sale_item
+  from public.sale_items
+  where id = p_sale_item_id;
 
   if not found or v_sale_item.product_id is null then
+    return;
+  end if;
+
+  select s.brand_id, s.sold_at
+    into v_brand_id, v_sold_at
+  from public.sales s
+  where s.id = v_sale_item.sale_id;
+
+  if v_brand_id is null then
     return;
   end if;
 
@@ -400,7 +407,10 @@ begin
     end loop;
   end if;
 
-  return coalesce(new, old);
+  if tg_op = 'DELETE' then
+    return old;
+  end if;
+  return new;
 end;
 $$;
 
