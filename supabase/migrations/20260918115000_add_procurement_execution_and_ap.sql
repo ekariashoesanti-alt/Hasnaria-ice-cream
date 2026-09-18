@@ -78,7 +78,7 @@ create index if not exists purchase_orders_created_by_idx on public.purchase_ord
 create or replace function private.guard_purchase_order_header()
 returns trigger
 language plpgsql security definer set search_path=''
-as $
+as $$
 declare
   v_supplier_brand uuid;
   v_request_brand uuid;
@@ -111,7 +111,7 @@ begin
   new.updated_at:=now();
   return new;
 end;
-$;
+$$;
 
 revoke execute on function private.guard_purchase_order_header()
   from public,anon,authenticated;
@@ -456,7 +456,7 @@ create index if not exists goods_receipts_received_by_idx on public.goods_receip
 create or replace function private.guard_goods_receipt_header()
 returns trigger
 language plpgsql security definer set search_path=''
-as $
+as $$
 declare
   v_po public.purchase_orders%rowtype;
 begin
@@ -481,7 +481,7 @@ begin
   new.updated_at:=now();
   return new;
 end;
-$;
+$$;
 
 revoke execute on function private.guard_goods_receipt_header()
   from public,anon,authenticated;
@@ -817,7 +817,7 @@ create index if not exists purchase_invoices_created_by_idx on public.purchase_i
 create or replace function private.guard_purchase_invoice_header()
 returns trigger
 language plpgsql security definer set search_path=''
-as $
+as $$
 declare
   v_supplier_brand uuid;
   v_po public.purchase_orders%rowtype;
@@ -850,7 +850,7 @@ begin
   new.updated_at:=now();
   return new;
 end;
-$;
+$$;
 
 revoke execute on function private.guard_purchase_invoice_header()
   from public,anon,authenticated;
