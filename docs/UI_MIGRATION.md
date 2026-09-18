@@ -64,7 +64,9 @@ Jalankan `node scripts/vercel-build-check.js`. Gate meliputi syntax, importer, a
 
 Regression test menjaga modul existing Penjualan/Pembelian/Keuangan/Stok tetap tersedia, memvalidasi parameter RPC, memastikan recipe draft terpisah dari verification, menolak duplicate component/qty <= 0, dan menolak verified cost tanpa nominal positif, tanggal berlaku valid, serta sumber bukti.
 
-Preview harus diverifikasi sebelum merge. Automated gate dan Vercel preview harus hijau. Pemeriksaan authenticated Owner tetap dilakukan read-only terlebih dahulu; jangan mengirim impor, konfirmasi biaya, recipe, verified cost, stock opname, atau transaksi percobaan hanya untuk smoke test.
+Final automated gate: GitHub Hasnaria Audit Gate dan Vercel Preview harus hijau pada head PR. Supabase security advisor tidak menemukan vulnerability database baru; warning yang masih ada hanya pengaturan Auth `Leaked Password Protection Disabled`. Performance advisor setelah FK index fix hanya melaporkan unused-index INFO pada workload saat ini.
+
+Preview harus diverifikasi sebelum merge. Pemeriksaan authenticated Owner tetap dilakukan read-only terlebih dahulu; jangan mengirim impor, konfirmasi biaya, recipe, verified cost, stock opname, atau transaksi percobaan hanya untuk smoke test.
 
 ## Pengembangan selanjutnya
 
