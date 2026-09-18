@@ -18,6 +18,7 @@ Scope disepakati 18 September 2026: migrasi UI terlebih dahulu; Next.js/TypeScri
 Action Center sekarang dapat menyelesaikan workflow berikut melalui RPC Supabase setelah Owner mengisi form dan menekan submit:
 
 - pack conversion → `resolve_inventory_conversion`
+- missing recipe draft → `save_product_recipe_draft`
 - recipe verification + `effective_from` → `resolve_product_recipe_verification_v2`
 - sale-item mapping → `resolve_sale_item_product_mapping`
 - selling-price confirmation → `resolve_product_selling_price`
@@ -42,12 +43,13 @@ Kontrol keselamatan:
 - Physical stock opname hanya menerima qty fisik >= 0, tanggal <= hari ini, dan alasan. `system_qty` dibaca dari ledger; tidak ada tebakan quantity atau valuation.
 - Financing `cash_paid` membutuhkan tanggal dan nominal kas; PAYLATER/utang tidak otomatis dianggap cash-out.
 - Baseline historis diberi peringatan bahwa nilainya bukan stock opname hari ini.
-- Recipe verification tidak berlaku sebelum `effective_from`.
+- Missing recipe disimpan sebagai **draft**. Draft tidak mengurangi stok dan tidak digunakan HPP.
+- Recipe yang sudah verified hanya menghasilkan `SALE_CONSUMPTION` dan verified COGS untuk transaksi pada/ setelah `effective_from`.
+- Perubahan komponen recipe otomatis membuka kembali status menjadi draft dan membersihkan derived COGS/inventory consumption yang tidak lagi valid.
+- Sebanyak 2.694 legacy `SALE_CONSUMPTION` rows yang berasal dari recipe belum verified dibersihkan secara deterministik saat temporal rule diaktifkan; transaksi penjualan sumber tidak diubah.
 - Setelah RPC sukses, bootstrap/action queue dimuat ulang.
 
-Action yang masih diarahkan ke workflow manual/lanjutan: missing recipe dan missing component cost.
-
-**Catatan safety recipe:** komponen recipe saat ini memiliki trigger yang menyinkronkan ulang `SALE_CONSUMPTION` untuk seluruh histori sale item produk tersebut. Karena itu, membuat form `missing_recipe` sebelum inventory movement mendukung recipe `effective_from` dapat membuat resep hari ini seolah berlaku sejak transaksi lama. Workflow ini sengaja belum diaktifkan sampai temporal recipe movement dibenahi.
+Action yang masih diarahkan ke workflow manual/lanjutan: **missing component cost**. Cost hanya boleh dibuka setelah ada sumber cost atau unit conversion yang dapat diverifikasi; UI tidak membuat fallback cost.
 
 Write bisnis hanya terjadi jika Owner yang sudah login secara eksplisit mengirim form action; backend RLS/RPC tetap menjadi enforcement utama.
 
@@ -55,9 +57,9 @@ Write bisnis hanya terjadi jika Owner yang sudah login secara eksplisit mengirim
 
 Jalankan `node scripts/vercel-build-check.js`. Gate meliputi syntax, importer, authority `user_profiles`, password policy, canonical runtime, CSP, tracker, integrasi shell ERP, dan kontrak parameter RPC Action Center.
 
-Build style diperbaiki agar pemasangan stylesheet tidak masuk ke fungsi loader CSS sebelahnya. Regression test mengeksekusi wiring runtime dan menjaga modul existing Penjualan/Pembelian/Keuangan/Stok tetap tersedia.
+Regression test menjaga modul existing Penjualan/Pembelian/Keuangan/Stok tetap tersedia, memvalidasi parameter RPC, memastikan recipe draft terpisah dari verification, dan menolak duplicate component atau qty <= 0.
 
-Preview harus diverifikasi sebelum merge. Automated gate dan Vercel preview harus hijau. Pemeriksaan authenticated Owner tetap dilakukan read-only terlebih dahulu; jangan mengirim impor, konfirmasi biaya, atau transaksi percobaan hanya untuk smoke test.
+Preview harus diverifikasi sebelum merge. Automated gate dan Vercel preview harus hijau. Pemeriksaan authenticated Owner tetap dilakukan read-only terlebih dahulu; jangan mengirim impor, konfirmasi biaya, recipe, stock opname, atau transaksi percobaan hanya untuk smoke test.
 
 ## Pengembangan selanjutnya
 
