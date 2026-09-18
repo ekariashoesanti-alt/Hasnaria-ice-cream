@@ -39,18 +39,17 @@ function assertShellIntegration() {
 
 function assertActionContracts() {
   const window = {__HASNARIA_CONTEXT:{brandId:'hasnaria',userId:'owner',role:'owner'}};
-  vm.runInNewContext(actionSource, {window,document:{},Date,console,AbortSignal,FormData:function(){},CustomEvent:function(){}});
+  vm.runInNewContext(actionSource, {window,document:{},Date,console,AbortSignal,FormData:function(){},CustomEvent:function(){},Set,JSON});
   const api = window.HasnariaERPActions;
   assert.ok(api, 'ERP action module exports API');
-  for (const type of ['pack_conversion','recipe_verification','sale_item_mapping','selling_price_confirmation','inventory_baseline_confirmation','financing_payment_review','invalid_purchase_qty','unmatched_purchase','unverified_inventory','zero_amount_purchase','untracked_stock']) {
+  for (const type of ['pack_conversion','recipe_verification','sale_item_mapping','selling_price_confirmation','inventory_baseline_confirmation','financing_payment_review','invalid_purchase_qty','unmatched_purchase','unverified_inventory','zero_amount_purchase','untracked_stock','missing_recipe']) {
     assert.equal(api.canHandle(type), true, `${type} is directly resolvable`);
   }
-  for (const type of ['missing_recipe','missing_component_cost']) {
-    assert.equal(api.canHandle(type), false, `${type} stays manual until temporal safety or source cost is available`);
-  }
+  assert.equal(api.canHandle('missing_component_cost'), false, 'missing component cost stays manual until verified source cost is available');
   const request = (action, values) => JSON.parse(JSON.stringify(api._buildRequest(action, values)));
   assert.deepEqual(request({action_type:'pack_conversion',metadata:{conversion_id:'c1'}},{units_per_purchase_unit:'50',reason:'Kemasan supplier'}), {rpc:'resolve_inventory_conversion',params:{p_conversion_id:'c1',p_units_per_purchase_unit:50,p_reason:'Kemasan supplier'}});
   assert.deepEqual(request({action_type:'recipe_verification',metadata:{product_id:'p1'}},{effective_from:'2026-09-18',reason:'BOM diperiksa'}), {rpc:'resolve_product_recipe_verification_v2',params:{p_product_id:'p1',p_verified:true,p_effective_from:'2026-09-18',p_reason:'BOM diperiksa'}});
+  assert.deepEqual(request({action_type:'missing_recipe',metadata:{product_id:'p0'}},{components:[{inventory_item_id:'i10',qty_per_sale:'1'},{inventory_item_id:'i11',qty_per_sale:'0.25'}],reason:'Resep aktual owner'}), {rpc:'save_product_recipe_draft',params:{p_product_id:'p0',p_components:[{inventory_item_id:'i10',qty_per_sale:1},{inventory_item_id:'i11',qty_per_sale:0.25}],p_reason:'Resep aktual owner'}});
   assert.deepEqual(request({action_type:'sale_item_mapping',subject:'MUKBANG RABOKKI',metadata:{suggested_product_id:'p2'}},{reason:'Nama transaksi sama'}), {rpc:'resolve_sale_item_product_mapping',params:{p_source_name:'MUKBANG RABOKKI',p_product_id:'p2',p_reason:'Nama transaksi sama'}});
   assert.deepEqual(request({action_type:'selling_price_confirmation',metadata:{product_id:'p3'}},{selling_price:'15000',reason:'Konfirmasi owner'}), {rpc:'resolve_product_selling_price',params:{p_product_id:'p3',p_selling_price:15000,p_reason:'Konfirmasi owner'}});
   assert.deepEqual(request({action_type:'inventory_baseline_confirmation',metadata:{source_history_id:'h1'}},{reason:'Sesuai stock akhir Juli'}), {rpc:'resolve_inventory_baseline_candidate',params:{p_source_history_id:'h1',p_reason:'Sesuai stock akhir Juli'}});
@@ -65,10 +64,15 @@ function assertActionContracts() {
   assert.deepEqual(request({action_type:'untracked_stock',metadata:{inventory_item_id:'i3'}},{physical_qty:'0',opname_date:'2026-09-18',reason:'Hitung fisik outlet'}), {rpc:'resolve_physical_stock_opname',params:{p_inventory_item_id:'i3',p_physical_qty:0,p_opname_date:'2026-09-18',p_reason:'Hitung fisik outlet'}});
   assert.deepEqual(request({action_type:'untracked_stock',metadata:{inventory_item_id:'i4'}},{physical_qty:'12.5',opname_date:'2026-09-18',reason:'Hitung fisik outlet'}), {rpc:'resolve_physical_stock_opname',params:{p_inventory_item_id:'i4',p_physical_qty:12.5,p_opname_date:'2026-09-18',p_reason:'Hitung fisik outlet'}});
   assert.ok(actionSource.includes('ui_invalid_quantity_queue'), 'invalid quantity resolution loads source rows before mutation');
-  assert.ok(actionSource.includes("from('ui_inventory_items')"), 'purchase rule forms load inventory master instead of guessing');
+  assert.ok(actionSource.includes("from('ui_inventory_items')"), 'purchase and recipe forms load inventory master instead of guessing');
   assert.ok(actionSource.includes('resolve_zero_amount_purchase_candidate'), 'zero amount action uses audited backend resolution');
   assert.ok(actionSource.includes('resolve_physical_stock_opname'), 'untracked stock action uses audited physical opname RPC');
+  assert.ok(actionSource.includes('save_product_recipe_draft'), 'missing recipe action stores draft before verification');
+  assert.match(actionSource,/Draft tidak mengurangi stok|draft tersimpan/i, 'recipe form explains draft/verification separation');
   assert.throws(()=>api._buildRequest({action_type:'pack_conversion',metadata:{conversion_id:'c1'}},{units_per_purchase_unit:'0',reason:'x'}),/lebih dari 0/);
+  assert.throws(()=>api._buildRequest({action_type:'missing_recipe',metadata:{product_id:'p0'}},{components:[],reason:'x'}),/Minimal satu komponen/);
+  assert.throws(()=>api._buildRequest({action_type:'missing_recipe',metadata:{product_id:'p0'}},{components:[{inventory_item_id:'i1',qty_per_sale:'1'},{inventory_item_id:'i1',qty_per_sale:'2'}],reason:'x'}),/duplikat/);
+  assert.throws(()=>api._buildRequest({action_type:'missing_recipe',metadata:{product_id:'p0'}},{components:[{inventory_item_id:'i1',qty_per_sale:'0'}],reason:'x'}),/lebih dari 0/);
   assert.throws(()=>api._buildRequest({action_type:'financing_payment_review',metadata:{source_history_id:'h4'}},{resolution:'cash_paid',reason:'x'}),/Tanggal pembayaran kas/);
   assert.throws(()=>api._buildRequest({action_type:'invalid_purchase_qty',metadata:{}},{source_history_id:'',effective_qty:'3',reason:'x'}),/Pilih baris pembelian/);
   assert.throws(()=>api._buildRequest({action_type:'invalid_purchase_qty',metadata:{}},{source_history_id:'h5',effective_qty:'0',reason:'x'}),/lebih dari 0/);
