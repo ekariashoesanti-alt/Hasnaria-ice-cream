@@ -13,7 +13,8 @@
     'unverified_inventory',
     'zero_amount_purchase',
     'untracked_stock',
-    'missing_recipe'
+    'missing_recipe',
+    'missing_component_cost'
   ]);
 
   const esc = value => String(value == null ? '' : value).replace(/[&<>"']/g, c => ({
@@ -35,6 +36,16 @@
     const meta=action&&action.metadata||{};
     const type=action&&action.action_type;
     if(!canHandle(type)) throw new Error('Action type belum didukung oleh form ERP.');
+
+    if(type==='missing_component_cost'){
+      if(!meta.inventory_item_id) throw new Error('Inventory item tidak tersedia.');
+      const effectiveFrom=String(values.effective_from||'').trim();
+      if(!effectiveFrom) throw new Error('Tanggal mulai berlaku cost wajib diisi.');
+      if(effectiveFrom>todayJakarta()) throw new Error('Tanggal mulai berlaku cost tidak boleh di masa depan.');
+      const sourceReference=String(values.source_reference||'').trim();
+      if(!sourceReference) throw new Error('Sumber bukti cost wajib diisi.');
+      return {rpc:'resolve_inventory_item_cost_verification',params:{p_inventory_item_id:meta.inventory_item_id,p_unit_cost:positive(values.unit_cost,'Unit cost'),p_effective_from:effectiveFrom,p_source_reference:sourceReference,p_reason:reason(values.reason)}};
+    }
 
     if(type==='missing_recipe'){
       if(!meta.product_id) throw new Error('Product ID tidak tersedia.');
@@ -211,6 +222,12 @@
       body='<p class="erp-note warn">Isi per pack harus berasal dari kemasan/supplier yang benar. Jangan menebak.</p><label>Isi per pack<input name="units_per_purchase_unit" type="number" min="0.000001" step="any" required placeholder="Contoh: 50"></label>';submitLabel='Verifikasi konversi';
     }else if(type==='recipe_verification'){
       body='<p class="erp-note warn">Verifikasi hanya jika BOM, komponen, dan qty per penjualan sudah lengkap. HPP dan konsumsi stok hanya berlaku untuk transaksi pada/ setelah tanggal yang dipilih.</p><div class="erp-wide erp-note"><b>Ringkasan resep</b><br>'+esc(meta.recipe_summary||'Belum tersedia')+'<br><small>Komponen aktif: '+number(meta.active_components)+'</small></div><label>Tanggal mulai berlaku<input name="effective_from" type="date" max="'+todayJakarta()+'" required></label>';submitLabel='Verifikasi resep';
+    }else if(type==='missing_component_cost'){
+      const observedRows=Number(meta.observed_purchase_rows||0);
+      const observed=observedRows>0
+        ? '<br><b>Histori purchase (referensi saja):</b> '+number(observedRows)+' baris · rentang '+money(meta.min_observed_unit_cost)+' – '+money(meta.max_observed_unit_cost)+'<br><b>Terbaru:</b> '+money(meta.latest_observed_unit_cost)+' pada '+esc(meta.latest_observed_purchase_date||'—')+' · '+esc(meta.latest_observed_mapping_method||'unverified')
+        : '<br><b>Histori purchase:</b> belum ada cost source terhubung';
+      body='<p class="erp-note warn">Masukkan unit cost hanya dari bukti yang dapat diverifikasi. Angka histori di bawah tidak diterapkan otomatis dan field cost sengaja kosong.</p><div class="erp-wide erp-note"><b>Unit inventory:</b> '+esc(meta.unit||'—')+'<br><b>Produk terdampak:</b> '+esc(meta.affected_products||'—')+observed+'</div><label>Unit cost terverifikasi (Rp / '+esc(meta.unit||'unit')+')<input name="unit_cost" type="number" min="0.000001" step="any" required placeholder="Isi dari bukti"></label><label>Tanggal mulai berlaku cost<input name="effective_from" type="date" max="'+todayJakarta()+'" required></label><label class="erp-wide">Referensi bukti<input name="source_reference" required placeholder="Contoh: nota supplier / invoice / dokumen harga"></label>';submitLabel='Simpan verified cost';
     }else if(type==='sale_item_mapping'){
       if(!meta.suggested_product_id) body='<p class="erp-note warn">Belum ada saran produk yang dapat dikonfirmasi dari Action Center. Buka modul Penjualan untuk memilih produk tujuan.</p>';
       else{body='<div class="erp-wide erp-note"><b>Nama transaksi:</b> '+esc(meta.source_name||action.subject)+'<br><b>Saran produk:</b> '+esc(meta.suggested_product_name||'Produk tersaran')+'<br><b>Confidence:</b> '+esc(meta.suggestion_confidence||'Belum tersedia')+'</div>';submitLabel='Konfirmasi mapping';}
