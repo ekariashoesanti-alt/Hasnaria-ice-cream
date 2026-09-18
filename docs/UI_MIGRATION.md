@@ -4,7 +4,7 @@ Scope disepakati 18 September 2026: migrasi UI terlebih dahulu; Next.js/TypeScri
 
 - Repository: ekariashoesanti-alt/Hasnaria-ice-cream, asal aplikasi aktif dan terhubung ke Vercel.
 - Production: `main`, proyek `hasnaria-business-analyzer`.
-- Backend/Auth tetap Supabase `bnnhmtkpdjlgehsvgoda`; PR ini tidak menambah migration/schema database.
+- Backend/Auth tetap Supabase `bnnhmtkpdjlgehsvgoda`. Migration yang dibutuhkan Action Center disimpan di `supabase/migrations/` dan harus tetap sinkron dengan backend live.
 - Login, password reset, upload pembelian + tahun, importer penjualan, stok/opname/resep, keuangan/approval, HR, pemasaran, dan pengaturan memakai implementasi existing.
 - Shell sidebar navy/blue/white dari UI Site dimigrasikan. Ringkasan menggunakan `get_ui_bootstrap_v4`; inventory, costing, action queue dan audit dimuat saat halaman dibuka.
 - Views utama: `ui_inventory_items`, `ui_hpp_blockers`, `ui_erp_action_queue_v4`, `ui_recent_erp_audit`. Data tetap melalui authenticated client dan RLS; brand response diverifikasi.
@@ -26,6 +26,7 @@ Action Center sekarang dapat menyelesaikan workflow berikut melalui RPC Supabase
 - invalid purchase quantity per source row → `resolve_purchase_quantity_override`
 - unmatched purchase classification → `resolve_purchase_item_rule`
 - unverified inventory classification → `resolve_purchase_item_rule`
+- zero-amount purchase → `resolve_zero_amount_purchase_candidate`
 
 Kontrol keselamatan:
 
@@ -35,14 +36,16 @@ Kontrol keselamatan:
 - Invalid quantity diselesaikan per `source_history_id`; suggestion hanya ditampilkan bila backend menandainya deterministik.
 - Unmatched purchase tidak diberi klasifikasi default. Item ambigu seperti `PINES` tetap menunggu keputusan Owner.
 - Posting transaksi historis pada purchase rule adalah checkbox eksplisit dan default **tidak aktif**.
+- Zero-amount purchase tidak menulis ulang raw import. Owner harus memilih `actual_amount` dengan nominal > 0 berdasarkan bukti atau `exclude`; tidak ada nominal default.
+- Resolution zero-amount disimpan terpisah dan diaudit. `actual_amount` menjadi effective amount downstream; `exclude` mengeluarkan baris dari mapping/posting.
 - Financing `cash_paid` membutuhkan tanggal dan nominal kas; PAYLATER/utang tidak otomatis dianggap cash-out.
 - Baseline historis diberi peringatan bahwa nilainya bukan stock opname hari ini.
 - Recipe verification tidak berlaku sebelum `effective_from`.
 - Setelah RPC sukses, bootstrap/action queue dimuat ulang.
 
-Action yang masih diarahkan ke modul/manual workflow karena belum memiliki input aman yang cukup di Action Center: zero-amount purchase, missing recipe, missing component cost, dan untracked stock/physical opname.
+Action yang masih diarahkan ke modul/manual workflow karena belum memiliki input aman yang cukup di Action Center: missing recipe, missing component cost, dan untracked stock/physical opname.
 
-PR/deployment sendiri tidak menulis data bisnis. Write hanya terjadi jika Owner yang sudah login secara eksplisit mengirim form action; backend RLS/RPC tetap menjadi enforcement utama.
+Write bisnis hanya terjadi jika Owner yang sudah login secara eksplisit mengirim form action; backend RLS/RPC tetap menjadi enforcement utama.
 
 ## Verifikasi
 
