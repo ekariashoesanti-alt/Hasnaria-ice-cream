@@ -10,7 +10,7 @@ with ranked as (
     cs.*,
     row_number() over (
       partition by cs.brand_id,cs.outlet_id
-      order by cs.session_date desc,cs.closed_at desc nulls last,cs.created_at desc
+      order by cs.session_date desc,cs.closed_at desc nulls last,cs.opened_at desc
     ) as rn
   from public.cash_sessions cs
   where cs.status='closed'
