@@ -1,0 +1,2 @@
+create index if not exists inventory_cost_verifications_inventory_item_idx
+  on public.inventory_cost_verifications(inventory_item_id);
