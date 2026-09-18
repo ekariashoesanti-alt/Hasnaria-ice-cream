@@ -302,7 +302,7 @@
       "id": "HSN-107",
       "milestone": "M1",
       "priority": "P0",
-      "status": "TODO",
+      "status": "DONE",
       "title": "Supplier master",
       "dependencies": [
         "HSN-101"
@@ -380,7 +380,7 @@
       "id": "HSN-113",
       "milestone": "M1",
       "priority": "P0",
-      "status": "TODO",
+      "status": "DONE",
       "title": "ERP settings registry",
       "dependencies": [
         "HSN-101"
@@ -393,7 +393,7 @@
       "id": "HSN-114",
       "milestone": "M1",
       "priority": "P1",
-      "status": "TODO",
+      "status": "DONE",
       "title": "Business calendar / period model",
       "dependencies": [
         "HSN-113"
@@ -419,7 +419,7 @@
       "id": "HSN-116",
       "milestone": "M1",
       "priority": "P0",
-      "status": "REVIEW",
+      "status": "DONE",
       "title": "Data dictionary",
       "dependencies": [
         "HSN-106",
@@ -483,7 +483,7 @@
       "id": "HSN-203",
       "milestone": "M2",
       "priority": "P0",
-      "status": "TODO",
+      "status": "REVIEW",
       "title": "Normalized sales header/detail contract",
       "dependencies": [
         "HSN-200"
@@ -496,7 +496,7 @@
       "id": "HSN-204",
       "milestone": "M2",
       "priority": "P0",
-      "status": "TODO",
+      "status": "REVIEW",
       "title": "Payment method normalization",
       "dependencies": [
         "HSN-203"
@@ -509,7 +509,7 @@
       "id": "HSN-205",
       "milestone": "M2",
       "priority": "P0",
-      "status": "TODO",
+      "status": "REVIEW",
       "title": "Sales daily KPI service",
       "dependencies": [
         "HSN-203"
@@ -522,7 +522,7 @@
       "id": "HSN-206",
       "milestone": "M2",
       "priority": "P0",
-      "status": "TODO",
+      "status": "REVIEW",
       "title": "Sales MTD/MoM/YoY service",
       "dependencies": [
         "HSN-205"
@@ -561,7 +561,7 @@
       "id": "HSN-209",
       "milestone": "M2",
       "priority": "P1",
-      "status": "TODO",
+      "status": "REVIEW",
       "title": "Sales target vs actual",
       "dependencies": [
         "HSN-113",
@@ -588,7 +588,7 @@
       "id": "HSN-211",
       "milestone": "M2",
       "priority": "P1",
-      "status": "TODO",
+      "status": "DONE",
       "title": "Sales anomaly rules",
       "dependencies": [
         "HSN-206"
@@ -682,7 +682,7 @@
       "id": "HSN-304",
       "milestone": "M3",
       "priority": "P0",
-      "status": "TODO",
+      "status": "DONE",
       "title": "Purchase Request workflow",
       "dependencies": [
         "HSN-107",
@@ -696,7 +696,7 @@
       "id": "HSN-305",
       "milestone": "M3",
       "priority": "P0",
-      "status": "TODO",
+      "status": "DONE",
       "title": "Purchase approval threshold",
       "dependencies": [
         "HSN-304",
@@ -710,7 +710,7 @@
       "id": "HSN-306",
       "milestone": "M3",
       "priority": "P0",
-      "status": "TODO",
+      "status": "DONE",
       "title": "Purchase Order lifecycle",
       "dependencies": [
         "HSN-305"
@@ -723,7 +723,7 @@
       "id": "HSN-307",
       "milestone": "M3",
       "priority": "P0",
-      "status": "TODO",
+      "status": "DONE",
       "title": "Goods Receipt",
       "dependencies": [
         "HSN-306"
@@ -736,7 +736,7 @@
       "id": "HSN-308",
       "milestone": "M3",
       "priority": "P0",
-      "status": "TODO",
+      "status": "DONE",
       "title": "Purchase invoice",
       "dependencies": [
         "HSN-307"
@@ -749,7 +749,7 @@
       "id": "HSN-309",
       "milestone": "M3",
       "priority": "P0",
-      "status": "TODO",
+      "status": "DONE",
       "title": "Purchase payment status",
       "dependencies": [
         "HSN-308",
@@ -763,7 +763,7 @@
       "id": "HSN-310",
       "milestone": "M3",
       "priority": "P1",
-      "status": "TODO",
+      "status": "DONE",
       "title": "Supplier spend analysis",
       "dependencies": [
         "HSN-302",
@@ -777,7 +777,7 @@
       "id": "HSN-311",
       "milestone": "M3",
       "priority": "P1",
-      "status": "TODO",
+      "status": "DONE",
       "title": "Purchase price variance",
       "dependencies": [
         "HSN-302",
@@ -804,7 +804,7 @@
       "id": "HSN-313",
       "milestone": "M3",
       "priority": "P1",
-      "status": "TODO",
+      "status": "REVIEW",
       "title": "Open PO / overdue receipt dashboard",
       "dependencies": [
         "HSN-306",
@@ -818,7 +818,7 @@
       "id": "HSN-314",
       "milestone": "M3",
       "priority": "P0",
-      "status": "TODO",
+      "status": "REVIEW",
       "title": "Purchase regression tests",
       "dependencies": [
         "HSN-300",
@@ -872,7 +872,7 @@
       "id": "HSN-403",
       "milestone": "M4",
       "priority": "P0",
-      "status": "TODO",
+      "status": "DONE",
       "title": "Canonical inventory movement ledger",
       "dependencies": [
         "HSN-402"
@@ -885,7 +885,7 @@
       "id": "HSN-404",
       "milestone": "M4",
       "priority": "P0",
-      "status": "TODO",
+      "status": "DONE",
       "title": "Purchase receipt posts stock movement",
       "dependencies": [
         "HSN-307",
@@ -899,7 +899,7 @@
       "id": "HSN-405",
       "milestone": "M4",
       "priority": "P0",
-      "status": "TODO",
+      "status": "DONE",
       "title": "Sales posts consumption movement",
       "dependencies": [
         "HSN-203",
@@ -914,7 +914,7 @@
       "id": "HSN-406",
       "milestone": "M4",
       "priority": "P0",
-      "status": "TODO",
+      "status": "DONE",
       "title": "Waste movement",
       "dependencies": [
         "HSN-403"
@@ -927,7 +927,7 @@
       "id": "HSN-407",
       "milestone": "M4",
       "priority": "P0",
-      "status": "TODO",
+      "status": "DONE",
       "title": "Adjustment movement",
       "dependencies": [
         "HSN-403"
@@ -940,7 +940,7 @@
       "id": "HSN-408",
       "milestone": "M4",
       "priority": "P0",
-      "status": "REVIEW",
+      "status": "DONE",
       "title": "Physical stock opname",
       "dependencies": [
         "HSN-402"
@@ -953,7 +953,7 @@
       "id": "HSN-409",
       "milestone": "M4",
       "priority": "P0",
-      "status": "TODO",
+      "status": "REVIEW",
       "title": "Stock valuation",
       "dependencies": [
         "HSN-403"
@@ -1019,7 +1019,7 @@
       "id": "HSN-414",
       "milestone": "M4",
       "priority": "P0",
-      "status": "TODO",
+      "status": "REVIEW",
       "title": "Negative stock prevention policy",
       "dependencies": [
         "HSN-403"
@@ -1032,7 +1032,7 @@
       "id": "HSN-415",
       "milestone": "M4",
       "priority": "P0",
-      "status": "TODO",
+      "status": "DONE",
       "title": "Inventory reconciliation test pack",
       "dependencies": [
         "HSN-403",
@@ -1046,7 +1046,7 @@
       "id": "HSN-500",
       "milestone": "M5",
       "priority": "P0",
-      "status": "TODO",
+      "status": "DONE",
       "title": "Chart of accounts minimal",
       "dependencies": [
         "HSN-100"
@@ -1059,7 +1059,7 @@
       "id": "HSN-501",
       "milestone": "M5",
       "priority": "P0",
-      "status": "TODO",
+      "status": "DONE",
       "title": "Cash session opening/closing",
       "dependencies": [
         "HSN-105"
@@ -1072,7 +1072,7 @@
       "id": "HSN-502",
       "milestone": "M5",
       "priority": "P0",
-      "status": "TODO",
+      "status": "DONE",
       "title": "Cash/QRIS/transfer settlement model",
       "dependencies": [
         "HSN-204"
@@ -1085,7 +1085,7 @@
       "id": "HSN-503",
       "milestone": "M5",
       "priority": "P0",
-      "status": "TODO",
+      "status": "DONE",
       "title": "Accounts Payable ledger",
       "dependencies": [
         "HSN-308"
@@ -1138,7 +1138,7 @@
       "id": "HSN-507",
       "milestone": "M5",
       "priority": "P0",
-      "status": "TODO",
+      "status": "REVIEW",
       "title": "COGS calculation contract",
       "dependencies": [
         "HSN-409",
@@ -1152,7 +1152,7 @@
       "id": "HSN-508",
       "milestone": "M5",
       "priority": "P0",
-      "status": "TODO",
+      "status": "REVIEW",
       "title": "Gross profit and gross margin",
       "dependencies": [
         "HSN-205",
@@ -1166,7 +1166,7 @@
       "id": "HSN-509",
       "milestone": "M5",
       "priority": "P0",
-      "status": "TODO",
+      "status": "REVIEW",
       "title": "Operating expense summary",
       "dependencies": [
         "HSN-506"
@@ -1179,7 +1179,7 @@
       "id": "HSN-510",
       "milestone": "M5",
       "priority": "P0",
-      "status": "TODO",
+      "status": "REVIEW",
       "title": "Operating profit",
       "dependencies": [
         "HSN-508",
@@ -1193,7 +1193,7 @@
       "id": "HSN-511",
       "milestone": "M5",
       "priority": "P0",
-      "status": "TODO",
+      "status": "REVIEW",
       "title": "Cashflow report",
       "dependencies": [
         "HSN-501",
@@ -1208,7 +1208,7 @@
       "id": "HSN-512",
       "milestone": "M5",
       "priority": "P1",
-      "status": "TODO",
+      "status": "DONE",
       "title": "Budget model",
       "dependencies": [
         "HSN-113",
@@ -1222,7 +1222,7 @@
       "id": "HSN-513",
       "milestone": "M5",
       "priority": "P1",
-      "status": "TODO",
+      "status": "DONE",
       "title": "Budget vs actual",
       "dependencies": [
         "HSN-512",
@@ -1236,7 +1236,7 @@
       "id": "HSN-514",
       "milestone": "M5",
       "priority": "P0",
-      "status": "TODO",
+      "status": "REVIEW",
       "title": "Financial close checklist",
       "dependencies": [
         "HSN-114",
@@ -1251,7 +1251,7 @@
       "id": "HSN-515",
       "milestone": "M5",
       "priority": "P0",
-      "status": "TODO",
+      "status": "REVIEW",
       "title": "Finance reconciliation test pack",
       "dependencies": [
         "HSN-508",
@@ -1617,7 +1617,7 @@
       "id": "HSN-800",
       "milestone": "M8",
       "priority": "P0",
-      "status": "TODO",
+      "status": "REVIEW",
       "title": "CEO dashboard information architecture",
       "dependencies": [
         "HSN-205",
@@ -1633,7 +1633,7 @@
       "id": "HSN-801",
       "milestone": "M8",
       "priority": "P0",
-      "status": "TODO",
+      "status": "REVIEW",
       "title": "Executive KPI snapshot",
       "dependencies": [
         "HSN-800"
@@ -1659,7 +1659,7 @@
       "id": "HSN-803",
       "milestone": "M8",
       "priority": "P0",
-      "status": "TODO",
+      "status": "REVIEW",
       "title": "Business health scorecards",
       "dependencies": [
         "HSN-801",
@@ -1673,7 +1673,7 @@
       "id": "HSN-804",
       "milestone": "M8",
       "priority": "P0",
-      "status": "TODO",
+      "status": "REVIEW",
       "title": "Owner Decision Center",
       "dependencies": [
         "HSN-901",
@@ -1687,7 +1687,7 @@
       "id": "HSN-805",
       "milestone": "M8",
       "priority": "P0",
-      "status": "TODO",
+      "status": "REVIEW",
       "title": "Critical alert prioritization",
       "dependencies": [
         "HSN-910"
@@ -1780,7 +1780,7 @@
       "id": "HSN-812",
       "milestone": "M8",
       "priority": "P0",
-      "status": "TODO",
+      "status": "REVIEW",
       "title": "Executive data freshness indicator",
       "dependencies": [
         "HSN-801"
@@ -1793,7 +1793,7 @@
       "id": "HSN-813",
       "milestone": "M8",
       "priority": "P0",
-      "status": "TODO",
+      "status": "REVIEW",
       "title": "CEO dashboard regression & reconciliation",
       "dependencies": [
         "HSN-801",
@@ -1821,7 +1821,7 @@
       "id": "HSN-901",
       "milestone": "M9",
       "priority": "P0",
-      "status": "REVIEW",
+      "status": "DONE",
       "title": "Generic approval request engine",
       "dependencies": [
         "HSN-900"
@@ -1834,7 +1834,7 @@
       "id": "HSN-902",
       "milestone": "M9",
       "priority": "P0",
-      "status": "REVIEW",
+      "status": "DONE",
       "title": "Approval history immutable log",
       "dependencies": [
         "HSN-901"
@@ -1886,7 +1886,7 @@
       "id": "HSN-906",
       "milestone": "M9",
       "priority": "P0",
-      "status": "TODO",
+      "status": "REVIEW",
       "title": "Sensitive action reason requirement",
       "dependencies": [
         "HSN-904"
@@ -1912,7 +1912,7 @@
       "id": "HSN-908",
       "milestone": "M9",
       "priority": "P1",
-      "status": "TODO",
+      "status": "REVIEW",
       "title": "Approval SLA/aging",
       "dependencies": [
         "HSN-901"
@@ -1938,7 +1938,7 @@
       "id": "HSN-910",
       "milestone": "M9",
       "priority": "P0",
-      "status": "TODO",
+      "status": "DONE",
       "title": "Business alert rules",
       "dependencies": [
         "HSN-909"
@@ -1951,7 +1951,7 @@
       "id": "HSN-911",
       "milestone": "M9",
       "priority": "P1",
-      "status": "TODO",
+      "status": "DONE",
       "title": "Alert acknowledge/resolve workflow",
       "dependencies": [
         "HSN-909"
@@ -1977,7 +1977,7 @@
       "id": "HSN-913",
       "milestone": "M9",
       "priority": "P0",
-      "status": "TODO",
+      "status": "REVIEW",
       "title": "Controls regression tests",
       "dependencies": [
         "HSN-901",
