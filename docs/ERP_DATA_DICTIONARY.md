@@ -1,79 +1,88 @@
-# Hasnaria ERP Data Dictionary — Baseline
+# Hasnaria ERP Data Dictionary
 
-Status: **REVIEW**. This is the first canonical dictionary pass and must be reconciled with live Supabase before HSN-116 is DONE.
+Status: **LIVE RECONCILED BASELINE — 2026-09-18**.
 
-## Existing canonical / retained
+This dictionary reflects the canonical structures verified in the live Hasnaria Supabase project. Existing legacy-compatible sources remain in place while new ERP modules are introduced additively.
 
-| Entity | Purpose | ERP direction |
+## Identity & tenant
+
+| Entity | Purpose | Status |
 |---|---|---|
-| brands | Business/tenant boundary | Retain as current organization boundary |
-| user_profiles | Identity, role, status, brand authority | Retain as authority source |
-| products | Product/menu master | Retain and extend only through migrations |
-| sales | Sales transaction header | Retain as canonical sales header |
-| sale_items | Sales detail | Retain as canonical sales detail |
-| sales_import_batches | Sales import provenance | Generalize pattern into import_jobs |
-| expenses | Operating expense + approval baseline | Retain while Finance ledger is introduced |
-| daily_metrics | Legacy daily summary | Keep for compatibility; do not make sole accounting truth |
-| offline_purchase_history | Purchase import history/raw normalized rows | Use as staging/history while procurement tables are introduced |
-| inventory_items | Inventory item master | Retain |
-| inventory_purchase_log | Existing stock purchase movement source | Migrate toward canonical inventory_movements |
-| inventory_recipe_components | Product-to-stock recipe/BOM | Retain |
-| inventory_stock_opname | Physical stock count and variance | Retain |
-| inventory_stock_reconciliation | Theoretical stock view | Retain until canonical movement ledger supersedes it |
-| social_contents | Shared legacy shift/HR/marketing storage | Migrate domain-by-domain; do not expand new ERP features into this table |
+| brands | Business / tenant boundary | Canonical existing |
+| outlets | Store/outlet under a brand | Canonical ERP |
+| user_profiles | Identity, role, status, brand authority | Canonical authority |
+| business_settings | Brand-scoped ERP thresholds/configuration | Canonical ERP |
+| accounting_periods | Finance period open/close state | Canonical ERP |
 
-## Foundation entities
+Current Hasnaria default outlet: `MAIN / Hasnaria Main / Asia/Jakarta`.
 
-### outlets
-Child of brand. One brand may have multiple outlets. Current app can continue brand-only until each module receives outlet_id.
+## Master data
 
-Core fields:
-- id
-- brand_id
-- code
-- name
-- timezone
-- active
-- created_by
-- created_at
-- updated_at
+| Entity | Purpose |
+|---|---|
+| products | Product/menu master |
+| inventory_items | Raw material / inventory item master |
+| inventory_recipe_components | Product-to-stock recipe/BOM |
+| suppliers | Supplier/vendor master |
+| finance_accounts | Minimal chart of accounts |
+| business_targets | KPI/Revenue target definitions |
+| budgets | Period/category budget |
 
-### import_jobs
-Planned canonical batch header for Sales, Purchasing, Bank and future imports.
+## Sales
 
-Core fields:
-- id
-- brand_id
-- outlet_id nullable
-- module
-- source_file
-- file_hash
-- status
-- rows_total
-- rows_valid
-- rows_failed
-- created_by
-- created_at
-- completed_at
-- error_summary jsonb
+| Entity / view | Purpose |
+|---|---|
+| sales | Canonical sales header |
+| sale_items | Canonical sales detail |
+| sales_import_batches | Existing normalized Majoo import provenance |
+| import_jobs | Shared ERP import/provenance layer for future module migration |
+| import_job_errors | Row/field validation errors |
+| sales_daily_kpis | Daily revenue, trx, units, COGS coverage, margin |
+| sales_anomaly_summary | Latest 7-day revenue comparison |
 
-### suppliers
-Planned vendor master used by procurement/AP.
+Sales remain brand-scoped today; outlet-level sales attribution is a future migration.
 
-### customers
-Lightweight optional customer master; not mandatory for every sale.
+## Purchasing & AP
 
-### units_of_measure
-Canonical unit definitions and future conversion factors.
+Lifecycle:
 
-## Transaction entities planned
+`Purchase Request → Approval → Purchase Order → Goods Receipt → Supplier Invoice → Payment`
 
-### Purchasing
-purchase_requests → purchase_orders → goods_receipts → purchase_invoices → purchase_payments.
+| Entity / view | Purpose |
+|---|---|
+| purchase_requests | Procurement request header |
+| purchase_request_items | Requested item/qty/value lines |
+| approval_rules | Rule-driven routing |
+| approval_requests | Approval queue |
+| approval_history | Append-only approval decision history |
+| purchase_orders | Supplier commitments |
+| purchase_order_items | Ordered item/qty/price |
+| goods_receipts | Receipt header |
+| goods_receipt_items | Received quantities/cost |
+| purchase_invoices | Supplier invoice/AP |
+| purchase_payments | Supplier payment events |
+| accounts_payable_aging | Outstanding invoice aging |
+| supplier_spend_monthly | Monthly supplier spend |
+| purchase_price_variance | Supplier/item price change |
+| purchase_order_receipt_status | PO received-vs-ordered summary |
 
-### Inventory
-inventory_movements becomes canonical movement ledger:
-- OPENING
+Legacy `offline_purchase_history` is retained as import/history source and is not deleted.
+
+## Inventory
+
+| Entity / view | Purpose |
+|---|---|
+| inventory_items | Inventory master |
+| inventory_recipe_components | BOM/recipe |
+| inventory_stock_opname | Physical count + system/physical variance |
+| inventory_movements | Canonical movement ledger |
+| inventory_ledger_balance | Latest physical baseline + post-baseline movement balance |
+| inventory_stock_reconciliation | Existing proven reconciliation kept for parity |
+| inventory_valuation_summary | Estimated inventory valuation + cost coverage |
+| inventory_waste_summary | Waste trend relative to latest baseline |
+
+Movement types:
+- BASELINE
 - PURCHASE_RECEIPT
 - SALE_CONSUMPTION
 - WASTE
@@ -82,23 +91,38 @@ inventory_movements becomes canonical movement ledger:
 - TRANSFER_OUT
 - OPNAME_CORRECTION
 
-### Finance
-cash_sessions, settlements, accounts_payable, bank_transactions, budgets, period_close.
+Live reconciliation verified 101 inventory items with **0 mismatches** between the new ledger balance and existing reconciliation at verification time.
 
-### HR
-employees, shift_roster, attendance, leave_requests, overtime, payroll_inputs.
+## Finance & cash
 
-### Marketing
-campaigns, campaign_metrics, promotions, feedback_cases.
+| Entity / view | Purpose |
+|---|---|
+| finance_accounts | Minimal COA |
+| cash_sessions | Opening/closing cash + variance |
+| payment_settlements | QRIS/transfer expected-vs-actual reconciliation |
+| finance_daily_summary | Daily management P&L/cash movement summary |
+| budget_vs_actual | Expense budget utilization |
+| cash_position_summary | Latest closed cash per outlet |
+| cash_reconciliation_summary | Cash-session detail |
 
-### Controls
-approval_rules, approval_requests, approval_history, audit_logs, exception_events, automation_runs.
+COGS/profit reporting is guarded by `cogs_coverage_pct`. Incomplete costing returns NULL profit/margin instead of false precision.
+
+## Executive & controls
+
+| Entity / view | Purpose |
+|---|---|
+| audit_logs | Append-only critical business audit trail |
+| exception_events | Persisted business exceptions |
+| business_alerts | Dynamic sales/stock/waste/budget/price/approval/cash alerts |
+| executive_kpi_snapshot | Reconciled management KPI snapshot |
+| executive_dashboard_snapshot | CEO-ready snapshot incl. cash and decision counts |
+| executive_decision_center | Action queue for approvals, stock, AP, alerts, data quality/freshness |
 
 ## Data ownership principles
 
-- Every business row has a brand scope.
-- Operational transaction rows should gain outlet scope when applicable.
-- Critical rows store actor and timestamps.
-- Imported rows preserve source batch/file/row identity.
-- Summary/KPI tables never replace transaction truth.
-- RLS is the security boundary; frontend visibility is only UX.
+- Every business row is brand-scoped.
+- New operational entities use outlet scope when source data supports it.
+- Critical mutations record actor/timestamps and use controlled RPCs/triggers.
+- Imported data preserves provenance.
+- Summary/KPI views never replace transaction truth.
+- Browser/UI is never the security boundary; RLS/database controls are final.
