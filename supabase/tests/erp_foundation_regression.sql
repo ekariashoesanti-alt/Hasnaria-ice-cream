@@ -104,7 +104,7 @@ begin
 end $$;
 
 -- Incomplete COGS must never produce false profit precision.
-do $
+do $$
 declare bad integer;
 begin
   select count(*) into bad
@@ -118,7 +118,7 @@ begin
 end $;
 
 -- Canonical executive/operational views must resolve.
-do $
+do $$
 declare missing integer;
 begin
   select count(*) into missing
