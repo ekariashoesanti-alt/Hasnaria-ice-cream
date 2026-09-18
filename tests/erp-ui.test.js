@@ -4,6 +4,7 @@ const vm = require('vm');
 const assert = require('assert/strict');
 const ROOT = path.join(__dirname, '..');
 const source = fs.readFileSync(path.join(ROOT, 'erp.js'), 'utf8');
+const actionSource = fs.readFileSync(path.join(ROOT, 'erp-actions.js'), 'utf8');
 const indexSource = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
 const appSource = fs.readFileSync(path.join(ROOT, 'app.js'), 'utf8');
 const coreSource = fs.readFileSync(path.join(ROOT, 'core-app.js'), 'utf8');
@@ -47,15 +48,62 @@ function assertShellIntegration() {
   ]) assert.ok(source.includes(contract), `ERP UI keeps backend contract ${contract}`);
 
   assert.ok(source.includes('context().navigate(value)'), 'ERP detail actions route back into existing modules');
+  assert.ok(source.includes('/erp-actions.js?v=1'), 'ERP action forms are lazy-loaded as a production runtime asset');
+  assert.ok(source.includes('hasnaria:erp-action-resolved'), 'successful ERP action resolution refreshes dashboard contracts');
   console.log('ERP shell integration wiring: PASS');
+}
+
+function assertActionContracts() {
+  const window = {__HASNARIA_CONTEXT:{brandId:'hasnaria',userId:'owner',role:'owner'}};
+  vm.runInNewContext(actionSource, {window,document:{},Date,console,AbortSignal,FormData:function(){},CustomEvent:function(){}});
+  const api = window.HasnariaERPActions;
+  assert.ok(api, 'ERP action module exports API');
+
+  for (const type of ['pack_conversion','recipe_verification','sale_item_mapping','selling_price_confirmation','inventory_baseline_confirmation','financing_payment_review']) {
+    assert.equal(api.canHandle(type), true, `${type} is directly resolvable`);
+  }
+  for (const type of ['invalid_purchase_qty','unmatched_purchase','unverified_inventory','zero_amount_purchase','missing_recipe','missing_component_cost','untracked_stock']) {
+    assert.equal(api.canHandle(type), false, `${type} stays manual until row-specific safe input exists`);
+  }
+
+  const request = (action, values) => JSON.parse(JSON.stringify(api._buildRequest(action, values)));
+  assert.deepEqual(request({action_type:'pack_conversion',metadata:{conversion_id:'c1'}},{units_per_purchase_unit:'50',reason:'Kemasan supplier'}), {
+    rpc:'resolve_inventory_conversion',params:{p_conversion_id:'c1',p_units_per_purchase_unit:50,p_reason:'Kemasan supplier'}
+  });
+  assert.deepEqual(request({action_type:'recipe_verification',metadata:{product_id:'p1'}},{effective_from:'2026-09-18',reason:'BOM diperiksa'}), {
+    rpc:'resolve_product_recipe_verification_v2',params:{p_product_id:'p1',p_verified:true,p_effective_from:'2026-09-18',p_reason:'BOM diperiksa'}
+  });
+  assert.deepEqual(request({action_type:'sale_item_mapping',subject:'MUKBANG RABOKKI',metadata:{suggested_product_id:'p2'}},{reason:'Nama transaksi sama'}), {
+    rpc:'resolve_sale_item_product_mapping',params:{p_source_name:'MUKBANG RABOKKI',p_product_id:'p2',p_reason:'Nama transaksi sama'}
+  });
+  assert.deepEqual(request({action_type:'selling_price_confirmation',metadata:{product_id:'p3'}},{selling_price:'15000',reason:'Konfirmasi owner'}), {
+    rpc:'resolve_product_selling_price',params:{p_product_id:'p3',p_selling_price:15000,p_reason:'Konfirmasi owner'}
+  });
+  assert.deepEqual(request({action_type:'inventory_baseline_confirmation',metadata:{source_history_id:'h1'}},{reason:'Sesuai stock akhir Juli'}), {
+    rpc:'resolve_inventory_baseline_candidate',params:{p_source_history_id:'h1',p_reason:'Sesuai stock akhir Juli'}
+  });
+  assert.deepEqual(request({action_type:'financing_payment_review',metadata:{source_history_id:'h2'}},{resolution:'liability_only',reason:'Belum ada bukti kas keluar'}), {
+    rpc:'resolve_financing_payment_candidate',params:{p_source_history_id:'h2',p_resolution:'liability_only',p_cash_date:null,p_cash_amount:null,p_reason:'Belum ada bukti kas keluar'}
+  });
+  assert.deepEqual(request({action_type:'financing_payment_review',metadata:{source_history_id:'h3'}},{resolution:'cash_paid',cash_date:'2026-09-18',cash_amount:'82000',reason:'Mutasi bank terverifikasi'}), {
+    rpc:'resolve_financing_payment_candidate',params:{p_source_history_id:'h3',p_resolution:'cash_paid',p_cash_date:'2026-09-18',p_cash_amount:82000,p_reason:'Mutasi bank terverifikasi'}
+  });
+  assert.throws(()=>api._buildRequest({action_type:'pack_conversion',metadata:{conversion_id:'c1'}},{units_per_purchase_unit:'0',reason:'x'}),/lebih dari 0/);
+  assert.throws(()=>api._buildRequest({action_type:'financing_payment_review',metadata:{source_history_id:'h4'}},{resolution:'cash_paid',reason:'x'}),/Tanggal pembayaran kas/);
+  console.log('ERP action RPC contracts and safety gates: PASS');
 }
 
 async function renderFixture(data, error) {
   const nodes = new Map();
-  const document = {getElementById(id) {
-    if (!nodes.has(id)) nodes.set(id, {innerHTML:'', classList:{add(){}}, close(){}, showModal(){}});
-    return nodes.get(id);
-  }};
+  const document = {
+    head:{appendChild(){}},
+    addEventListener(){},
+    createElement(){return {};},
+    getElementById(id) {
+      if (!nodes.has(id)) nodes.set(id, {innerHTML:'', classList:{add(){}}, close(){}, showModal(){}});
+      return nodes.get(id);
+    }
+  };
   let calls = 0;
   const window = {__HASNARIA_CONTEXT:{brandId:'hasnaria',userId:'owner',role:'owner'},
     __HASNARIA_DB:{rpc(name) {
@@ -70,6 +118,7 @@ async function renderFixture(data, error) {
 
 (async()=>{
   assertShellIntegration();
+  assertActionContracts();
   const empty = await renderFixture({owner:{brand_id:'hasnaria'},monthly_trend:[{month:'2026-09-01',gross_profit_verified:null,operating_profit_verified:null}]});
   assert.equal(empty.calls,1);
   assert.match(empty.html,/Belum tersedia/);
