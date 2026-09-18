@@ -11,7 +11,8 @@
     'invalid_purchase_qty',
     'unmatched_purchase',
     'unverified_inventory',
-    'zero_amount_purchase'
+    'zero_amount_purchase',
+    'untracked_stock'
   ]);
 
   const esc = value => String(value == null ? '' : value).replace(/[&<>"']/g, c => ({
@@ -25,6 +26,7 @@
   function canHandle(type) { return HANDLED.has(type); }
   function requireOwner() { const c=context(); if(!c||c.role!=='owner') throw new Error('Tindakan ini hanya dapat diselesaikan oleh Owner.'); }
   function positive(value,label){ const n=Number(value); if(!(n>0)) throw new Error(label+' harus lebih dari 0.'); return n; }
+  function nonNegative(value,label){ const n=Number(value); if(!(n>=0)) throw new Error(label+' harus 0 atau lebih.'); return n; }
   function reason(value){ const text=String(value||'').trim(); if(!text) throw new Error('Alasan wajib diisi untuk audit trail.'); return text; }
   function todayJakarta(){ return new Date(Date.now()+7*60*60*1000).toISOString().slice(0,10); }
 
@@ -40,6 +42,14 @@
       let effectiveAmount=null;
       if(resolution==='actual_amount') effectiveAmount=positive(values.effective_amount,'Nominal aktual');
       return {rpc:'resolve_zero_amount_purchase_candidate',params:{p_source_history_id:meta.source_history_id,p_resolution:resolution,p_effective_amount:effectiveAmount,p_reason:reason(values.reason)}};
+    }
+
+    if(type==='untracked_stock'){
+      if(!meta.inventory_item_id) throw new Error('Inventory item tidak tersedia.');
+      const opnameDate=String(values.opname_date||'').trim();
+      if(!opnameDate) throw new Error('Tanggal stock opname wajib diisi.');
+      if(opnameDate>todayJakarta()) throw new Error('Tanggal stock opname tidak boleh di masa depan.');
+      return {rpc:'resolve_physical_stock_opname',params:{p_inventory_item_id:meta.inventory_item_id,p_physical_qty:nonNegative(values.physical_qty,'Stok fisik'),p_opname_date:opnameDate,p_reason:reason(values.reason)}};
     }
 
     if(type==='unmatched_purchase'||type==='unverified_inventory'){
@@ -153,6 +163,8 @@
       body='<p class="erp-note warn">Ini baseline historis, bukan stok hari ini. Konfirmasi hanya jika stok akhir periode sumber memang benar.</p><div class="erp-wide erp-note"><b>Tanggal baseline:</b> '+esc(meta.baseline_date||'Belum tersedia')+'<br><b>Qty akhir historis:</b> '+number(meta.ending_qty)+' '+esc(meta.unit||'')+'</div>';submitLabel='Konfirmasi baseline historis';
     }else if(type==='zero_amount_purchase'){
       body='<p class="erp-note warn">Baris sumber bernilai Rp0. Isi nominal aktual hanya dari bukti pembelian; jika baris memang tidak seharusnya diposting, pilih Exclude.</p><div class="erp-wide erp-note"><b>Tanggal sumber:</b> '+esc(meta.purchase_date||'Belum tersedia')+'<br><b>Mapping:</b> '+esc(meta.mapping_status||'Belum tersedia')+'<br><b>File:</b> '+esc((meta.source_file||'—')+' #'+(meta.row_no||'—'))+'</div><label>Keputusan<select name="resolution" required><option value="">Pilih…</option><option value="actual_amount">Isi nominal aktual</option><option value="exclude">Exclude</option></select></label><label id="erp-zero-fields" hidden>Nominal aktual<input name="effective_amount" type="number" min="0.01" step="any" placeholder="Nominal berdasarkan bukti"></label>';submitLabel='Simpan keputusan nominal';
+    }else if(type==='untracked_stock'){
+      body='<p class="erp-note warn">Masukkan hasil hitung fisik yang benar. Nilai ini menjadi baseline stok pada tanggal opname; sistem tidak menebak quantity.</p><div class="erp-wide erp-note"><b>Unit:</b> '+esc(meta.unit||'—')+'<br><b>Ledger saat ini:</b> '+number(meta.ledger_qty)+'<br><b>Kategori:</b> '+esc(meta.category||'—')+'</div><label>Stok fisik<input name="physical_qty" type="number" min="0" step="any" required placeholder="0"></label><label>Tanggal stock opname<input name="opname_date" type="date" max="'+todayJakarta()+'" value="'+todayJakarta()+'" required></label>';submitLabel='Simpan stock opname';
     }else if(type==='financing_payment_review'){
       body='<p class="erp-note warn">Pilih cash_paid hanya jika uang benar-benar keluar dari kas/bank pada tanggal yang diisi.</p><div class="erp-wide erp-note"><b>Tanggal sumber:</b> '+esc(meta.purchase_date||'Belum tersedia')+'<br><b>Nilai kandidat:</b> '+money(meta.amount)+'<br><b>Metode sumber:</b> '+esc(meta.payment_method||'Belum tersedia')+'</div><label>Keputusan<select name="resolution" required><option value="">Pilih…</option><option value="cash_paid">Cash paid</option><option value="liability_only">Liability only</option><option value="exclude">Exclude</option></select></label><fieldset id="erp-cash-fields" class="erp-wide" hidden><div class="erp-form"><label>Tanggal pembayaran<input name="cash_date" type="date"></label><label>Nominal dibayar<input name="cash_amount" type="number" min="0.01" step="any"></label></div></fieldset>';submitLabel='Simpan keputusan pembiayaan';
     }
