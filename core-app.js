@@ -234,6 +234,7 @@
 
   function render() {
     if (!me) return;
+    window.__HASNARIA_CONTEXT = {brandId:BRAND,userId:me.userId,role:role,navigate:setTab};
     $("whoName").textContent = me.name || "—";
     $("whoMeta").textContent = (ROLE_L[role] || role) + " · " + (me.email || "");
     tabs();
@@ -275,6 +276,8 @@
       '<div class="card"><div class="label">Waste 30 hari</div><div class="metric">' + rp(waste) + '</div></div>' +
       '<div class="card"><div class="label">Stok kritis / izin hari ini</div><div class="metric">' + crit.length + " · " + absen.length + "</div></div></div>" +
       '<div class="card"><div class="label">Jalur komando</div><p style="margin-top:6px"><b>Owner → Head / PIC → Pelaksana</b>. Bukan Owner → semua orang.</p></div>';
+
+    if (window.HasnariaERP) window.HasnariaERP.mount();
 
     $("sales").innerHTML = '<div class="card"><h2>Omzet + kas harian</h2>' +
       (canSales(role) ? "" : '<p class="small" style="color:var(--d)">Role Anda tidak menginput penjualan.</p>') +

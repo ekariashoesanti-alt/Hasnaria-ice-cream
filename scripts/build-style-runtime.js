@@ -75,7 +75,7 @@ function hardenRuntimeStyleAttachment(distDir) {
     {
       file: 'sales-ui-patch.js',
       functionMarker: '  function injectStyle() {',
-      nextFunctionMarker: '  function hideSalesPanels() {',
+      nextFunctionMarker: '  function ensureTrendAlignCss() {',
       styleId: 'hasnaria-sales-layout-style',
       label: 'Sales UI layout style'
     },

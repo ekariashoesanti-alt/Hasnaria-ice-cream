@@ -35,6 +35,17 @@ try {
     if (checked.status !== 0) throw new Error(checked.stderr || checked.stdout || `${name} syntax check failed`);
   }
 
+  // Execute the neighbouring loader: style hardening must not move `s` into it.
+  const vm = require('vm');
+  const builtSales = fs.readFileSync(path.join(tmp, 'sales-ui-patch.js'), 'utf8');
+  const loader = builtSales.slice(builtSales.indexOf('  function ensureTrendAlignCss() {'), builtSales.indexOf('  function hideSalesPanels() {'));
+  const attached = [];
+  vm.runInNewContext(loader + '\nensureTrendAlignCss();', {document: {
+    getElementById: () => null,
+    createElement: () => ({}),
+    head: {appendChild: element => attached.push(element)}
+  }});
+  if (attached.length !== 1 || attached[0].rel !== 'stylesheet') throw new Error('Trend CSS loader regression');
   console.log('runtime style attachment test: PASS');
 } finally {
   fs.rmSync(tmp, { recursive: true, force: true });
