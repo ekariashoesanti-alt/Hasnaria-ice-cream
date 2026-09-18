@@ -171,78 +171,78 @@ Rule-driven approvals, immutable audit, self-approval prevention, exception mode
 | HSN-104 | M1 | P0 | REVIEW | User profile authority hardening | HSN-101 |
 | HSN-105 | M1 | P0 | DONE | Role capability matrix service | HSN-104 |
 | HSN-106 | M1 | P0 | REVIEW | Product master canonicalization | HSN-101 |
-| HSN-107 | M1 | P0 | TODO | Supplier master | HSN-101 |
+| HSN-107 | M1 | P0 | DONE | Supplier master | HSN-101 |
 | HSN-108 | M1 | P1 | TODO | Customer master lightweight | HSN-101 |
 | HSN-109 | M1 | P0 | TODO | Units of measure master | HSN-106 |
 | HSN-110 | M1 | P0 | TODO | Category master produk/pembelian/expense | HSN-106 |
 | HSN-111 | M1 | P0 | DONE | Import job model | HSN-101 |
 | HSN-112 | M1 | P0 | DONE | File provenance and duplicate protection | HSN-111 |
-| HSN-113 | M1 | P0 | TODO | ERP settings registry | HSN-101 |
-| HSN-114 | M1 | P1 | TODO | Business calendar / period model | HSN-113 |
+| HSN-113 | M1 | P0 | DONE | ERP settings registry | HSN-101 |
+| HSN-114 | M1 | P1 | DONE | Business calendar / period model | HSN-113 |
 | HSN-115 | M1 | P0 | TODO | Migration naming & rollback runbook | HSN-100 |
-| HSN-116 | M1 | P0 | REVIEW | Data dictionary | HSN-106, HSN-107 |
+| HSN-116 | M1 | P0 | DONE | Data dictionary | HSN-106, HSN-107 |
 | HSN-117 | M1 | P0 | DONE | ERP project tracker and Codex governance | — |
 | HSN-200 | M2 | P0 | REVIEW | Majoo sales import baseline | HSN-111 |
 | HSN-201 | M2 | P0 | TODO | Sales import validation report | HSN-200 |
 | HSN-202 | M2 | P0 | TODO | Sales batch rollback | HSN-200 |
-| HSN-203 | M2 | P0 | TODO | Normalized sales header/detail contract | HSN-200 |
-| HSN-204 | M2 | P0 | TODO | Payment method normalization | HSN-203 |
-| HSN-205 | M2 | P0 | TODO | Sales daily KPI service | HSN-203 |
-| HSN-206 | M2 | P0 | TODO | Sales MTD/MoM/YoY service | HSN-205 |
+| HSN-203 | M2 | P0 | REVIEW | Normalized sales header/detail contract | HSN-200 |
+| HSN-204 | M2 | P0 | REVIEW | Payment method normalization | HSN-203 |
+| HSN-205 | M2 | P0 | REVIEW | Sales daily KPI service | HSN-203 |
+| HSN-206 | M2 | P0 | REVIEW | Sales MTD/MoM/YoY service | HSN-205 |
 | HSN-207 | M2 | P1 | TODO | Product/category performance | HSN-203 |
 | HSN-208 | M2 | P1 | REVIEW | Hourly sales analysis | HSN-203 |
-| HSN-209 | M2 | P1 | TODO | Sales target vs actual | HSN-113, HSN-205 |
+| HSN-209 | M2 | P1 | REVIEW | Sales target vs actual | HSN-113, HSN-205 |
 | HSN-210 | M2 | P1 | TODO | Refund/void dashboard | HSN-203 |
-| HSN-211 | M2 | P1 | TODO | Sales anomaly rules | HSN-206 |
+| HSN-211 | M2 | P1 | DONE | Sales anomaly rules | HSN-206 |
 | HSN-212 | M2 | P2 | TODO | Channel mix reporting | HSN-203 |
 | HSN-213 | M2 | P0 | TODO | Sales reconciliation test pack | HSN-200, HSN-203 |
 | HSN-300 | M3 | P0 | REVIEW | Purchase file upload UX baseline | HSN-111 |
 | HSN-301 | M3 | P0 | TODO | Purchase import validation | HSN-300 |
 | HSN-302 | M3 | P0 | TODO | Purchase import batch model | HSN-111, HSN-301 |
 | HSN-303 | M3 | P0 | TODO | Supplier mapping during import | HSN-107, HSN-301 |
-| HSN-304 | M3 | P0 | TODO | Purchase Request workflow | HSN-107, HSN-105 |
-| HSN-305 | M3 | P0 | TODO | Purchase approval threshold | HSN-304, HSN-900 |
-| HSN-306 | M3 | P0 | TODO | Purchase Order lifecycle | HSN-305 |
-| HSN-307 | M3 | P0 | TODO | Goods Receipt | HSN-306 |
-| HSN-308 | M3 | P0 | TODO | Purchase invoice | HSN-307 |
-| HSN-309 | M3 | P0 | TODO | Purchase payment status | HSN-308, HSN-503 |
-| HSN-310 | M3 | P1 | TODO | Supplier spend analysis | HSN-302, HSN-303 |
-| HSN-311 | M3 | P1 | TODO | Purchase price variance | HSN-302, HSN-303 |
+| HSN-304 | M3 | P0 | DONE | Purchase Request workflow | HSN-107, HSN-105 |
+| HSN-305 | M3 | P0 | DONE | Purchase approval threshold | HSN-304, HSN-900 |
+| HSN-306 | M3 | P0 | DONE | Purchase Order lifecycle | HSN-305 |
+| HSN-307 | M3 | P0 | DONE | Goods Receipt | HSN-306 |
+| HSN-308 | M3 | P0 | DONE | Purchase invoice | HSN-307 |
+| HSN-309 | M3 | P0 | DONE | Purchase payment status | HSN-308, HSN-503 |
+| HSN-310 | M3 | P1 | DONE | Supplier spend analysis | HSN-302, HSN-303 |
+| HSN-311 | M3 | P1 | DONE | Purchase price variance | HSN-302, HSN-303 |
 | HSN-312 | M3 | P1 | TODO | Purchase trend annual chart | HSN-302 |
-| HSN-313 | M3 | P1 | TODO | Open PO / overdue receipt dashboard | HSN-306, HSN-307 |
-| HSN-314 | M3 | P0 | TODO | Purchase regression tests | HSN-300, HSN-302 |
+| HSN-313 | M3 | P1 | REVIEW | Open PO / overdue receipt dashboard | HSN-306, HSN-307 |
+| HSN-314 | M3 | P0 | REVIEW | Purchase regression tests | HSN-300, HSN-302 |
 | HSN-400 | M4 | P0 | REVIEW | Inventory item master baseline | HSN-109 |
 | HSN-401 | M4 | P0 | REVIEW | Recipe/BOM mapping baseline | HSN-106, HSN-400 |
 | HSN-402 | M4 | P0 | REVIEW | Stock reconciliation view baseline | HSN-401 |
-| HSN-403 | M4 | P0 | TODO | Canonical inventory movement ledger | HSN-402 |
-| HSN-404 | M4 | P0 | TODO | Purchase receipt posts stock movement | HSN-307, HSN-403 |
-| HSN-405 | M4 | P0 | TODO | Sales posts consumption movement | HSN-203, HSN-401, HSN-403 |
-| HSN-406 | M4 | P0 | TODO | Waste movement | HSN-403 |
-| HSN-407 | M4 | P0 | TODO | Adjustment movement | HSN-403 |
-| HSN-408 | M4 | P0 | REVIEW | Physical stock opname | HSN-402 |
-| HSN-409 | M4 | P0 | TODO | Stock valuation | HSN-403 |
+| HSN-403 | M4 | P0 | DONE | Canonical inventory movement ledger | HSN-402 |
+| HSN-404 | M4 | P0 | DONE | Purchase receipt posts stock movement | HSN-307, HSN-403 |
+| HSN-405 | M4 | P0 | DONE | Sales posts consumption movement | HSN-203, HSN-401, HSN-403 |
+| HSN-406 | M4 | P0 | DONE | Waste movement | HSN-403 |
+| HSN-407 | M4 | P0 | DONE | Adjustment movement | HSN-403 |
+| HSN-408 | M4 | P0 | DONE | Physical stock opname | HSN-402 |
+| HSN-409 | M4 | P0 | REVIEW | Stock valuation | HSN-403 |
 | HSN-410 | M4 | P1 | TODO | Reorder recommendation | HSN-403 |
 | HSN-411 | M4 | P1 | TODO | Days of inventory | HSN-403, HSN-205 |
 | HSN-412 | M4 | P1 | TODO | Slow-moving / dead stock | HSN-403 |
 | HSN-413 | M4 | P1 | TODO | Inventory variance dashboard | HSN-408 |
-| HSN-414 | M4 | P0 | TODO | Negative stock prevention policy | HSN-403 |
-| HSN-415 | M4 | P0 | TODO | Inventory reconciliation test pack | HSN-403, HSN-408 |
-| HSN-500 | M5 | P0 | TODO | Chart of accounts minimal | HSN-100 |
-| HSN-501 | M5 | P0 | TODO | Cash session opening/closing | HSN-105 |
-| HSN-502 | M5 | P0 | TODO | Cash/QRIS/transfer settlement model | HSN-204 |
-| HSN-503 | M5 | P0 | TODO | Accounts Payable ledger | HSN-308 |
+| HSN-414 | M4 | P0 | REVIEW | Negative stock prevention policy | HSN-403 |
+| HSN-415 | M4 | P0 | DONE | Inventory reconciliation test pack | HSN-403, HSN-408 |
+| HSN-500 | M5 | P0 | DONE | Chart of accounts minimal | HSN-100 |
+| HSN-501 | M5 | P0 | DONE | Cash session opening/closing | HSN-105 |
+| HSN-502 | M5 | P0 | DONE | Cash/QRIS/transfer settlement model | HSN-204 |
+| HSN-503 | M5 | P0 | DONE | Accounts Payable ledger | HSN-308 |
 | HSN-504 | M5 | P1 | TODO | Bank transaction import | HSN-111 |
 | HSN-505 | M5 | P1 | TODO | Bank reconciliation | HSN-502, HSN-504 |
 | HSN-506 | M5 | P0 | TODO | Expense classification hardening | HSN-110 |
-| HSN-507 | M5 | P0 | TODO | COGS calculation contract | HSN-409, HSN-205 |
-| HSN-508 | M5 | P0 | TODO | Gross profit and gross margin | HSN-205, HSN-507 |
-| HSN-509 | M5 | P0 | TODO | Operating expense summary | HSN-506 |
-| HSN-510 | M5 | P0 | TODO | Operating profit | HSN-508, HSN-509 |
-| HSN-511 | M5 | P0 | TODO | Cashflow report | HSN-501, HSN-503, HSN-506 |
-| HSN-512 | M5 | P1 | TODO | Budget model | HSN-113, HSN-500 |
-| HSN-513 | M5 | P1 | TODO | Budget vs actual | HSN-512, HSN-509 |
-| HSN-514 | M5 | P0 | TODO | Financial close checklist | HSN-114, HSN-510, HSN-511 |
-| HSN-515 | M5 | P0 | TODO | Finance reconciliation test pack | HSN-508, HSN-510, HSN-511 |
+| HSN-507 | M5 | P0 | REVIEW | COGS calculation contract | HSN-409, HSN-205 |
+| HSN-508 | M5 | P0 | REVIEW | Gross profit and gross margin | HSN-205, HSN-507 |
+| HSN-509 | M5 | P0 | REVIEW | Operating expense summary | HSN-506 |
+| HSN-510 | M5 | P0 | REVIEW | Operating profit | HSN-508, HSN-509 |
+| HSN-511 | M5 | P0 | REVIEW | Cashflow report | HSN-501, HSN-503, HSN-506 |
+| HSN-512 | M5 | P1 | DONE | Budget model | HSN-113, HSN-500 |
+| HSN-513 | M5 | P1 | DONE | Budget vs actual | HSN-512, HSN-509 |
+| HSN-514 | M5 | P0 | REVIEW | Financial close checklist | HSN-114, HSN-510, HSN-511 |
+| HSN-515 | M5 | P0 | REVIEW | Finance reconciliation test pack | HSN-508, HSN-510, HSN-511 |
 | HSN-600 | M6 | P0 | TODO | Employee master | HSN-101 |
 | HSN-601 | M6 | P0 | TODO | Shift template and roster | HSN-600, HSN-102 |
 | HSN-602 | M6 | P0 | TODO | Attendance check-in/out | HSN-601 |
@@ -269,34 +269,34 @@ Rule-driven approvals, immutable audit, self-approval prevention, exception mode
 | HSN-709 | M7 | P2 | TODO | Feedback/complaint log | HSN-108 |
 | HSN-710 | M7 | P1 | TODO | Marketing executive summary | HSN-705, HSN-707 |
 | HSN-711 | M7 | P0 | TODO | Marketing regression tests | HSN-701, HSN-704 |
-| HSN-800 | M8 | P0 | TODO | CEO dashboard information architecture | HSN-205, HSN-508, HSN-511, HSN-403 |
-| HSN-801 | M8 | P0 | TODO | Executive KPI snapshot | HSN-800 |
+| HSN-800 | M8 | P0 | REVIEW | CEO dashboard information architecture | HSN-205, HSN-508, HSN-511, HSN-403 |
+| HSN-801 | M8 | P0 | REVIEW | Executive KPI snapshot | HSN-800 |
 | HSN-802 | M8 | P0 | TODO | Revenue/profit trend toggle | HSN-801 |
-| HSN-803 | M8 | P0 | TODO | Business health scorecards | HSN-801, HSN-910 |
-| HSN-804 | M8 | P0 | TODO | Owner Decision Center | HSN-901, HSN-910 |
-| HSN-805 | M8 | P0 | TODO | Critical alert prioritization | HSN-910 |
+| HSN-803 | M8 | P0 | REVIEW | Business health scorecards | HSN-801, HSN-910 |
+| HSN-804 | M8 | P0 | REVIEW | Owner Decision Center | HSN-901, HSN-910 |
+| HSN-805 | M8 | P0 | REVIEW | Critical alert prioritization | HSN-910 |
 | HSN-806 | M8 | P1 | TODO | Period selector MTD/QTD/YTD/custom | HSN-114 |
 | HSN-807 | M8 | P1 | TODO | Outlet selector / consolidated view | HSN-102 |
 | HSN-808 | M8 | P1 | TODO | Executive drill-down | HSN-801 |
 | HSN-809 | M8 | P1 | TODO | CEO insight narrative | HSN-801, HSN-803 |
 | HSN-810 | M8 | P1 | TODO | Daily owner digest | HSN-804, HSN-809 |
 | HSN-811 | M8 | P1 | TODO | Weekly management review pack | HSN-801 |
-| HSN-812 | M8 | P0 | TODO | Executive data freshness indicator | HSN-801 |
-| HSN-813 | M8 | P0 | TODO | CEO dashboard regression & reconciliation | HSN-801, HSN-804 |
+| HSN-812 | M8 | P0 | REVIEW | Executive data freshness indicator | HSN-801 |
+| HSN-813 | M8 | P0 | REVIEW | CEO dashboard regression & reconciliation | HSN-801, HSN-804 |
 | HSN-900 | M9 | P0 | DONE | Approval rule data model | HSN-105, HSN-113 |
-| HSN-901 | M9 | P0 | REVIEW | Generic approval request engine | HSN-900 |
-| HSN-902 | M9 | P0 | REVIEW | Approval history immutable log | HSN-901 |
+| HSN-901 | M9 | P0 | DONE | Generic approval request engine | HSN-900 |
+| HSN-902 | M9 | P0 | DONE | Approval history immutable log | HSN-901 |
 | HSN-903 | M9 | P0 | DONE | Self-approval prevention | HSN-901 |
 | HSN-904 | M9 | P0 | DONE | Audit log foundation | HSN-100 |
 | HSN-905 | M9 | P0 | DONE | Audit immutability controls | HSN-904 |
-| HSN-906 | M9 | P0 | TODO | Sensitive action reason requirement | HSN-904 |
+| HSN-906 | M9 | P0 | REVIEW | Sensitive action reason requirement | HSN-904 |
 | HSN-907 | M9 | P1 | TODO | Approval delegation/out-of-office | HSN-901 |
-| HSN-908 | M9 | P1 | TODO | Approval SLA/aging | HSN-901 |
+| HSN-908 | M9 | P1 | REVIEW | Approval SLA/aging | HSN-901 |
 | HSN-909 | M9 | P0 | DONE | Exception event model | HSN-100 |
-| HSN-910 | M9 | P0 | TODO | Business alert rules | HSN-909 |
-| HSN-911 | M9 | P1 | TODO | Alert acknowledge/resolve workflow | HSN-909 |
+| HSN-910 | M9 | P0 | DONE | Business alert rules | HSN-909 |
+| HSN-911 | M9 | P1 | DONE | Alert acknowledge/resolve workflow | HSN-909 |
 | HSN-912 | M9 | P1 | TODO | Automation jobs registry | HSN-111 |
-| HSN-913 | M9 | P0 | TODO | Controls regression tests | HSN-901, HSN-904, HSN-910 |
+| HSN-913 | M9 | P0 | REVIEW | Controls regression tests | HSN-901, HSN-904, HSN-910 |
 | HSN-1000 | M10 | P0 | TODO | Production architecture review | HSN-813, HSN-913 |
 | HSN-1001 | M10 | P0 | TODO | RLS full matrix test suite | HSN-105 |
 | HSN-1002 | M10 | P0 | TODO | Performance budget | HSN-800 |
