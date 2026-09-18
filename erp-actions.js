@@ -7,7 +7,8 @@
     'sale_item_mapping',
     'selling_price_confirmation',
     'inventory_baseline_confirmation',
-    'financing_payment_review'
+    'financing_payment_review',
+    'invalid_purchase_qty'
   ]);
 
   const esc = value => String(value == null ? '' : value).replace(/[&<>"']/g, c => ({
@@ -47,6 +48,19 @@
     const meta = action && action.metadata || {};
     const type = action && action.action_type;
     if (!canHandle(type)) throw new Error('Action type belum didukung oleh form ERP.');
+
+    if (type === 'invalid_purchase_qty') {
+      const sourceHistoryId = values.source_history_id || meta.source_history_id;
+      if (!sourceHistoryId) throw new Error('Pilih baris pembelian yang akan diperbaiki.');
+      return {
+        rpc: 'resolve_purchase_quantity_override',
+        params: {
+          p_source_history_id: sourceHistoryId,
+          p_effective_qty: positive(values.effective_qty, 'Quantity efektif'),
+          p_reason: reason(values.reason)
+        }
+      };
+    }
 
     if (type === 'pack_conversion') {
       if (!meta.conversion_id) throw new Error('Conversion ID tidak tersedia.');
@@ -147,6 +161,48 @@
       '</div>';
   }
 
+  function invalidRowLabel(row) {
+    return [row.purchase_date || 'Tanpa tanggal', row.quantity_text ? 'qty sumber ' + row.quantity_text : 'qty sumber kosong', money(row.total_amount), (row.source_file || 'file') + ' #' + (row.row_no || '—')].join(' · ');
+  }
+
+  async function openInvalidQuantity(action, dialog) {
+    dialog.innerHTML = commonHeader(action) + '<p class="erp-note warn">Perbaikan dilakukan per baris sumber. Raw Excel tidak diubah; override akan diaudit.</p><p role="status">Memuat baris pembelian…</p>';
+    dialog.showModal();
+    const result = await db().from('ui_invalid_quantity_queue').select('*').eq('brand_id', context().brandId).eq('item_name', action.subject).order('purchase_date', {ascending:false}).limit(100).abortSignal(AbortSignal.timeout(30000));
+    if (result.error) throw result.error;
+    const rows = result.data || [];
+    if (!rows.length) {
+      dialog.innerHTML = commonHeader(action) + '<p class="erp-note">Tidak ada lagi baris invalid quantity untuk item ini. Muat ulang Action Center.</p><div class="erp-form-actions"><button type="button" data-erp-action-close>Tutup</button></div>';
+      const close = dialog.querySelector('[data-erp-action-close]');
+      if (close) close.onclick = () => dialog.close();
+      return;
+    }
+    dialog.innerHTML = commonHeader(action) + '<p class="erp-note warn">Pilih baris sumber yang benar. Suggested quantity hanya diisi otomatis jika total ÷ harga satuan menghasilkan angka bulat secara deterministik.</p>' +
+      '<form id="erp-action-form" class="erp-form"><label class="erp-wide">Baris pembelian<select name="source_history_id" required><option value="">Pilih…</option>' + rows.map(row => '<option value="' + esc(row.source_history_id) + '">' + esc(invalidRowLabel(row)) + '</option>').join('') + '</select></label>' +
+      '<label>Quantity efektif<input name="effective_qty" type="number" min="0.000001" step="any" required></label>' +
+      '<div id="erp-invalid-hint" class="erp-note">Pilih baris untuk melihat apakah ada suggestion deterministik.</div>' +
+      '<label class="erp-wide">Alasan / catatan audit<textarea name="reason" rows="3" required placeholder="Tuliskan dasar quantity yang benar"></textarea></label>' +
+      '<p id="erp-action-message" class="erp-wide erp-message" role="status"></p><div class="erp-form-actions erp-wide"><button type="button" data-erp-action-close>Tutup</button><button class="primary" type="submit">Simpan quantity efektif</button></div></form>';
+    const form = dialog.querySelector('#erp-action-form');
+    const close = dialog.querySelector('[data-erp-action-close]');
+    const select = form.elements.source_history_id;
+    const qty = form.elements.effective_qty;
+    const hint = dialog.querySelector('#erp-invalid-hint');
+    if (close) close.onclick = () => dialog.close();
+    select.onchange = () => {
+      const row = rows.find(x => String(x.source_history_id) === select.value);
+      qty.value = '';
+      if (!row) { hint.textContent = 'Pilih baris untuk melihat apakah ada suggestion deterministik.'; return; }
+      if (row.can_apply_suggestion && Number(row.suggested_qty) > 0) {
+        qty.value = row.suggested_qty;
+        hint.textContent = 'Suggestion deterministik: ' + number(row.suggested_qty) + ' (' + row.suggestion_method + '). Tetap periksa dokumen sumber sebelum simpan.';
+      } else {
+        hint.textContent = 'Tidak ada suggestion deterministik. Isi quantity dari dokumen sumber.';
+      }
+    };
+    form.onsubmit = event => { event.preventDefault(); submit(action, form, dialog); };
+  }
+
   function formHtml(action) {
     const meta = action.metadata || {};
     const type = action.action_type;
@@ -223,6 +279,14 @@
     requireOwner();
     if (!dialog) throw new Error('Dialog ERP tidak tersedia.');
     if (!canHandle(action && action.action_type)) throw new Error('Action type belum didukung oleh form ERP.');
+    if (action.action_type === 'invalid_purchase_qty') {
+      openInvalidQuantity(action, dialog).catch(error => {
+        dialog.innerHTML = commonHeader(action) + '<p class="erp-note error">' + esc(error && error.message ? error.message : error) + '</p><div class="erp-form-actions"><button type="button" data-erp-action-close>Tutup</button></div>';
+        const close = dialog.querySelector('[data-erp-action-close]');
+        if (close) close.onclick = () => dialog.close();
+      });
+      return;
+    }
     dialog.innerHTML = formHtml(action);
     const form = dialog.querySelector('#erp-action-form');
     const close = dialog.querySelector('[data-erp-action-close]');
