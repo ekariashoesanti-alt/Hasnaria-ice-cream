@@ -97,7 +97,7 @@ insert into public.accounting_periods(brand_id,period_start,period_end,status)
 select
   b.id,
   date_trunc('month',current_date)::date,
-  (date_trunc('month',current_date)+interval '1 month-1 day')::date,
+  (date_trunc('month',current_date)+interval '1 month'-interval '1 day')::date,
   'open'
 from public.brands b
 where lower(btrim(b.name))='hasnaria'
