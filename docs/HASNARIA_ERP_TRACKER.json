@@ -315,7 +315,7 @@
       "id": "HSN-108",
       "milestone": "M1",
       "priority": "P1",
-      "status": "TODO",
+      "status": "DONE",
       "title": "Customer master lightweight",
       "dependencies": [
         "HSN-101"
@@ -328,7 +328,7 @@
       "id": "HSN-109",
       "milestone": "M1",
       "priority": "P0",
-      "status": "TODO",
+      "status": "DONE",
       "title": "Units of measure master",
       "dependencies": [
         "HSN-106"
@@ -341,7 +341,7 @@
       "id": "HSN-110",
       "milestone": "M1",
       "priority": "P0",
-      "status": "TODO",
+      "status": "DONE",
       "title": "Category master produk/pembelian/expense",
       "dependencies": [
         "HSN-106"
@@ -406,7 +406,7 @@
       "id": "HSN-115",
       "milestone": "M1",
       "priority": "P0",
-      "status": "TODO",
+      "status": "DONE",
       "title": "Migration naming & rollback runbook",
       "dependencies": [
         "HSN-100"
@@ -1236,7 +1236,7 @@
       "id": "HSN-514",
       "milestone": "M5",
       "priority": "P0",
-      "status": "REVIEW",
+      "status": "DONE",
       "title": "Financial close checklist",
       "dependencies": [
         "HSN-114",
@@ -1266,7 +1266,7 @@
       "id": "HSN-600",
       "milestone": "M6",
       "priority": "P0",
-      "status": "TODO",
+      "status": "DONE",
       "title": "Employee master",
       "dependencies": [
         "HSN-101"
@@ -1279,7 +1279,7 @@
       "id": "HSN-601",
       "milestone": "M6",
       "priority": "P0",
-      "status": "TODO",
+      "status": "DONE",
       "title": "Shift template and roster",
       "dependencies": [
         "HSN-600",
@@ -1293,7 +1293,7 @@
       "id": "HSN-602",
       "milestone": "M6",
       "priority": "P0",
-      "status": "TODO",
+      "status": "DONE",
       "title": "Attendance check-in/out",
       "dependencies": [
         "HSN-601"
@@ -1306,7 +1306,7 @@
       "id": "HSN-603",
       "milestone": "M6",
       "priority": "P1",
-      "status": "TODO",
+      "status": "REVIEW",
       "title": "Late/absence rules",
       "dependencies": [
         "HSN-602"
@@ -1319,7 +1319,7 @@
       "id": "HSN-604",
       "milestone": "M6",
       "priority": "P0",
-      "status": "TODO",
+      "status": "DONE",
       "title": "Leave request workflow",
       "dependencies": [
         "HSN-600",
@@ -1346,7 +1346,7 @@
       "id": "HSN-606",
       "milestone": "M6",
       "priority": "P1",
-      "status": "TODO",
+      "status": "DONE",
       "title": "Overtime records",
       "dependencies": [
         "HSN-602"
@@ -1359,7 +1359,7 @@
       "id": "HSN-607",
       "milestone": "M6",
       "priority": "P1",
-      "status": "TODO",
+      "status": "DONE",
       "title": "Payroll summary inputs",
       "dependencies": [
         "HSN-602",
@@ -1386,7 +1386,7 @@
       "id": "HSN-609",
       "milestone": "M6",
       "priority": "P1",
-      "status": "TODO",
+      "status": "REVIEW",
       "title": "Sales per employee/hour KPI",
       "dependencies": [
         "HSN-205",
@@ -1400,7 +1400,7 @@
       "id": "HSN-610",
       "milestone": "M6",
       "priority": "P1",
-      "status": "TODO",
+      "status": "DONE",
       "title": "Training/compliance record",
       "dependencies": [
         "HSN-600"
@@ -1426,7 +1426,7 @@
       "id": "HSN-612",
       "milestone": "M6",
       "priority": "P0",
-      "status": "TODO",
+      "status": "DONE",
       "title": "HR role privacy controls",
       "dependencies": [
         "HSN-105",
@@ -1440,7 +1440,7 @@
       "id": "HSN-613",
       "milestone": "M6",
       "priority": "P0",
-      "status": "TODO",
+      "status": "REVIEW",
       "title": "HR regression tests",
       "dependencies": [
         "HSN-602",
@@ -1467,7 +1467,7 @@
       "id": "HSN-701",
       "milestone": "M7",
       "priority": "P0",
-      "status": "TODO",
+      "status": "DONE",
       "title": "Campaign master",
       "dependencies": [
         "HSN-101"
@@ -1480,7 +1480,7 @@
       "id": "HSN-702",
       "milestone": "M7",
       "priority": "P1",
-      "status": "TODO",
+      "status": "REVIEW",
       "title": "Campaign spend",
       "dependencies": [
         "HSN-701",
@@ -1494,7 +1494,7 @@
       "id": "HSN-703",
       "milestone": "M7",
       "priority": "P1",
-      "status": "TODO",
+      "status": "DONE",
       "title": "Reach/engagement metrics",
       "dependencies": [
         "HSN-701"
@@ -1507,7 +1507,7 @@
       "id": "HSN-704",
       "milestone": "M7",
       "priority": "P1",
-      "status": "TODO",
+      "status": "DONE",
       "title": "Attributed transactions/revenue",
       "dependencies": [
         "HSN-203",
@@ -1521,7 +1521,7 @@
       "id": "HSN-705",
       "milestone": "M7",
       "priority": "P1",
-      "status": "TODO",
+      "status": "REVIEW",
       "title": "ROAS/CAC metrics",
       "dependencies": [
         "HSN-702",
@@ -1535,7 +1535,7 @@
       "id": "HSN-706",
       "milestone": "M7",
       "priority": "P1",
-      "status": "TODO",
+      "status": "DONE",
       "title": "Promotion registry",
       "dependencies": [
         "HSN-701"
@@ -1548,7 +1548,7 @@
       "id": "HSN-707",
       "milestone": "M7",
       "priority": "P1",
-      "status": "TODO",
+      "status": "DONE",
       "title": "Promo performance",
       "dependencies": [
         "HSN-706",
@@ -1562,7 +1562,7 @@
       "id": "HSN-708",
       "milestone": "M7",
       "priority": "P2",
-      "status": "TODO",
+      "status": "DONE",
       "title": "Customer repeat indicator",
       "dependencies": [
         "HSN-108",
@@ -1576,7 +1576,7 @@
       "id": "HSN-709",
       "milestone": "M7",
       "priority": "P2",
-      "status": "TODO",
+      "status": "DONE",
       "title": "Feedback/complaint log",
       "dependencies": [
         "HSN-108"
@@ -1589,7 +1589,7 @@
       "id": "HSN-710",
       "milestone": "M7",
       "priority": "P1",
-      "status": "TODO",
+      "status": "REVIEW",
       "title": "Marketing executive summary",
       "dependencies": [
         "HSN-705",
@@ -1603,7 +1603,7 @@
       "id": "HSN-711",
       "milestone": "M7",
       "priority": "P0",
-      "status": "TODO",
+      "status": "REVIEW",
       "title": "Marketing regression tests",
       "dependencies": [
         "HSN-701",
@@ -1899,7 +1899,7 @@
       "id": "HSN-907",
       "milestone": "M9",
       "priority": "P1",
-      "status": "TODO",
+      "status": "DONE",
       "title": "Approval delegation/out-of-office",
       "dependencies": [
         "HSN-901"
@@ -1912,7 +1912,7 @@
       "id": "HSN-908",
       "milestone": "M9",
       "priority": "P1",
-      "status": "REVIEW",
+      "status": "DONE",
       "title": "Approval SLA/aging",
       "dependencies": [
         "HSN-901"
@@ -1964,7 +1964,7 @@
       "id": "HSN-912",
       "milestone": "M9",
       "priority": "P1",
-      "status": "TODO",
+      "status": "REVIEW",
       "title": "Automation jobs registry",
       "dependencies": [
         "HSN-111"
