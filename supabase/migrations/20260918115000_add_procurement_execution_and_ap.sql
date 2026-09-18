@@ -75,6 +75,51 @@ create index if not exists purchase_orders_supplier_idx on public.purchase_order
 create index if not exists purchase_orders_outlet_idx on public.purchase_orders(outlet_id);
 create index if not exists purchase_orders_created_by_idx on public.purchase_orders(created_by);
 
+create or replace function private.guard_purchase_order_header()
+returns trigger
+language plpgsql security definer set search_path=''
+as $
+declare
+  v_supplier_brand uuid;
+  v_request_brand uuid;
+begin
+  select brand_id into v_supplier_brand
+  from public.suppliers where id=new.supplier_id;
+
+  if v_supplier_brand is distinct from new.brand_id then
+    raise exception 'Supplier belongs to another brand';
+  end if;
+
+  if new.purchase_request_id is not null then
+    select brand_id into v_request_brand
+    from public.purchase_requests where id=new.purchase_request_id;
+    if v_request_brand is distinct from new.brand_id then
+      raise exception 'Purchase request belongs to another brand';
+    end if;
+  end if;
+
+  if new.outlet_id is not null and not exists (
+    select 1 from public.outlets o
+    where o.id=new.outlet_id and o.brand_id=new.brand_id
+  ) then
+    raise exception 'Outlet belongs to another brand';
+  end if;
+
+  if tg_op='INSERT' and auth.uid() is not null then
+    new.created_by:=auth.uid();
+  end if;
+  new.updated_at:=now();
+  return new;
+end;
+$;
+
+revoke execute on function private.guard_purchase_order_header()
+  from public,anon,authenticated;
+
+create trigger trg_guard_purchase_order_header
+before insert or update on public.purchase_orders
+for each row execute function private.guard_purchase_order_header();
+
 alter table public.purchase_orders enable row level security;
 
 create policy purchase_orders_read_same_brand
@@ -408,6 +453,43 @@ create index if not exists goods_receipts_brand_date_idx on public.goods_receipt
 create index if not exists goods_receipts_outlet_idx on public.goods_receipts(outlet_id);
 create index if not exists goods_receipts_received_by_idx on public.goods_receipts(received_by);
 
+create or replace function private.guard_goods_receipt_header()
+returns trigger
+language plpgsql security definer set search_path=''
+as $
+declare
+  v_po public.purchase_orders%rowtype;
+begin
+  select * into v_po from public.purchase_orders
+  where id=new.purchase_order_id;
+
+  if not found then raise exception 'Purchase order not found'; end if;
+  if v_po.brand_id<>new.brand_id then raise exception 'Purchase order belongs to another brand'; end if;
+  if v_po.status not in ('issued','partially_received') then
+    raise exception 'Purchase order is not open for receiving';
+  end if;
+
+  if new.outlet_id is null then
+    new.outlet_id:=v_po.outlet_id;
+  elsif v_po.outlet_id is not null and new.outlet_id<>v_po.outlet_id then
+    raise exception 'Goods receipt outlet must match purchase order outlet';
+  end if;
+
+  if tg_op='INSERT' and auth.uid() is not null then
+    new.received_by:=auth.uid();
+  end if;
+  new.updated_at:=now();
+  return new;
+end;
+$;
+
+revoke execute on function private.guard_goods_receipt_header()
+  from public,anon,authenticated;
+
+create trigger trg_guard_goods_receipt_header
+before insert or update on public.goods_receipts
+for each row execute function private.guard_goods_receipt_header();
+
 alter table public.goods_receipts enable row level security;
 
 create policy goods_receipts_read_same_brand
@@ -718,6 +800,9 @@ create table if not exists public.purchase_invoices (
   constraint purchase_invoices_due_check check (due_date is null or due_date>=invoice_date),
   constraint purchase_invoices_status_check check (
     status in ('open','partially_paid','paid','void')
+  ),
+  constraint purchase_invoices_total_positive check (
+    subtotal + tax_amount + other_amount > 0
   )
 );
 
@@ -728,6 +813,51 @@ create index if not exists purchase_invoices_brand_status_idx
 create index if not exists purchase_invoices_po_idx on public.purchase_invoices(purchase_order_id);
 create index if not exists purchase_invoices_outlet_idx on public.purchase_invoices(outlet_id);
 create index if not exists purchase_invoices_created_by_idx on public.purchase_invoices(created_by);
+
+create or replace function private.guard_purchase_invoice_header()
+returns trigger
+language plpgsql security definer set search_path=''
+as $
+declare
+  v_supplier_brand uuid;
+  v_po public.purchase_orders%rowtype;
+begin
+  select brand_id into v_supplier_brand
+  from public.suppliers where id=new.supplier_id;
+
+  if v_supplier_brand is distinct from new.brand_id then
+    raise exception 'Invoice supplier belongs to another brand';
+  end if;
+
+  if new.purchase_order_id is not null then
+    select * into v_po from public.purchase_orders
+    where id=new.purchase_order_id;
+
+    if not found then raise exception 'Purchase order not found'; end if;
+    if v_po.brand_id<>new.brand_id then raise exception 'Purchase order belongs to another brand'; end if;
+    if v_po.supplier_id<>new.supplier_id then raise exception 'Invoice supplier must match purchase order supplier'; end if;
+
+    if new.outlet_id is null then
+      new.outlet_id:=v_po.outlet_id;
+    elsif v_po.outlet_id is not null and new.outlet_id<>v_po.outlet_id then
+      raise exception 'Invoice outlet must match purchase order outlet';
+    end if;
+  end if;
+
+  if tg_op='INSERT' and auth.uid() is not null then
+    new.created_by:=auth.uid();
+  end if;
+  new.updated_at:=now();
+  return new;
+end;
+$;
+
+revoke execute on function private.guard_purchase_invoice_header()
+  from public,anon,authenticated;
+
+create trigger trg_guard_purchase_invoice_header
+before insert on public.purchase_invoices
+for each row execute function private.guard_purchase_invoice_header();
 
 alter table public.purchase_invoices enable row level security;
 
