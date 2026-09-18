@@ -27,6 +27,7 @@ Action Center sekarang dapat menyelesaikan workflow berikut melalui RPC Supabase
 - unmatched purchase classification → `resolve_purchase_item_rule`
 - unverified inventory classification → `resolve_purchase_item_rule`
 - zero-amount purchase → `resolve_zero_amount_purchase_candidate`
+- physical stock / untracked stock → `resolve_physical_stock_opname`
 
 Kontrol keselamatan:
 
@@ -38,12 +39,15 @@ Kontrol keselamatan:
 - Posting transaksi historis pada purchase rule adalah checkbox eksplisit dan default **tidak aktif**.
 - Zero-amount purchase tidak menulis ulang raw import. Owner harus memilih `actual_amount` dengan nominal > 0 berdasarkan bukti atau `exclude`; tidak ada nominal default.
 - Resolution zero-amount disimpan terpisah dan diaudit. `actual_amount` menjadi effective amount downstream; `exclude` mengeluarkan baris dari mapping/posting.
+- Physical stock opname hanya menerima qty fisik >= 0, tanggal <= hari ini, dan alasan. `system_qty` dibaca dari ledger; tidak ada tebakan quantity atau valuation.
 - Financing `cash_paid` membutuhkan tanggal dan nominal kas; PAYLATER/utang tidak otomatis dianggap cash-out.
 - Baseline historis diberi peringatan bahwa nilainya bukan stock opname hari ini.
 - Recipe verification tidak berlaku sebelum `effective_from`.
 - Setelah RPC sukses, bootstrap/action queue dimuat ulang.
 
-Action yang masih diarahkan ke modul/manual workflow karena belum memiliki input aman yang cukup di Action Center: missing recipe, missing component cost, dan untracked stock/physical opname.
+Action yang masih diarahkan ke workflow manual/lanjutan: missing recipe dan missing component cost.
+
+**Catatan safety recipe:** komponen recipe saat ini memiliki trigger yang menyinkronkan ulang `SALE_CONSUMPTION` untuk seluruh histori sale item produk tersebut. Karena itu, membuat form `missing_recipe` sebelum inventory movement mendukung recipe `effective_from` dapat membuat resep hari ini seolah berlaku sejak transaksi lama. Workflow ini sengaja belum diaktifkan sampai temporal recipe movement dibenahi.
 
 Write bisnis hanya terjadi jika Owner yang sudah login secara eksplisit mengirim form action; backend RLS/RPC tetap menjadi enforcement utama.
 
