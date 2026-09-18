@@ -19,6 +19,7 @@ The capability layer centralizes role-to-capability mapping while retaining exis
 | finance.read | ✓ | ✓ | — | — | — | — |
 | finance.ap.write | ✓ | ✓ | — | — | — | — |
 | hr.manage | ✓ | ✓ | — | — | — | — |
+| shift.manage | ✓ | ✓ | — | ✓ | — | — |
 | marketing.manage | ✓ | ✓ | ✓ | — | — | — |
 | team.manage | ✓ | — | — | — | — | — |
 | settings.manage | ✓ | — | — | — | — | — |
