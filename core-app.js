@@ -598,7 +598,13 @@
       if (x.data && x.data.session) enter(x.data.session.user);
     });
     db.auth.onAuthStateChange(function (ev, sess) {
-      if (ev === "SIGNED_IN" && sess) enter(sess.user);
+      // Never run Supabase queries inside the auth callback itself.
+      // Defer dashboard bootstrap to avoid an auth-lock deadlock after SIGNED_IN.
+      if (ev === "SIGNED_IN" && sess) {
+        setTimeout(function () {
+          if (!me) enter(sess.user);
+        }, 0);
+      }
     });
   }).catch(function (e) { setAuthMessage(e.message); });
 })();
