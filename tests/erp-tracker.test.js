@@ -1,8 +1,11 @@
 const fs = require('fs');
 const path = require('path');
 
-const trackerPath = path.join(__dirname, '..', 'docs', 'HASNARIA_ERP_TRACKER.json');
+const root = path.join(__dirname, '..');
+const trackerPath = path.join(root, 'docs', 'HASNARIA_ERP_TRACKER.json');
 const data = JSON.parse(fs.readFileSync(trackerPath, 'utf8'));
+const appSource = fs.readFileSync(path.join(root, 'app.js'), 'utf8');
+const ownerShellSource = fs.readFileSync(path.join(root, 'owner-shell-guard.js'), 'utf8');
 
 function assert(cond, msg) {
   if (!cond) {
@@ -39,4 +42,14 @@ for (const task of data.tasks) {
   }
 }
 
-console.log('ERP tracker test: PASS (' + data.tasks.length + ' tasks, ' + data.milestones.length + ' milestones)');
+assert(appSource.includes("var OWNER_SHELL = '/owner-shell-guard.js?v=1';"), 'owner navigation guard is declared in runtime loader');
+assert(appSource.includes("function afterCore(){load(OWNER_SHELL);load('/xlsx-preload.js?v=2')"), 'owner navigation guard loads before Sales/Stock feature modules');
+assert(ownerShellSource.includes("c.role!=='owner'"), 'guard is scoped to Owner role only');
+assert(ownerShellSource.includes('c.navigate=safeNavigate'), 'ERP module navigation is redirected to the safe Owner navigator');
+assert(ownerShellSource.includes('event.stopPropagation();'), 'Owner top navigation blocks legacy target/bubble tab render');
+assert(!ownerShellSource.includes('event.stopImmediatePropagation();'), 'Stock capture listener remains able to run on the same document node');
+assert(ownerShellSource.includes("typeof window.__hasnariaReloadSales==='function'"), 'Sales renderer is explicitly restored when needed');
+assert(ownerShellSource.includes("data-owner-shell-stock-nudge"), 'Stock reconciliation renderer is explicitly woken after safe navigation');
+assert(!/\.(?:from|insert|update|delete|rpc)\s*\(/.test(ownerShellSource), 'navigation guard contains no database mutation/query path');
+
+console.log('ERP tracker test: PASS (' + data.tasks.length + ' tasks, ' + data.milestones.length + ' milestones; Owner single-render guard wired)');
