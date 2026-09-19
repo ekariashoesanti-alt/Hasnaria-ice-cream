@@ -1,14 +1,24 @@
 /* Hasnaria Owner palette: one green-white visual system.
  * Semantic warning/error colors remain unchanged.
+ * Brand tokens are centralized here so legacy/runtime CSS can keep working.
  */
 :root{
-  --hasnaria-green:#176b55;
-  --hasnaria-green-dark:#0f5744;
-  --hasnaria-green-ink:#173a30;
-  --hasnaria-green-muted:#62756d;
-  --hasnaria-green-soft:#edf6f2;
-  --hasnaria-green-border:#d7e2dc;
-  --hasnaria-green-bg:#f3f7f5;
+  --hasnaria-green:#2f5f36;
+  --hasnaria-green-dark:#23482a;
+  --hasnaria-accent:#5e8f3b;
+  --hasnaria-accent-dark:#4f7b34;
+  --hasnaria-green-ink:#23412b;
+  --hasnaria-green-muted:#6b786e;
+  --hasnaria-green-soft:#eef6ee;
+  --hasnaria-green-border:#d8e4d8;
+  --hasnaria-green-bg:#eef6ee;
+
+  /* Keep the legacy shell variables aligned with the Hasnaria system. */
+  --g:var(--hasnaria-accent);
+  --bd:var(--hasnaria-green-border);
+  --tx:var(--hasnaria-green-ink);
+  --mu:var(--hasnaria-green-muted);
+  --bg:var(--hasnaria-green-bg);
 }
 
 body.hasnaria-owner-erp{
@@ -33,8 +43,40 @@ body.hasnaria-owner-erp #app>header .hasnaria-header-nav .tab.on:hover{
 body.hasnaria-owner-erp #app>header .user-box{
   border-top-color:#ffffff38!important;
 }
+body.hasnaria-owner-erp #app>header .brand-logo{
+  background:transparent!important;
+}
 body.hasnaria-owner-erp #app>main.wrap{
   background:var(--hasnaria-green-bg)!important;
+  color:var(--hasnaria-green-ink)!important;
+}
+
+/* Shared white surfaces across Dashboard, Sales, Purchasing and Inventory. */
+body.hasnaria-owner-erp #app>main .card,
+body.hasnaria-owner-erp #app>main .erp-panel,
+body.hasnaria-owner-erp #app>main .erp-kpi,
+body.hasnaria-owner-erp #sales .sb-card{
+  background:#fff!important;
+  border-color:var(--hasnaria-green-border)!important;
+}
+body.hasnaria-owner-erp #app>main h1,
+body.hasnaria-owner-erp #app>main h2,
+body.hasnaria-owner-erp #app>main h3{
+  color:var(--hasnaria-green-ink);
+}
+body.hasnaria-owner-erp #app>main button.primary{
+  background:var(--hasnaria-accent)!important;
+  color:#fff!important;
+}
+body.hasnaria-owner-erp #app>main button.primary:hover{
+  background:var(--hasnaria-accent-dark)!important;
+}
+body.hasnaria-owner-erp #app>main input:focus,
+body.hasnaria-owner-erp #app>main select:focus,
+body.hasnaria-owner-erp #app>main textarea:focus{
+  border-color:var(--hasnaria-accent)!important;
+  box-shadow:0 0 0 3px #5e8f3b24!important;
+  outline:none!important;
 }
 
 /* ERP/Ringkasan follows the same Hasnaria palette instead of navy/blue. */
@@ -44,22 +86,22 @@ body.hasnaria-owner-erp .erp{
 }
 body.hasnaria-owner-erp .erp .eyebrow,
 body.hasnaria-owner-erp .erp .erp-link{
-  color:var(--hasnaria-green)!important;
+  color:var(--hasnaria-accent)!important;
 }
 body.hasnaria-owner-erp .erp-tabs button[aria-selected=true],
 body.hasnaria-owner-erp .erp .erp-tabs button[aria-current="page"]{
-  background:var(--hasnaria-green)!important;
-  border-color:var(--hasnaria-green)!important;
+  background:var(--hasnaria-accent)!important;
+  border-color:var(--hasnaria-accent)!important;
   color:#fff!important;
 }
 body.hasnaria-owner-erp .erp-kpi:first-child{
-  background:var(--hasnaria-green)!important;
-  border-color:var(--hasnaria-green)!important;
+  background:var(--hasnaria-accent)!important;
+  border-color:var(--hasnaria-accent)!important;
   color:#fff!important;
 }
 body.hasnaria-owner-erp .erp-note{
   background:var(--hasnaria-green-soft)!important;
-  border-left-color:var(--hasnaria-green)!important;
+  border-left-color:var(--hasnaria-accent)!important;
 }
 body.hasnaria-owner-erp .erp-note.warn{
   background:#fff5dd!important;
@@ -72,13 +114,13 @@ body.hasnaria-owner-erp .erp-note.error{
   color:#9b2929!important;
 }
 body.hasnaria-owner-erp .erp-bar{
-  background:var(--hasnaria-green)!important;
+  background:var(--hasnaria-accent)!important;
 }
 body.hasnaria-owner-erp .erp-progress{
-  accent-color:var(--hasnaria-green)!important;
+  accent-color:var(--hasnaria-accent)!important;
 }
 body.hasnaria-owner-erp .erp .primary{
-  background:var(--hasnaria-green)!important;
+  background:var(--hasnaria-accent)!important;
   color:#fff!important;
 }
 body.hasnaria-owner-erp .erp-readiness{
@@ -89,16 +131,16 @@ body.hasnaria-owner-erp .erp-readiness span{
   color:var(--hasnaria-green-muted)!important;
 }
 body.hasnaria-owner-erp .erp-readiness strong{
-  color:var(--hasnaria-green)!important;
+  color:var(--hasnaria-accent)!important;
 }
 body.hasnaria-owner-erp .erp-tabs button:focus-visible,
 body.hasnaria-owner-erp .erp button:focus-visible,
 body.hasnaria-owner-erp .erp input:focus-visible,
 body.hasnaria-owner-erp .erp select:focus-visible{
-  outline-color:#79b9a5!important;
+  outline-color:#9fbd86!important;
 }
 
-/* Pembelian: white surfaces with Hasnaria-green hierarchy and controls. */
+/* Pembelian: white surfaces with Hasnaria hierarchy and controls. */
 body.hasnaria-owner-erp #pembelian .card{
   background:#fff!important;
   border-color:var(--hasnaria-green-border)!important;
@@ -114,20 +156,67 @@ body.hasnaria-owner-erp #pembelian .small{
 body.hasnaria-owner-erp #pembelian button.primary,
 body.hasnaria-owner-erp #pembelian #purchaseUploadBtn,
 body.hasnaria-owner-erp #pembelian #purchaseCommit{
-  background:var(--hasnaria-green)!important;
+  background:var(--hasnaria-accent)!important;
   color:#fff!important;
 }
 body.hasnaria-owner-erp #pembelian button.primary:hover,
 body.hasnaria-owner-erp #pembelian #purchaseUploadBtn:hover,
 body.hasnaria-owner-erp #pembelian #purchaseCommit:hover{
-  background:var(--hasnaria-green-dark)!important;
+  background:var(--hasnaria-accent-dark)!important;
 }
 body.hasnaria-owner-erp #pembelian input:focus,
 body.hasnaria-owner-erp #pembelian select:focus{
-  border-color:var(--hasnaria-green)!important;
-  box-shadow:0 0 0 3px #176b5524!important;
+  border-color:var(--hasnaria-accent)!important;
+  box-shadow:0 0 0 3px #5e8f3b24!important;
   outline:none!important;
 }
 body.hasnaria-owner-erp #pembelian th{
   color:var(--hasnaria-green-ink)!important;
+}
+
+/* Penjualan: keep the reporting cards white while replacing old emerald accents. */
+body.hasnaria-owner-erp #sales .sb-btn-format{
+  color:var(--hasnaria-accent)!important;
+  border-color:var(--hasnaria-green-border)!important;
+}
+body.hasnaria-owner-erp #sales .sb-sku-metric-toggle button.on,
+body.hasnaria-owner-erp #sales .sb-btn-submit.ready{
+  background:var(--hasnaria-accent)!important;
+  color:#fff!important;
+}
+body.hasnaria-owner-erp #sales .sb-btn-submit.ready:hover{
+  background:var(--hasnaria-accent-dark)!important;
+}
+body.hasnaria-owner-erp #sales svg [stroke="#176b55"]{
+  stroke:var(--hasnaria-accent)!important;
+}
+body.hasnaria-owner-erp #sales svg [fill="#176b55"]{
+  fill:var(--hasnaria-accent)!important;
+}
+body.hasnaria-owner-erp #sales svg stop[stop-color="#176b55"]{
+  stop-color:var(--hasnaria-accent)!important;
+}
+
+/* Inventory controls inherit the accent through --g; these hard-coded legacy borders are normalized too. */
+body.hasnaria-owner-erp #stok .stk-buy{
+  border-color:var(--hasnaria-accent)!important;
+}
+body.hasnaria-owner-erp #stok .seg-btn.on,
+body.hasnaria-owner-erp #stok .pg.on{
+  background:var(--hasnaria-accent)!important;
+  border-color:var(--hasnaria-accent)!important;
+  color:#fff!important;
+}
+
+/* Account/settings sheet is injected by nav-patch.js after load, so use important overrides. */
+body.hasnaria-owner-erp .hasnaria-account-page-top{
+  background:var(--hasnaria-green)!important;
+}
+body.hasnaria-owner-erp .hasnaria-account-kicker{
+  color:var(--hasnaria-accent)!important;
+}
+body.hasnaria-owner-erp .hasnaria-avatar,
+body.hasnaria-owner-erp .hasnaria-setting-item .primary{
+  background:var(--hasnaria-accent)!important;
+  color:#fff!important;
 }

@@ -20,7 +20,12 @@ try {
   if (html.indexOf('/owner-shell-guard.js?v=1') > html.indexOf('/app.js')) throw new Error('owner shell guard must load before app runtime');
   if (!html.includes('/owner-green.css?v=1')) throw new Error('Owner green palette missing from production index');
   if (html.indexOf('/owner-green.css?v=1') < html.indexOf('/erp.css')) throw new Error('Owner green palette must load after ERP stylesheet');
-  if (!fs.readFileSync(path.join(root, 'owner-green.css'), 'utf8').includes('--hasnaria-green:#176b55')) throw new Error('Owner palette must use Hasnaria green');
+
+  const ownerPalette = fs.readFileSync(path.join(root, 'owner-green.css'), 'utf8');
+  if (!ownerPalette.includes('--hasnaria-green:#2f5f36')) throw new Error('Owner sidebar must use Hasnaria forest green');
+  if (!ownerPalette.includes('--hasnaria-accent:#5e8f3b')) throw new Error('Owner controls must use Hasnaria accent green');
+  if (!ownerPalette.includes('--hasnaria-green-bg:#eef6ee')) throw new Error('Owner workspace must use Hasnaria soft green background');
+  if (!ownerPalette.includes('--hasnaria-green-ink:#23412b')) throw new Error('Owner text must use Hasnaria dark green ink');
 
   for (const name of ['auth-bootstrap.js', 'password-reset-bootstrap.js']) {
     const file = path.join(out, name);
