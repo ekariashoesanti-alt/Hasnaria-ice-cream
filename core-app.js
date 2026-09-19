@@ -194,11 +194,18 @@
   function show(id) { ["auth", "pending", "app"].forEach(function (x) { $(x).classList.toggle("hidden", x !== id); }); }
   function setTab(id) {
     tab = id;
+    if (role === "owner") document.body.classList.add("hasnaria-owner-erp"); else document.body.classList.remove("hasnaria-owner-erp");
     ["dashboard", "sales", "pembelian", "ops", "stok", "shift", "social", "approval", "team", "sistem"].forEach(function (x) { $(x).classList.toggle("hidden", x !== id); });
     document.querySelectorAll(".tab").forEach(function (b) { b.classList.toggle("on", b.getAttribute("data-tab") === id); });
     render();
   }
   function tabs() {
+    if (role === "owner") {
+      var ownerItems = [["dashboard","Ringkasan CEO"],["sales","Penjualan"],["pembelian","Pembelian"],["ops","Keuangan"],["stok","Stok"]];
+      $("tabs").innerHTML = ownerItems.map(function(pair){return '<button class="tab' + (tab===pair[0] ? " on" : "") + '" data-tab="' + pair[0] + '" type="button">' + pair[1] + "</button>";}).join("");
+      document.querySelectorAll(".tab").forEach(function(b){b.addEventListener("click",function(){setTab(b.getAttribute("data-tab"));});});
+      return;
+    }
     var pend = expenses.filter(function (x) { return x.status === "pending_approval"; }).length;
     var items = [["dashboard", "Hari ini"], ["ops", "Keuangan"], ["sales", "Penjualan"], ["pembelian", "Pembelian"], ["stok", "Stok"], ["shift", "Shift"], ["social", "Medsos"]];
     if (canAppr(role)) items.push(["approval", "Putusan" + (pend ? " (" + pend + ")" : "")]);
@@ -235,6 +242,7 @@
   function render() {
     if (!me) return;
     window.__HASNARIA_CONTEXT = {brandId:BRAND,userId:me.userId,role:role,navigate:setTab};
+    if (role === "owner") document.body.classList.add("hasnaria-owner-erp"); else document.body.classList.remove("hasnaria-owner-erp");
     $("whoName").textContent = me.name || "—";
     $("whoMeta").textContent = (ROLE_L[role] || role) + " · " + (me.email || "");
     tabs();
