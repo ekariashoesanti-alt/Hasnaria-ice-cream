@@ -13,7 +13,7 @@
     var l=document.createElement('link');
     l.id='hasnaria-purchase-compact-css';
     l.rel='stylesheet';
-    l.href='/purchase-compact.css?v=1';
+    l.href='/purchase-compact.css?v=2';
     document.head.appendChild(l);
   }
 
@@ -90,7 +90,8 @@
 
   function listHtml(arr,type){
     if(!arr.length)return'<div class="pa-empty">'+(type==='shortage'?'Tidak ada item persediaan yang perlu perhatian pada periode ini.':'Belum ada item yang memenuhi aturan 3 periode tanpa pembelian.')+'</div>';
-    return'<div class="pa-list'+(type==='discontinue'?' pa-list-muted':'')+'">'+arr.slice(0,7).map(function(x){var badge=type==='discontinue'?'Discontinue':(x.streak+' / 3 periode');var note='Terakhir dibeli '+periodLabel(x.lastPeriod)+(type==='discontinue'?' · '+x.streak+' periode data valid tanpa pembelian':' · perlu cek stok / reorder');return'<div><span>'+esc(x.name)+'</span><b>'+esc(badge)+'</b><small>'+esc(note)+'</small></div>';}).join('')+'</div>';
+    var max=4,shown=arr.slice(0,max),more=arr.length-shown.length;
+    return'<div class="pa-list'+(type==='discontinue'?' pa-list-muted':'')+'">'+shown.map(function(x){var badge=type==='discontinue'?'Discontinue':(x.streak+' / 3 periode');var note='Terakhir dibeli '+periodLabel(x.lastPeriod)+(type==='discontinue'?' · '+x.streak+' periode data valid tanpa pembelian':' · cek stok / reorder');return'<div><span>'+esc(x.name)+'</span><b>'+esc(badge)+'</b><small>'+esc(note)+'</small></div>';}).join('')+'</div>'+(more>0?'<div class="pa-stock-more">+'+more.toLocaleString('id-ID')+' item lainnya</div>':'');
   }
 
   function patch(status,root){
@@ -98,12 +99,12 @@
     var kpis=root.querySelectorAll('.pa-kpis article');
     if(kpis.length){
       var k=kpis[kpis.length-1];
-      k.innerHTML='<span>Status Persediaan</span><strong>'+status.shortage.length.toLocaleString('id-ID')+' kurang · '+status.discontinue.length.toLocaleString('id-ID')+' hapus</strong><small>khusus bahan baku & perlengkapan stockable</small>';
+      k.innerHTML='<span>Status Persediaan</span><strong>'+status.shortage.length.toLocaleString('id-ID')+' kurang · '+status.discontinue.length.toLocaleString('id-ID')+' hapus</strong><small>bahan baku & perlengkapan stockable</small>';
     }
     var lower=root.querySelectorAll('.pa-lower-grid article');
     if(lower.length){
       var card=lower[lower.length-1];
-      card.innerHTML='<h2>Persediaan Kurang</h2><p class="pa-sub">Item stockable yang belum dibeli lagi selama 1–2 periode data valid sejak pembelian terakhir.</p>'+listHtml(status.shortage,'shortage')+'<br><h2>Persediaan Hapus / Discontinue</h2><p class="pa-sub">Item stockable yang sudah 3 periode data valid berturut-turut tidak dibeli sejak pembelian terakhir. Bulan tanpa file tidak dihitung.</p>'+listHtml(status.discontinue,'discontinue');
+      card.innerHTML='<div class="pa-stock-grid"><section class="pa-stock-section"><div class="pa-stock-head"><h2>Persediaan Kurang</h2><span class="pa-stock-count">'+status.shortage.length.toLocaleString('id-ID')+' item</span></div><p class="pa-sub">Tidak dibeli lagi selama 1–2 periode data valid.</p>'+listHtml(status.shortage,'shortage')+'</section><section class="pa-stock-section"><div class="pa-stock-head"><h2>Persediaan Hapus</h2><span class="pa-stock-count">'+status.discontinue.length.toLocaleString('id-ID')+' item</span></div><p class="pa-sub">Tidak dibeli ≥3 periode data valid berturut-turut.</p>'+listHtml(status.discontinue,'discontinue')+'</section></div>';
     }
     var insight=root.querySelector('.pa-insight ol');
     if(insight){
