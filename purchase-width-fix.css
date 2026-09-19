@@ -1,0 +1,31 @@
+/* Final viewport-width guard for Pembelian desktop. Prevents stale horizontal offset and 100vw overflow. */
+@media (min-width:980px){
+  html,body,#app{width:100%!important;max-width:100%!important;overflow-x:hidden!important}
+  #app:has(#pembelian:not(.hidden)){position:relative!important;left:0!important;right:auto!important;transform:none!important}
+  #app>main.wrap:has(#pembelian:not(.hidden)){
+    width:calc(100% - 24px)!important;
+    max-width:calc(100% - 24px)!important;
+    min-width:0!important;
+    margin-left:12px!important;
+    margin-right:12px!important;
+    position:relative!important;
+    left:0!important;
+    right:auto!important;
+    transform:none!important;
+    box-sizing:border-box!important;
+  }
+  #pembelian:not(.hidden),#pembelian .pa-root,#pembelian .pa-main-grid,#pembelian .pa-lower-grid,#pembelian .pa-kpis,#pembelian .pa-controls{
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+    box-sizing:border-box!important;
+  }
+}
+@media (min-width:980px) and (max-width:1450px){
+  #app>main.wrap:has(#pembelian:not(.hidden)){
+    width:calc(100% - 16px)!important;
+    max-width:calc(100% - 16px)!important;
+    margin-left:8px!important;
+    margin-right:8px!important;
+  }
+}
