@@ -280,8 +280,11 @@ body.hasnaria-owner-erp #pembelian #purchaseCommit:hover{
   background:var(--hasnaria-green-dark)!important;
 }
 
-/* Keep imported purchase history in backend, but do not render the history card in UI. */
-#pembelian .card:has(#purchaseAnnualChart) + .card{
+/* Keep purchase/import data in backend, but hide backend-oriented cards from UI. */
+#pembelian .card:has(#purchaseAnnualChart) + .card,
+#pembelian .card:has(#purchaseAnnualChart) + .card + .card,
+#pembelian .card:has(#purchaseAnnualChart) + .card + .card + .card,
+#pembelian .card:has(#purchaseAnnualChart) + .card + .card + .card + .card{
   display:none!important;
 }
 
