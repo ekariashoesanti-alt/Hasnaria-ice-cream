@@ -14,18 +14,35 @@
     l.id=id;
     l.rel='stylesheet';
     l.href=href;
+    l.onload=function(){resetHorizontalViewport();};
     document.head.appendChild(l);
   }
   function ensureCompactCss(){
     addCss('hasnaria-purchase-compact-css','/purchase-compact.css?v=2');
-    addCss('hasnaria-purchase-width-fix-css','/purchase-width-fix.css?v=1');
+    addCss('hasnaria-purchase-width-fix-css','/purchase-width-fix.css?v=2');
   }
-  function resetHorizontalViewport(){
+  function resetScrollNow(){
     try{
-      document.documentElement.scrollLeft=0;
-      if(document.body)document.body.scrollLeft=0;
+      var els=[
+        document.scrollingElement,
+        document.documentElement,
+        document.body,
+        document.getElementById('app'),
+        document.querySelector('#app>main.wrap'),
+        document.getElementById('pembelian'),
+        document.getElementById('paRoot')
+      ];
+      els.forEach(function(el){
+        if(!el)return;
+        try{el.scrollLeft=0;}catch(_){}
+      });
       if(window.scrollX)window.scrollTo(0,window.scrollY||0);
     }catch(_){}
+  }
+  function resetHorizontalViewport(){
+    resetScrollNow();
+    try{requestAnimationFrame(function(){resetScrollNow();requestAnimationFrame(resetScrollNow);});}catch(_){}
+    setTimeout(resetScrollNow,80);
   }
 
   function clean(v){return String(v==null?'':v).trim().replace(/\s+/g,' ');}
@@ -132,7 +149,7 @@
       if(!root||!period)return;
       if(!force&&root===lastRoot&&root.getAttribute('data-inventory-status-period')===period.value)return;
       lastRoot=root;root.setAttribute('data-inventory-status-period',period.value);
-      loadData().then(function(data){patch(compute(data,period.value),root);}).catch(function(e){console.warn('Purchase inventory status:',e&&e.message?e.message:e);});
+      loadData().then(function(data){patch(compute(data,period.value),root);resetHorizontalViewport();}).catch(function(e){console.warn('Purchase inventory status:',e&&e.message?e.message:e);});
     },40);
   }
 
