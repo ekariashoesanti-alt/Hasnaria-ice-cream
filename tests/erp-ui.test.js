@@ -34,6 +34,11 @@ function assertShellIntegration() {
   assert.ok(source.includes('context().navigate(value)'), 'ERP detail actions route back into existing modules');
   assert.ok(source.includes('/erp-actions.js?v=1'), 'ERP action forms are lazy-loaded as a production runtime asset');
   assert.ok(source.includes('hasnaria:erp-action-resolved'), 'successful ERP action resolution refreshes dashboard contracts');
+  assert.ok(coreSource.includes('if (role === "owner") document.body.classList.add("hasnaria-owner-erp")'), 'owner session activates isolated ERP shell class');
+  assert.ok(coreSource.includes('var ownerItems = [["dashboard","Ringkasan CEO"],["sales","Penjualan"],["pembelian","Pembelian"],["ops","Keuangan"],["stok","Stok"]]'), 'owner primary nav exposes only supported production modules');
+  const erpCss=fs.readFileSync(path.join(ROOT,'erp.css'),'utf8');
+  assert.ok(erpCss.includes('body.hasnaria-owner-erp #app>header{position:fixed!important'), 'owner shell CSS has final explicit precedence over legacy/nav patch');
+  assert.ok(erpCss.includes('body.hasnaria-owner-erp #shift'), 'legacy secondary sections are hidden from owner shell');
   console.log('ERP shell integration wiring: PASS');
 }
 
