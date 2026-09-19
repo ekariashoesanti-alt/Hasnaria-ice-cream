@@ -8,13 +8,24 @@
   var STOCK_CATS={'Makanan':1,'Minuman':1,'Ice Cream':1,'Snack':1,'Kemasan & Supplies':1};
   var db=null,observer=null,timer=0,fetching=null,lastRoot=null;
 
-  function ensureCompactCss(){
-    if(document.getElementById('hasnaria-purchase-compact-css'))return;
+  function addCss(id,href){
+    if(document.getElementById(id))return;
     var l=document.createElement('link');
-    l.id='hasnaria-purchase-compact-css';
+    l.id=id;
     l.rel='stylesheet';
-    l.href='/purchase-compact.css?v=2';
+    l.href=href;
     document.head.appendChild(l);
+  }
+  function ensureCompactCss(){
+    addCss('hasnaria-purchase-compact-css','/purchase-compact.css?v=2');
+    addCss('hasnaria-purchase-width-fix-css','/purchase-width-fix.css?v=1');
+  }
+  function resetHorizontalViewport(){
+    try{
+      document.documentElement.scrollLeft=0;
+      if(document.body)document.body.scrollLeft=0;
+      if(window.scrollX)window.scrollTo(0,window.scrollY||0);
+    }catch(_){}
   }
 
   function clean(v){return String(v==null?'':v).trim().replace(/\s+/g,' ');}
@@ -116,6 +127,7 @@
 
   function refresh(force){
     clearTimeout(timer);timer=setTimeout(function(){
+      resetHorizontalViewport();
       var root=document.getElementById('paRoot'),period=document.getElementById('paPeriod');
       if(!root||!period)return;
       if(!force&&root===lastRoot&&root.getAttribute('data-inventory-status-period')===period.value)return;
@@ -126,6 +138,7 @@
 
   function boot(){
     ensureCompactCss();
+    resetHorizontalViewport();
     db=window.__HASNARIA_DB||null;
     var tries=0;(function wait(){
       db=db||window.__HASNARIA_DB||null;
@@ -138,8 +151,12 @@
         });
         observer.observe(host,{childList:true,subtree:false});
         document.addEventListener('change',function(e){if(e.target&&e.target.id==='paPeriod')refresh(true);},true);
-        document.addEventListener('click',function(e){var b=e.target&&e.target.closest?e.target.closest('#paUpload,[data-tab="pembelian"]'):null;if(b)setTimeout(function(){refresh(true);},350);},true);
-        refresh(true);return;
+        document.addEventListener('click',function(e){
+          var b=e.target&&e.target.closest?e.target.closest('#paUpload,[data-tab="pembelian"]'):null;
+          if(b)setTimeout(function(){resetHorizontalViewport();refresh(true);},120);
+        },true);
+        window.addEventListener('resize',function(){resetHorizontalViewport();});
+        resetHorizontalViewport();refresh(true);return;
       }
       if(tries++<120)setTimeout(wait,100);
     })();
