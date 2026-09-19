@@ -86,6 +86,12 @@ body.hasnaria-owner-erp #app>header .user-box{
 #app>header .brand-logo,
 body.hasnaria-owner-erp #app>header .brand-logo{
   background:transparent!important;
+  display:block!important;
+  height:88px!important;
+  max-width:min(100%,240px)!important;
+  width:auto!important;
+  object-fit:contain!important;
+  margin:0 auto 8px!important;
 }
 #app>header .tagline{color:#e5f1ed!important}
 #logoutBtn{background:#ffffff17!important;border-color:#ffffff40!important;color:#fff!important}
@@ -355,3 +361,12 @@ body.hasnaria-owner-erp .hasnaria-setting-item .primary{
 #app .xls,
 #app .pg{background:#fff!important;border-color:var(--hasnaria-green-border)!important}
 #app .seg{background:var(--hasnaria-green-soft)!important}
+
+@media (max-width:600px){
+  #app>header .brand-logo,
+  body.hasnaria-owner-erp #app>header .brand-logo{
+    height:76px!important;
+    max-width:min(100%,220px)!important;
+    margin:0 auto 10px!important;
+  }
+}
