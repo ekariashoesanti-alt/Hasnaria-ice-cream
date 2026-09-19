@@ -1,0 +1,133 @@
+/* Hasnaria Owner palette: one green-white visual system.
+ * Semantic warning/error colors remain unchanged.
+ */
+:root{
+  --hasnaria-green:#176b55;
+  --hasnaria-green-dark:#0f5744;
+  --hasnaria-green-ink:#173a30;
+  --hasnaria-green-muted:#62756d;
+  --hasnaria-green-soft:#edf6f2;
+  --hasnaria-green-border:#d7e2dc;
+  --hasnaria-green-bg:#f3f7f5;
+}
+
+body.hasnaria-owner-erp{
+  background:var(--hasnaria-green-bg)!important;
+  color:var(--hasnaria-green-ink)!important;
+}
+body.hasnaria-owner-erp #app>header{
+  background:var(--hasnaria-green)!important;
+  border-right-color:var(--hasnaria-green-dark)!important;
+}
+body.hasnaria-owner-erp #app>header .hasnaria-header-nav .tab{
+  color:#f7fffb!important;
+}
+body.hasnaria-owner-erp #app>header .hasnaria-header-nav .tab:hover{
+  background:#ffffff1f!important;
+}
+body.hasnaria-owner-erp #app>header .hasnaria-header-nav .tab.on,
+body.hasnaria-owner-erp #app>header .hasnaria-header-nav .tab.on:hover{
+  background:#fff!important;
+  color:var(--hasnaria-green)!important;
+}
+body.hasnaria-owner-erp #app>header .user-box{
+  border-top-color:#ffffff38!important;
+}
+body.hasnaria-owner-erp #app>main.wrap{
+  background:var(--hasnaria-green-bg)!important;
+}
+
+/* ERP/Ringkasan follows the same Hasnaria palette instead of navy/blue. */
+body.hasnaria-owner-erp .erp{
+  --ink:var(--hasnaria-green-ink);
+  --muted:var(--hasnaria-green-muted);
+}
+body.hasnaria-owner-erp .erp .eyebrow,
+body.hasnaria-owner-erp .erp .erp-link{
+  color:var(--hasnaria-green)!important;
+}
+body.hasnaria-owner-erp .erp-tabs button[aria-selected=true],
+body.hasnaria-owner-erp .erp .erp-tabs button[aria-current="page"]{
+  background:var(--hasnaria-green)!important;
+  border-color:var(--hasnaria-green)!important;
+  color:#fff!important;
+}
+body.hasnaria-owner-erp .erp-kpi:first-child{
+  background:var(--hasnaria-green)!important;
+  border-color:var(--hasnaria-green)!important;
+  color:#fff!important;
+}
+body.hasnaria-owner-erp .erp-note{
+  background:var(--hasnaria-green-soft)!important;
+  border-left-color:var(--hasnaria-green)!important;
+}
+body.hasnaria-owner-erp .erp-note.warn{
+  background:#fff5dd!important;
+  border-left-color:#b68119!important;
+  color:#715018!important;
+}
+body.hasnaria-owner-erp .erp-note.error{
+  background:#ffeded!important;
+  border-left-color:#b43b3b!important;
+  color:#9b2929!important;
+}
+body.hasnaria-owner-erp .erp-bar{
+  background:var(--hasnaria-green)!important;
+}
+body.hasnaria-owner-erp .erp-progress{
+  accent-color:var(--hasnaria-green)!important;
+}
+body.hasnaria-owner-erp .erp .primary{
+  background:var(--hasnaria-green)!important;
+  color:#fff!important;
+}
+body.hasnaria-owner-erp .erp-readiness{
+  background:var(--hasnaria-green-soft)!important;
+  border-color:var(--hasnaria-green-border)!important;
+}
+body.hasnaria-owner-erp .erp-readiness span{
+  color:var(--hasnaria-green-muted)!important;
+}
+body.hasnaria-owner-erp .erp-readiness strong{
+  color:var(--hasnaria-green)!important;
+}
+body.hasnaria-owner-erp .erp-tabs button:focus-visible,
+body.hasnaria-owner-erp .erp button:focus-visible,
+body.hasnaria-owner-erp .erp input:focus-visible,
+body.hasnaria-owner-erp .erp select:focus-visible{
+  outline-color:#79b9a5!important;
+}
+
+/* Pembelian: white surfaces with Hasnaria-green hierarchy and controls. */
+body.hasnaria-owner-erp #pembelian .card{
+  background:#fff!important;
+  border-color:var(--hasnaria-green-border)!important;
+}
+body.hasnaria-owner-erp #pembelian h2,
+body.hasnaria-owner-erp #pembelian .metric{
+  color:var(--hasnaria-green)!important;
+}
+body.hasnaria-owner-erp #pembelian .label,
+body.hasnaria-owner-erp #pembelian .small{
+  color:var(--hasnaria-green-muted)!important;
+}
+body.hasnaria-owner-erp #pembelian button.primary,
+body.hasnaria-owner-erp #pembelian #purchaseUploadBtn,
+body.hasnaria-owner-erp #pembelian #purchaseCommit{
+  background:var(--hasnaria-green)!important;
+  color:#fff!important;
+}
+body.hasnaria-owner-erp #pembelian button.primary:hover,
+body.hasnaria-owner-erp #pembelian #purchaseUploadBtn:hover,
+body.hasnaria-owner-erp #pembelian #purchaseCommit:hover{
+  background:var(--hasnaria-green-dark)!important;
+}
+body.hasnaria-owner-erp #pembelian input:focus,
+body.hasnaria-owner-erp #pembelian select:focus{
+  border-color:var(--hasnaria-green)!important;
+  box-shadow:0 0 0 3px #176b5524!important;
+  outline:none!important;
+}
+body.hasnaria-owner-erp #pembelian th{
+  color:var(--hasnaria-green-ink)!important;
+}

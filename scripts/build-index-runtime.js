@@ -3,6 +3,7 @@ const path = require('path');
 
 const GOOGLE_BINDING = `\n(function bindHasnariaGoogleButton() {\n  function bind() {\n    var btn = document.getElementById('googleBtn');\n    if (!btn || btn.__hasnariaGoogleBound) return;\n    btn.__hasnariaGoogleBound = true;\n    btn.addEventListener('click', function (event) {\n      if (typeof window.hasnariaGoogle === 'function') window.hasnariaGoogle(event);\n    });\n  }\n  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bind, { once: true });\n  else bind();\n})();\n`;
 const OWNER_SHELL_TAG = '<script src="/owner-shell-guard.js?v=1"></script>';
+const OWNER_PALETTE_TAG = '<link rel="stylesheet" href="/owner-green.css?v=1">';
 
 function fail(message) {
   throw new Error(`Index runtime build failed: ${message}`);
@@ -37,6 +38,12 @@ function buildStrictIndexRuntime(sourceIndexPath, outputDir) {
   if (!extracted.some((item) => item.name === 'password-reset-bootstrap.js')) fail('password reset bootstrap block not found');
 
   html = html.replace(/\s+onclick=(['"])return\s+hasnariaGoogle\(event\)\1/gi, '');
+
+  const erpCssTag = html.match(/<link rel="stylesheet" href="\/erp\.css[^\"]*">/i);
+  if (!erpCssTag) fail('ERP stylesheet reference missing');
+  if (!html.includes(OWNER_PALETTE_TAG)) html = html.replace(erpCssTag[0], erpCssTag[0] + '\n' + OWNER_PALETTE_TAG);
+  if (!html.includes(OWNER_PALETTE_TAG)) fail('Owner green palette reference missing');
+  if (html.indexOf(OWNER_PALETTE_TAG) < html.indexOf(erpCssTag[0])) fail('Owner green palette must load after ERP stylesheet');
 
   const appTag = html.match(/<script src="\/app\.js[^\"]*"><\/script>/i);
   if (!appTag) fail('application runtime script reference missing');

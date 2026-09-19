@@ -18,6 +18,9 @@ try {
   if (!html.includes('/password-reset-bootstrap.js')) throw new Error('password reset bootstrap script missing');
   if (!html.includes('/owner-shell-guard.js?v=1')) throw new Error('owner shell guard missing from production index');
   if (html.indexOf('/owner-shell-guard.js?v=1') > html.indexOf('/app.js')) throw new Error('owner shell guard must load before app runtime');
+  if (!html.includes('/owner-green.css?v=1')) throw new Error('Owner green palette missing from production index');
+  if (html.indexOf('/owner-green.css?v=1') < html.indexOf('/erp.css')) throw new Error('Owner green palette must load after ERP stylesheet');
+  if (!fs.readFileSync(path.join(root, 'owner-green.css'), 'utf8').includes('--hasnaria-green:#176b55')) throw new Error('Owner palette must use Hasnaria green');
 
   for (const name of ['auth-bootstrap.js', 'password-reset-bootstrap.js']) {
     const file = path.join(out, name);
