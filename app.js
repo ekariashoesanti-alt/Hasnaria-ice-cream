@@ -8,7 +8,6 @@
   var SALES_FALLBACK = false;
   var SALES_UI = '/sales-ui-patch.js?v=12';
   var PURCHASE_INVENTORY = '/purchase-inventory-status.js?v=1';
-  var PURCHASE_COMPACT = '/purchase-compact.css?v=1';
   var AUTH_URL = window.HASNARIA_SB;
   var AUTH_KEY = window.HASNARIA_KEY;
   if (typeof supabase !== 'undefined' && AUTH_URL && AUTH_KEY) {
@@ -38,9 +37,8 @@
     }catch(e){console.error('Hasnaria Auth client init gagal:',e);}
   }
   function load(src,done){var s=document.createElement('script');s.src=src;s.async=false;s.onload=function(){if(done)done();};s.onerror=function(){console.error('Hasnaria module gagal dimuat:',src);if(done)done();};document.head.appendChild(s);}
-  function loadCss(href){if(document.querySelector('link[href="'+href+'"]'))return;var l=document.createElement('link');l.rel='stylesheet';l.href=href;document.head.appendChild(l);}
   function fixStockLayout(){var host=document.getElementById('stok');if(!host)return;var form=host.querySelector('.stk-form');if(form){form.style.minWidth='0';form.style.maxWidth='100%';}var price=host.querySelector('#stkBuyPrice'),priceBox=price&&price.parentElement;if(priceBox){var units=priceBox.querySelectorAll('.unit');if(units.length)units[units.length-1].textContent='/ pcs';}}
-  function afterCore(){loadCss(PURCHASE_COMPACT);load(OWNER_SHELL);load('/xlsx-preload.js?v=2');load(STOCK,function(){fixStockLayout();setTimeout(fixStockLayout,150);setTimeout(fixStockLayout,500);setTimeout(fixStockLayout,1200);});load(SALES,function(){load(SALES_UI);load(SALES_HOURLY);});load(PURCHASE_INVENTORY);document.addEventListener('click',function(e){var b=e.target&&e.target.closest?e.target.closest('button'):null;if(!b)return;var id=b.id||'',watch=id==='sSave'||id==='oSave'||id==='cSave'||id==='lzSave'||id==='svOpen'||id==='svHand'||id==='svClose'||b.hasAttribute('data-stk')||b.hasAttribute('data-ok')||b.hasAttribute('data-no')||b.hasAttribute('data-lzok')||b.hasAttribute('data-lzno');if(!watch)return;if(b.getAttribute('data-busy')==='1'){e.preventDefault();e.stopImmediatePropagation();return;}b.setAttribute('data-busy','1');setTimeout(function(){try{b.removeAttribute('data-busy');}catch(_){}},1800);},true);}
+  function afterCore(){load(OWNER_SHELL);load('/xlsx-preload.js?v=2');load(STOCK,function(){fixStockLayout();setTimeout(fixStockLayout,150);setTimeout(fixStockLayout,500);setTimeout(fixStockLayout,1200);});load(SALES,function(){load(SALES_UI);load(SALES_HOURLY);});load(PURCHASE_INVENTORY);document.addEventListener('click',function(e){var b=e.target&&e.target.closest?e.target.closest('button'):null;if(!b)return;var id=b.id||'',watch=id==='sSave'||id==='oSave'||id==='cSave'||id==='lzSave'||id==='svOpen'||id==='svHand'||id==='svClose'||b.hasAttribute('data-stk')||b.hasAttribute('data-ok')||b.hasAttribute('data-no')||b.hasAttribute('data-lzok')||b.hasAttribute('data-lzno');if(!watch)return;if(b.getAttribute('data-busy')==='1'){e.preventDefault();e.stopImmediatePropagation();return;}b.setAttribute('data-busy','1');setTimeout(function(){try{b.removeAttribute('data-busy');}catch(_){}},1800);},true);}
   window.hasnariaGoogleHref=function(){return '#';};
   function startCore(){load(CORE,afterCore);}
   if(window.__HASNARIA_AUTH_READY&&typeof window.__HASNARIA_AUTH_READY.then==='function'){window.__HASNARIA_AUTH_READY.then(function(){startCore();}).catch(function(){startCore();});}else startCore();
