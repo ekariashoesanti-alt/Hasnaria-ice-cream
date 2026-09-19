@@ -16,6 +16,8 @@ try {
   if (/\son[a-z]+\s*=/i.test(html)) throw new Error('inline event handler survived production index build');
   if (!html.includes('/auth-bootstrap.js')) throw new Error('auth bootstrap script missing');
   if (!html.includes('/password-reset-bootstrap.js')) throw new Error('password reset bootstrap script missing');
+  if (!html.includes('/owner-shell-guard.js?v=1')) throw new Error('owner shell guard missing from production index');
+  if (html.indexOf('/owner-shell-guard.js?v=1') > html.indexOf('/app.js')) throw new Error('owner shell guard must load before app runtime');
 
   for (const name of ['auth-bootstrap.js', 'password-reset-bootstrap.js']) {
     const file = path.join(out, name);
@@ -30,6 +32,9 @@ try {
 
   const reset = fs.readFileSync(path.join(out, 'password-reset-bootstrap.js'), 'utf8');
   if (!reset.includes('resetPasswordForEmail')) throw new Error('password reset flow missing');
+
+  const ownerGuard = fs.readFileSync(path.join(root, 'owner-shell-guard.js'), 'utf8');
+  if (!ownerGuard.includes('__HASNARIA_OWNER_SHELL_BOOTSTRAPPED')) throw new Error('owner shell guard must be idempotent before static + fallback loading');
 
   const styleBlocks = inventoryStyleBlocks(root);
   if (styleBlocks.length < 6) throw new Error(`expected at least 6 unique inline style blocks, found ${styleBlocks.length}`);

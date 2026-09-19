@@ -7,6 +7,9 @@
 (function () {
   'use strict';
 
+  if (window.__HASNARIA_OWNER_SHELL_BOOTSTRAPPED) return;
+  window.__HASNARIA_OWNER_SHELL_BOOTSTRAPPED = true;
+
   var OWNER_TABS = ['dashboard','sales','pembelian','ops','stok'];
   var SECTION_IDS = ['dashboard','sales','pembelian','ops','stok','shift','social','approval','team','sistem'];
   var state = { active:'dashboard', initialized:false, scheduled:false, salesRetries:0, stockNudgeAt:0 };
