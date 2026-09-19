@@ -2,6 +2,18 @@
 
 Append-only working journal. Newest session goes at the top.
 
+## 2026-09-20 — HSN-402 Persediaan Kurang/Hapus moved to Stok
+
+**Scope**
+- Moved the two purchase-cycle inventory cards `Persediaan Kurang` and `Persediaan Hapus` out of the Pembelian lower analysis row and into the Stok screen.
+- Added a dedicated Stock purchase-cycle status runtime that reuses the same stockable classification, alias mapping, and 1–2 / >=3 valid-period rules as the previous Pembelian presentation.
+- The Stok panel works from purchase history directly, so it does not require the user to open Pembelian first.
+- Pembelian keeps its purchase analytics/KPI context, while the two detailed inventory-status cards are hidden there and the remaining lower row expands cleanly.
+
+**Verification target**
+- HSN-402 remains REVIEW pending authenticated visual reconciliation in the live UI.
+- Vercel/build gate must pass before claiming the relocation live.
+
 ## 2026-09-20 — HSN-008 Pembelian sidebar viewport hotfix
 
 **Scope**
