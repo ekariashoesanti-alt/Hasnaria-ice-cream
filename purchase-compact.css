@@ -1,140 +1,147 @@
-/* Compact 100% desktop viewport layout for Pembelian. Mobile/tablet keep the existing responsive flow. */
+/* Purchase dashboard: balanced one-view desktop layout at browser zoom 100%. */
 @media (min-width:980px){
+  html,body{max-width:100%;overflow-x:hidden}
   body:has(#pembelian:not(.hidden)){overflow:hidden!important}
   #app>main.wrap:has(#pembelian:not(.hidden)){
-    width:100%!important;
-    max-width:1440px!important;
-    height:calc(100vh - 118px)!important;
-    padding:7px 16px 8px!important;
+    box-sizing:border-box!important;
+    width:calc(100vw - 24px)!important;
+    max-width:none!important;
+    height:calc(100dvh - 92px)!important;
+    margin:0 12px!important;
+    padding:8px 0 10px!important;
     overflow:hidden!important;
   }
-  #pembelian:not(.hidden){height:100%;overflow:hidden}
+  #pembelian:not(.hidden){width:100%;max-width:100%;height:100%;overflow:hidden}
   #pembelian .pa-root{
-    height:100%;
-    min-height:0;
-    overflow:hidden;
+    width:100%;max-width:100%;height:100%;min-width:0;min-height:0;overflow:hidden;
     display:grid;
-    grid-template-columns:220px minmax(0,1fr);
-    grid-template-rows:50px 70px minmax(166px,1.15fr) minmax(154px,.95fr) 54px;
-    gap:7px 10px;
+    grid-template-columns:205px minmax(0,1fr);
+    grid-template-rows:56px 72px minmax(220px,1.15fr) minmax(205px,.95fr) 54px;
+    gap:8px 10px;
   }
+  #pembelian .pa-root>*{min-width:0;max-width:100%}
 
-  /* Title and filters share the first row to save vertical space. */
-  #pembelian .pa-title{grid-column:1;grid-row:1;align-items:center;padding:0 2px}
-  #pembelian .pa-title h1{font-size:23px;line-height:1;margin:0}
-  #pembelian .pa-title p{font-size:9.5px;line-height:1.25;margin:4px 0 0;max-width:210px}
+  /* Header area */
+  #pembelian .pa-title{grid-column:1;grid-row:1;align-items:center;padding:0 4px;overflow:hidden}
+  #pembelian .pa-title h1{font-size:24px;line-height:1;margin:0;letter-spacing:-.02em}
+  #pembelian .pa-title p{font-size:10.5px;line-height:1.25;margin:5px 0 0;max-width:195px}
   #pembelian .pa-controls{
-    grid-column:2;grid-row:1;
-    height:50px;min-height:0;
-    grid-template-columns:minmax(112px,.8fr) minmax(145px,1fr) minmax(140px,.9fr) minmax(176px,1fr);
-    gap:7px;
-    padding:5px 8px;
-    border-radius:12px;
-    align-items:center;
+    grid-column:2;grid-row:1;width:100%;height:56px;min-height:0;min-width:0;
+    grid-template-columns:minmax(120px,.8fr) minmax(170px,1fr) minmax(155px,.9fr) minmax(190px,.9fr);
+    gap:8px;padding:6px 8px;border-radius:14px;align-items:center;box-sizing:border-box;overflow:hidden;
   }
-  #pembelian .pa-controls label>span{font-size:8.5px;margin-bottom:2px}
-  #pembelian .pa-controls select{height:31px!important;min-height:31px!important;padding:4px 8px!important;font-size:10.5px!important;border-radius:8px!important}
-  #pembelian .pa-upload-wrap{height:40px;gap:2px;padding-left:8px;justify-content:center}
-  #pembelian .pa-upload{height:31px!important;min-height:31px!important;padding:4px 10px!important;font-size:10.5px!important;border-radius:8px!important}
-  #pembelian .pa-upload-wrap small{font-size:8px;line-height:1;min-height:8px;max-width:220px}
+  #pembelian .pa-controls>*{min-width:0}
+  #pembelian .pa-controls label>span{font-size:9.5px;margin-bottom:2px}
+  #pembelian .pa-controls select{width:100%!important;height:34px!important;min-height:34px!important;padding:5px 9px!important;font-size:11.5px!important;border-radius:9px!important}
+  #pembelian .pa-upload-wrap{height:43px;min-width:0;gap:2px;padding-left:8px;justify-content:center;overflow:hidden}
+  #pembelian .pa-upload{width:100%;height:34px!important;min-height:34px!important;padding:5px 10px!important;font-size:11.5px!important;border-radius:9px!important;white-space:nowrap}
+  #pembelian .pa-upload-wrap small{font-size:8.5px;line-height:1;min-height:8px;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
-  /* KPI strip */
-  #pembelian .pa-kpis{grid-column:1/-1;grid-row:2;gap:7px;min-height:0}
-  #pembelian .pa-kpis article{min-height:0;height:70px;padding:7px 10px;border-radius:11px}
-  #pembelian .pa-kpis span{font-size:8.5px;line-height:1.15}
-  #pembelian .pa-kpis strong{font-size:16px;line-height:1.05;margin-top:4px}
-  #pembelian .pa-kpis small{font-size:8px;line-height:1.1;margin-top:3px}
+  /* KPI row */
+  #pembelian .pa-kpis{grid-column:1/-1;grid-row:2;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;min-width:0;min-height:0}
+  #pembelian .pa-kpis article{min-width:0;min-height:0;height:72px;padding:9px 12px;border-radius:12px;overflow:hidden}
+  #pembelian .pa-kpis span{font-size:9.5px;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #pembelian .pa-kpis strong{font-size:18px;line-height:1.05;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #pembelian .pa-kpis small{font-size:8.8px;line-height:1.1;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
-  /* Main charts */
+  /* Main chart row */
   #pembelian .pa-main-grid{
-    grid-column:1/-1;grid-row:3;
-    min-height:0;height:100%;
-    grid-template-columns:minmax(0,2.15fr) minmax(0,.85fr);
-    gap:8px;
+    grid-column:1/-1;grid-row:3;display:grid;grid-template-columns:minmax(0,2.45fr) minmax(300px,.9fr);
+    gap:9px;min-width:0;min-height:0;height:100%;overflow:hidden;
   }
-  #pembelian .pa-card{min-height:0;height:100%;padding:8px 10px;border-radius:12px;overflow:hidden}
-  #pembelian .pa-card h2{font-size:11.5px;line-height:1.15;margin:0 0 2px}
-  #pembelian .pa-sub{font-size:8.5px;line-height:1.15;margin:0 0 3px}
-  #pembelian .pa-trend{display:flex;flex-direction:column}
-  #pembelian .pa-trend-svg{width:100%;height:calc(100% - 33px);min-height:0;max-height:none;flex:1}
-  #pembelian .pa-axis{font-size:8px}
-  #pembelian .pa-axis-x{font-size:8.5px}
-  #pembelian .pa-legend{gap:9px;margin-top:-2px;font-size:8.5px;line-height:1}
-  #pembelian .pa-legend i,#pembelian .pa-donut-legend i{width:7px;height:7px;flex-basis:7px}
-  #pembelian .pa-line-key{width:13px}
-  #pembelian .pa-donut-wrap{height:calc(100% - 18px);min-height:0;grid-template-columns:minmax(118px,.8fr) minmax(110px,.7fr);gap:3px}
-  #pembelian .pa-donut{width:auto;height:100%;max-width:158px;max-height:158px}
-  #pembelian .pa-donut-value{font-size:12px}
-  #pembelian .pa-donut-caption{font-size:8px}
-  #pembelian .pa-donut-legend{gap:5px;font-size:9px}
-  #pembelian .pa-donut-legend>div{gap:5px}
+  #pembelian .pa-card{box-sizing:border-box;min-width:0;min-height:0;height:100%;padding:10px 12px;border-radius:13px;overflow:hidden}
+  #pembelian .pa-card h2{font-size:12.5px;line-height:1.15;margin:0 0 3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #pembelian .pa-sub{font-size:9px;line-height:1.15;margin:0 0 4px}
+  #pembelian .pa-trend{display:flex;flex-direction:column;min-width:0}
+  #pembelian .pa-trend-svg{display:block;width:100%;height:calc(100% - 38px);min-width:0;min-height:0;max-height:none;flex:1}
+  #pembelian .pa-axis{font-size:8.5px}
+  #pembelian .pa-axis-x{font-size:9px}
+  #pembelian .pa-legend{gap:12px;margin-top:-1px;font-size:9.5px;line-height:1;white-space:nowrap}
+  #pembelian .pa-legend i,#pembelian .pa-donut-legend i{width:8px;height:8px;flex-basis:8px}
+  #pembelian .pa-line-key{width:15px}
+  #pembelian .pa-donut-wrap{height:calc(100% - 22px);min-width:0;min-height:0;grid-template-columns:minmax(150px,1fr) minmax(120px,.82fr);gap:6px;align-items:center;overflow:hidden}
+  #pembelian .pa-donut{display:block;width:100%;height:auto;max-width:185px;max-height:185px;margin:auto}
+  #pembelian .pa-donut-value{font-size:13px}
+  #pembelian .pa-donut-caption{font-size:8.5px}
+  #pembelian .pa-donut-legend{gap:7px;font-size:9.5px;min-width:0}
+  #pembelian .pa-donut-legend>div{gap:6px;min-width:0}
+  #pembelian .pa-donut-legend span{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
-  /* Lower analysis row: more width to the inventory status card. */
+  /* Lower analysis row */
   #pembelian .pa-lower-grid{
-    grid-column:1/-1;grid-row:4;
-    min-height:0;height:100%;
-    grid-template-columns:minmax(0,1.55fr) minmax(0,.62fr) minmax(0,1.22fr);
-    gap:8px;
+    grid-column:1/-1;grid-row:4;display:grid;
+    grid-template-columns:minmax(0,1.72fr) minmax(225px,.68fr) minmax(390px,1.15fr);
+    gap:9px;min-width:0;min-height:0;height:100%;overflow:hidden;
   }
-  #pembelian .pa-bars{gap:2px;margin-top:4px}
-  #pembelian .pa-bar-row{grid-template-columns:minmax(80px,.9fr) minmax(90px,2fr) 58px 42px;gap:5px;font-size:8.7px;line-height:1.05;min-height:10px}
-  #pembelian .pa-bar-row progress{height:6px}
-  #pembelian .pa-bar-row b{font-size:8.5px}
-  #pembelian .pa-bar-row em{font-size:8px}
-  #pembelian .pa-list{gap:3px;margin-top:4px}
-  #pembelian .pa-list>div{gap:1px 5px;padding:4px 6px;border-radius:8px;min-height:0}
-  #pembelian .pa-list span{font-size:9px;line-height:1.05}
-  #pembelian .pa-list b{font-size:8px;line-height:1;padding:2px 5px}
-  #pembelian .pa-list small{font-size:7.5px;line-height:1.05}
+  #pembelian .pa-bars{gap:3px;margin-top:5px;min-width:0}
+  #pembelian .pa-bar-row{grid-template-columns:minmax(100px,.95fr) minmax(130px,2.3fr) 70px 50px;gap:6px;font-size:9.4px;line-height:1.05;min-height:13px;min-width:0}
+  #pembelian .pa-bar-name{min-width:0}
+  #pembelian .pa-bar-row progress{height:7px;min-width:0}
+  #pembelian .pa-bar-row b{font-size:9.2px;white-space:nowrap}
+  #pembelian .pa-bar-row em{font-size:8.8px;white-space:nowrap}
+  #pembelian .pa-list{gap:4px;margin-top:5px;min-width:0;overflow:hidden}
+  #pembelian .pa-list>div{gap:1px 6px;padding:5px 7px;border-radius:8px;min-height:0;min-width:0}
+  #pembelian .pa-list span{font-size:9.5px;line-height:1.08;min-width:0}
+  #pembelian .pa-list b{font-size:8.3px;line-height:1;padding:3px 6px;white-space:nowrap}
+  #pembelian .pa-list small{font-size:7.8px;line-height:1.05;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
-  /* Inventory card contains two sections; present them side-by-side. */
-  #pembelian .pa-lower-grid>article:last-child{
-    display:grid;
-    grid-template-columns:minmax(0,1fr) minmax(0,1fr);
-    grid-template-rows:auto auto minmax(0,1fr);
-    column-gap:9px;
-    row-gap:1px;
-    align-content:start;
-  }
-  #pembelian .pa-lower-grid>article:last-child>h2:first-child{grid-column:1;grid-row:1}
-  #pembelian .pa-lower-grid>article:last-child>p:nth-child(2){grid-column:1;grid-row:2}
-  #pembelian .pa-lower-grid>article:last-child>.pa-list:nth-child(3),
-  #pembelian .pa-lower-grid>article:last-child>.pa-empty:nth-child(3){grid-column:1;grid-row:3;align-self:start}
-  #pembelian .pa-lower-grid>article:last-child>br{display:none}
-  #pembelian .pa-lower-grid>article:last-child>h2:nth-of-type(2){grid-column:2;grid-row:1}
-  #pembelian .pa-lower-grid>article:last-child>h2:nth-of-type(2)+p{grid-column:2;grid-row:2}
-  #pembelian .pa-lower-grid>article:last-child>h2:nth-of-type(2)+p+.pa-list,
-  #pembelian .pa-lower-grid>article:last-child>h2:nth-of-type(2)+p+.pa-empty{grid-column:2;grid-row:3;align-self:start}
-  #pembelian .pa-lower-grid>article:last-child .pa-sub{font-size:7.5px;line-height:1.08;margin-bottom:2px}
-  #pembelian .pa-lower-grid>article:last-child .pa-empty{min-height:70px;font-size:8.5px;padding:6px}
+  /* Inventory status now uses two clean internal panels. */
+  #pembelian .pa-stock-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;height:100%;min-width:0;min-height:0}
+  #pembelian .pa-stock-section{min-width:0;min-height:0;padding:7px 8px;border:1px solid #e1ece7;border-radius:10px;background:#fbfdfc;overflow:hidden}
+  #pembelian .pa-stock-head{display:flex;align-items:center;justify-content:space-between;gap:6px;min-width:0}
+  #pembelian .pa-stock-head h2{min-width:0;margin:0;font-size:11px}
+  #pembelian .pa-stock-count{flex:0 0 auto;padding:2px 6px;border-radius:99px;background:#e6f4ed;color:#125644;font-size:8px;font-weight:800;white-space:nowrap}
+  #pembelian .pa-stock-section>.pa-sub{font-size:7.8px;line-height:1.08;margin:3px 0 4px;min-height:17px}
+  #pembelian .pa-stock-section .pa-list{gap:3px;margin-top:3px}
+  #pembelian .pa-stock-section .pa-list>div{padding:4px 5px}
+  #pembelian .pa-stock-section .pa-list span{font-size:8.8px}
+  #pembelian .pa-stock-section .pa-list b{font-size:7.7px;padding:2px 5px}
+  #pembelian .pa-stock-section .pa-list small{font-size:7.2px}
+  #pembelian .pa-stock-more{font-size:7.8px;color:#6f8178;text-align:right;margin-top:4px;white-space:nowrap}
+  #pembelian .pa-stock-section .pa-empty{min-height:58px;font-size:8.5px;padding:6px}
 
-  /* Insight row stays visible without adding page height. */
-  #pembelian .pa-insight{grid-column:1/-1;grid-row:5;height:54px;min-height:0;padding:7px 9px;grid-template-columns:28px 1fr;gap:7px;align-items:center}
-  #pembelian .pa-insight-icon{width:26px;height:26px;font-size:12px}
+  /* Insight bar */
+  #pembelian .pa-insight{grid-column:1/-1;grid-row:5;height:54px;min-height:0;padding:7px 10px;grid-template-columns:30px 1fr;gap:8px;align-items:center;overflow:hidden}
+  #pembelian .pa-insight-icon{width:27px;height:27px;font-size:12px}
   #pembelian .pa-insight h2{font-size:10.5px;margin:0}
-  #pembelian .pa-insight ol{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px 8px;margin:3px 0 0}
-  #pembelian .pa-insight li{grid-template-columns:15px minmax(0,1fr);gap:4px;font-size:7.8px;line-height:1.1;min-width:0}
+  #pembelian .pa-insight ol{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px 10px;margin:3px 0 0;min-width:0}
+  #pembelian .pa-insight li{grid-template-columns:15px minmax(0,1fr);gap:4px;font-size:8.2px;line-height:1.1;min-width:0;overflow:hidden}
   #pembelian .pa-insight li:before{width:14px;height:14px;font-size:7.5px}
-  #pembelian .pa-empty{min-height:56px;font-size:9px;padding:6px}
+  #pembelian .pa-empty{min-height:60px;font-size:9.5px;padding:6px}
 }
 
-/* Shorter laptop screens get one additional compression step. */
-@media (min-width:980px) and (max-height:780px){
-  #app>main.wrap:has(#pembelian:not(.hidden)){height:calc(100vh - 112px)!important;padding-top:5px!important;padding-bottom:5px!important}
-  #pembelian .pa-root{grid-template-rows:46px 64px minmax(150px,1.1fr) minmax(142px,.92fr) 48px;gap:5px 8px}
+/* 1366-class and shorter laptop screens: tighter, still readable. */
+@media (min-width:980px) and (max-width:1450px){
+  #app>main.wrap:has(#pembelian:not(.hidden)){width:calc(100vw - 16px)!important;margin:0 8px!important}
+  #pembelian .pa-root{grid-template-columns:185px minmax(0,1fr);gap:7px 8px}
+  #pembelian .pa-title h1{font-size:22px}
+  #pembelian .pa-title p{font-size:9.5px}
+  #pembelian .pa-controls{grid-template-columns:minmax(110px,.75fr) minmax(145px,1fr) minmax(135px,.85fr) minmax(165px,.9fr);gap:6px}
+  #pembelian .pa-kpis article{padding:8px 10px}
+  #pembelian .pa-kpis strong{font-size:16px}
+  #pembelian .pa-main-grid{grid-template-columns:minmax(0,2.25fr) minmax(275px,.85fr)}
+  #pembelian .pa-lower-grid{grid-template-columns:minmax(0,1.6fr) minmax(205px,.65fr) minmax(350px,1.12fr)}
+  #pembelian .pa-bar-row{grid-template-columns:minmax(88px,.9fr) minmax(105px,2fr) 62px 45px;gap:5px}
+}
+
+@media (min-width:980px) and (max-height:800px){
+  #app>main.wrap:has(#pembelian:not(.hidden)){height:calc(100dvh - 84px)!important;padding-top:5px!important;padding-bottom:6px!important}
+  #pembelian .pa-root{grid-template-rows:50px 64px minmax(180px,1.08fr) minmax(170px,.92fr) 48px;gap:6px 8px}
   #pembelian .pa-title h1{font-size:21px}
-  #pembelian .pa-title p{font-size:8.5px}
-  #pembelian .pa-controls{height:46px;padding:4px 7px}
-  #pembelian .pa-controls select,#pembelian .pa-upload{height:29px!important;min-height:29px!important}
-  #pembelian .pa-kpis article{height:64px;padding:6px 9px}
-  #pembelian .pa-kpis strong{font-size:14.5px}
-  #pembelian .pa-card{padding:7px 8px}
-  #pembelian .pa-card h2{font-size:10.5px}
-  #pembelian .pa-sub{font-size:7.8px}
-  #pembelian .pa-bar-row{font-size:8px;gap:4px}
-  #pembelian .pa-list>div{padding:3px 5px}
-  #pembelian .pa-list span{font-size:8.5px}
-  #pembelian .pa-list small{font-size:7px}
+  #pembelian .pa-title p{font-size:9px}
+  #pembelian .pa-controls{height:50px;padding:5px 7px}
+  #pembelian .pa-controls select,#pembelian .pa-upload{height:31px!important;min-height:31px!important}
+  #pembelian .pa-kpis article{height:64px;padding:7px 9px}
+  #pembelian .pa-kpis strong{font-size:15px}
+  #pembelian .pa-card{padding:8px 9px}
+  #pembelian .pa-card h2{font-size:11.5px}
+  #pembelian .pa-bar-row{font-size:8.8px;min-height:11px}
+  #pembelian .pa-list>div{padding:4px 6px}
   #pembelian .pa-insight{height:48px;padding:5px 8px}
-  #pembelian .pa-insight li{font-size:7.2px}
+  #pembelian .pa-insight li{font-size:7.6px}
+}
+
+@media (max-width:979px){
+  body{overflow-x:hidden}
+  #pembelian .pa-root{max-width:100%}
 }
