@@ -115,8 +115,8 @@
   }
 
   // Capture phase prevents the legacy button handler from reaching
-  // setTab()->render(). stopPropagation is intentional: Stock's own capture
-  // listener on document must still run, so never use stopImmediatePropagation.
+  // setTab()->render(). stopPropagation is intentional so Stock's own
+  // document-capture listener can still run on the same node.
   document.addEventListener('click',function(event){
     if(!isOwner()) return;
     var target=event.target&&event.target.closest?event.target.closest('#tabs .tab[data-tab]'):null;
