@@ -22,10 +22,10 @@ try {
   if (html.indexOf('/owner-green.css?v=1') < html.indexOf('/erp.css')) throw new Error('Owner green palette must load after ERP stylesheet');
 
   const ownerPalette = fs.readFileSync(path.join(root, 'owner-green.css'), 'utf8');
-  if (!ownerPalette.includes('--hasnaria-green:#2f5f36')) throw new Error('Owner sidebar must use Hasnaria forest green');
-  if (!ownerPalette.includes('--hasnaria-accent:#5e8f3b')) throw new Error('Owner controls must use Hasnaria accent green');
-  if (!ownerPalette.includes('--hasnaria-green-bg:#eef6ee')) throw new Error('Owner workspace must use Hasnaria soft green background');
-  if (!ownerPalette.includes('--hasnaria-green-ink:#23412b')) throw new Error('Owner text must use Hasnaria dark green ink');
+  if (!ownerPalette.includes('--hasnaria-green:#125644')) throw new Error('Hasnaria shell must use the approved #125644 brand green');
+  if (!ownerPalette.includes('--hasnaria-accent:#125644')) throw new Error('Hasnaria controls must use the approved brand green');
+  if (!ownerPalette.includes('--hasnaria-green-bg:#f7faf9')) throw new Error('Hasnaria workspace must use the green-white background system');
+  if (!ownerPalette.includes('--hasnaria-green-ink:#143c30')) throw new Error('Hasnaria text must use dark green ink');
 
   for (const name of ['auth-bootstrap.js', 'password-reset-bootstrap.js']) {
     const file = path.join(out, name);
