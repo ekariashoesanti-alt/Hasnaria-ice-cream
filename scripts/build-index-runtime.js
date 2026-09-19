@@ -4,6 +4,8 @@ const path = require('path');
 const GOOGLE_BINDING = `\n(function bindHasnariaGoogleButton() {\n  function bind() {\n    var btn = document.getElementById('googleBtn');\n    if (!btn || btn.__hasnariaGoogleBound) return;\n    btn.__hasnariaGoogleBound = true;\n    btn.addEventListener('click', function (event) {\n      if (typeof window.hasnariaGoogle === 'function') window.hasnariaGoogle(event);\n    });\n  }\n  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bind, { once: true });\n  else bind();\n})();\n`;
 const OWNER_SHELL_TAG = '<script src="/owner-shell-guard.js?v=1"></script>';
 const OWNER_PALETTE_TAG = '<link rel="stylesheet" href="/owner-green.css?v=1">';
+const PURCHASE_CSS_TAG = '<link rel="stylesheet" href="/purchase-analytics.css?v=1">';
+const PURCHASE_JS_TAG = '<script src="/purchase-analytics.js?v=1"></script>';
 
 function fail(message) {
   throw new Error(`Index runtime build failed: ${message}`);
@@ -44,12 +46,19 @@ function buildStrictIndexRuntime(sourceIndexPath, outputDir) {
   if (!html.includes(OWNER_PALETTE_TAG)) html = html.replace(erpCssTag[0], erpCssTag[0] + '\n' + OWNER_PALETTE_TAG);
   if (!html.includes(OWNER_PALETTE_TAG)) fail('Owner green palette reference missing');
   if (html.indexOf(OWNER_PALETTE_TAG) < html.indexOf(erpCssTag[0])) fail('Owner green palette must load after ERP stylesheet');
+  if (!html.includes(PURCHASE_CSS_TAG)) html = html.replace(OWNER_PALETTE_TAG, OWNER_PALETTE_TAG + '\n' + PURCHASE_CSS_TAG);
+  if (!html.includes(PURCHASE_CSS_TAG)) fail('Purchase analytics stylesheet reference missing');
 
   const appTag = html.match(/<script src="\/app\.js[^\"]*"><\/script>/i);
   if (!appTag) fail('application runtime script reference missing');
   if (!html.includes(OWNER_SHELL_TAG)) html = html.replace(appTag[0], OWNER_SHELL_TAG + '\n' + appTag[0]);
   if (!html.includes(OWNER_SHELL_TAG)) fail('owner shell guard reference missing');
   if (html.indexOf(OWNER_SHELL_TAG) > html.indexOf(appTag[0])) fail('owner shell guard must load before app runtime');
+
+  const navTag = html.match(/<script src="\/nav-patch\.js[^\"]*"><\/script>/i);
+  if (!navTag) fail('navigation patch reference missing');
+  if (!html.includes(PURCHASE_JS_TAG)) html = html.replace(navTag[0], navTag[0] + '\n' + PURCHASE_JS_TAG);
+  if (!html.includes(PURCHASE_JS_TAG)) fail('Purchase analytics runtime reference missing');
 
   if (/<script\b(?![^>]*\bsrc\s*=)[^>]*>/i.test(html)) fail('inline script remained in production index');
   if (/\son[a-z]+\s*=/i.test(html)) fail('inline event handler remained in production index');
