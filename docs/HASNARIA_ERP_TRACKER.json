@@ -1,6 +1,6 @@
 {
   "project": "Hasnaria ERP Command Center",
-  "target_frontend": "ChatGPT Site (primary target) with Supabase as persistent backend",
+  "target_frontend": "GitHub main → Vercel; existing Supabase. Next.js deferred by user.",
   "status_scale": {
     "TODO": 0,
     "BLOCKED": 0.25,
@@ -198,7 +198,7 @@
       "id": "HSN-010",
       "milestone": "M0",
       "priority": "P0",
-      "status": "TODO",
+      "status": "REVIEW",
       "title": "Parity checklist ChatGPT Site vs repository",
       "dependencies": [
         "HSN-009"

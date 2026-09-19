@@ -1,0 +1,281 @@
+(function () {
+  'use strict';
+
+  const HANDLED = new Set([
+    'pack_conversion',
+    'recipe_verification',
+    'sale_item_mapping',
+    'selling_price_confirmation',
+    'inventory_baseline_confirmation',
+    'financing_payment_review',
+    'invalid_purchase_qty',
+    'unmatched_purchase',
+    'unverified_inventory',
+    'zero_amount_purchase',
+    'untracked_stock',
+    'missing_recipe',
+    'missing_component_cost'
+  ]);
+
+  const esc = value => String(value == null ? '' : value).replace(/[&<>"']/g, c => ({
+    '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
+  }[c]));
+  const money = value => value == null ? 'Belum tersedia' : 'Rp' + Number(value).toLocaleString('id-ID', {maximumFractionDigits:0});
+  const number = value => value == null ? 'Belum tersedia' : Number(value).toLocaleString('id-ID');
+  const context = () => window.__HASNARIA_CONTEXT;
+  const db = () => window.__HASNARIA_DB;
+
+  function canHandle(type) { return HANDLED.has(type); }
+  function requireOwner() { const c=context(); if(!c||c.role!=='owner') throw new Error('Tindakan ini hanya dapat diselesaikan oleh Owner.'); }
+  function positive(value,label){ const n=Number(value); if(!(n>0)) throw new Error(label+' harus lebih dari 0.'); return n; }
+  function nonNegative(value,label){ const n=Number(value); if(!(n>=0)) throw new Error(label+' harus 0 atau lebih.'); return n; }
+  function reason(value){ const text=String(value||'').trim(); if(!text) throw new Error('Alasan wajib diisi untuk audit trail.'); return text; }
+  function todayJakarta(){ return new Date(Date.now()+7*60*60*1000).toISOString().slice(0,10); }
+
+  function buildRequest(action, values) {
+    const meta=action&&action.metadata||{};
+    const type=action&&action.action_type;
+    if(!canHandle(type)) throw new Error('Action type belum didukung oleh form ERP.');
+
+    if(type==='missing_component_cost'){
+      if(!meta.inventory_item_id) throw new Error('Inventory item tidak tersedia.');
+      const effectiveFrom=String(values.effective_from||'').trim();
+      if(!effectiveFrom) throw new Error('Tanggal mulai berlaku cost wajib diisi.');
+      if(effectiveFrom>todayJakarta()) throw new Error('Tanggal mulai berlaku cost tidak boleh di masa depan.');
+      const sourceReference=String(values.source_reference||'').trim();
+      if(!sourceReference) throw new Error('Sumber bukti cost wajib diisi.');
+      return {rpc:'resolve_inventory_item_cost_verification',params:{p_inventory_item_id:meta.inventory_item_id,p_unit_cost:positive(values.unit_cost,'Unit cost'),p_effective_from:effectiveFrom,p_source_reference:sourceReference,p_reason:reason(values.reason)}};
+    }
+
+    if(type==='missing_recipe'){
+      if(!meta.product_id) throw new Error('Product ID tidak tersedia.');
+      let components=values.components;
+      if(!Array.isArray(components)){
+        try{components=JSON.parse(String(values.components_json||'[]'));}catch(_){throw new Error('Komponen recipe tidak valid.');}
+      }
+      if(!Array.isArray(components)||!components.length) throw new Error('Minimal satu komponen recipe wajib diisi.');
+      const seen=new Set();
+      const normalized=components.map((component,index)=>{
+        const inventoryItemId=String(component&&component.inventory_item_id||'').trim();
+        if(!inventoryItemId) throw new Error('Pilih inventory item untuk komponen '+(index+1)+'.');
+        if(seen.has(inventoryItemId)) throw new Error('Inventory item tidak boleh duplikat dalam recipe.');
+        seen.add(inventoryItemId);
+        return {inventory_item_id:inventoryItemId,qty_per_sale:positive(component.qty_per_sale,'Qty per sale komponen '+(index+1))};
+      });
+      return {rpc:'save_product_recipe_draft',params:{p_product_id:meta.product_id,p_components:normalized,p_reason:reason(values.reason)}};
+    }
+
+    if(type==='zero_amount_purchase'){
+      if(!meta.source_history_id) throw new Error('Source history ID tidak tersedia.');
+      const resolution=String(values.resolution||'');
+      if(!['actual_amount','exclude'].includes(resolution)) throw new Error('Pilih keputusan untuk baris Rp0.');
+      let effectiveAmount=null;
+      if(resolution==='actual_amount') effectiveAmount=positive(values.effective_amount,'Nominal aktual');
+      return {rpc:'resolve_zero_amount_purchase_candidate',params:{p_source_history_id:meta.source_history_id,p_resolution:resolution,p_effective_amount:effectiveAmount,p_reason:reason(values.reason)}};
+    }
+
+    if(type==='untracked_stock'){
+      if(!meta.inventory_item_id) throw new Error('Inventory item tidak tersedia.');
+      const opnameDate=String(values.opname_date||'').trim();
+      if(!opnameDate) throw new Error('Tanggal stock opname wajib diisi.');
+      if(opnameDate>todayJakarta()) throw new Error('Tanggal stock opname tidak boleh di masa depan.');
+      return {rpc:'resolve_physical_stock_opname',params:{p_inventory_item_id:meta.inventory_item_id,p_physical_qty:nonNegative(values.physical_qty,'Stok fisik'),p_opname_date:opnameDate,p_reason:reason(values.reason)}};
+    }
+
+    if(type==='unmatched_purchase'||type==='unverified_inventory'){
+      const sourceName=String(values.source_name||action.subject||'').trim();
+      if(!sourceName) throw new Error('Nama sumber pembelian tidak tersedia.');
+      const ruleType=type==='unverified_inventory'?'inventory_alias':String(values.rule_type||'');
+      if(!['inventory_alias','expense_candidate','payment_candidate','exclude'].includes(ruleType)) throw new Error('Pilih klasifikasi pembelian.');
+      let inventoryItemId=null,expenseCategory=null,qtyMultiplier=null;
+      if(ruleType==='inventory_alias'){
+        inventoryItemId=String(values.inventory_item_id||'').trim();
+        if(!inventoryItemId) throw new Error('Pilih inventory item tujuan.');
+        qtyMultiplier=positive(values.qty_multiplier,'Quantity multiplier');
+      }else if(ruleType==='expense_candidate'){
+        expenseCategory=String(values.expense_category||'').trim();
+        if(!expenseCategory) throw new Error('Kategori biaya wajib diisi.');
+      }
+      return {rpc:'resolve_purchase_item_rule',params:{p_source_name:sourceName,p_rule_type:ruleType,p_inventory_item_id:inventoryItemId,p_expense_category:expenseCategory,p_qty_multiplier:qtyMultiplier,p_reason:reason(values.reason),p_post:values.post===true||values.post==='on'||values.post==='true'}};
+    }
+
+    if(type==='invalid_purchase_qty'){
+      const sourceHistoryId=values.source_history_id||meta.source_history_id;
+      if(!sourceHistoryId) throw new Error('Pilih baris pembelian yang akan diperbaiki.');
+      return {rpc:'resolve_purchase_quantity_override',params:{p_source_history_id:sourceHistoryId,p_effective_qty:positive(values.effective_qty,'Quantity efektif'),p_reason:reason(values.reason)}};
+    }
+    if(type==='pack_conversion'){
+      if(!meta.conversion_id) throw new Error('Conversion ID tidak tersedia.');
+      return {rpc:'resolve_inventory_conversion',params:{p_conversion_id:meta.conversion_id,p_units_per_purchase_unit:positive(values.units_per_purchase_unit,'Isi per pack'),p_reason:reason(values.reason)}};
+    }
+    if(type==='recipe_verification'){
+      if(!meta.product_id) throw new Error('Product ID tidak tersedia.');
+      const effectiveFrom=String(values.effective_from||'').trim();
+      if(!effectiveFrom) throw new Error('Tanggal mulai berlaku wajib diisi.');
+      if(effectiveFrom>todayJakarta()) throw new Error('Tanggal mulai berlaku tidak boleh di masa depan.');
+      return {rpc:'resolve_product_recipe_verification_v2',params:{p_product_id:meta.product_id,p_verified:true,p_effective_from:effectiveFrom,p_reason:reason(values.reason)}};
+    }
+    if(type==='sale_item_mapping'){
+      const productId=meta.suggested_product_id||values.product_id;
+      if(!productId) throw new Error('Produk tujuan belum dipilih.');
+      return {rpc:'resolve_sale_item_product_mapping',params:{p_source_name:meta.source_name||action.subject,p_product_id:productId,p_reason:reason(values.reason)}};
+    }
+    if(type==='selling_price_confirmation'){
+      if(!meta.product_id) throw new Error('Product ID tidak tersedia.');
+      return {rpc:'resolve_product_selling_price',params:{p_product_id:meta.product_id,p_selling_price:positive(values.selling_price,'Harga jual'),p_reason:reason(values.reason)}};
+    }
+    if(type==='inventory_baseline_confirmation'){
+      if(!meta.source_history_id) throw new Error('Source history ID tidak tersedia.');
+      return {rpc:'resolve_inventory_baseline_candidate',params:{p_source_history_id:meta.source_history_id,p_reason:reason(values.reason)}};
+    }
+    if(type==='financing_payment_review'){
+      if(!meta.source_history_id) throw new Error('Source history ID tidak tersedia.');
+      const resolution=String(values.resolution||'');
+      if(!['cash_paid','liability_only','exclude'].includes(resolution)) throw new Error('Pilih keputusan pembiayaan.');
+      let cashDate=null,cashAmount=null;
+      if(resolution==='cash_paid'){
+        cashDate=String(values.cash_date||'').trim();
+        if(!cashDate) throw new Error('Tanggal pembayaran kas wajib diisi.');
+        cashAmount=positive(values.cash_amount,'Nominal pembayaran kas');
+      }
+      return {rpc:'resolve_financing_payment_candidate',params:{p_source_history_id:meta.source_history_id,p_resolution:resolution,p_cash_date:cashDate,p_cash_amount:cashAmount,p_reason:reason(values.reason)}};
+    }
+    throw new Error('Action type belum didukung.');
+  }
+
+  function commonHeader(action){
+    return '<h2 id="erp-dialog-title">'+esc(action.subject)+'</h2><p>'+esc(action.action_needed||'')+'</p><div class="erp-kpis"><div class="erp-kpi"><div>Nilai terkait</div><div class="value">'+money(action.financial_impact)+'</div></div><div class="erp-kpi"><div>Aktivitas terkait</div><div class="value">'+number(action.activity_impact)+'</div></div></div>';
+  }
+  function invalidRowLabel(row){ return [row.purchase_date||'Tanpa tanggal',row.quantity_text?'qty sumber '+row.quantity_text:'qty sumber kosong',money(row.total_amount),(row.source_file||'file')+' #'+(row.row_no||'—')].join(' · '); }
+
+  async function openInvalidQuantity(action,dialog){
+    dialog.innerHTML=commonHeader(action)+'<p class="erp-note warn">Perbaikan dilakukan per baris sumber. Raw Excel tidak diubah; override akan diaudit.</p><p role="status">Memuat baris pembelian…</p>';
+    dialog.showModal();
+    const result=await db().from('ui_invalid_quantity_queue').select('*').eq('brand_id',context().brandId).eq('item_name',action.subject).order('purchase_date',{ascending:false}).limit(100).abortSignal(AbortSignal.timeout(30000));
+    if(result.error) throw result.error;
+    const rows=result.data||[];
+    if(!rows.length){
+      dialog.innerHTML=commonHeader(action)+'<p class="erp-note">Tidak ada lagi baris invalid quantity untuk item ini. Muat ulang Action Center.</p><div class="erp-form-actions"><button type="button" data-erp-action-close>Tutup</button></div>';
+      const close=dialog.querySelector('[data-erp-action-close]'); if(close) close.onclick=()=>dialog.close(); return;
+    }
+    dialog.innerHTML=commonHeader(action)+'<p class="erp-note warn">Pilih baris sumber yang benar. Suggested quantity hanya diisi otomatis jika total ÷ harga satuan menghasilkan angka bulat secara deterministik.</p><form id="erp-action-form" class="erp-form"><label class="erp-wide">Baris pembelian<select name="source_history_id" required><option value="">Pilih…</option>'+rows.map(row=>'<option value="'+esc(row.source_history_id)+'">'+esc(invalidRowLabel(row))+'</option>').join('')+'</select></label><label>Quantity efektif<input name="effective_qty" type="number" min="0.000001" step="any" required></label><div id="erp-invalid-hint" class="erp-note">Pilih baris untuk melihat apakah ada suggestion deterministik.</div><label class="erp-wide">Alasan / catatan audit<textarea name="reason" rows="3" required placeholder="Tuliskan dasar quantity yang benar"></textarea></label><p id="erp-action-message" class="erp-wide erp-message" role="status"></p><div class="erp-form-actions erp-wide"><button type="button" data-erp-action-close>Tutup</button><button class="primary" type="submit">Simpan quantity efektif</button></div></form>';
+    const form=dialog.querySelector('#erp-action-form'),close=dialog.querySelector('[data-erp-action-close]'),select=form.elements.source_history_id,qty=form.elements.effective_qty,hint=dialog.querySelector('#erp-invalid-hint');
+    if(close) close.onclick=()=>dialog.close();
+    select.onchange=()=>{const row=rows.find(x=>String(x.source_history_id)===select.value);qty.value='';if(!row){hint.textContent='Pilih baris untuk melihat apakah ada suggestion deterministik.';return;}if(row.can_apply_suggestion&&Number(row.suggested_qty)>0){qty.value=row.suggested_qty;hint.textContent='Suggestion deterministik: '+number(row.suggested_qty)+' ('+row.suggestion_method+'). Tetap periksa dokumen sumber sebelum simpan.';}else hint.textContent='Tidak ada suggestion deterministik. Isi quantity dari dokumen sumber.';};
+    form.onsubmit=event=>{event.preventDefault();submit(action,form,dialog);};
+  }
+
+  function inventoryOptions(rows){ return '<option value="">Pilih inventory item…</option>'+rows.map(row=>'<option value="'+esc(row.inventory_item_id)+'">'+esc(row.item_name+' · '+(row.unit||'tanpa satuan'))+'</option>').join(''); }
+
+  async function openMissingRecipe(action,dialog){
+    if(!(action.metadata&&action.metadata.product_id)) throw new Error('Product ID tidak tersedia.');
+    dialog.innerHTML=commonHeader(action)+'<p class="erp-note warn">Recipe disimpan sebagai draft dulu. Draft tidak mengurangi stok dan tidak dipakai HPP sampai diverifikasi terpisah dengan tanggal effective_from.</p><p role="status">Memuat master inventory…</p>';
+    dialog.showModal();
+    const result=await db().from('ui_inventory_items').select('inventory_item_id,item_name,unit,category,brand_id').eq('brand_id',context().brandId).order('item_name',{ascending:true}).limit(500).abortSignal(AbortSignal.timeout(30000));
+    if(result.error) throw result.error;
+    const inventory=result.data||[];
+    const options=inventoryOptions(inventory);
+    dialog.innerHTML=commonHeader(action)+'<p class="erp-note warn">Susun BOM berdasarkan resep aktual. Tidak ada komponen atau quantity yang diisi otomatis. Setelah draft tersimpan, lakukan Verifikasi Recipe sebagai langkah terpisah.</p><form id="erp-action-form" class="erp-form"><input type="hidden" name="components_json"><div class="erp-wide" id="erp-recipe-components"></div><div class="erp-wide"><button type="button" data-erp-add-component>+ Tambah komponen</button></div><label class="erp-wide">Alasan / sumber resep<textarea name="reason" rows="3" required placeholder="Contoh: resep operasional aktual diperiksa dengan owner"></textarea></label><p id="erp-action-message" class="erp-wide erp-message" role="status"></p><div class="erp-form-actions erp-wide"><button type="button" data-erp-action-close>Tutup</button><button class="primary" type="submit">Simpan draft recipe</button></div></form>';
+    const form=dialog.querySelector('#erp-action-form'),container=dialog.querySelector('#erp-recipe-components'),add=dialog.querySelector('[data-erp-add-component]'),close=dialog.querySelector('[data-erp-action-close]');
+    let nextId=0;
+    const addRow=()=>{
+      nextId+=1;
+      const row=document.createElement('div');
+      row.className='erp-form erp-wide erp-recipe-row';
+      row.dataset.recipeRow=String(nextId);
+      row.innerHTML='<label>Inventory item<select data-recipe-item required>'+options+'</select></label><label>Qty per penjualan<input data-recipe-qty type="number" min="0.000001" step="any" required placeholder="Contoh: 1 atau 0.05"></label><div class="erp-form-actions"><button type="button" data-recipe-remove>Hapus</button></div>';
+      const remove=row.querySelector('[data-recipe-remove]');
+      if(remove) remove.onclick=()=>{if(container.querySelectorAll('.erp-recipe-row').length>1) row.remove();};
+      container.appendChild(row);
+    };
+    addRow();
+    if(add) add.onclick=addRow;
+    if(close) close.onclick=()=>dialog.close();
+    form.onsubmit=event=>{
+      event.preventDefault();
+      const components=[];
+      for(const row of container.querySelectorAll('.erp-recipe-row')){
+        const item=row.querySelector('[data-recipe-item]');
+        const qty=row.querySelector('[data-recipe-qty]');
+        components.push({inventory_item_id:item?item.value:'',qty_per_sale:qty?qty.value:''});
+      }
+      form.elements.components_json.value=JSON.stringify(components);
+      submit(action,form,dialog);
+    };
+  }
+
+  async function openPurchaseRule(action,dialog){
+    dialog.innerHTML=commonHeader(action)+'<p class="erp-note warn">Klasifikasi ini adalah keputusan bisnis manual. Tidak ada pilihan yang diterapkan otomatis.</p><p role="status">Memuat master inventory…</p>';dialog.showModal();
+    const result=await db().from('ui_inventory_items').select('inventory_item_id,item_name,unit,category,brand_id').eq('brand_id',context().brandId).order('item_name',{ascending:true}).limit(500).abortSignal(AbortSignal.timeout(30000));
+    if(result.error) throw result.error;
+    const inventory=result.data||[],fixedInventory=action.action_type==='unverified_inventory';
+    dialog.innerHTML=commonHeader(action)+'<p class="erp-note warn">'+(fixedInventory?'Konfirmasi inventory item dan multiplier. Jangan gunakan multiplier 1 kecuali benar sesuai unit pembelian.':'Pilih klasifikasi untuk nama sumber ini. Khusus item ambigu seperti PINES, jangan pilih inventory/expense tanpa bukti sumber.')+'</p><form id="erp-action-form" class="erp-form"><input type="hidden" name="source_name" value="'+esc(action.subject)+'">'+(fixedInventory?'<input type="hidden" name="rule_type" value="inventory_alias"><div class="erp-wide erp-note"><b>Klasifikasi:</b> Inventory alias (perlu dikonfirmasi)</div>':'<label>Klasifikasi<select name="rule_type" required><option value="">Pilih…</option><option value="inventory_alias">Inventory alias</option><option value="expense_candidate">Expense candidate</option><option value="payment_candidate">Payment candidate</option><option value="exclude">Exclude</option></select></label>')+'<div id="erp-rule-inventory" class="erp-wide" '+(fixedInventory?'':'hidden')+'><div class="erp-form"><label>Inventory item<select name="inventory_item_id">'+inventoryOptions(inventory)+'</select></label><label>Quantity multiplier<input name="qty_multiplier" type="number" min="0.000001" step="any" placeholder="Wajib untuk inventory alias"></label></div><p class="erp-note">Multiplier mengubah quantity sumber menjadi unit inventory. Jangan menebak.</p></div><label id="erp-rule-expense" class="erp-wide" hidden>Kategori biaya<input name="expense_category" placeholder="Contoh: store_supplies"></label><label class="erp-wide erp-check"><input name="post" type="checkbox"> Posting transaksi historis setelah rule tersimpan <small>Default tidak aktif. Aktifkan hanya jika mapping/unit sudah benar.</small></label><label class="erp-wide">Alasan / catatan audit<textarea name="reason" rows="3" required placeholder="Tuliskan dasar klasifikasi"></textarea></label><p id="erp-action-message" class="erp-wide erp-message" role="status"></p><div class="erp-form-actions erp-wide"><button type="button" data-erp-action-close>Tutup</button><button class="primary" type="submit">Simpan klasifikasi</button></div></form>';
+    const form=dialog.querySelector('#erp-action-form'),close=dialog.querySelector('[data-erp-action-close]'),rule=form.elements.rule_type,inventoryBlock=dialog.querySelector('#erp-rule-inventory'),expenseField=dialog.querySelector('#erp-rule-expense');
+    if(close) close.onclick=()=>dialog.close();
+    const sync=()=>{const value=fixedInventory?'inventory_alias':rule.value;if(inventoryBlock)inventoryBlock.hidden=value!=='inventory_alias';if(expenseField)expenseField.hidden=value!=='expense_candidate';const inv=form.elements.inventory_item_id,mult=form.elements.qty_multiplier,exp=form.elements.expense_category;if(inv)inv.required=value==='inventory_alias';if(mult)mult.required=value==='inventory_alias';if(exp)exp.required=value==='expense_candidate';if(value!=='inventory_alias'){if(inv)inv.value='';if(mult)mult.value='';}if(value!=='expense_candidate'&&exp)exp.value='';};
+    if(rule&&!fixedInventory) rule.onchange=sync;sync();form.onsubmit=event=>{event.preventDefault();submit(action,form,dialog);};
+  }
+
+  function formHtml(action){
+    const meta=action.metadata||{},type=action.action_type;let body='',submitLabel='Simpan keputusan';
+    if(type==='pack_conversion'){
+      body='<p class="erp-note warn">Isi per pack harus berasal dari kemasan/supplier yang benar. Jangan menebak.</p><label>Isi per pack<input name="units_per_purchase_unit" type="number" min="0.000001" step="any" required placeholder="Contoh: 50"></label>';submitLabel='Verifikasi konversi';
+    }else if(type==='recipe_verification'){
+      body='<p class="erp-note warn">Verifikasi hanya jika BOM, komponen, dan qty per penjualan sudah lengkap. HPP dan konsumsi stok hanya berlaku untuk transaksi pada/ setelah tanggal yang dipilih.</p><div class="erp-wide erp-note"><b>Ringkasan resep</b><br>'+esc(meta.recipe_summary||'Belum tersedia')+'<br><small>Komponen aktif: '+number(meta.active_components)+'</small></div><label>Tanggal mulai berlaku<input name="effective_from" type="date" max="'+todayJakarta()+'" required></label>';submitLabel='Verifikasi resep';
+    }else if(type==='missing_component_cost'){
+      const observedRows=Number(meta.observed_purchase_rows||0);
+      const observed=observedRows>0
+        ? '<br><b>Histori purchase (referensi saja):</b> '+number(observedRows)+' baris · rentang '+money(meta.min_observed_unit_cost)+' – '+money(meta.max_observed_unit_cost)+'<br><b>Terbaru:</b> '+money(meta.latest_observed_unit_cost)+' pada '+esc(meta.latest_observed_purchase_date||'—')+' · '+esc(meta.latest_observed_mapping_method||'unverified')
+        : '<br><b>Histori purchase:</b> belum ada cost source terhubung';
+      body='<p class="erp-note warn">Masukkan unit cost hanya dari bukti yang dapat diverifikasi. Angka histori di bawah tidak diterapkan otomatis dan field cost sengaja kosong.</p><div class="erp-wide erp-note"><b>Unit inventory:</b> '+esc(meta.unit||'—')+'<br><b>Produk terdampak:</b> '+esc(meta.affected_products||'—')+observed+'</div><label>Unit cost terverifikasi (Rp / '+esc(meta.unit||'unit')+')<input name="unit_cost" type="number" min="0.000001" step="any" required placeholder="Isi dari bukti"></label><label>Tanggal mulai berlaku cost<input name="effective_from" type="date" max="'+todayJakarta()+'" required></label><label class="erp-wide">Referensi bukti<input name="source_reference" required placeholder="Contoh: nota supplier / invoice / dokumen harga"></label>';submitLabel='Simpan verified cost';
+    }else if(type==='sale_item_mapping'){
+      if(!meta.suggested_product_id) body='<p class="erp-note warn">Belum ada saran produk yang dapat dikonfirmasi dari Action Center. Buka modul Penjualan untuk memilih produk tujuan.</p>';
+      else{body='<div class="erp-wide erp-note"><b>Nama transaksi:</b> '+esc(meta.source_name||action.subject)+'<br><b>Saran produk:</b> '+esc(meta.suggested_product_name||'Produk tersaran')+'<br><b>Confidence:</b> '+esc(meta.suggestion_confidence||'Belum tersedia')+'</div>';submitLabel='Konfirmasi mapping';}
+    }else if(type==='selling_price_confirmation'){
+      body='<p class="erp-note">Suggestion hanya referensi histori transaksi dan tidak diterapkan otomatis.</p><div class="erp-wide erp-note"><b>Confidence:</b> '+esc(meta.confidence||'Belum tersedia')+' · <b>Observasi:</b> '+number(meta.observation_count)+'<br><b>Rentang teramati:</b> '+money(meta.min_observed_price)+' – '+money(meta.max_observed_price)+'</div><label>Harga jual<input name="selling_price" type="number" min="0.01" step="any" required value="'+esc(meta.suggested_selling_price||'')+'"></label>';submitLabel='Simpan harga jual';
+    }else if(type==='inventory_baseline_confirmation'){
+      body='<p class="erp-note warn">Ini baseline historis, bukan stok hari ini. Konfirmasi hanya jika stok akhir periode sumber memang benar.</p><div class="erp-wide erp-note"><b>Tanggal baseline:</b> '+esc(meta.baseline_date||'Belum tersedia')+'<br><b>Qty akhir historis:</b> '+number(meta.ending_qty)+' '+esc(meta.unit||'')+'</div>';submitLabel='Konfirmasi baseline historis';
+    }else if(type==='zero_amount_purchase'){
+      body='<p class="erp-note warn">Baris sumber bernilai Rp0. Isi nominal aktual hanya dari bukti pembelian; jika baris memang tidak seharusnya diposting, pilih Exclude.</p><div class="erp-wide erp-note"><b>Tanggal sumber:</b> '+esc(meta.purchase_date||'Belum tersedia')+'<br><b>Mapping:</b> '+esc(meta.mapping_status||'Belum tersedia')+'<br><b>File:</b> '+esc((meta.source_file||'—')+' #'+(meta.row_no||'—'))+'</div><label>Keputusan<select name="resolution" required><option value="">Pilih…</option><option value="actual_amount">Isi nominal aktual</option><option value="exclude">Exclude</option></select></label><label id="erp-zero-fields" hidden>Nominal aktual<input name="effective_amount" type="number" min="0.01" step="any" placeholder="Nominal berdasarkan bukti"></label>';submitLabel='Simpan keputusan nominal';
+    }else if(type==='untracked_stock'){
+      body='<p class="erp-note warn">Masukkan hasil hitung fisik yang benar. Nilai ini menjadi baseline stok pada tanggal opname; sistem tidak menebak quantity.</p><div class="erp-wide erp-note"><b>Unit:</b> '+esc(meta.unit||'—')+'<br><b>Ledger saat ini:</b> '+number(meta.ledger_qty)+'<br><b>Kategori:</b> '+esc(meta.category||'—')+'</div><label>Stok fisik<input name="physical_qty" type="number" min="0" step="any" required placeholder="0"></label><label>Tanggal stock opname<input name="opname_date" type="date" max="'+todayJakarta()+'" value="'+todayJakarta()+'" required></label>';submitLabel='Simpan stock opname';
+    }else if(type==='financing_payment_review'){
+      body='<p class="erp-note warn">Pilih cash_paid hanya jika uang benar-benar keluar dari kas/bank pada tanggal yang diisi.</p><div class="erp-wide erp-note"><b>Tanggal sumber:</b> '+esc(meta.purchase_date||'Belum tersedia')+'<br><b>Nilai kandidat:</b> '+money(meta.amount)+'<br><b>Metode sumber:</b> '+esc(meta.payment_method||'Belum tersedia')+'</div><label>Keputusan<select name="resolution" required><option value="">Pilih…</option><option value="cash_paid">Cash paid</option><option value="liability_only">Liability only</option><option value="exclude">Exclude</option></select></label><fieldset id="erp-cash-fields" class="erp-wide" hidden><div class="erp-form"><label>Tanggal pembayaran<input name="cash_date" type="date"></label><label>Nominal dibayar<input name="cash_amount" type="number" min="0.01" step="any"></label></div></fieldset>';submitLabel='Simpan keputusan pembiayaan';
+    }
+    const canSubmit=!(type==='sale_item_mapping'&&!meta.suggested_product_id);
+    return commonHeader(action)+'<form id="erp-action-form" class="erp-form">'+body+'<label class="erp-wide">Alasan / catatan audit<textarea name="reason" rows="3" required placeholder="Tuliskan dasar keputusan"></textarea></label><p id="erp-action-message" class="erp-wide erp-message" role="status"></p><div class="erp-form-actions erp-wide"><button type="button" data-erp-action-close>Tutup</button>'+(canSubmit?'<button class="primary" type="submit">'+esc(submitLabel)+'</button>':'')+'</div></form>';
+  }
+
+  function valuesFrom(form){const out={};new FormData(form).forEach((value,key)=>{out[key]=value;});return out;}
+  async function submit(action,form,dialog){
+    requireOwner();const button=form.querySelector('button[type="submit"]'),message=form.querySelector('#erp-action-message');if(button)button.disabled=true;if(message)message.textContent='Menyimpan keputusan…';
+    try{const request=buildRequest(action,valuesFrom(form));const result=await db().rpc(request.rpc,request.params).abortSignal(AbortSignal.timeout(30000));if(result.error)throw result.error;if(message)message.textContent='Berhasil disimpan.';dialog.close();document.dispatchEvent(new CustomEvent('hasnaria:erp-action-resolved',{detail:{actionType:action.action_type,rpc:request.rpc}}));}catch(error){if(message)message.textContent=error&&error.message?error.message:String(error);if(button)button.disabled=false;}
+  }
+
+  function open(action,dialog){
+    requireOwner();if(!dialog)throw new Error('Dialog ERP tidak tersedia.');if(!canHandle(action&&action.action_type))throw new Error('Action type belum didukung oleh form ERP.');
+    if(action.action_type==='missing_recipe'){
+      openMissingRecipe(action,dialog).catch(error=>{dialog.innerHTML=commonHeader(action)+'<p class="erp-note error">'+esc(error&&error.message?error.message:error)+'</p><div class="erp-form-actions"><button type="button" data-erp-action-close>Tutup</button></div>';const close=dialog.querySelector('[data-erp-action-close]');if(close)close.onclick=()=>dialog.close();});return;
+    }
+    if(action.action_type==='unmatched_purchase'||action.action_type==='unverified_inventory'){
+      openPurchaseRule(action,dialog).catch(error=>{dialog.innerHTML=commonHeader(action)+'<p class="erp-note error">'+esc(error&&error.message?error.message:error)+'</p><div class="erp-form-actions"><button type="button" data-erp-action-close>Tutup</button></div>';const close=dialog.querySelector('[data-erp-action-close]');if(close)close.onclick=()=>dialog.close();});return;
+    }
+    if(action.action_type==='invalid_purchase_qty'){
+      openInvalidQuantity(action,dialog).catch(error=>{dialog.innerHTML=commonHeader(action)+'<p class="erp-note error">'+esc(error&&error.message?error.message:error)+'</p><div class="erp-form-actions"><button type="button" data-erp-action-close>Tutup</button></div>';const close=dialog.querySelector('[data-erp-action-close]');if(close)close.onclick=()=>dialog.close();});return;
+    }
+    dialog.innerHTML=formHtml(action);const form=dialog.querySelector('#erp-action-form'),close=dialog.querySelector('[data-erp-action-close]');if(close)close.onclick=()=>dialog.close();
+    if(form){
+      form.onsubmit=event=>{event.preventDefault();submit(action,form,dialog);};
+      const resolution=form.elements.resolution;
+      if(resolution) resolution.onchange=()=>{
+        const cash=dialog.querySelector('#erp-cash-fields'),cashEnabled=resolution.value==='cash_paid';if(cash)cash.hidden=!cashEnabled;
+        for(const name of ['cash_date','cash_amount']){const field=form.elements[name];if(field){field.required=cashEnabled;field.disabled=!cashEnabled;if(!cashEnabled)field.value='';}}
+        const zero=dialog.querySelector('#erp-zero-fields'),zeroEnabled=resolution.value==='actual_amount';if(zero)zero.hidden=!zeroEnabled;const amount=form.elements.effective_amount;if(amount){amount.required=zeroEnabled;amount.disabled=!zeroEnabled;if(!zeroEnabled)amount.value='';}
+      };
+      if(resolution)resolution.onchange();
+    }
+    dialog.showModal();
+  }
+
+  window.HasnariaERPActions={canHandle,open,_buildRequest:buildRequest};
+})();

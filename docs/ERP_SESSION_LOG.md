@@ -156,3 +156,6 @@ Append-only working journal. Newest session goes at the top.
 - HSN-010 Site/repository parity audit.
 - HSN-100 architecture sign-off.
 - HSN-105 capability matrix design.
+
+## 2026-09-18 — HSN-010 UI migration
+User scoped work to UI migration; Next.js deferred. Added navy responsive shell and bootstrap-v4 owner dashboard, lazy inventory/HPP/action/audit views. Preserved operational/auth/import code and Supabase. Fixed build style insertion scope with execution regression test. Existing build gate passed. Status REVIEW pending authenticated preview and production checks.
