@@ -61,9 +61,15 @@ body.hasnaria-owner-erp .erp-note{
   background:var(--hasnaria-green-soft)!important;
   border-left-color:var(--hasnaria-green)!important;
 }
-body.hasnaria-owner-erp .erp-note.warn,
+body.hasnaria-owner-erp .erp-note.warn{
+  background:#fff5dd!important;
+  border-left-color:#b68119!important;
+  color:#715018!important;
+}
 body.hasnaria-owner-erp .erp-note.error{
-  background:revert-layer;
+  background:#ffeded!important;
+  border-left-color:#b43b3b!important;
+  color:#9b2929!important;
 }
 body.hasnaria-owner-erp .erp-bar{
   background:var(--hasnaria-green)!important;
