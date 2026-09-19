@@ -8,6 +8,15 @@
   var STOCK_CATS={'Makanan':1,'Minuman':1,'Ice Cream':1,'Snack':1,'Kemasan & Supplies':1};
   var db=null,observer=null,timer=0,fetching=null,lastRoot=null;
 
+  function ensureCompactCss(){
+    if(document.getElementById('hasnaria-purchase-compact-css'))return;
+    var l=document.createElement('link');
+    l.id='hasnaria-purchase-compact-css';
+    l.rel='stylesheet';
+    l.href='/purchase-compact.css?v=1';
+    document.head.appendChild(l);
+  }
+
   function clean(v){return String(v==null?'':v).trim().replace(/\s+/g,' ');}
   function norm(v){return clean(v).toUpperCase().replace(/[^A-Z0-9]+/g,'');}
   function esc(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
@@ -115,6 +124,7 @@
   }
 
   function boot(){
+    ensureCompactCss();
     db=window.__HASNARIA_DB||null;
     var tries=0;(function wait(){
       db=db||window.__HASNARIA_DB||null;
