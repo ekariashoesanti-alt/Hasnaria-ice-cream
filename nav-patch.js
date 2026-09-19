@@ -291,7 +291,8 @@
   }
 
   var runTimer=null;
-  function run(){injectStyle();injectAccountPageStyle();moveNav();styleButtons();syncGroupedContent();ensureAccountMenu();loadSettings();watchPasswordRecovery();showPasswordActivation()}
+  function ownerShellActive(){try{return !!(window.__HASNARIA_CONTEXT&&window.__HASNARIA_CONTEXT.role==='owner');}catch(_){return false}}
+  function run(){injectStyle();injectAccountPageStyle();moveNav();styleButtons();if(!ownerShellActive())syncGroupedContent();ensureAccountMenu();loadSettings();watchPasswordRecovery();showPasswordActivation()}
   function scheduleRun(){if(runTimer)return;runTimer=setTimeout(function(){runTimer=null;run()},120)}
   function start(){run();new MutationObserver(scheduleRun).observe(document.body,{childList:true,subtree:true})}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
