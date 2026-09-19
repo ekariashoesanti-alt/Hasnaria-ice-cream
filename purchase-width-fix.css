@@ -1,31 +1,83 @@
-/* Final viewport-width guard for Pembelian desktop. Prevents stale horizontal offset and 100vw overflow. */
-@media (min-width:980px){
-  html,body,#app{width:100%!important;max-width:100%!important;overflow-x:hidden!important}
-  #app:has(#pembelian:not(.hidden)){position:relative!important;left:0!important;right:auto!important;transform:none!important}
-  #app>main.wrap:has(#pembelian:not(.hidden)){
-    width:calc(100% - 24px)!important;
-    max-width:calc(100% - 24px)!important;
+/* Pembelian viewport guard: keep the full dashboard inside one browser width. */
+@media (min-width:760px){
+  html,body{
+    width:100%!important;
+    max-width:100%!important;
+    overflow-x:clip!important;
+  }
+  #app:has(#pembelian:not(.hidden)){
+    width:100%!important;
+    max-width:100%!important;
     min-width:0!important;
-    margin-left:12px!important;
-    margin-right:12px!important;
+    margin:0!important;
+    padding:0!important;
     position:relative!important;
     left:0!important;
     right:auto!important;
     transform:none!important;
-    box-sizing:border-box!important;
+    overflow-x:clip!important;
   }
-  #pembelian:not(.hidden),#pembelian .pa-root,#pembelian .pa-main-grid,#pembelian .pa-lower-grid,#pembelian .pa-kpis,#pembelian .pa-controls{
+  #app>main.wrap:has(#pembelian:not(.hidden)){
     width:100%!important;
     max-width:100%!important;
     min-width:0!important;
+    margin:0!important;
+    padding-left:12px!important;
+    padding-right:12px!important;
+    box-sizing:border-box!important;
+    position:relative!important;
+    left:0!important;
+    right:auto!important;
+    transform:none!important;
+    overflow-x:clip!important;
+  }
+  #pembelian:not(.hidden){
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+    margin:0!important;
+    padding:0!important;
+    left:0!important;
+    transform:none!important;
+    box-sizing:border-box!important;
+    overflow-x:clip!important;
+  }
+  #pembelian .pa-root{
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+    margin:0!important;
+    left:0!important;
+    transform:none!important;
+    box-sizing:border-box!important;
+    overflow-x:clip!important;
+  }
+  #pembelian .pa-root>*,
+  #pembelian .pa-controls>*,
+  #pembelian .pa-kpis>*,
+  #pembelian .pa-main-grid>*,
+  #pembelian .pa-lower-grid>*{
+    min-width:0!important;
+    max-width:100%!important;
+    box-sizing:border-box!important;
+  }
+  #pembelian .pa-controls,
+  #pembelian .pa-kpis,
+  #pembelian .pa-main-grid,
+  #pembelian .pa-lower-grid,
+  #pembelian .pa-insight{
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+    margin-left:0!important;
+    margin-right:0!important;
     box-sizing:border-box!important;
   }
 }
-@media (min-width:980px) and (max-width:1450px){
+
+@media (min-width:760px) and (max-width:1450px){
   #app>main.wrap:has(#pembelian:not(.hidden)){
-    width:calc(100% - 16px)!important;
-    max-width:calc(100% - 16px)!important;
-    margin-left:8px!important;
-    margin-right:8px!important;
+    padding-left:8px!important;
+    padding-right:8px!important;
   }
 }
