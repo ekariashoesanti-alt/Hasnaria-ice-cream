@@ -5,6 +5,7 @@ const assert = require('assert/strict');
 const ROOT = path.join(__dirname, '..');
 const source = fs.readFileSync(path.join(ROOT, 'erp.js'), 'utf8');
 const actionSource = fs.readFileSync(path.join(ROOT, 'erp-actions.js'), 'utf8');
+const guardSource = fs.readFileSync(path.join(ROOT, 'owner-shell-guard.js'), 'utf8');
 const indexSource = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
 const appSource = fs.readFileSync(path.join(ROOT, 'app.js'), 'utf8');
 const coreSource = fs.readFileSync(path.join(ROOT, 'core-app.js'), 'utf8');
@@ -21,6 +22,12 @@ function assertShellIntegration() {
   const startCore = appSource.indexOf('function startCore()');
   assert.ok(sharedDb >= 0, 'shared authenticated Supabase client is exported for ERP UI');
   assert.ok(startCore > sharedDb, 'Supabase client is exported before core-app can load');
+  const ownerGuard = appSource.indexOf("var OWNER_SHELL = '/owner-shell-guard.js?v=1'");
+  const guardLoad = appSource.indexOf('load(OWNER_SHELL)');
+  const stockLoad = appSource.indexOf('load(STOCK');
+  const salesLoad = appSource.indexOf('load(SALES');
+  assert.ok(ownerGuard >= 0 && guardLoad >= 0, 'Owner single-render guard is part of runtime');
+  assert.ok(guardLoad < stockLoad && guardLoad < salesLoad, 'Owner guard loads before modern Stock and Sales mounts');
   const context = coreSource.indexOf('window.__HASNARIA_CONTEXT = {brandId:BRAND,userId:me.userId,role:role,navigate:setTab};');
   const legacyDashboard = coreSource.indexOf('$("dashboard").innerHTML =');
   const mount = coreSource.indexOf('window.HasnariaERP.mount()', legacyDashboard);
@@ -28,13 +35,80 @@ function assertShellIntegration() {
   assert.ok(context >= 0, 'core-app exports authenticated Hasnaria context');
   assert.ok(legacyDashboard >= 0 && mount > legacyDashboard, 'ERP mount replaces the legacy dashboard after legacy render starts');
   assert.ok(context < mount, 'brand/user/role context exists before ERP mount');
-  assert.ok(salesRender > mount, 'legacy Sales module still renders after ERP dashboard mount');
+  assert.ok(salesRender > mount, 'legacy Sales module remains available as fallback before the modern sales board mounts');
   for (const marker of ['$("pembelian").innerHTML =','$("ops").innerHTML =','$("stok").innerHTML =']) assert.ok(coreSource.includes(marker), `core-app still owns existing module: ${marker}`);
+  assert.match(coreSource,/Upload File Pembelian/, 'Pembelian upload UI remains available');
+  assert.match(coreSource,/id=\\?"purchaseYear\\?"/, 'Pembelian year selector remains available');
+  assert.match(coreSource,/BELANJA/, 'Pembelian BELANJA sheet parser remains available');
+  assert.ok(guardSource.includes("c.navigate = safeNavigate"), 'Owner context navigation is redirected away from legacy full render');
+  assert.ok(guardSource.includes("window.__hasnariaReloadSales"), 'Owner guard restores the modern sales board after any legacy overwrite');
+  assert.ok(guardSource.includes("event.stopPropagation()"), 'Owner tab click stops legacy target/bubble navigation');
+  assert.ok(!guardSource.includes('stopImmediatePropagation'), 'Owner guard does not block same-node capture listeners such as Stock reconciliation');
   for (const contract of ['get_ui_bootstrap_v4','ui_erp_action_queue_v4','ui_inventory_items','ui_hpp_blockers','ui_recent_erp_audit']) assert.ok(source.includes(contract), `ERP UI keeps backend contract ${contract}`);
-  assert.ok(source.includes('context().navigate(value)'), 'ERP detail actions route back into existing modules');
+  assert.ok(source.includes('context().navigate(value)'), 'ERP detail actions route back into operational modules');
   assert.ok(source.includes('/erp-actions.js?v=1'), 'ERP action forms are lazy-loaded as a production runtime asset');
   assert.ok(source.includes('hasnaria:erp-action-resolved'), 'successful ERP action resolution refreshes dashboard contracts');
   console.log('ERP shell integration wiring: PASS');
+}
+
+function classList(initial = []) {
+  const values = new Set(initial);
+  return {
+    add(value) { values.add(value); },
+    remove(value) { values.delete(value); },
+    contains(value) { return values.has(value); },
+    toggle(value, force) {
+      if (force === undefined) force = !values.has(value);
+      if (force) values.add(value); else values.delete(value);
+      return !!force;
+    }
+  };
+}
+
+function runOwnerGuard(role) {
+  const ids = ['dashboard','sales','pembelian','ops','stok','shift','social','approval','team','sistem'];
+  const nodes = new Map(ids.map(id => [id, {
+    id,
+    classList: classList(id === 'dashboard' ? [] : ['hidden']),
+    querySelector() { return null; },
+    appendChild() {},
+    removeChild() {}
+  }]));
+  const tabs = ids.slice(0,7).map(id => ({
+    id,
+    classList: classList(id === 'dashboard' ? ['on'] : []),
+    getAttribute(name) { return name === 'data-tab' ? id : null; }
+  }));
+  const listeners = {};
+  const document = {
+    readyState:'loading',
+    body:{},
+    getElementById(id) { return nodes.get(id) || null; },
+    querySelector() { return null; },
+    querySelectorAll(selector) { return selector === '#tabs .tab[data-tab]' ? tabs : []; },
+    addEventListener(type, fn, capture) { listeners[type] = {fn,capture}; },
+    dispatchEvent() {},
+    createElement() { return {hidden:false,setAttribute(){}}; }
+  };
+  const window = {__HASNARIA_CONTEXT:{brandId:'brand',userId:'user',role,navigate:function legacyNavigate(){ throw new Error('legacy navigate should not run for Owner'); }}};
+  vm.runInNewContext(guardSource, {window,document,console,Date,Set,CustomEvent:function(){},MutationObserver:function(){},setTimeout:function(){}});
+  return {window,document,nodes,tabs,listeners};
+}
+
+function assertOwnerNavigationGuard() {
+  const owner = runOwnerGuard('owner');
+  assert.equal(owner.window.__HASNARIA_OWNER_SHELL.isOwner(), true);
+  assert.equal(owner.window.__HASNARIA_OWNER_SHELL.navigate('pembelian'), true);
+  assert.equal(owner.nodes.get('pembelian').classList.contains('hidden'), false, 'Owner can show Pembelian without legacy render');
+  assert.equal(owner.nodes.get('dashboard').classList.contains('hidden'), true, 'Owner navigation hides previous section');
+  assert.equal(owner.window.__HASNARIA_CONTEXT.navigate, owner.window.__HASNARIA_OWNER_SHELL.navigate, 'Owner context is patched to safe navigation');
+  assert.equal(owner.listeners.click.capture, true, 'Owner guard intercepts top navigation in capture phase');
+
+  const nonOwner = runOwnerGuard('head_store');
+  assert.equal(nonOwner.window.__HASNARIA_OWNER_SHELL.isOwner(), false);
+  assert.equal(nonOwner.window.__HASNARIA_OWNER_SHELL.navigate('pembelian'), false, 'Non-owner navigation remains legacy/unmodified');
+  assert.equal(nonOwner.nodes.get('pembelian').classList.contains('hidden'), true, 'Non-owner DOM is not mutated by Owner guard');
+  console.log('Owner single-render navigation guard: PASS');
 }
 
 function assertActionContracts() {
@@ -104,6 +178,7 @@ async function renderFixture(data, error) {
 
 (async()=>{
   assertShellIntegration();
+  assertOwnerNavigationGuard();
   assertActionContracts();
   const empty = await renderFixture({owner:{brand_id:'hasnaria'},monthly_trend:[{month:'2026-09-01',gross_profit_verified:null,operating_profit_verified:null}]});
   assert.equal(empty.calls,1);
