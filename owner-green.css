@@ -280,6 +280,11 @@ body.hasnaria-owner-erp #pembelian #purchaseCommit:hover{
   background:var(--hasnaria-green-dark)!important;
 }
 
+/* Keep imported purchase history in backend, but do not render the history card in UI. */
+#pembelian .card:has(#purchaseAnnualChart) + .card{
+  display:none!important;
+}
+
 /* Penjualan / sales dashboard */
 #sales .sb-btn-format,
 body.hasnaria-owner-erp #sales .sb-btn-format{
