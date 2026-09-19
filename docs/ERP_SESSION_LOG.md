@@ -2,6 +2,21 @@
 
 Append-only working journal. Newest session goes at the top.
 
+## 2026-09-20 — HSN-008 Pembelian sidebar viewport hotfix
+
+**Scope**
+- Fixed the Pembelian desktop/laptop viewport guard so the dashboard uses only the usable area to the right of the fixed ERP sidebar.
+- Restored the shell offsets used by the existing sidebar: 232px on desktop and 190px on 761–1100px widths.
+- Kept mobile at <=760px on the existing no-sidebar-offset layout.
+- Preserved the existing Pembelian compact grids, analytics, upload flow, and business logic.
+
+**Root cause**
+- `purchase-width-fix.css` reset `#app>main.wrap` to `margin:0` and `width:100%`, overriding the ERP shell `margin-left` and placing the left side of Pembelian underneath the fixed sidebar.
+
+**Verification**
+- Updated CSS is present on `main` and the deployment check for the functional commit passed in Vercel.
+- This is a focused HSN-008 responsive hotfix; the full 360px/768px/desktop baseline remains broader than this single fix.
+
 ## 2026-09-18 — Sales outlet scope, analytics and rollback controls
 
 **Live changes**
