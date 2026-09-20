@@ -27,6 +27,15 @@
     document.head.appendChild(d);
   }
 
+  /* Pembelian chart redesign: larger trend chart + horizontal composition chart. */
+  if(!document.getElementById('hasnaria-purchase-chart-redesign-js')){
+    var c=document.createElement('script');
+    c.id='hasnaria-purchase-chart-redesign-js';
+    c.src='/purchase-chart-redesign.js?v=1';
+    c.async=true;
+    document.head.appendChild(c);
+  }
+
   if (window.XLSX) { window.__HASNARIA_XLSX_READY = Promise.resolve(window.XLSX); return; }
   if (window.__HASNARIA_XLSX_READY) return;
   window.__HASNARIA_XLSX_READY = new Promise(function(resolve,reject){
