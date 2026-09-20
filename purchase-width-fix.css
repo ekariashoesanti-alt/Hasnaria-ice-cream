@@ -1,6 +1,6 @@
-/* Pembelian viewport + proportional layout guard.
-   This file loads after purchase-compact.css and intentionally owns the final
-   desktop proportions without changing purchase data, filters, or calculations. */
+/* Pembelian final viewport guard.
+   Keep desktop at browser zoom 100% in one screen while preserving readable charts.
+   Data, filters, calculations and purchase business logic are untouched. */
 
 @media (min-width:761px){
   html,body{
@@ -17,35 +17,21 @@
     padding:0!important;
     position:relative!important;
     left:0!important;
-    right:auto!important;
     transform:none!important;
     overflow-x:clip!important;
   }
 
   #app>main.wrap:has(#pembelian:not(.hidden)){
     min-width:0!important;
-    padding-left:12px!important;
-    padding-right:12px!important;
     box-sizing:border-box!important;
     position:relative!important;
     left:0!important;
-    right:auto!important;
     transform:none!important;
     overflow-x:clip!important;
   }
 
   #pembelian:not(.hidden),
-  #pembelian .pa-root{
-    width:100%!important;
-    max-width:100%!important;
-    min-width:0!important;
-    margin:0!important;
-    left:0!important;
-    transform:none!important;
-    box-sizing:border-box!important;
-    overflow-x:clip!important;
-  }
-
+  #pembelian .pa-root,
   #pembelian .pa-root>*,
   #pembelian .pa-controls>*,
   #pembelian .pa-kpis>*,
@@ -56,35 +42,22 @@
     box-sizing:border-box!important;
   }
 
+  #pembelian:not(.hidden),
+  #pembelian .pa-root,
   #pembelian .pa-controls,
   #pembelian .pa-kpis,
   #pembelian .pa-main-grid,
-  #pembelian .pa-lower-grid,
-  #pembelian .pa-insight{
+  #pembelian .pa-lower-grid{
     width:100%!important;
-    max-width:100%!important;
-    min-width:0!important;
     margin-left:0!important;
     margin-right:0!important;
-    box-sizing:border-box!important;
   }
 }
 
-/* Persediaan Kurang / Persediaan Hapus live only in tab Stok. */
-#pembelian .pa-lower-grid>article:nth-child(3){
+/* Inventory-cycle cards belong only in Stok. Insight Utama is intentionally hidden. */
+#pembelian .pa-lower-grid>article:nth-child(3),
+#pembelian .pa-insight{
   display:none!important;
-}
-
-@media (min-width:980px){
-  #pembelian .pa-lower-grid{
-    grid-template-columns:minmax(0,1.72fr) minmax(225px,.68fr)!important;
-  }
-}
-
-@media (min-width:980px) and (max-width:1450px){
-  #pembelian .pa-lower-grid{
-    grid-template-columns:minmax(0,1.6fr) minmax(205px,.65fr)!important;
-  }
 }
 
 /* Fixed ERP sidebar offsets. */
@@ -92,10 +65,7 @@
   #app>main.wrap:has(#pembelian:not(.hidden)){
     width:calc(100vw - 232px)!important;
     max-width:calc(100vw - 232px)!important;
-    margin-top:0!important;
-    margin-right:0!important;
-    margin-bottom:0!important;
-    margin-left:232px!important;
+    margin:0 0 0 232px!important;
   }
 }
 
@@ -103,10 +73,7 @@
   #app>main.wrap:has(#pembelian:not(.hidden)){
     width:calc(100vw - 190px)!important;
     max-width:calc(100vw - 190px)!important;
-    margin-top:0!important;
-    margin-right:0!important;
-    margin-bottom:0!important;
-    margin-left:190px!important;
+    margin:0 0 0 190px!important;
   }
 }
 
@@ -117,48 +84,48 @@
   }
 }
 
-/* Desktop: keep the framed Sales-Intelligence look, but allow the dashboard to
-   extend downward. The charts must stay readable instead of being squeezed to
-   force every row into the viewport. */
+/* Desktop one-screen composition. */
 @media (min-width:980px){
   html,body{
-    height:auto!important;
+    height:100%!important;
     min-height:100%!important;
   }
 
   body:has(#pembelian:not(.hidden)){
-    overflow-y:auto!important;
-    overflow-x:hidden!important;
+    overflow:hidden!important;
   }
 
   #app>main.wrap:has(#pembelian:not(.hidden)){
-    height:auto!important;
-    min-height:calc(100dvh - 92px)!important;
-    padding-top:8px!important;
-    padding-bottom:18px!important;
-    overflow:visible!important;
+    height:100dvh!important;
+    min-height:0!important;
+    padding-top:4px!important;
+    padding-bottom:4px!important;
+    overflow:hidden!important;
   }
 
   #pembelian:not(.hidden){
-    height:auto!important;
+    height:100%!important;
     min-height:0!important;
-    overflow:visible!important;
+    margin:0!important;
+    padding:0!important;
+    overflow:hidden!important;
   }
 
   #pembelian .pa-root{
     position:relative!important;
     display:grid!important;
     grid-template-columns:minmax(0,1fr)!important;
-    grid-template-rows:56px 46px 70px minmax(315px,auto) minmax(210px,auto) 50px!important;
-    gap:8px!important;
+    grid-template-rows:50px 42px 64px minmax(0,1fr) 218px!important;
+    gap:6px!important;
     width:100%!important;
-    height:auto!important;
-    min-height:calc(100dvh - 108px)!important;
-    padding:13px!important;
-    overflow:visible!important;
+    height:100%!important;
+    min-height:0!important;
+    margin:0!important;
+    padding:10px!important;
+    overflow:hidden!important;
     background:#f8fbf9!important;
     border:1px solid #d5e4df!important;
-    border-radius:24px!important;
+    border-radius:22px!important;
     box-shadow:0 8px 28px rgba(18,86,68,.05)!important;
   }
 
@@ -166,258 +133,276 @@
   #pembelian .pa-controls,
   #pembelian .pa-kpis,
   #pembelian .pa-main-grid,
-  #pembelian .pa-lower-grid,
-  #pembelian .pa-insight{
+  #pembelian .pa-lower-grid{
+    height:100%!important;
     min-height:0!important;
     margin:0!important;
   }
 
+  /* Header and controls are intentionally compact so chart area stays dominant. */
   #pembelian .pa-title{
-    min-height:56px!important;
-    padding-top:13px!important;
-    overflow:visible!important;
+    padding:12px 250px 0 0!important;
+    overflow:hidden!important;
   }
-
+  #pembelian .pa-title:before{
+    top:0!important;
+    font-size:10px!important;
+  }
+  #pembelian .pa-title h1{
+    font-size:25px!important;
+    line-height:.98!important;
+  }
   #pembelian .pa-title p{
-    margin-top:3px!important;
-    font-size:10.5px!important;
-    line-height:1.15!important;
+    margin:3px 0 0!important;
+    font-size:9.8px!important;
+    line-height:1.08!important;
+    white-space:nowrap!important;
+    overflow:hidden!important;
+    text-overflow:ellipsis!important;
   }
 
   #pembelian .pa-controls{
-    min-height:46px!important;
+    min-height:0!important;
     align-self:stretch!important;
+    gap:7px!important;
   }
-
+  #pembelian .pa-controls label>span{
+    margin-bottom:2px!important;
+    font-size:9px!important;
+  }
   #pembelian .pa-controls select{
-    height:36px!important;
-    min-height:36px!important;
+    height:33px!important;
+    min-height:33px!important;
+    padding:5px 10px!important;
+    font-size:11px!important;
   }
 
   #pembelian .pa-upload-wrap{
-    top:13px!important;
-    right:13px!important;
+    top:10px!important;
+    right:10px!important;
+    width:235px!important;
   }
-
   #pembelian .pa-upload{
-    height:40px!important;
-    min-height:40px!important;
+    height:38px!important;
+    min-height:38px!important;
+    border-radius:12px!important;
+    font-size:12px!important;
   }
+  #pembelian .pa-upload-wrap small{display:none!important}
 
+  /* KPI strip. */
   #pembelian .pa-kpis{
-    gap:7px!important;
+    grid-template-columns:repeat(5,minmax(0,1fr))!important;
+    gap:6px!important;
   }
-
   #pembelian .pa-kpis article{
-    height:70px!important;
-    min-height:70px!important;
+    height:100%!important;
+    min-height:0!important;
     padding:7px 11px!important;
     border-radius:12px!important;
   }
-
   #pembelian .pa-kpis span{
-    font-size:9.5px!important;
+    font-size:9px!important;
+    line-height:1.05!important;
   }
-
   #pembelian .pa-kpis strong{
     margin-top:3px!important;
     font-size:17px!important;
     line-height:1!important;
   }
-
   #pembelian .pa-kpis small{
     margin-top:2px!important;
-    font-size:8.3px!important;
+    font-size:8px!important;
+    line-height:1!important;
   }
 
-  /* Main analytics row gets the extra vertical room. */
+  /* Main chart row gets all remaining flexible height. */
   #pembelian .pa-main-grid{
-    grid-template-columns:minmax(0,2.65fr) minmax(330px,1fr)!important;
-    min-height:315px!important;
-    height:auto!important;
-    gap:8px!important;
-    overflow:visible!important;
+    display:grid!important;
+    grid-template-columns:minmax(0,2.65fr) minmax(325px,1fr)!important;
+    gap:7px!important;
+    overflow:hidden!important;
   }
 
   #pembelian .pa-card{
-    height:auto!important;
+    height:100%!important;
     min-height:0!important;
-    padding:10px 12px!important;
+    padding:9px 11px!important;
     overflow:hidden!important;
+    border-radius:14px!important;
+  }
+  #pembelian .pa-card h2{
+    font-size:12.5px!important;
+    margin-bottom:3px!important;
+  }
+  #pembelian .pa-sub{
+    margin-bottom:3px!important;
+    font-size:8.8px!important;
   }
 
   #pembelian .pa-trend{
-    min-height:290px!important;
+    display:flex!important;
+    flex-direction:column!important;
   }
-
   #pembelian .pa-trend-svg{
     display:block!important;
-    width:112%!important;
-    height:275px!important;
-    min-height:265px!important;
+    width:108%!important;
+    height:calc(100% - 44px)!important;
+    min-height:0!important;
     max-height:none!important;
-    margin-left:-6%!important;
-    flex:none!important;
+    margin-left:-4%!important;
+    flex:1 1 auto!important;
     transform:none!important;
   }
-
   #pembelian .pa-legend{
-    margin-top:2px!important;
-    padding-bottom:2px!important;
+    flex:0 0 18px!important;
+    margin:0!important;
+    gap:12px!important;
+    font-size:9px!important;
+    line-height:1!important;
   }
 
   #pembelian .pa-donut-wrap{
-    grid-template-columns:minmax(190px,1.08fr) minmax(125px,.72fr)!important;
-    gap:6px!important;
-    height:auto!important;
-    min-height:285px!important;
-    overflow:visible!important;
-  }
-
-  #pembelian .pa-donut{
-    width:100%!important;
-    max-width:245px!important;
-    max-height:245px!important;
-    transform:none!important;
-  }
-
-  #pembelian .pa-donut-legend{
-    gap:8px!important;
-    font-size:9.8px!important;
-  }
-
-  /* Give the lower analysis enough room too, rather than using it as the
-     compression buffer for the charts above. */
-  #pembelian .pa-lower-grid{
-    min-height:210px!important;
-    height:auto!important;
-    gap:8px!important;
-    overflow:visible!important;
-  }
-
-  #pembelian .pa-lower-grid .pa-card{
-    min-height:210px!important;
-  }
-
-  #pembelian .pa-bars{
-    gap:4px!important;
-    margin-top:6px!important;
-  }
-
-  #pembelian .pa-bar-row{
-    min-height:13px!important;
-  }
-
-  #pembelian .pa-insight{
-    min-height:50px!important;
-    padding:7px 10px!important;
+    display:grid!important;
+    grid-template-columns:minmax(170px,1.08fr) minmax(120px,.72fr)!important;
+    gap:5px!important;
+    height:calc(100% - 24px)!important;
+    min-height:0!important;
     overflow:hidden!important;
   }
+  #pembelian .pa-donut{
+    width:100%!important;
+    max-width:min(225px,92%)!important;
+    max-height:225px!important;
+    margin:auto!important;
+    transform:none!important;
+  }
+  #pembelian .pa-donut-legend{
+    gap:7px!important;
+    font-size:9.2px!important;
+  }
+
+  /* Lower row keeps all Top 10 rows visible while staying inside the viewport. */
+  #pembelian .pa-lower-grid{
+    display:grid!important;
+    grid-template-columns:minmax(0,1.72fr) minmax(250px,.68fr)!important;
+    gap:7px!important;
+    overflow:hidden!important;
+  }
+  #pembelian .pa-lower-grid .pa-card{
+    height:100%!important;
+    min-height:0!important;
+    padding:8px 11px!important;
+  }
+  #pembelian .pa-bars{
+    gap:3px!important;
+    margin-top:4px!important;
+  }
+  #pembelian .pa-bar-row{
+    grid-template-columns:minmax(100px,.95fr) minmax(130px,2.35fr) 70px 50px!important;
+    gap:6px!important;
+    min-height:13px!important;
+    font-size:9px!important;
+    line-height:1!important;
+  }
+  #pembelian .pa-bar-row progress{height:7px!important}
+  #pembelian .pa-bar-row b{font-size:8.8px!important}
+  #pembelian .pa-bar-row em{font-size:8.5px!important}
+  #pembelian .pa-empty{
+    min-height:0!important;
+    height:calc(100% - 24px)!important;
+    font-size:9px!important;
+  }
 }
 
-/* Laptop widths keep the same readable chart proportions. */
+/* Typical 1366–1450px laptop width: keep the same one-screen proportions. */
 @media (min-width:980px) and (max-width:1450px){
   #pembelian .pa-root{
-    grid-template-rows:54px 44px 66px minmax(295px,auto) minmax(195px,auto) 46px!important;
-    gap:7px!important;
-    padding:11px!important;
+    grid-template-rows:48px 40px 60px minmax(0,1fr) 205px!important;
+    gap:5px!important;
+    padding:8px!important;
   }
-
-  #pembelian .pa-main-grid{
-    grid-template-columns:minmax(0,2.45fr) minmax(300px,.95fr)!important;
-    min-height:295px!important;
-  }
-
-  #pembelian .pa-trend{
-    min-height:270px!important;
-  }
-
-  #pembelian .pa-trend-svg{
-    height:255px!important;
-    min-height:245px!important;
-  }
-
-  #pembelian .pa-donut-wrap{
-    min-height:260px!important;
-  }
-
-  #pembelian .pa-donut{
-    max-width:220px!important;
-    max-height:220px!important;
-  }
-
-  #pembelian .pa-lower-grid,
-  #pembelian .pa-lower-grid .pa-card{
-    min-height:195px!important;
-  }
-}
-
-/* Short screens are allowed to scroll vertically; do not squeeze the graphs. */
-@media (min-width:980px) and (max-height:800px){
-  #app>main.wrap:has(#pembelian:not(.hidden)){
-    height:auto!important;
-    min-height:calc(100dvh - 84px)!important;
-    padding-top:5px!important;
-    padding-bottom:14px!important;
-    overflow:visible!important;
-  }
-
-  #pembelian .pa-root{
-    grid-template-rows:50px 40px 62px minmax(275px,auto) minmax(185px,auto) 44px!important;
-    gap:6px!important;
-    padding:9px!important;
-    min-height:auto!important;
-    overflow:visible!important;
-  }
-
   #pembelian .pa-title{
-    padding-top:11px!important;
+    padding:11px 215px 0 0!important;
   }
-
-  #pembelian .pa-controls select{
-    height:32px!important;
-    min-height:32px!important;
-  }
-
+  #pembelian .pa-title h1{font-size:23px!important}
   #pembelian .pa-upload-wrap{
-    top:9px!important;
-    right:9px!important;
+    top:8px!important;
+    right:8px!important;
+    width:200px!important;
   }
-
   #pembelian .pa-upload{
     height:35px!important;
     min-height:35px!important;
   }
-
-  #pembelian .pa-kpis article{
-    height:62px!important;
-    min-height:62px!important;
+  #pembelian .pa-controls{
+    grid-template-columns:minmax(135px,.82fr) minmax(165px,1fr) minmax(145px,.9fr)!important;
+    gap:6px!important;
   }
-
+  #pembelian .pa-controls select{
+    height:31px!important;
+    min-height:31px!important;
+  }
+  #pembelian .pa-kpis strong{font-size:15px!important}
   #pembelian .pa-main-grid{
-    min-height:275px!important;
+    grid-template-columns:minmax(0,2.45fr) minmax(295px,.95fr)!important;
   }
-
-  #pembelian .pa-trend{
-    min-height:250px!important;
-  }
-
-  #pembelian .pa-trend-svg{
-    height:235px!important;
-    min-height:225px!important;
-  }
-
-  #pembelian .pa-donut-wrap{
-    min-height:240px!important;
-  }
-
   #pembelian .pa-donut{
-    max-width:205px!important;
+    max-width:min(205px,92%)!important;
     max-height:205px!important;
   }
-
-  #pembelian .pa-lower-grid,
-  #pembelian .pa-lower-grid .pa-card{
-    min-height:185px!important;
+  #pembelian .pa-lower-grid{
+    grid-template-columns:minmax(0,1.6fr) minmax(220px,.65fr)!important;
   }
+}
+
+/* Short desktop screens still stay at one view: compress chrome and lower cards,
+   not the actual chart drawing area. */
+@media (min-width:980px) and (max-height:780px){
+  #app>main.wrap:has(#pembelian:not(.hidden)){
+    padding-top:3px!important;
+    padding-bottom:3px!important;
+  }
+  #pembelian .pa-root{
+    grid-template-rows:44px 36px 56px minmax(0,1fr) 184px!important;
+    gap:4px!important;
+    padding:7px!important;
+  }
+  #pembelian .pa-title{
+    padding-top:10px!important;
+  }
+  #pembelian .pa-title h1{font-size:21px!important}
+  #pembelian .pa-title p{font-size:8.8px!important}
+  #pembelian .pa-controls select{
+    height:28px!important;
+    min-height:28px!important;
+  }
+  #pembelian .pa-upload-wrap{
+    top:7px!important;
+    right:7px!important;
+  }
+  #pembelian .pa-upload{
+    height:32px!important;
+    min-height:32px!important;
+  }
+  #pembelian .pa-kpis article{
+    padding-top:5px!important;
+    padding-bottom:5px!important;
+  }
+  #pembelian .pa-kpis strong{font-size:14px!important}
+  #pembelian .pa-card{
+    padding:7px 9px!important;
+  }
+  #pembelian .pa-trend-svg{
+    height:calc(100% - 38px)!important;
+  }
+  #pembelian .pa-donut{
+    max-width:min(185px,90%)!important;
+    max-height:185px!important;
+  }
+  #pembelian .pa-lower-grid .pa-card{
+    padding:7px 9px!important;
+  }
+  #pembelian .pa-bars{gap:2px!important;margin-top:3px!important}
+  #pembelian .pa-bar-row{min-height:11px!important}
 }
