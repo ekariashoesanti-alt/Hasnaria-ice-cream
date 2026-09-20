@@ -115,7 +115,7 @@
     position:relative!important;
     display:grid!important;
     grid-template-columns:minmax(0,1fr)!important;
-    grid-template-rows:50px 42px 64px minmax(0,1fr) 218px!important;
+    grid-template-rows:50px 42px 64px minmax(0,1fr) 150px!important;
     gap:6px!important;
     width:100%!important;
     height:100%!important;
@@ -282,7 +282,7 @@
     font-size:9.2px!important;
   }
 
-  /* Lower row keeps all Top 10 rows visible while staying inside the viewport. */
+  /* Lower row now shows only Top 5 to stay compact. */
   #pembelian .pa-lower-grid{
     display:grid!important;
     grid-template-columns:minmax(0,1.72fr) minmax(250px,.68fr)!important;
@@ -294,15 +294,26 @@
     min-height:0!important;
     padding:8px 11px!important;
   }
+  #pembelian .pa-top h2{
+    font-size:0!important;
+  }
+  #pembelian .pa-top h2:after{
+    content:'Top 5 Item Terboros';
+    font-size:12.5px!important;
+    line-height:1.15!important;
+  }
+  #pembelian .pa-top .pa-bar-row:nth-child(n+6){
+    display:none!important;
+  }
   #pembelian .pa-bars{
-    gap:3px!important;
-    margin-top:4px!important;
+    gap:4px!important;
+    margin-top:5px!important;
   }
   #pembelian .pa-bar-row{
     grid-template-columns:minmax(100px,.95fr) minmax(130px,2.35fr) 70px 50px!important;
     gap:6px!important;
-    min-height:13px!important;
-    font-size:9px!important;
+    min-height:15px!important;
+    font-size:9.2px!important;
     line-height:1!important;
   }
   #pembelian .pa-bar-row progress{height:7px!important}
@@ -318,7 +329,7 @@
 /* Typical 1366–1450px laptop width: keep the same one-screen proportions. */
 @media (min-width:980px) and (max-width:1450px){
   #pembelian .pa-root{
-    grid-template-rows:48px 40px 60px minmax(0,1fr) 205px!important;
+    grid-template-rows:48px 40px 60px minmax(0,1fr) 142px!important;
     gap:5px!important;
     padding:8px!important;
   }
@@ -364,7 +375,7 @@
     padding-bottom:3px!important;
   }
   #pembelian .pa-root{
-    grid-template-rows:44px 36px 56px minmax(0,1fr) 184px!important;
+    grid-template-rows:44px 36px 56px minmax(0,1fr) 132px!important;
     gap:4px!important;
     padding:7px!important;
   }
@@ -403,6 +414,6 @@
   #pembelian .pa-lower-grid .pa-card{
     padding:7px 9px!important;
   }
-  #pembelian .pa-bars{gap:2px!important;margin-top:3px!important}
-  #pembelian .pa-bar-row{min-height:11px!important}
+  #pembelian .pa-bars{gap:3px!important;margin-top:4px!important}
+  #pembelian .pa-bar-row{min-height:13px!important}
 }
