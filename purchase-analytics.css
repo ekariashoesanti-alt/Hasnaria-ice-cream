@@ -83,3 +83,96 @@ html body #app #pembelian .pa-controls>label:nth-of-type(3){display:none!importa
 
 /* Shift Pembelian content one spacing to the right while keeping the outer border fixed. */
 @media(min-width:761px){html body #app #pembelian .pa-root{padding-left:18px!important}}
+
+/* Swap Top Most Buy with Komposisi Kategori on desktop.
+   Trend stays upper-left; Top Most Buy becomes upper-right;
+   Komposisi Kategori moves to the lower-left; Top Low Buy stays lower-right. */
+@media(min-width:980px){
+  html body #app #pembelian .pa-root{
+    grid-template-columns:minmax(0,2.65fr) minmax(325px,1fr)!important;
+    grid-template-rows:50px 42px 64px minmax(0,1fr) 150px!important;
+    column-gap:7px!important;
+    row-gap:6px!important;
+  }
+  html body #app #pembelian .pa-title,
+  html body #app #pembelian .pa-controls,
+  html body #app #pembelian .pa-kpis{grid-column:1/-1!important}
+  html body #app #pembelian .pa-title{grid-row:1!important}
+  html body #app #pembelian .pa-controls{grid-row:2!important}
+  html body #app #pembelian .pa-kpis{grid-row:3!important}
+  html body #app #pembelian .pa-main-grid,
+  html body #app #pembelian .pa-lower-grid{display:contents!important}
+  html body #app #pembelian .pa-main-grid>.pa-trend{grid-column:1!important;grid-row:4!important}
+  html body #app #pembelian .pa-main-grid>article:nth-child(2){grid-column:1!important;grid-row:5!important}
+  html body #app #pembelian .pa-lower-grid>.pa-top{grid-column:2!important;grid-row:4!important}
+  html body #app #pembelian .pa-lower-grid>article:nth-child(2){grid-column:2!important;grid-row:5!important}
+  html body #app #pembelian .pa-lower-grid>article:nth-child(3){display:none!important}
+
+  /* Top Most Buy: compact vertical ranking suited to the narrow upper-right card. */
+  html body #app #pembelian .pa-top{padding:9px 10px!important;overflow:hidden!important}
+  html body #app #pembelian .pa-top .pa-sub{font-size:7.8px!important;line-height:1.15!important;margin:1px 0 6px!important}
+  html body #app #pembelian .pa-top .pa-bars{gap:6px!important;margin-top:4px!important}
+  html body #app #pembelian .pa-top .pa-bar-row{
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr) auto auto!important;
+    grid-template-areas:'name amount delta' 'bar bar bar'!important;
+    column-gap:6px!important;
+    row-gap:2px!important;
+    min-height:30px!important;
+    align-items:center!important;
+  }
+  html body #app #pembelian .pa-top .pa-bar-name{grid-area:name!important;font-size:8.6px!important;font-weight:650!important}
+  html body #app #pembelian .pa-top .pa-bar-row progress{grid-area:bar!important;height:5px!important}
+  html body #app #pembelian .pa-top .pa-bar-row b{grid-area:amount!important;font-size:8.2px!important;white-space:nowrap!important}
+  html body #app #pembelian .pa-top .pa-bar-row em{grid-area:delta!important;font-size:7.8px!important;white-space:nowrap!important}
+  html body #app #pembelian .pa-top .pa-bar-row:nth-child(n+6){display:none!important}
+
+  /* Komposisi Kategori: wider, shorter horizontal composition for the lower-left card. */
+  html body #app #pembelian .pa-main-grid>article:nth-child(2){padding:8px 12px!important;overflow:hidden!important}
+  html body #app #pembelian .pa-main-grid>article:nth-child(2) h2{font-size:11.5px!important;margin-bottom:0!important}
+  html body #app #pembelian .pa-main-grid>article:nth-child(2) .pa-donut-wrap{
+    display:grid!important;
+    grid-template-columns:145px minmax(0,1fr)!important;
+    align-items:center!important;
+    gap:18px!important;
+    min-height:0!important;
+    height:calc(100% - 18px)!important;
+    overflow:hidden!important;
+  }
+  html body #app #pembelian .pa-main-grid>article:nth-child(2) .pa-donut{
+    width:118px!important;
+    height:118px!important;
+    max-width:118px!important;
+    max-height:118px!important;
+    margin:auto!important;
+  }
+  html body #app #pembelian .pa-main-grid>article:nth-child(2) .pa-donut-legend{
+    display:grid!important;
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:7px 18px!important;
+    align-content:center!important;
+    font-size:8.8px!important;
+    padding:0!important;
+  }
+  html body #app #pembelian .pa-main-grid>article:nth-child(2) .pa-donut-legend>div{
+    min-width:0!important;
+    gap:8px!important;
+    padding:4px 0!important;
+    border-bottom:1px solid #edf3f0!important;
+  }
+}
+
+@media(min-width:980px) and (max-width:1450px){
+  html body #app #pembelian .pa-root{
+    grid-template-columns:minmax(0,2.45fr) minmax(295px,.95fr)!important;
+    grid-template-rows:48px 40px 60px minmax(0,1fr) 142px!important;
+  }
+}
+
+@media(min-width:980px) and (max-height:780px){
+  html body #app #pembelian .pa-root{grid-template-rows:44px 36px 56px minmax(0,1fr) 132px!important}
+  html body #app #pembelian .pa-main-grid>article:nth-child(2) .pa-donut{width:104px!important;height:104px!important;max-width:104px!important;max-height:104px!important}
+  html body #app #pembelian .pa-main-grid>article:nth-child(2) .pa-donut-wrap{grid-template-columns:128px minmax(0,1fr)!important;gap:12px!important}
+  html body #app #pembelian .pa-top .pa-bars{gap:4px!important}
+  html body #app #pembelian .pa-top .pa-bar-row{min-height:25px!important}
+}
