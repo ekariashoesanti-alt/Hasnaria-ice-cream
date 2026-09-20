@@ -1,6 +1,16 @@
 /* Hasnaria XLSX preload — single shared promise so Sales + Stock never load Excel parser twice */
 (function(){
   'use strict';
+
+  /* Pembelian ranking patch: keep Top Most/Fewest in sync with the selected period. */
+  if(!document.getElementById('hasnaria-purchase-rankings-five-js')){
+    var p=document.createElement('script');
+    p.id='hasnaria-purchase-rankings-five-js';
+    p.src='/purchase-rankings-five.js?v=1';
+    p.async=true;
+    document.head.appendChild(p);
+  }
+
   if (window.XLSX) { window.__HASNARIA_XLSX_READY = Promise.resolve(window.XLSX); return; }
   if (window.__HASNARIA_XLSX_READY) return;
   window.__HASNARIA_XLSX_READY = new Promise(function(resolve,reject){
