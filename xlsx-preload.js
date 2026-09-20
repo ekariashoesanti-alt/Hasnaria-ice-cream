@@ -46,11 +46,11 @@
     document.head.appendChild(c);
   }
 
-  /* Finance + stock reporting: one-page P&L, journal, ledger and category stock slides. */
-  if(!document.getElementById('hasnaria-finance-stock-v1-js')){
+  /* Finance + stock reporting v2: accounting-safe P&L, journal, ledger and split stock tables. */
+  if(!document.getElementById('hasnaria-finance-stock-v2-js')){
     var fs=document.createElement('script');
-    fs.id='hasnaria-finance-stock-v1-js';
-    fs.src='/finance-stock-v1.js?v=1';
+    fs.id='hasnaria-finance-stock-v2-js';
+    fs.src='/finance-stock-v2.js?v=1';
     fs.async=true;
     document.head.appendChild(fs);
   }
