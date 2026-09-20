@@ -16,6 +16,14 @@
   function fmtMoney(v){var n=Number(v||0),a=Math.abs(n);if(a>=1e9)return'Rp '+(n/1e9).toLocaleString('id-ID',{maximumFractionDigits:1})+' M';if(a>=1e6)return'Rp '+(n/1e6).toLocaleString('id-ID',{maximumFractionDigits:2})+' jt';if(a>=1e3)return'Rp '+(n/1e3).toLocaleString('id-ID',{maximumFractionDigits:0})+' rb';return'Rp '+n.toLocaleString('id-ID',{maximumFractionDigits:0});}
   function pct(v){if(v==null||!isFinite(v))return'NEW';return(v>0?'+':'')+v.toLocaleString('id-ID',{maximumFractionDigits:1})+'%';}
 
+  function ensureTitleCss(){
+    if(document.getElementById('hasnaria-purchase-ranking-title-fix'))return;
+    var s=document.createElement('style');
+    s.id='hasnaria-purchase-ranking-title-fix';
+    s.textContent='#pembelian .pa-lower-grid>.pa-top h2,#pembelian .pa-lower-grid>article.pa-fewest h2{font-size:12.5px!important;line-height:1.15!important;display:block!important;margin-bottom:3px!important}#pembelian .pa-lower-grid>.pa-top h2:after,#pembelian .pa-lower-grid>article.pa-fewest h2:after{content:none!important;display:none!important}';
+    document.head.appendChild(s);
+  }
+
   function totals(rows,period,scope){
     var out={};
     rows.forEach(function(r){
@@ -43,7 +51,7 @@
     if(!card)return;
     var h=card.querySelector('h2');
     if(!h){h=document.createElement('h2');card.insertBefore(h,card.firstChild);}
-    h.textContent='';
+    h.textContent=isFewest?'Top Fewest Buy':'Top Most Buy';
     Array.prototype.slice.call(card.children).forEach(function(el){if(el!==h)el.remove();});
     if(isFewest)card.classList.add('pa-fewest');else card.classList.remove('pa-fewest');
     if(!items.length){
@@ -61,6 +69,7 @@
   }
 
   function apply(rows){
+    ensureTitleCss();
     var host=document.getElementById('pembelian'),periodEl=document.getElementById('paPeriod'),scopeEl=document.getElementById('paScope');
     if(!host||host.classList.contains('hidden')||!periodEl)return;
     var period=String(periodEl.value||'').slice(0,7),scope=scopeEl?scopeEl.value:'all';
@@ -86,6 +95,7 @@
 
   function schedule(){clearTimeout(timer);timer=setTimeout(fetchAndApply,70);}
   function boot(){
+    ensureTitleCss();
     var tries=0;(function wait(){
       db=db||window.__HASNARIA_DB||null;
       var host=document.getElementById('pembelian');
