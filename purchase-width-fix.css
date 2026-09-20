@@ -420,3 +420,47 @@
   #pembelian .pa-bars{gap:3px!important;margin-top:4px!important}
   #pembelian .pa-bar-row{min-height:13px!important}
 }
+
+/* HSN-008 — density parity with Penjualan.
+   Outer boxes/layout stay unchanged; only content inside Pembelian is scaled down. */
+@media (min-width:980px){
+  #pembelian .pa-title{padding-top:8px!important}
+  #pembelian .pa-title:before{font-size:8.5px!important;letter-spacing:.11em!important}
+  #pembelian .pa-title h1{font-size:19px!important;line-height:1.05!important}
+  #pembelian .pa-title p{font-size:8.8px!important;line-height:1.15!important;margin-top:2px!important}
+
+  #pembelian .pa-controls label>span{font-size:8.5px!important;margin-bottom:2px!important}
+  #pembelian .pa-controls select{height:29px!important;min-height:29px!important;padding:3px 8px!important;font-size:10px!important;border-radius:8px!important}
+  #pembelian .pa-upload{height:31px!important;min-height:31px!important;font-size:10.5px!important;border-radius:9px!important;padding:0 10px!important}
+
+  #pembelian .pa-kpis article{padding:5px 9px!important}
+  #pembelian .pa-kpis span{font-size:8.5px!important;line-height:1.08!important}
+  #pembelian .pa-kpis strong{font-size:14px!important;line-height:1.05!important;margin-top:2px!important}
+  #pembelian .pa-kpis small{font-size:7.8px!important;line-height:1.05!important;margin-top:1px!important}
+
+  #pembelian .pa-card{padding:7px 9px!important}
+  #pembelian .pa-card h2{font-size:11.5px!important;line-height:1.15!important;margin-bottom:2px!important}
+  #pembelian .pa-sub{font-size:8px!important;line-height:1.1!important;margin-bottom:2px!important}
+
+  #pembelian .pa-axis{font-size:8px!important}
+  #pembelian .pa-axis-x{font-size:8.5px!important}
+  #pembelian .pa-legend{font-size:8.3px!important;gap:9px!important}
+  #pembelian .pa-legend i{width:7px!important;height:7px!important;flex-basis:7px!important}
+  #pembelian .pa-line-key{width:14px!important}
+
+  #pembelian .pa-donut{max-width:min(185px,86%)!important;max-height:185px!important}
+  #pembelian .pa-donut-value{font-size:12px!important}
+  #pembelian .pa-donut-caption{font-size:8px!important}
+  #pembelian .pa-donut-legend{font-size:8.5px!important;gap:5px!important}
+  #pembelian .pa-donut-legend i{width:7px!important;height:7px!important;flex-basis:7px!important}
+
+  #pembelian .pa-top h2:after,
+  #pembelian .pa-lower-grid>article:nth-child(2) h2:after{font-size:11.5px!important}
+  #pembelian .pa-bars{gap:3px!important;margin-top:4px!important}
+  #pembelian .pa-bar-row{font-size:8.5px!important;min-height:13px!important}
+  #pembelian .pa-bar-name{font-size:8.5px!important}
+  #pembelian .pa-bar-row b{font-size:8.2px!important}
+  #pembelian .pa-bar-row em{font-size:8px!important}
+  #pembelian .pa-bar-row progress{height:5px!important}
+  #pembelian .pa-empty{font-size:8.5px!important}
+}
