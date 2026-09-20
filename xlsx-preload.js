@@ -12,6 +12,13 @@
   }
 
   /* Pembelian dual-source import: Excel manual + Faktur Majoo with cross-source dedup. */
+  if(!document.getElementById('hasnaria-purchase-dual-source-css')){
+    var l=document.createElement('link');
+    l.id='hasnaria-purchase-dual-source-css';
+    l.rel='stylesheet';
+    l.href='/purchase-dual-source.css?v=1';
+    document.head.appendChild(l);
+  }
   if(!document.getElementById('hasnaria-purchase-dual-source-js')){
     var d=document.createElement('script');
     d.id='hasnaria-purchase-dual-source-js';
