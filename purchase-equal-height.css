@@ -1,0 +1,30 @@
+/* Pembelian — equal 50:50 height for the two analytics rows on desktop.
+   Row 4: Tren + Top Most Buy
+   Row 5: Komposisi Kategori + Top Low Buy */
+@media (min-width:980px){
+  html body #app #pembelian .pa-root{
+    grid-template-rows:50px 42px 64px minmax(0,1fr) minmax(0,1fr)!important;
+  }
+}
+
+@media (min-width:980px) and (max-width:1450px){
+  html body #app #pembelian .pa-root{
+    grid-template-rows:48px 40px 60px minmax(0,1fr) minmax(0,1fr)!important;
+  }
+}
+
+@media (min-width:980px) and (max-height:780px){
+  html body #app #pembelian .pa-root{
+    grid-template-rows:44px 36px 56px minmax(0,1fr) minmax(0,1fr)!important;
+  }
+}
+
+@media (min-width:980px){
+  html body #app #pembelian .pa-main-grid>.pa-trend,
+  html body #app #pembelian .pa-main-grid>article:nth-child(2),
+  html body #app #pembelian .pa-lower-grid>.pa-top,
+  html body #app #pembelian .pa-lower-grid>article:nth-child(2){
+    height:100%!important;
+    min-height:0!important;
+  }
+}
