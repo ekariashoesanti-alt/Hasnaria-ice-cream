@@ -72,6 +72,26 @@
   }
 }
 
+/* Persediaan Kurang / Persediaan Hapus now live only in tab Stok.
+   The third lower card is the legacy inventory-status container patched by
+   purchase-inventory-status.js, so remove it from Pembelian and let the two
+   remaining analysis cards use the full row. */
+#pembelian .pa-lower-grid>article:nth-child(3){
+  display:none!important;
+}
+
+@media (min-width:980px){
+  #pembelian .pa-lower-grid{
+    grid-template-columns:minmax(0,1.72fr) minmax(225px,.68fr)!important;
+  }
+}
+
+@media (min-width:980px) and (max-width:1450px){
+  #pembelian .pa-lower-grid{
+    grid-template-columns:minmax(0,1.6fr) minmax(205px,.65fr)!important;
+  }
+}
+
 /* Desktop shell: the sidebar is fixed, so the purchase dashboard must use only
    the viewport area to the right of it.  Do not reset main back to x=0. */
 @media (min-width:1101px){
