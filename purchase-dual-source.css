@@ -1,0 +1,13 @@
+/* Pembelian dual-source importer: Excel manual + Faktur Majoo. */
+#pembelian .pa-upload-wrap.purchase-dual-upload{width:330px!important;display:block!important}
+#pembelian .purchase-dual-buttons{display:grid;grid-template-columns:1fr 1.32fr;gap:6px;width:100%}
+#pembelian .purchase-source-btn{min-height:36px!important;height:36px!important;padding:6px 9px!important;border-radius:11px!important;font-size:10.2px!important;line-height:1!important;white-space:nowrap}
+#pembelian .purchase-source-btn.excel{background:#eef6f2!important;border:1px solid #176b55!important;color:#125844!important}
+#pembelian .purchase-source-btn.majoo{background:#176b55!important;border:1px solid #176b55!important;color:#fff!important}
+#pembelian .purchase-source-btn:disabled{opacity:.55;cursor:wait}
+#pembelian .purchase-source-hint{display:block!important;margin-top:3px!important;text-align:right!important;font-size:7.8px!important;line-height:1!important;color:#71827a!important}
+@media (min-width:980px){#pembelian .pa-title{padding-right:350px!important}}
+@media (min-width:980px) and (max-width:1450px){#pembelian .pa-upload-wrap.purchase-dual-upload{width:300px!important}#pembelian .pa-title{padding-right:315px!important}#pembelian .purchase-source-btn{font-size:9.5px!important;padding-left:7px!important;padding-right:7px!important}}
+@media (max-width:979px){#pembelian .pa-upload-wrap.purchase-dual-upload{width:100%!important}}
+.purchase-dual-toast{position:fixed;right:20px;bottom:20px;z-index:99999;max-width:min(520px,calc(100vw - 40px));padding:12px 15px;border-radius:12px;background:#24483f;color:#fff;font-size:12px;line-height:1.35;box-shadow:0 12px 34px rgba(0,0,0,.18)}
+.purchase-dual-toast.success{background:#176b55}.purchase-dual-toast.error{background:#9f2d2d}.purchase-dual-toast.info{background:#24483f}
