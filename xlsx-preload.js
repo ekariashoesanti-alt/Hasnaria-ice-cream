@@ -11,6 +11,16 @@
     document.head.appendChild(p);
   }
 
+  /* Majoo exports may carry a stale worksheet dimension (for example A1:U4)
+     even though real data extends farther. Repair !ref before sheet_to_json reads it. */
+  if(!document.getElementById('hasnaria-purchase-majoo-range-fix-js')){
+    var rf=document.createElement('script');
+    rf.id='hasnaria-purchase-majoo-range-fix-js';
+    rf.src='/purchase-majoo-range-fix.js?v=1';
+    rf.async=true;
+    document.head.appendChild(rf);
+  }
+
   /* Pembelian dual-source import: Excel manual + Faktur Majoo with cross-source dedup. */
   if(!document.getElementById('hasnaria-purchase-dual-source-css')){
     var l=document.createElement('link');
