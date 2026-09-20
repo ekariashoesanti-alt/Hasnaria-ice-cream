@@ -20,6 +20,7 @@
   function ensureCompactCss(){
     addCss('hasnaria-purchase-compact-css','/purchase-compact.css?v=2');
     addCss('hasnaria-purchase-width-fix-css','/purchase-width-fix.css?v=2');
+    addCss('hasnaria-purchase-equal-height-css','/purchase-equal-height.css?v=1');
   }
   function resetScrollNow(){
     try{
