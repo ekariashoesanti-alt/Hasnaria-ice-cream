@@ -60,12 +60,14 @@
   display:none!important;
 }
 
-/* Fixed ERP sidebar offsets. */
+/* Fixed ERP sidebar offsets. Keep the same horizontal gutters as Penjualan. */
 @media (min-width:1101px){
   #app>main.wrap:has(#pembelian:not(.hidden)){
     width:calc(100vw - 232px)!important;
     max-width:calc(100vw - 232px)!important;
     margin:0 0 0 232px!important;
+    padding-left:34px!important;
+    padding-right:34px!important;
   }
 }
 
@@ -74,13 +76,8 @@
     width:calc(100vw - 190px)!important;
     max-width:calc(100vw - 190px)!important;
     margin:0 0 0 190px!important;
-  }
-}
-
-@media (min-width:761px) and (max-width:1450px){
-  #app>main.wrap:has(#pembelian:not(.hidden)){
-    padding-left:8px!important;
-    padding-right:8px!important;
+    padding-left:22px!important;
+    padding-right:22px!important;
   }
 }
 
