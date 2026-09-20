@@ -21,7 +21,7 @@
     document.head.appendChild(rf);
   }
 
-  /* Pembelian dual-source import: Excel manual + Faktur Majoo with cross-source dedup. */
+  /* Pembelian dual-source import v2: Excel manual + Faktur Majoo + fuzzy cross-source dedup. */
   if(!document.getElementById('hasnaria-purchase-dual-source-css')){
     var l=document.createElement('link');
     l.id='hasnaria-purchase-dual-source-css';
@@ -29,10 +29,10 @@
     l.href='/purchase-dual-source.css?v=1';
     document.head.appendChild(l);
   }
-  if(!document.getElementById('hasnaria-purchase-dual-source-js')){
+  if(!document.getElementById('hasnaria-purchase-dual-source-v2-js')){
     var d=document.createElement('script');
-    d.id='hasnaria-purchase-dual-source-js';
-    d.src='/purchase-dual-source.js?v=1';
+    d.id='hasnaria-purchase-dual-source-v2-js';
+    d.src='/purchase-dual-source-v2.js?v=2';
     d.async=true;
     document.head.appendChild(d);
   }
