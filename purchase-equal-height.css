@@ -1,6 +1,6 @@
 /* Pembelian — equal 50:50 height for the two analytics rows on desktop.
    Row 4: Tren + Top Most Buy
-   Row 5: Komposisi Kategori + Top Low Buy */
+   Row 5: Komposisi Kategori + Top Fewest Buy */
 @media (min-width:980px){
   html body #app #pembelian .pa-root{
     grid-template-rows:50px 42px 64px minmax(0,1fr) minmax(0,1fr)!important;
@@ -26,5 +26,48 @@
   html body #app #pembelian .pa-lower-grid>article:nth-child(2){
     height:100%!important;
     min-height:0!important;
+  }
+
+  /* Right-side rankings: exactly 5 highest + 5 lowest purchase items. */
+  html body #app #pembelian .pa-lower-grid>article:nth-child(2) h2:after{
+    content:'Top Fewest Buy'!important;
+  }
+  html body #app #pembelian .pa-fewest{
+    display:flex!important;
+    flex-direction:column!important;
+    padding:10px 12px!important;
+  }
+  html body #app #pembelian .pa-fewest .pa-bars{
+    flex:1 1 auto!important;
+    display:flex!important;
+    flex-direction:column!important;
+    justify-content:space-evenly!important;
+    gap:0!important;
+    margin-top:0!important;
+  }
+  html body #app #pembelian .pa-fewest .pa-bar-row{
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr) auto auto!important;
+    grid-template-areas:'name amount delta' 'bar bar bar'!important;
+    column-gap:6px!important;
+    row-gap:4px!important;
+    min-height:0!important;
+    padding:6px 0!important;
+    border-bottom:1px solid #edf3f0!important;
+    align-items:center!important;
+  }
+  html body #app #pembelian .pa-fewest .pa-bar-row:last-child{border-bottom:0!important}
+  html body #app #pembelian .pa-fewest .pa-bar-name{grid-area:name!important;font-size:9px!important;font-weight:650!important;color:#294a3f!important}
+  html body #app #pembelian .pa-fewest .pa-bar-row progress{grid-area:bar!important;height:6px!important;background:#e8f1ed!important}
+  html body #app #pembelian .pa-fewest .pa-bar-row b{grid-area:amount!important;font-size:8.7px!important;white-space:nowrap!important;color:#23463b!important}
+  html body #app #pembelian .pa-fewest .pa-bar-row em{
+    grid-area:delta!important;
+    min-width:34px!important;
+    padding:2px 4px!important;
+    border-radius:999px!important;
+    background:#f5f8f6!important;
+    text-align:center!important;
+    font-size:7.6px!important;
+    white-space:nowrap!important;
   }
 }
