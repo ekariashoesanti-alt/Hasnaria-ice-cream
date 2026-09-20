@@ -20,7 +20,7 @@
   display:block;
   width:100%;
   height:100%;
-  min-height:255px;
+  min-height:210px;
   flex:1 1 auto;
   overflow:visible;
 }
@@ -29,11 +29,12 @@
 #pembelian .pa-redesign-y{font-size:10.5px}
 #pembelian .pa-redesign-x{font-size:11px;font-weight:700;fill:#36584b}
 #pembelian .pa-redesign-note{
-  margin-top:-2px;
+  margin-top:0;
   text-align:center;
   color:#788a82;
   font-size:9.5px;
   line-height:1.2;
+  flex:0 0 auto;
 }
 
 #pembelian .pa-comp-redesign{
@@ -113,7 +114,7 @@
   #pembelian .pa-main-grid>article:nth-child(2){padding:16px 14px 12px!important}
 }
 @media(min-width:980px) and (max-height:780px){
-  #pembelian .pa-redesign-trend-svg{min-height:220px}
+  #pembelian .pa-redesign-trend-svg{min-height:185px}
   #pembelian .pa-comp-redesign{grid-template-rows:auto 60px minmax(0,1fr);gap:5px}
   #pembelian .pa-comp-stack{height:60px}
   #pembelian .pa-comp-metric{padding:7px 9px}
@@ -121,10 +122,10 @@
   #pembelian .pa-main-grid>article:nth-child(2){padding-top:14px!important}
 }
 @media(max-width:979px){
-  #pembelian .pa-redesign-trend-svg{min-height:280px}
+  #pembelian .pa-redesign-trend-svg{min-height:240px}
   #pembelian .pa-comp-redesign{grid-template-rows:auto 76px auto}
 }
 @media(max-width:700px){
   #pembelian .pa-comp-metrics{grid-template-columns:1fr}
-  #pembelian .pa-redesign-trend-svg{min-height:240px}
+  #pembelian .pa-redesign-trend-svg{min-height:220px}
 }
