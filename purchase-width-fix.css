@@ -294,11 +294,17 @@
     min-height:0!important;
     padding:8px 11px!important;
   }
-  #pembelian .pa-top h2{
+  #pembelian .pa-top h2,
+  #pembelian .pa-lower-grid>article:nth-child(2) h2{
     font-size:0!important;
   }
   #pembelian .pa-top h2:after{
-    content:'Top 5 Item Terboros';
+    content:'Top Most Buy';
+    font-size:12.5px!important;
+    line-height:1.15!important;
+  }
+  #pembelian .pa-lower-grid>article:nth-child(2) h2:after{
+    content:'Top Low Buy';
     font-size:12.5px!important;
     line-height:1.15!important;
   }
