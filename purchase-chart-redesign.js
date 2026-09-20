@@ -94,8 +94,8 @@
     if(!data.length)return'<div class="pa-empty pa-chart-empty">Belum ada periode untuk ditampilkan.</div>';
     var rawMax=Math.max.apply(null,data.map(function(x){return x.total;}));
     if(!(rawMax>0))rawMax=1;
-    var axisMax=niceAxisMax(rawMax),axisMin=-axisMax*.14;
-    var W=900,H=280,left=78,right=28,top=32,bottom=36,pw=W-left-right,ph=H-top-bottom,span=axisMax-axisMin;
+    var axisMax=niceAxisMax(rawMax),axisMin=-axisMax*.35;
+    var W=900,H=280,left=78,right=28,top=32,bottom=30,pw=W-left-right,ph=H-top-bottom,span=axisMax-axisMin;
     var step=pw/Math.max(1,data.length),bw=Math.min(86,Math.max(42,step*.5));
     var y=function(v){return top+((axisMax-v)/span)*ph;};
     var zeroY=y(0);
@@ -109,7 +109,7 @@
       var cx=left+i*step+step/2,x=cx-bw/2,yy=y(d.total),hh=zeroY-yy;
       s.push('<rect class="pa-redesign-total-bar" x="'+x.toFixed(1)+'" y="'+yy.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+Math.max(2,hh).toFixed(1)+'" rx="8"></rect>');
       s.push('<text class="pa-redesign-value" x="'+cx.toFixed(1)+'" y="'+Math.max(18,yy-10).toFixed(1)+'" text-anchor="middle">'+esc(fmtMoney(d.total))+'</text>');
-      s.push('<text class="pa-axis pa-axis-x pa-redesign-x" x="'+cx.toFixed(1)+'" y="'+Math.min(H-8,zeroY+24).toFixed(1)+'" text-anchor="middle">'+esc(shortPeriod(d.period))+'</text>');
+      s.push('<text class="pa-axis pa-axis-x pa-redesign-x" x="'+cx.toFixed(1)+'" y="'+Math.min(H-16,zeroY+20).toFixed(1)+'" text-anchor="middle">'+esc(shortPeriod(d.period))+'</text>');
     });
     s.push('</svg><div class="pa-redesign-note">Total pengeluaran per periode · komposisi kategori dirinci pada grafik bawah</div></div>');
     return s.join('');
