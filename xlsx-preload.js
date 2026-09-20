@@ -41,7 +41,7 @@
   if(!document.getElementById('hasnaria-purchase-chart-redesign-js')){
     var c=document.createElement('script');
     c.id='hasnaria-purchase-chart-redesign-js';
-    c.src='/purchase-chart-redesign.js?v=1';
+    c.src='/purchase-chart-redesign.js?v=2';
     c.async=true;
     document.head.appendChild(c);
   }
