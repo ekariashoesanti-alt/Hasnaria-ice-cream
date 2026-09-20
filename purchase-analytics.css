@@ -76,3 +76,7 @@ html body #app #pembelian .pa-insight{display:none!important}
 @media(min-width:980px){html body #app #pembelian .pa-root{grid-template-rows:56px 46px 70px minmax(315px,auto) minmax(210px,auto)!important}}
 @media(min-width:980px) and (max-width:1450px){html body #app #pembelian .pa-root{grid-template-rows:54px 44px 66px minmax(295px,auto) minmax(195px,auto)!important}}
 @media(min-width:980px) and (max-height:800px){html body #app #pembelian .pa-root{grid-template-rows:50px 40px 62px minmax(275px,auto) minmax(185px,auto)!important}}
+
+/* Remove single-branch selector from Pembelian; only Period and Scope remain. */
+html body #app #pembelian .pa-controls>label:nth-of-type(3){display:none!important}
+@media(min-width:761px){html body #app #pembelian .pa-controls{grid-template-columns:minmax(150px,1fr) minmax(190px,1.25fr)!important}}
