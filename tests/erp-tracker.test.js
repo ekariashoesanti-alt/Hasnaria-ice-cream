@@ -7,6 +7,7 @@ const data = JSON.parse(fs.readFileSync(trackerPath, 'utf8'));
 const appSource = fs.readFileSync(path.join(root, 'app.js'), 'utf8');
 const ownerShellSource = fs.readFileSync(path.join(root, 'owner-shell-guard.js'), 'utf8');
 const operationalBridgeSource = fs.readFileSync(path.join(root, 'operational-role-bridge.js'), 'utf8');
+const operationalSource = fs.readFileSync(path.join(root, 'operational-v1.js'), 'utf8');
 
 function assert(cond, msg) {
   if (!cond) {
@@ -63,4 +64,17 @@ assert(!operationalBridgeSource.includes("observe(document.body,{childList:true,
 assert(operationalBridgeSource.includes('state.readyAttempts<80'), 'Operasional context readiness uses a bounded lightweight retry');
 assert(!/\.(?:from|insert|update|delete|rpc)\s*\(/.test(operationalBridgeSource), 'Operasional bridge remains zero-query and zero-mutation');
 
-console.log('ERP tracker test: PASS (' + data.tasks.length + ' tasks, ' + data.milestones.length + ' milestones; Owner guard + idempotent/scoped Operasional bridge wired)');
+assert(operationalSource.includes('var PAGE_SIZE=25;'), 'Operasional detail page budget must remain 25 rows');
+assert(operationalSource.includes(".limit(30)"), 'Operasional run header budget must remain capped at 30');
+assert(operationalSource.includes(".limit(100)"), 'Operasional member lookup must remain bounded');
+assert(operationalSource.includes(".range(from,to)"), 'Operasional item details must remain server-paginated');
+assert(operationalSource.includes("if(action==='new-opname'){state.createOpen=true;clearAction();render();loadMembers();return}"), 'member list must load only when the create-opname form opens');
+const saveStart = operationalSource.indexOf('async function saveItem');
+const submitStart = operationalSource.indexOf('async function submitRun');
+assert(saveStart >= 0 && submitStart > saveStart, 'saveItem/submitRun boundaries must exist');
+const saveItemSource = operationalSource.slice(saveStart, submitStart);
+assert(saveItemSource.includes('Object.assign(item,row)'), 'single-row save must update local state from the RPC response');
+assert(!saveItemSource.includes('loadItemPage('), 'single-row save must not reload the 25-row detail page');
+assert(!saveItemSource.includes('loadRuns('), 'single-row save must not reload the 30-run header list');
+
+console.log('ERP tracker test: PASS (' + data.tasks.length + ' tasks, ' + data.milestones.length + ' milestones; Owner guard + scoped Operasional bridge + loading budget locked)');
