@@ -64,20 +64,25 @@
     try { document.dispatchEvent(new CustomEvent('hasnaria:owner-shell-navigate',{detail:{tab:id}})); } catch (_) {}
   }
 
+  function refreshFinStockCss() {
+    var l=document.getElementById('ofs3-css');
+    if (l) l.href='/owner-finance-stock-v3.css?v=2';
+  }
+
   function ensureFinStockRuntime(id) {
     if (!isOwner()) return;
     var host=section(id);
     if (!host || host.classList.contains('hidden')) return;
-    if (host.querySelector('.ofs3-shell')) return;
+    if (host.querySelector('.ofs3-shell')) { refreshFinStockCss(); return; }
 
     var existing=document.getElementById('hasnaria-owner-finance-stock-v3-js');
     if (existing) {
-      if (window.__HASNARIA_OWNER_FINSTOCK_V3) dispatchFinStock(id);
-      else existing.addEventListener('load',function(){ dispatchFinStock(id); },{once:true});
+      if (window.__HASNARIA_OWNER_FINSTOCK_V3) { refreshFinStockCss(); dispatchFinStock(id); }
+      else existing.addEventListener('load',function(){ refreshFinStockCss(); dispatchFinStock(id); },{once:true});
       return;
     }
     if (state.finStockLoad) {
-      state.finStockLoad.then(function(){ dispatchFinStock(id); });
+      state.finStockLoad.then(function(){ refreshFinStockCss(); dispatchFinStock(id); });
       return;
     }
     state.finStockLoad=new Promise(function(resolve){
@@ -85,11 +90,11 @@
       s.id='hasnaria-owner-finance-stock-v3-js';
       s.src='/owner-finance-stock-v3.js?v=2';
       s.async=true;
-      s.onload=function(){ resolve(); };
+      s.onload=function(){ refreshFinStockCss(); resolve(); };
       s.onerror=function(){ state.finStockLoad=null; resolve(); };
       document.head.appendChild(s);
     });
-    state.finStockLoad.then(function(){ dispatchFinStock(id); });
+    state.finStockLoad.then(function(){ refreshFinStockCss(); dispatchFinStock(id); });
   }
 
   function ensureFinance() { ensureFinStockRuntime('ops'); }
