@@ -83,8 +83,17 @@
     state.finStockLoad.then(function(){afterRuntime(id,requestRender)});
   }
 
+  function nudgeLegacyStockFallback(){
+    var h=section('stok');
+    if(!h||h.classList.contains('hidden')||stockMounted())return;
+    var marker=document.createElement('span');
+    marker.hidden=true;
+    marker.setAttribute('data-owner-shell-stock-nudge','1');
+    h.appendChild(marker);h.removeChild(marker);
+  }
+
   function ensureFinance(requestRender){ensureFinStockRuntime('ops',!!requestRender)}
-  function ensureStock(requestRender){ensureFinStockRuntime('stok',!!requestRender)}
+  function ensureStock(requestRender){ensureFinStockRuntime('stok',!!requestRender);setTimeout(nudgeLegacyStockFallback,700)}
   function patchContext(){var c=context();if(!c||c.role!=='owner')return;if(c.navigate!==safeNavigate)c.navigate=safeNavigate}
 
   function safeNavigate(id){
