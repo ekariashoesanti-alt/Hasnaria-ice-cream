@@ -46,11 +46,11 @@
     document.head.appendChild(c);
   }
 
-  /* Owner finance + stock v3 fast path: lazy data loading; journal/ledger only load on demand. */
-  if(!document.getElementById('hasnaria-finance-stock-fast-v3-js')){
+  /* Finance + stock reporting v3: fast lazy loading, no global mutation-observer render loop. */
+  if(!document.getElementById('hasnaria-finance-stock-v3-js')){
     var fs=document.createElement('script');
-    fs.id='hasnaria-finance-stock-fast-v3-js';
-    fs.src='/finance-stock-fast-v3.js?v=2';
+    fs.id='hasnaria-finance-stock-v3-js';
+    fs.src='/finance-stock-v3.js?v=1';
     fs.async=true;
     document.head.appendChild(fs);
   }
