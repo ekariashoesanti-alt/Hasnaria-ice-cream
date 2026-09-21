@@ -38,6 +38,13 @@
       p4.async=true;
       document.head.appendChild(p4);
     }
+    if(!document.getElementById('hasnaria-finance-p5-js')){
+      var p5=document.createElement('script');
+      p5.id='hasnaria-finance-p5-js';
+      p5.src='/finance-archive-p5.js?v=1';
+      p5.async=true;
+      document.head.appendChild(p5);
+    }
   }
 
   function currentActive(){
