@@ -1,12 +1,11 @@
-/* Compatibility shim: old Owner finance/stock entry now delegates to the fast lazy loader. */
+/* Compatibility shim: Owner Finance/Stock now use accuracy + recall v4 runtimes. */
 (function(){
   'use strict';
-  if(window.__HASNARIA_FINANCE_STOCK_FAST_V3)return;
-  var id='hasnaria-finance-stock-fast-v3-js';
-  if(document.getElementById(id))return;
-  var s=document.createElement('script');
-  s.id=id;
-  s.src='/finance-stock-fast-v3.js?v=2';
-  s.async=true;
-  document.head.appendChild(s);
+  function load(id,src){
+    if(document.getElementById(id))return;
+    var s=document.createElement('script');
+    s.id=id;s.src=src;s.async=true;document.head.appendChild(s);
+  }
+  load('hasnaria-finance-accuracy-v4-js','/finance-accuracy-v4.js?v=1');
+  load('hasnaria-stock-recall-v4-js','/stock-recall-v4.js?v=1');
 })();
