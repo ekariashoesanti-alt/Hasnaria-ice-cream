@@ -1,0 +1,13 @@
+/* Hasnaria Finance P5 archive + export */
+.finp5-btn{border-style:dashed}
+.finp5-modal{width:min(1180px,96vw)}
+.finp5-actions{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+.finp5-meta{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin:12px 0}
+.finp5-meta-card{border:1px solid #dfeae5;background:#fbfdfc;border-radius:12px;padding:10px 11px;min-width:0}
+.finp5-meta-card span{display:block;font-size:9px;color:#74877f;text-transform:uppercase;letter-spacing:.05em}.finp5-meta-card b{display:block;font-size:11px;color:#173f34;margin-top:4px;word-break:break-word}
+.finp5-note{margin:10px 0;padding:10px 12px;border-radius:11px;border:1px solid #dfeae5;background:#f7fbf9;color:#526c62;font-size:10px;line-height:1.5}.finp5-note.warn{background:#fff8df;border-color:#f0dda0;color:#735710}
+.finp5-section{margin-top:14px}.finp5-section h3{font-size:12px;margin:0 0 7px;color:#173f34}
+.finp5-event{display:grid;grid-template-columns:92px 140px minmax(0,1fr);gap:8px;padding:8px 10px;border-top:1px solid #e6efeb;font-size:10px}.finp5-event:first-child{border-top:0}.finp5-event b{color:#173f34}.finp5-event span{color:#6d8078}
+.finp5-fingerprint{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:9px;word-break:break-all}
+.finp5-reopen-form{display:grid;gap:8px}.finp5-reopen-form textarea{width:100%;border:1px solid #cfe0d9;border-radius:9px;padding:8px 9px;font:inherit}.finp5-reopen-form-actions{display:flex;justify-content:flex-end;gap:7px}
+@media(max-width:760px){.finp5-meta{grid-template-columns:1fr}.finp5-event{grid-template-columns:1fr}.finp5-actions{width:100%}}
