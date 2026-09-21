@@ -41,7 +41,7 @@
 
   function claimFinanceHost(){
     var h=section('ops');if(!h||h.classList.contains('hidden')||financeMounted())return;
-    h.innerHTML='<div class="fsv2-shell" data-finance-boot="1"><div class="fsv2-head"><div><div class="fsv2-eyebrow">FINANCIAL REPORTING</div><h1>Keuangan</h1><p>Menyiapkan laporan keuangan…</p></div></div><div class="fsv2-report" style="min-height:180px;display:grid;place-items:center"><div class="fsv2-note">Memuat data…</div></div></div>';
+    h.innerHTML='<div class="fsv2-shell" data-finance-boot="1"><div class="fsv2-head"><div><div class="fsv2-eyebrow">FINANCIAL REPORTING</div><h1>Keuangan</h1><p>Menyiapkan laporan keuangan…</p></div></div><div class="fsv2-report"><div class="fsv2-note">Memuat data…</div></div></div>';
   }
 
   function mountFinance(force){
