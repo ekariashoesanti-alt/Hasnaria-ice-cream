@@ -1,21 +1,39 @@
 /* Owner navigation guard.
  * Owner top-level pages are owned by dedicated renderers. This guard prevents
- * legacy core-app render() calls from becoming visible or racing the Finance UI.
+ * legacy core-app render() calls from becoming visible or racing dedicated UIs.
  */
 (function(){
   'use strict';
   if(window.__HASNARIA_OWNER_SHELL_BOOTSTRAPPED)return;
   window.__HASNARIA_OWNER_SHELL_BOOTSTRAPPED=true;
 
-  var OWNER_TABS=['dashboard','sales','pembelian','ops','stok'];
-  var SECTION_IDS=['dashboard','sales','pembelian','ops','stok','shift','social','approval','team','sistem'];
-  var state={active:'dashboard',initialized:false,scheduled:false,salesRetries:0,finStockLoad:null};
+  var OWNER_TABS=['dashboard','sales','pembelian','operasional','ops','stok'];
+  var SECTION_IDS=['dashboard','sales','pembelian','operasional','ops','stok','shift','social','approval','team','sistem'];
+  var state={active:'dashboard',initialized:false,scheduled:false,salesRetries:0,finStockLoad:null,operationalLoad:null};
 
   function context(){return window.__HASNARIA_CONTEXT||null}
   function isOwner(){var c=context();return!!(c&&c.role==='owner')}
   function section(id){return document.getElementById(id)}
   function financeMounted(){var h=section('ops');return!!(h&&h.querySelector('[data-finance-v6="1"]'))}
   function stockMounted(){var h=section('stok');return!!(h&&h.querySelector('[data-stock-v4="1"],.ofs3-shell'))}
+  function operationalMounted(){var h=section('operasional');return!!(h&&h.querySelector('[data-operational-v1="1"]'))}
+
+  function ensureOperationalSurface(){
+    var main=document.querySelector('#app main'),h=section('operasional');
+    if(main&&!h){
+      h=document.createElement('section');h.id='operasional';h.className='hidden';
+      var finance=section('ops');main.insertBefore(h,finance||null);
+    }
+    var tabs=document.getElementById('tabs'),b=tabs&&tabs.querySelector('.tab[data-tab="operasional"]');
+    if(tabs&&!b){
+      b=document.createElement('button');b.type='button';b.className='tab';b.setAttribute('data-tab','operasional');
+      /* nav-patch keeps this compatibility id visible for dynamically owned tabs. */
+      b.id='userSettingsTab';b.textContent='Operasional';b.setAttribute('aria-label','Operasional');
+      var financeTab=tabs.querySelector('.tab[data-tab="ops"]');tabs.insertBefore(b,financeTab||null);
+    }
+    if(b){b.textContent='Operasional';b.setAttribute('aria-label','Operasional');b.style.display=''}
+    return h;
+  }
 
   function ensureShellCss(){
     var l=document.getElementById('ofs3-css');
@@ -26,28 +44,20 @@
   function ensureFinanceWorkbenches(){
     if(!document.getElementById('hasnaria-finance-hpp-p3-js')){
       var p3=document.createElement('script');
-      p3.id='hasnaria-finance-hpp-p3-js';
-      p3.src='/finance-hpp-p3.js?v=1';
-      p3.async=true;
-      document.head.appendChild(p3);
+      p3.id='hasnaria-finance-hpp-p3-js';p3.src='/finance-hpp-p3.js?v=1';p3.async=true;document.head.appendChild(p3);
     }
     if(!document.getElementById('hasnaria-finance-p4-js')){
       var p4=document.createElement('script');
-      p4.id='hasnaria-finance-p4-js';
-      p4.src='/finance-accounting-p4.js?v=1';
-      p4.async=true;
-      document.head.appendChild(p4);
+      p4.id='hasnaria-finance-p4-js';p4.src='/finance-accounting-p4.js?v=1';p4.async=true;document.head.appendChild(p4);
     }
     if(!document.getElementById('hasnaria-finance-p5-js')){
       var p5=document.createElement('script');
-      p5.id='hasnaria-finance-p5-js';
-      p5.src='/finance-archive-p5.js?v=1';
-      p5.async=true;
-      document.head.appendChild(p5);
+      p5.id='hasnaria-finance-p5-js';p5.src='/finance-archive-p5.js?v=1';p5.async=true;document.head.appendChild(p5);
     }
   }
 
   function currentActive(){
+    ensureOperationalSurface();
     var on=document.querySelector('#tabs .tab.on[data-tab]'),id=on&&on.getAttribute('data-tab');
     if(OWNER_TABS.indexOf(id)>=0)return id;
     for(var i=0;i<OWNER_TABS.length;i++){var el=section(OWNER_TABS[i]);if(el&&!el.classList.contains('hidden'))return OWNER_TABS[i]}
@@ -55,6 +65,7 @@
   }
 
   function setVisibility(id){
+    ensureOperationalSurface();
     SECTION_IDS.forEach(function(name){var el=section(name);if(el)el.classList.toggle('hidden',name!==id)});
     Array.prototype.forEach.call(document.querySelectorAll('#tabs .tab[data-tab]'),function(b){b.classList.toggle('on',b.getAttribute('data-tab')===id)});
   }
@@ -107,13 +118,22 @@
     state.finStockLoad.then(function(){afterRuntime(id,requestRender)});
   }
 
+  function ensureOperational(requestRender){
+    if(!isOwner())return;
+    var h=ensureOperationalSurface();if(!h||h.classList.contains('hidden'))return;
+    if(typeof window.__HASNARIA_OPERATIONS_V1_MOUNT==='function'){window.__HASNARIA_OPERATIONS_V1_MOUNT({force:!!requestRender});return}
+    if(state.operationalLoad){state.operationalLoad.then(function(){if(isOwner()&&state.active==='operasional'&&typeof window.__HASNARIA_OPERATIONS_V1_MOUNT==='function')window.__HASNARIA_OPERATIONS_V1_MOUNT({force:!!requestRender})});return}
+    state.operationalLoad=new Promise(function(resolve){
+      var s=document.createElement('script');s.id='hasnaria-operational-v1-js';s.src='/operational-v1.js?v=1';s.async=true;
+      s.onload=function(){resolve()};s.onerror=function(){state.operationalLoad=null;resolve()};document.head.appendChild(s);
+    });
+    state.operationalLoad.then(function(){if(isOwner()&&state.active==='operasional'&&typeof window.__HASNARIA_OPERATIONS_V1_MOUNT==='function')window.__HASNARIA_OPERATIONS_V1_MOUNT({force:!!requestRender})});
+  }
+
   function nudgeLegacyStockFallback(){
     var h=section('stok');
     if(!h||h.classList.contains('hidden')||stockMounted())return;
-    var marker=document.createElement('span');
-    marker.hidden=true;
-    marker.setAttribute('data-owner-shell-stock-nudge','1');
-    h.appendChild(marker);h.removeChild(marker);
+    var marker=document.createElement('span');marker.hidden=true;marker.setAttribute('data-owner-shell-stock-nudge','1');h.appendChild(marker);h.removeChild(marker);
   }
 
   function ensureFinance(requestRender){ensureFinStockRuntime('ops',!!requestRender)}
@@ -125,6 +145,7 @@
     state.active=id;state.initialized=true;state.salesRetries=0;setVisibility(id);patchContext();
     if(id==='dashboard')ensureDashboard();
     if(id==='sales')ensureSales();
+    if(id==='operasional')ensureOperational(true);
     if(id==='ops')ensureFinance(true);
     if(id==='stok')ensureStock(true);
     return true;
@@ -132,11 +153,12 @@
 
   function reconcile(){
     if(!isOwner())return;
-    ensureShellCss();
+    ensureOperationalSurface();ensureShellCss();
     if(!state.initialized){state.active=currentActive();state.initialized=true}
     patchContext();setVisibility(state.active);
     if(state.active==='dashboard')ensureDashboard();
     if(state.active==='sales')ensureSales();
+    if(state.active==='operasional')ensureOperational(false);
     if(state.active==='ops')ensureFinance(false);
     if(state.active==='stok')ensureStock(false);
   }
@@ -150,7 +172,7 @@
     event.preventDefault();event.stopPropagation();safeNavigate(id);
   },true);
 
-  function start(){if(!document.body)return;ensureShellCss();new MutationObserver(scheduleReconcile).observe(document.body,{childList:true,subtree:true});scheduleReconcile()}
+  function start(){if(!document.body)return;ensureOperationalSurface();ensureShellCss();new MutationObserver(scheduleReconcile).observe(document.body,{childList:true,subtree:true});scheduleReconcile()}
   window.__HASNARIA_OWNER_SHELL={navigate:safeNavigate,isOwner:isOwner,getActive:function(){return state.active},reconcile:reconcile};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
 })();

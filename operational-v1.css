@@ -1,0 +1,54 @@
+#operasional .op1-shell{min-width:0;color:#173c31}
+#operasional .op1-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:11px}
+#operasional .op1-eyebrow{font-size:8px;font-weight:900;letter-spacing:.16em;color:#168363}
+#operasional .op1-head h2{margin:2px 0 4px;font-size:22px;line-height:1.15;color:#143f32}
+#operasional .op1-head p{margin:0;max-width:700px;font-size:10px;line-height:1.45;color:#728079}
+#operasional .op1-refresh{height:34px;padding:0 11px;border:1px solid #d8e5df;border-radius:9px;background:#fff;color:#225343;font:inherit;font-size:9px;font-weight:800;cursor:pointer}
+#operasional .op1-kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:10px}
+#operasional .op1-kpis>div{border:1px solid #dce8e3;border-radius:11px;background:#fff;padding:9px 10px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+#operasional .op1-kpis span{font-size:8px;font-weight:850;color:#73827b;text-transform:uppercase}
+#operasional .op1-kpis strong{font-size:18px;color:#176b55}
+#operasional .op1-alert{margin-bottom:9px;padding:8px 10px;border:1px solid #efcec7;border-radius:9px;background:#fff7f5;color:#963827;font-size:8.5px}
+#operasional .op1-loading{padding:14px;border:1px dashed #d9e6e0;border-radius:10px;background:#fbfdfc;color:#7c8a84;text-align:center;font-size:8.5px}
+#operasional .op1-grid{display:grid;grid-template-columns:minmax(260px,.72fr) minmax(0,1.65fr);gap:10px;align-items:start}
+#operasional .op1-grid>section,#operasional .op1-detail{min-width:0;border:1px solid #dfe8e4;border-radius:12px;background:#fff;overflow:hidden}
+#operasional .op1-section-title{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 10px;border-bottom:1px solid #e6ece9}
+#operasional .op1-section-title strong{font-size:10px;color:#21473a}
+#operasional .op1-section-title span{font-size:7px;color:#839089}
+#operasional .op1-list{display:grid;padding:6px;gap:5px;max-height:540px;overflow:auto}
+#operasional .op1-run{width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px;border:1px solid #e5ece8;border-radius:9px;background:#fff;text-align:left;cursor:pointer}
+#operasional .op1-run:hover,#operasional .op1-run.on{border-color:#a8c9bc;background:#f4faf7}
+#operasional .op1-run>div{min-width:0;display:flex;flex-direction:column;gap:2px}
+#operasional .op1-run span{font-size:6.8px;font-weight:900;letter-spacing:.08em;color:#168163;text-transform:uppercase}
+#operasional .op1-run strong{font-size:9px;color:#173f33;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#operasional .op1-run small{font-size:7px;color:#829089}
+#operasional .op1-run i{font-style:normal;font-size:16px;color:#95a39c}
+#operasional .op1-empty{min-height:160px;display:grid;place-content:center;gap:5px;padding:18px;text-align:center;color:#74847d}
+#operasional .op1-empty b{font-size:10px;color:#36584d}
+#operasional .op1-empty span{max-width:330px;font-size:8px;line-height:1.45}
+#operasional .op1-detail-empty{min-height:250px;display:grid;place-content:center;gap:4px;padding:18px;text-align:center;color:#839089}
+#operasional .op1-detail-empty b{font-size:11px;color:#45645a}
+#operasional .op1-detail-empty span{font-size:8px}
+#operasional .op1-detail-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:10px 11px;border-bottom:1px solid #e6ece9}
+#operasional .op1-detail-head>div:first-child{min-width:0}
+#operasional .op1-detail-head span{font-size:7px;font-weight:900;letter-spacing:.09em;color:#168163;text-transform:uppercase}
+#operasional .op1-detail-head h3{margin:2px 0 2px;font-size:13px;color:#173f33}
+#operasional .op1-detail-head small{font-size:7px;color:#829089}
+#operasional .op1-badge{flex:0 0 auto;padding:4px 7px;border-radius:999px;background:#edf5f2;color:#35695a;font-size:7px;font-weight:850}
+#operasional .op1-table-wrap{overflow:auto;max-height:500px}
+#operasional table{width:100%;min-width:620px;border-collapse:collapse;font-size:8px}
+#operasional th{position:sticky;top:0;background:#f7faf8;z-index:1;padding:7px;border-bottom:1px solid #dfe8e4;text-align:left;font-size:7px;color:#60766e;white-space:nowrap}
+#operasional td{padding:7px;border-bottom:1px solid #edf1ef;color:#2b4d42;vertical-align:middle}
+#operasional td strong{display:block;font-size:8.5px;color:#1f4639}
+#operasional td small{display:block;margin-top:2px;font-size:6.5px;color:#8b9892}
+#operasional td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+#operasional .op1-pending{color:#9aa59f}
+#operasional .op1-pager{display:flex;align-items:center;justify-content:center;gap:8px;padding:7px;border-top:1px solid #e9efec}
+#operasional .op1-pager button{width:28px;height:26px;border:1px solid #dce6e1;border-radius:7px;background:#fff;color:#496158;cursor:pointer}
+#operasional .op1-pager button:disabled{opacity:.4;cursor:not-allowed}
+#operasional .op1-pager span{font-size:7.5px;color:#76857e}
+#operasional .op1-foot{display:flex;gap:6px;align-items:center;margin-top:8px;padding:7px 9px;border:1px solid #e3ebe7;border-radius:9px;background:#fafcfb;font-size:7.5px;color:#7a8982}
+#operasional .op1-foot span{font-weight:900;letter-spacing:.06em;text-transform:uppercase;color:#168163}
+#operasional .op1-foot b{font-weight:700;color:#47655a}
+@media(max-width:900px){#operasional .op1-grid{grid-template-columns:1fr}#operasional .op1-list{max-height:250px}}
+@media(max-width:620px){#operasional .op1-head{flex-direction:column}#operasional .op1-refresh{width:100%}#operasional .op1-kpis{grid-template-columns:1fr}#operasional .op1-foot{align-items:flex-start;flex-direction:column}}
