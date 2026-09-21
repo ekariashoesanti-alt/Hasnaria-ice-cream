@@ -77,7 +77,7 @@
     if(!isOwner())return;
     var h=section(id);if(!h||h.classList.contains('hidden'))return;
     ensureShellCss();
-    if(id==='ops'&&financeMounted())return;
+    if(id==='ops'&&financeMounted()){ensureFinanceP3Runtime();return}
     if(id==='stok'&&stockMounted())return;
     if(id==='ops')claimFinanceHost();
 
