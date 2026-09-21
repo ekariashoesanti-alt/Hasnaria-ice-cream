@@ -1,6 +1,9 @@
-/* Hasnaria Stock — reconciliation UI loader */
+/* Hasnaria Stock — lightweight lazy loader */
 (function () {
   'use strict';
+
+  if (window.__HASNARIA_STOCK_LAZY_LOADER) return;
+  window.__HASNARIA_STOCK_LAZY_LOADER = true;
 
   function css() {
     var s = document.getElementById('stk-css');
@@ -34,61 +37,57 @@
 
   function chip(l) { return l; }
 
-  function localToday() {
-    var d = new Date();
-    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  function stockHost() {
+    return document.getElementById('stok');
   }
 
-  function guardFutureDates() {
-    function apply(el) {
-      if (!el || (el.id !== 'srBuyDate' && el.id !== 'srOpnameDate')) return;
-      var max = localToday();
-      el.max = max;
-      if (el.value && el.value > max) el.value = max;
-    }
-    document.addEventListener('focusin', function (e) { apply(e.target); }, true);
-    document.addEventListener('change', function (e) { apply(e.target); }, true);
+  function stockActive() {
+    var host = stockHost();
+    return !!(host && !host.classList.contains('hidden'));
   }
 
-  function loadPurchaseCycleStatus() {
-    if (window.__HASNARIA_STOCK_PURCHASE_STATUS || document.getElementById('hasnaria-stock-purchase-status-loader')) return;
+  function showOpeningState() {
+    var host = stockHost();
+    if (!host || host.querySelector('.sc3-shell') || host.querySelector('[data-stock-opening]')) return;
+    host.innerHTML = '<div class="card" data-stock-opening="1"><h2>Stok &amp; Kebutuhan Material</h2><p class="small">Menyiapkan data persediaan…</p></div>';
+  }
+
+  function loadControl() {
+    if (!stockActive()) return;
+    if (window.__HASNARIA_STOCK_CONTROL_V3 || document.getElementById('hasnaria-stock-control-v3-loader')) return;
+
+    showOpeningState();
     var s = document.createElement('script');
-    s.id = 'hasnaria-stock-purchase-status-loader';
-    s.src = '/stock-purchase-status.js?v=1';
-    s.async = false;
-    s.onerror = function () { console.error('Hasnaria Stock purchase-cycle status gagal dimuat.'); };
-    document.head.appendChild(s);
-  }
-
-  function loadLinkedBalance() {
-    if (window.__HASNARIA_STOCK_LINKED_BALANCE || document.getElementById('hasnaria-stock-linked-balance-loader')) return;
-    var s = document.createElement('script');
-    s.id = 'hasnaria-stock-linked-balance-loader';
-    s.src = '/stock-linked-balance.js?v=1';
-    s.async = false;
-    s.onerror = function () { console.error('Hasnaria Stock linked-balance table gagal dimuat.'); };
-    document.head.appendChild(s);
-  }
-
-  function loadReconciliation() {
-    if (window.__HASNARIA_STOCK_RECONCILE_LOADING) return;
-    window.__HASNARIA_STOCK_RECONCILE_LOADING = true;
-    var s = document.createElement('script');
-    s.src = '/stock-control-v3.js?v=1';
-    s.async = false;
-    s.onload = function () { window.__HASNARIA_STOCK_RECONCILE_READY = true; };
+    s.id = 'hasnaria-stock-control-v3-loader';
+    s.src = '/stock-control-v3.js?v=2';
+    s.async = true;
+    s.onload = function () {
+      window.__HASNARIA_STOCK_RECONCILE_READY = true;
+    };
     s.onerror = function () {
-      window.__HASNARIA_STOCK_RECONCILE_LOADING = false;
-      console.error('Hasnaria Stock control module gagal dimuat.');
-      var host = document.getElementById('stok');
-      if (host && !host.querySelector('.sc3-shell')) {
+      var host = stockHost();
+      if (host && stockActive()) {
         host.innerHTML = '<div class="card"><h2>Stok</h2><p class="msg">Modul kontrol stok gagal dimuat. Refresh halaman atau coba lagi nanti.</p></div>';
       }
     };
     document.head.appendChild(s);
   }
 
+  function maybeLoad() {
+    if (stockActive()) loadControl();
+  }
+
+  document.addEventListener('click', function (e) {
+    var el = e.target && e.target.closest ? e.target.closest('[data-tab],.tab') : null;
+    if (!el) return;
+    var id = el.getAttribute('data-tab');
+    var text = String(el.textContent || '').trim().toLowerCase();
+    if (id === 'stok' || (!id && text === 'stok')) {
+      setTimeout(loadControl, 0);
+    }
+  }, true);
+
   css();
-  guardFutureDates();
-  loadReconciliation();
+  setTimeout(maybeLoad, 250);
+  setTimeout(maybeLoad, 1200);
 })();
