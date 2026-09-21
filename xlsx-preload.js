@@ -46,6 +46,22 @@
     document.head.appendChild(c);
   }
 
+  /* Purchase → Finance alignment: expose canonical accounting treatment and reconciliation status. */
+  if(!document.getElementById('hasnaria-purchase-finance-alignment-css')){
+    var afc=document.createElement('link');
+    afc.id='hasnaria-purchase-finance-alignment-css';
+    afc.rel='stylesheet';
+    afc.href='/purchase-finance-alignment-v1.css?v=1';
+    document.head.appendChild(afc);
+  }
+  if(!document.getElementById('hasnaria-purchase-finance-alignment-js')){
+    var af=document.createElement('script');
+    af.id='hasnaria-purchase-finance-alignment-js';
+    af.src='/purchase-finance-alignment-v1.js?v=1';
+    af.async=true;
+    document.head.appendChild(af);
+  }
+
   /* Owner Finance/Stock is intentionally NOT loaded here.
      owner-shell-guard owns that runtime so legacy and v4 renderers cannot race. */
 
