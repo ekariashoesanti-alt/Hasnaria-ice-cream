@@ -46,11 +46,11 @@
     document.head.appendChild(c);
   }
 
-  /* Finance + stock reporting v2: accounting-safe P&L, journal, ledger and split stock tables. */
-  if(!document.getElementById('hasnaria-finance-stock-v2-js')){
+  /* Owner finance + stock v3: clean report preview, journal/ledger and split inventory tables. */
+  if(!document.getElementById('hasnaria-owner-finance-stock-v3-js')){
     var fs=document.createElement('script');
-    fs.id='hasnaria-finance-stock-v2-js';
-    fs.src='/finance-stock-v2.js?v=1';
+    fs.id='hasnaria-owner-finance-stock-v3-js';
+    fs.src='/owner-finance-stock-v3.js?v=1';
     fs.async=true;
     document.head.appendChild(fs);
   }
