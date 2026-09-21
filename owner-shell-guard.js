@@ -72,7 +72,13 @@
     if (l) l.href='/owner-finance-stock-v3.css?v=2';
   }
 
-  function ensureFinStockRuntime(id) {
+  /*
+   * Important: MutationObserver-driven reconcile() must never dispatch a finance/stock
+   * navigation event. The v4 renderer mutates the host while loading; dispatching again
+   * from that mutation creates render -> skeleton -> mutation -> render loops (visible
+   * as severe blinking). Only an explicit top-level navigation may request a re-render.
+   */
+  function ensureFinStockRuntime(id, requestRender) {
     if (!isOwner()) return;
     var host=section(id);
     if (!host || host.classList.contains('hidden')) return;
@@ -80,24 +86,25 @@
 
     var existing=document.getElementById('hasnaria-owner-finance-stock-v3-js');
     if (existing) {
-      if (window.__HASNARIA_OWNER_FINSTOCK_V3) { refreshFinStockCss(); dispatchFinStock(id); }
-      else existing.addEventListener('load',function(){ refreshFinStockCss(); dispatchFinStock(id); },{once:true});
+      refreshFinStockCss();
+      if (requestRender && window.__HASNARIA_OWNER_FINSTOCK_V3) dispatchFinStock(id);
       return;
     }
     if (state.finStockLoad) {
-      state.finStockLoad.then(function(){ refreshFinStockCss(); dispatchFinStock(id); });
+      if (requestRender) state.finStockLoad.then(function(){ refreshFinStockCss(); dispatchFinStock(id); });
       return;
     }
     state.finStockLoad=new Promise(function(resolve){
       var s=document.createElement('script');
       s.id='hasnaria-owner-finance-stock-v3-js';
-      s.src='/owner-finance-stock-v3.js?v=3';
+      s.src='/owner-finance-stock-v3.js?v=4';
       s.async=true;
       s.onload=function(){ refreshFinStockCss(); resolve(); };
       s.onerror=function(){ state.finStockLoad=null; resolve(); };
       document.head.appendChild(s);
     });
-    state.finStockLoad.then(function(){ refreshFinStockCss(); dispatchFinStock(id); });
+    /* Initial visible renderer boots itself. Explicit navigation also gets one event. */
+    if (requestRender) state.finStockLoad.then(function(){ refreshFinStockCss(); dispatchFinStock(id); });
   }
 
   function nudgeLegacyStockFallback() {
@@ -110,9 +117,9 @@
     host.removeChild(marker);
   }
 
-  function ensureFinance() { ensureFinStockRuntime('ops'); }
-  function ensureStock() {
-    ensureFinStockRuntime('stok');
+  function ensureFinance(requestRender) { ensureFinStockRuntime('ops',!!requestRender); }
+  function ensureStock(requestRender) {
+    ensureFinStockRuntime('stok',!!requestRender);
     setTimeout(nudgeLegacyStockFallback,700);
   }
 
@@ -131,8 +138,8 @@
     patchContext();
     if (id==='dashboard') ensureDashboard();
     if (id==='sales') ensureSales();
-    if (id==='ops') setTimeout(ensureFinance,0);
-    if (id==='stok') setTimeout(ensureStock,0);
+    if (id==='ops') setTimeout(function(){ ensureFinance(true); },0);
+    if (id==='stok') setTimeout(function(){ ensureStock(true); },0);
     if (id!=='ops' && id!=='stok') dispatchFinStock(id);
     return true;
   }
@@ -144,8 +151,9 @@
     setVisibility(state.active);
     if (state.active==='dashboard') ensureDashboard();
     if (state.active==='sales') ensureSales();
-    if (state.active==='ops') ensureFinance();
-    if (state.active==='stok') ensureStock();
+    /* Reconcile is passive: never emit finance/stock navigation from DOM mutations. */
+    if (state.active==='ops') ensureFinance(false);
+    if (state.active==='stok') ensureStock(false);
   }
 
   function scheduleReconcile() {
