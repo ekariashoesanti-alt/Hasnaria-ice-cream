@@ -1,4 +1,4 @@
-.pfa-wrap{margin:0 0 16px;border:1px solid #dce8e2;border-radius:16px;background:#fff;padding:16px;box-shadow:0 8px 24px rgba(22,76,59,.05)}
+.pfa-wrap{margin:0 0 16px;border:1px solid #dce8e2;border-radius:16px;background:#fff;padding:16px;box-shadow:0 8px 24px rgba(22,76,59,.05);box-sizing:border-box;width:100%;min-width:0;position:relative;z-index:0}
 .pfa-head,.pfa-review-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap}
 .pfa-head h2,.pfa-review-head h3{margin:2px 0 4px;color:#173f34}.pfa-head h2{font-size:17px}.pfa-review-head h3{font-size:14px}
 .pfa-head p,.pfa-review-head p{margin:0;color:#667b72;font-size:11.5px;line-height:1.55}.pfa-head p{max-width:760px}
@@ -7,4 +7,20 @@
 .pfa-meta{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}.pfa-meta>div{border:1px solid #e5eee9;border-radius:12px;padding:10px 11px;background:#fafcfb}.pfa-meta b{display:block;font-size:10px;color:#315e4f;margin-bottom:5px}.pfa-meta span{display:flex;justify-content:space-between;gap:10px;padding:3px 0;font-size:9.5px;color:#687d74}.pfa-meta span strong{margin-left:auto;color:#173f34}
 .pfa-note{margin-top:10px;border-radius:11px;background:#eef8f4;color:#315e4f;padding:9px 11px;font-size:10px;line-height:1.5}.pfa-review-head{margin-top:14px;padding-top:13px;border-top:1px solid #edf3f0}.pfa-table-scroll{overflow:auto;margin-top:8px;border:1px solid #e3ece8;border-radius:12px}.pfa-table{width:100%;border-collapse:collapse;min-width:940px;font-size:10.5px}.pfa-table th{background:#f5f9f7;color:#587067;font-size:9px;text-transform:uppercase;letter-spacing:.04em;position:sticky;top:0}.pfa-table th,.pfa-table td{padding:9px 10px;border-bottom:1px solid #edf3f0;text-align:left;vertical-align:top}.pfa-table tbody tr:last-child td{border-bottom:0}.pfa-table td b{display:block;color:#173f34}.pfa-table td small{display:block;color:#7b8c85;margin-top:2px;max-width:260px}.pfa-table .num{text-align:right;font-weight:800;white-space:nowrap}
 .pfa-status{display:inline-block;border-radius:999px;padding:4px 7px;font-size:9px;font-weight:900;white-space:nowrap}.pfa-status.ok{background:#e7f7ef;color:#176b55}.pfa-status.warn{background:#fff6dc;color:#8a6615}.pfa-status.bad{background:#fff0f0;color:#a13d3d}.pfa-action{margin-top:5px!important;line-height:1.35}.pfa-more,.pfa-empty{padding:10px 2px 0;color:#71847c;font-size:9.5px}.pfa-empty{padding:18px;text-align:center}.pfa-error{color:#a13d3d!important}
+
+/* The Purchase analytics desktop layout uses explicit grid rows 1-5.
+   The Finance classification panel is a direct child of .pa-root, so without
+   an explicit placement it auto-occupies the same row as the analytics cards.
+   Keep it in its own sixth row and span the full workspace. */
+@media(min-width:980px){
+  html body #app #pembelian .pa-root>#purchaseFinanceAlignment{
+    grid-column:1/-1!important;
+    grid-row:6!important;
+    align-self:start!important;
+    justify-self:stretch!important;
+    margin:0 0 16px!important;
+    position:relative!important;
+    z-index:0!important;
+  }
+}
 @media(max-width:900px){.pfa-cards{grid-template-columns:repeat(2,minmax(0,1fr))}.pfa-meta{grid-template-columns:1fr}}@media(max-width:560px){.pfa-wrap{padding:12px}.pfa-cards{grid-template-columns:1fr 1fr}.pfa-card strong{font-size:14px}.pfa-head p{font-size:10.5px}}
