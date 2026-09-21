@@ -77,6 +77,20 @@
     if (stockActive()) loadControl();
   }
 
+  function loadOperationalBridge() {
+    if (window.__HASNARIA_OPERATIONAL_ROLE_BRIDGE || document.getElementById('hasnaria-operational-role-bridge-loader')) return;
+    var append = function () {
+      if (window.__HASNARIA_OPERATIONAL_ROLE_BRIDGE || document.getElementById('hasnaria-operational-role-bridge-loader')) return;
+      var s = document.createElement('script');
+      s.id = 'hasnaria-operational-role-bridge-loader';
+      s.src = '/operational-role-bridge.js?v=1';
+      s.async = true;
+      document.head.appendChild(s);
+    };
+    if (window.requestIdleCallback) window.requestIdleCallback(append, { timeout: 1200 });
+    else setTimeout(append, 600);
+  }
+
   document.addEventListener('click', function (e) {
     var el = e.target && e.target.closest ? e.target.closest('[data-tab],.tab') : null;
     if (!el) return;
@@ -88,6 +102,7 @@
   }, true);
 
   css();
+  loadOperationalBridge();
   setTimeout(maybeLoad, 250);
   setTimeout(maybeLoad, 1200);
 })();
