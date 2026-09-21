@@ -85,3 +85,92 @@
 @media(max-width:1050px){#stok .sc3-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}#stok .sc3-filters{grid-template-columns:1fr 1fr 1fr}#stok .sc3-filter-links{grid-column:1/-1;justify-content:flex-start}}
 @media(max-width:760px){#stok .sc3-head{flex-direction:column}#stok .sc3-actions{width:100%}#stok .sc3-actions .sc3-btn{flex:1}#stok .sc3-kpis{grid-template-columns:1fr 1fr}#stok .sc3-formula{display:flex;overflow-x:auto}#stok .sc3-formula>div:not(.sc3-formula-note){flex:0 0 145px}#stok .sc3-formula>b{flex:0 0 18px;align-self:center}#stok .sc3-formula .sc3-formula-note{display:none}#stok .sc3-filters{grid-template-columns:1fr}#stok .sc3-filter-links{grid-column:auto}#stok .sc3-notes{grid-template-columns:1fr}}
 @media(max-width:480px){#stok .sc3-kpis{grid-template-columns:1fr}#stok .sc3-head h2{font-size:19px}}
+
+/* Desktop 100% zoom: single-view stock workspace. PAGE_SIZE remains 18, sized to fit one desktop viewport. */
+@media(min-width:901px){
+#stok .sc3-shell{width:100%;max-width:none;min-width:0;overflow-x:hidden;contain:layout style}
+#stok .sc3-head{gap:10px;margin-bottom:6px;align-items:center}
+#stok .sc3-head h2{margin:0 0 2px;font-size:17px;line-height:1.05}
+#stok .sc3-head p{font-size:8px;line-height:1.2;max-width:680px}
+#stok .sc3-eyebrow{font-size:6px;letter-spacing:.13em}
+#stok .sc3-actions{gap:4px}
+#stok .sc3-btn{min-height:26px;height:26px;padding:0 8px;border-radius:7px;font-size:7px}
+#stok .sc3-kpis{gap:5px;margin-bottom:6px}
+#stok .sc3-kpi{padding:5px 7px;border-radius:8px;gap:0;min-height:43px;justify-content:center}
+#stok .sc3-kpi span{font-size:6px;line-height:1.05}
+#stok .sc3-kpi strong{font-size:15px;line-height:1}
+#stok .sc3-kpi small{font-size:5.8px;line-height:1.05}
+#stok .sc3-alert{margin-bottom:5px;padding:5px 7px;border-radius:7px;font-size:7px}
+#stok .sc3-loading{margin-bottom:5px;padding:6px;border-radius:7px;font-size:7px}
+#stok .sc3-auxbar{gap:4px;margin-bottom:5px;padding:4px 6px;border-radius:7px;font-size:6.5px;line-height:1.1}
+#stok .sc3-pulse{width:5px;height:5px;flex-basis:5px}
+#stok .sc3-formula{grid-template-columns:minmax(0,1fr) 13px minmax(0,1fr) 13px minmax(0,1fr) 13px minmax(0,1.05fr);gap:3px;margin-bottom:5px;padding:4px 6px;border-radius:8px}
+#stok .sc3-formula>div:not(.sc3-formula-note){padding:3px 5px;border-radius:6px;gap:0}
+#stok .sc3-formula>div span{font-size:5.5px;line-height:1}
+#stok .sc3-formula>div strong{font-size:7.5px;line-height:1.05}
+#stok .sc3-formula>div small{font-size:5.4px;line-height:1.05}
+#stok .sc3-formula>b{font-size:10px}
+#stok .sc3-formula .sc3-formula-result strong{font-size:8px}
+#stok .sc3-formula .sc3-formula-note{padding-top:0;font-size:5.8px;line-height:1.05}
+#stok .sc3-filters{grid-template-columns:minmax(160px,1.2fr) minmax(115px,.65fr) minmax(125px,.7fr) auto;gap:4px;margin-bottom:5px}
+#stok .sc3-filters input,#stok .sc3-filters select{height:27px;min-height:27px;padding:0 7px;border-radius:7px;font-size:7px}
+#stok .sc3-filter-links{gap:2px}
+#stok .sc3-filter-links button{height:25px;min-height:25px;padding:0 4px;font-size:6.2px}
+#stok .sc3-table-card{border-radius:9px}
+#stok .sc3-table-head{gap:8px;padding:5px 7px}
+#stok .sc3-table-head strong{font-size:8px;line-height:1}
+#stok .sc3-table-head span{font-size:5.8px;line-height:1.05}
+#stok .sc3-table-head>span{padding:2px 5px;font-size:5.8px}
+#stok .sc3-table-wrap{width:100%;max-width:100%;overflow-x:hidden;overflow-y:visible}
+#stok .sc3-table{width:100%;min-width:0;table-layout:fixed;font-size:6.7px}
+#stok .sc3-table th{padding:4px 3px;font-size:5.7px;line-height:1.05;overflow:hidden;text-overflow:ellipsis}
+#stok .sc3-table td{padding:3px 3px;line-height:1.05;overflow:hidden;text-overflow:ellipsis}
+#stok .sc3-table th:nth-child(1){width:16%}
+#stok .sc3-table th:nth-child(2),#stok .sc3-table th:nth-child(3){width:7%}
+#stok .sc3-table th:nth-child(4){width:9%}
+#stok .sc3-table th:nth-child(5),#stok .sc3-table th:nth-child(6),#stok .sc3-table th:nth-child(7){width:6%}
+#stok .sc3-table th:nth-child(8){width:7%}
+#stok .sc3-table th:nth-child(9){width:10%}
+#stok .sc3-table th:nth-child(10){width:10%}
+#stok .sc3-table th:nth-child(11){width:8%}
+#stok .sc3-item{min-width:0}
+#stok .sc3-item strong{max-width:100%;font-size:7px;line-height:1.05}
+#stok .sc3-item small,#stok .sc3-opname small,#stok .sc3-balance small,#stok .sc3-cover small{margin-top:1px;font-size:5.2px;line-height:1}
+#stok .sc3-balance strong{font-size:7.5px}
+#stok .sc3-chip{min-width:50px;max-width:100%;padding:2px 4px;font-size:5.4px;line-height:1;overflow:hidden;text-overflow:ellipsis}
+#stok .sc3-empty{height:42px}
+#stok .sc3-pager{position:relative;gap:5px;padding:4px 7px;font-size:5.8px;min-height:25px}
+#stok .sc3-pager>div{gap:2px}
+#stok .sc3-pager button{min-width:20px;width:20px;height:20px;min-height:20px;padding:0;border-radius:5px;font-size:5.8px}
+#stok .sc3-pager:after{content:'18 item / halaman · fit 100%';color:#9aa59f;font-size:5.4px;white-space:nowrap}
+#stok .sc3-notes{display:none}
+}
+
+/* Short desktop viewports get a second density step so 18 rows still stay within one screen. */
+@media(min-width:901px) and (max-height:850px){
+#stok .sc3-head{margin-bottom:4px}
+#stok .sc3-head p{display:none}
+#stok .sc3-eyebrow{display:none}
+#stok .sc3-kpis{margin-bottom:4px}
+#stok .sc3-kpi{padding:3px 6px;min-height:35px}
+#stok .sc3-kpi strong{font-size:13px}
+#stok .sc3-kpi small{font-size:5.2px}
+#stok .sc3-auxbar{margin-bottom:3px;padding:3px 5px}
+#stok .sc3-formula{margin-bottom:3px;padding:3px 5px}
+#stok .sc3-formula .sc3-formula-note{display:none}
+#stok .sc3-filters{margin-bottom:3px}
+#stok .sc3-table-head{padding:4px 6px}
+#stok .sc3-table-head>div>span{display:none}
+#stok .sc3-table th{padding-top:3px;padding-bottom:3px}
+#stok .sc3-table td{padding-top:2.5px;padding-bottom:2.5px}
+#stok .sc3-pager{padding-top:3px;padding-bottom:3px;min-height:23px}
+}
+
+@media(min-width:901px) and (max-height:720px){
+#stok .sc3-auxbar{display:none}
+#stok .sc3-formula{padding:2px 4px}
+#stok .sc3-formula>div:not(.sc3-formula-note){padding:2px 4px}
+#stok .sc3-item small{display:none}
+#stok .sc3-table td{padding-top:2px;padding-bottom:2px}
+#stok .sc3-pager:after{content:'18 / halaman'}
+}
