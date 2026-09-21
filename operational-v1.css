@@ -3,13 +3,33 @@
 #operasional .op1-eyebrow{font-size:8px;font-weight:900;letter-spacing:.16em;color:#168363}
 #operasional .op1-head h2{margin:2px 0 4px;font-size:22px;line-height:1.15;color:#143f32}
 #operasional .op1-head p{margin:0;max-width:700px;font-size:10px;line-height:1.45;color:#728079}
-#operasional .op1-refresh{height:34px;padding:0 11px;border:1px solid #d8e5df;border-radius:9px;background:#fff;color:#225343;font:inherit;font-size:9px;font-weight:800;cursor:pointer}
+#operasional .op1-head-actions{display:flex;gap:7px;flex:0 0 auto}
+#operasional .op1-refresh,#operasional .op1-new{height:34px;padding:0 11px;border:1px solid #d8e5df;border-radius:9px;background:#fff;color:#225343;font:inherit;font-size:9px;font-weight:800;cursor:pointer}
+#operasional .op1-new{background:#176b55;border-color:#176b55;color:#fff}
+#operasional button:disabled{opacity:.45;cursor:not-allowed}
 #operasional .op1-kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:10px}
 #operasional .op1-kpis>div{border:1px solid #dce8e3;border-radius:11px;background:#fff;padding:9px 10px;display:flex;justify-content:space-between;align-items:center;gap:8px}
 #operasional .op1-kpis span{font-size:8px;font-weight:850;color:#73827b;text-transform:uppercase}
 #operasional .op1-kpis strong{font-size:18px;color:#176b55}
-#operasional .op1-alert{margin-bottom:9px;padding:8px 10px;border:1px solid #efcec7;border-radius:9px;background:#fff7f5;color:#963827;font-size:8.5px}
+#operasional .op1-alert,#operasional .op1-notice{margin-bottom:9px;padding:8px 10px;border-radius:9px;font-size:8.5px}
+#operasional .op1-alert{border:1px solid #efcec7;background:#fff7f5;color:#963827}
+#operasional .op1-notice{border:1px solid #cce3d9;background:#f2faf6;color:#17644f}
 #operasional .op1-loading{padding:14px;border:1px dashed #d9e6e0;border-radius:10px;background:#fbfdfc;color:#7c8a84;text-align:center;font-size:8.5px}
+#operasional .op1-create{margin-bottom:10px;border:1px solid #cfe1da;border-radius:12px;background:#f9fcfa;padding:10px}
+#operasional .op1-create-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:8px}
+#operasional .op1-create-head>div{display:flex;flex-direction:column;gap:2px}
+#operasional .op1-create-head strong{font-size:10px;color:#1f493b}
+#operasional .op1-create-head span{font-size:7.5px;color:#7e8c86}
+#operasional .op1-create-head button{width:28px;height:28px;border:1px solid #d9e5e0;border-radius:8px;background:#fff;color:#60736b;cursor:pointer}
+#operasional .op1-create-grid{display:grid;grid-template-columns:1.2fr .7fr;gap:8px}
+#operasional .op1-create-grid label,#operasional .op1-review label{display:flex;flex-direction:column;gap:3px;margin:0}
+#operasional .op1-create-grid label.wide{grid-column:1/-1}
+#operasional .op1-create-grid label span,#operasional .op1-review label span{font-size:7px;font-weight:850;color:#64776f;text-transform:uppercase}
+#operasional .op1-create-grid input,#operasional .op1-create-grid select,#operasional .op1-review textarea{width:100%;min-height:34px;padding:6px 8px;border:1px solid #d8e4df;border-radius:8px;background:#fff;color:#234b3e;font:inherit;font-size:8.5px}
+#operasional .op1-create-actions{display:flex;justify-content:flex-end;margin-top:8px}
+#operasional .op1-create-actions button,#operasional .op1-review button{min-height:32px;padding:0 10px;border:1px solid #d9e5e0;border-radius:8px;background:#fff;color:#385b50;font:inherit;font-size:8px;font-weight:850;cursor:pointer}
+#operasional button.primary{background:#176b55!important;border-color:#176b55!important;color:#fff!important}
+#operasional button.danger{background:#fff7f5!important;border-color:#efcec7!important;color:#9b3c2c!important}
 #operasional .op1-grid{display:grid;grid-template-columns:minmax(260px,.72fr) minmax(0,1.65fr);gap:10px;align-items:start}
 #operasional .op1-grid>section,#operasional .op1-detail{min-width:0;border:1px solid #dfe8e4;border-radius:12px;background:#fff;overflow:hidden}
 #operasional .op1-section-title{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 10px;border-bottom:1px solid #e6ece9}
@@ -34,15 +54,25 @@
 #operasional .op1-detail-head span{font-size:7px;font-weight:900;letter-spacing:.09em;color:#168163;text-transform:uppercase}
 #operasional .op1-detail-head h3{margin:2px 0 2px;font-size:13px;color:#173f33}
 #operasional .op1-detail-head small{font-size:7px;color:#829089}
+#operasional .op1-detail-actions{display:flex;align-items:center;gap:6px;flex:0 0 auto}
 #operasional .op1-badge{flex:0 0 auto;padding:4px 7px;border-radius:999px;background:#edf5f2;color:#35695a;font-size:7px;font-weight:850}
-#operasional .op1-table-wrap{overflow:auto;max-height:500px}
-#operasional table{width:100%;min-width:620px;border-collapse:collapse;font-size:8px}
+#operasional .op1-submit{min-height:28px;padding:0 8px;border:1px solid #bcd7cd;border-radius:8px;background:#eef8f4;color:#17664f;font:inherit;font-size:7.5px;font-weight:850;cursor:pointer}
+#operasional .op1-rejected{padding:8px 10px;border-bottom:1px solid #eee3c6;background:#fffaf0;color:#786329;font-size:8px}
+#operasional .op1-review{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:end;padding:9px 10px;border-bottom:1px solid #e6ece9;background:#fbfdfc}
+#operasional .op1-review>div{display:flex;gap:6px}
+#operasional .op1-table-wrap{overflow:auto;max-height:520px}
+#operasional table{width:100%;min-width:760px;border-collapse:collapse;font-size:8px}
 #operasional th{position:sticky;top:0;background:#f7faf8;z-index:1;padding:7px;border-bottom:1px solid #dfe8e4;text-align:left;font-size:7px;color:#60766e;white-space:nowrap}
 #operasional td{padding:7px;border-bottom:1px solid #edf1ef;color:#2b4d42;vertical-align:middle}
 #operasional td strong{display:block;font-size:8.5px;color:#1f4639}
 #operasional td small{display:block;margin-top:2px;font-size:6.5px;color:#8b9892}
 #operasional td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 #operasional .op1-pending{color:#9aa59f}
+#operasional .op1-count,#operasional .op1-note,#operasional td select,#operasional td input[data-op-text]{min-height:30px;padding:4px 6px;border:1px solid #dbe5e1;border-radius:7px;background:#fff;color:#234b3e;font:inherit;font-size:8px}
+#operasional .op1-count{width:95px;text-align:right}
+#operasional .op1-note{min-width:150px;width:100%}
+#operasional .op1-save{min-height:28px;padding:0 8px;border:1px solid #d8e5df;border-radius:7px;background:#fff;color:#326354;font:inherit;font-size:7px;font-weight:850;cursor:pointer;white-space:nowrap}
+#operasional .op1-save.saved{background:#eaf6f1;border-color:#b8d9cd;color:#12684f}
 #operasional .op1-pager{display:flex;align-items:center;justify-content:center;gap:8px;padding:7px;border-top:1px solid #e9efec}
 #operasional .op1-pager button{width:28px;height:26px;border:1px solid #dce6e1;border-radius:7px;background:#fff;color:#496158;cursor:pointer}
 #operasional .op1-pager button:disabled{opacity:.4;cursor:not-allowed}
@@ -50,5 +80,5 @@
 #operasional .op1-foot{display:flex;gap:6px;align-items:center;margin-top:8px;padding:7px 9px;border:1px solid #e3ebe7;border-radius:9px;background:#fafcfb;font-size:7.5px;color:#7a8982}
 #operasional .op1-foot span{font-weight:900;letter-spacing:.06em;text-transform:uppercase;color:#168163}
 #operasional .op1-foot b{font-weight:700;color:#47655a}
-@media(max-width:900px){#operasional .op1-grid{grid-template-columns:1fr}#operasional .op1-list{max-height:250px}}
-@media(max-width:620px){#operasional .op1-head{flex-direction:column}#operasional .op1-refresh{width:100%}#operasional .op1-kpis{grid-template-columns:1fr}#operasional .op1-foot{align-items:flex-start;flex-direction:column}}
+@media(max-width:900px){#operasional .op1-grid{grid-template-columns:1fr}#operasional .op1-list{max-height:250px}#operasional .op1-review{grid-template-columns:1fr}#operasional .op1-review>div{justify-content:flex-end}}
+@media(max-width:620px){#operasional .op1-head{flex-direction:column}#operasional .op1-head-actions{width:100%}#operasional .op1-head-actions button{flex:1}#operasional .op1-kpis{grid-template-columns:1fr}#operasional .op1-create-grid{grid-template-columns:1fr}#operasional .op1-create-grid label.wide{grid-column:auto}#operasional .op1-detail-head{flex-direction:column}#operasional .op1-detail-actions{width:100%;justify-content:space-between}#operasional .op1-foot{align-items:flex-start;flex-direction:column}}
