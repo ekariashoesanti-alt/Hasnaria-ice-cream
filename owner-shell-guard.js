@@ -17,11 +17,10 @@
   function financeMounted(){var h=section('ops');return!!(h&&h.querySelector('[data-finance-v6="1"]'))}
   function stockMounted(){var h=section('stok');return!!(h&&h.querySelector('[data-stock-v4="1"],.ofs3-shell'))}
 
-  function installVisibilityGuard(){
-    if(document.getElementById('hasnaria-owner-shell-visibility'))return;
-    var s=document.createElement('style');s.id='hasnaria-owner-shell-visibility';
-    s.textContent='body.hasnaria-owner-erp #ops:not(.hidden)>*:not([data-finance-v6="1"]):not([data-finance-boot="1"]){display:none!important}';
-    document.head.appendChild(s);
+  function ensureShellCss(){
+    var l=document.getElementById('ofs3-css');
+    if(!l){l=document.createElement('link');l.id='ofs3-css';l.rel='stylesheet';l.href='/owner-finance-stock-v3.css?v=3';document.head.appendChild(l)}
+    else if(l.getAttribute('href')!=='/owner-finance-stock-v3.css?v=3')l.href='/owner-finance-stock-v3.css?v=3';
   }
 
   function currentActive(){
@@ -39,7 +38,6 @@
   function ensureDashboard(){var h=section('dashboard');if(!h||h.classList.contains('hidden')||h.querySelector('.erp-top'))return;if(window.HasnariaERP&&typeof window.HasnariaERP.mount==='function')window.HasnariaERP.mount()}
   function ensureSales(){var h=section('sales');if(!h||h.classList.contains('hidden'))return;if(h.querySelector('.sale-board')){state.salesRetries=0;return}if(typeof window.__hasnariaReloadSales==='function'){state.salesRetries=0;window.__hasnariaReloadSales();return}if(state.salesRetries>=40)return;state.salesRetries++;setTimeout(function(){if(isOwner()&&state.active==='sales')ensureSales()},100)}
   function dispatchStock(){try{document.dispatchEvent(new CustomEvent('hasnaria:owner-shell-navigate',{detail:{tab:'stok'}}))}catch(_){}}
-  function refreshCss(){var l=document.getElementById('ofs3-css');if(l)l.href='/owner-finance-stock-v3.css?v=2'}
 
   function claimFinanceHost(){
     var h=section('ops');if(!h||h.classList.contains('hidden')||financeMounted())return;
@@ -49,13 +47,13 @@
   function mountFinance(force){
     if(!isOwner())return false;
     var h=section('ops');if(!h||h.classList.contains('hidden'))return false;
-    claimFinanceHost();
+    ensureShellCss();claimFinanceHost();
     if(typeof window.__HASNARIA_FINANCE_V6_MOUNT==='function'){window.__HASNARIA_FINANCE_V6_MOUNT({force:!!force});return true}
     return false;
   }
 
   function afterRuntime(id,requestRender){
-    refreshCss();
+    ensureShellCss();
     if(id==='ops'){
       if(!mountFinance(!!requestRender)){
         var js=document.getElementById('hasnaria-finance-accuracy-v6-js');
@@ -69,8 +67,9 @@
   function ensureFinStockRuntime(id,requestRender){
     if(!isOwner())return;
     var h=section(id);if(!h||h.classList.contains('hidden'))return;
-    if(id==='ops'&&financeMounted()){refreshCss();return}
-    if(id==='stok'&&stockMounted()){refreshCss();return}
+    ensureShellCss();
+    if(id==='ops'&&financeMounted())return;
+    if(id==='stok'&&stockMounted())return;
     if(id==='ops')claimFinanceHost();
 
     var existing=document.getElementById('hasnaria-owner-finance-stock-v3-js');
@@ -79,7 +78,7 @@
 
     state.finStockLoad=new Promise(function(resolve){
       var s=document.createElement('script');s.id='hasnaria-owner-finance-stock-v3-js';s.src='/owner-finance-stock-v3.js?v=6';s.async=true;
-      s.onload=function(){refreshCss();resolve()};s.onerror=function(){state.finStockLoad=null;resolve()};document.head.appendChild(s);
+      s.onload=function(){resolve()};s.onerror=function(){state.finStockLoad=null;resolve()};document.head.appendChild(s);
     });
     state.finStockLoad.then(function(){afterRuntime(id,requestRender)});
   }
@@ -100,7 +99,7 @@
 
   function reconcile(){
     if(!isOwner())return;
-    installVisibilityGuard();
+    ensureShellCss();
     if(!state.initialized){state.active=currentActive();state.initialized=true}
     patchContext();setVisibility(state.active);
     if(state.active==='dashboard')ensureDashboard();
@@ -118,7 +117,7 @@
     event.preventDefault();event.stopPropagation();safeNavigate(id);
   },true);
 
-  function start(){if(!document.body)return;installVisibilityGuard();new MutationObserver(scheduleReconcile).observe(document.body,{childList:true,subtree:true});scheduleReconcile()}
+  function start(){if(!document.body)return;ensureShellCss();new MutationObserver(scheduleReconcile).observe(document.body,{childList:true,subtree:true});scheduleReconcile()}
   window.__HASNARIA_OWNER_SHELL={navigate:safeNavigate,isOwner:isOwner,getActive:function(){return state.active},reconcile:reconcile};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
 })();
