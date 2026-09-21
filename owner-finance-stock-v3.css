@@ -1,4 +1,7 @@
 /* Owner Finance + Stock v3 — refined reporting surfaces */
+/* Owner Finance v6 owns #ops. Keep legacy core-app finance markup invisible even
+   if core render() writes into the host while the dedicated runtime is mounting. */
+body.hasnaria-owner-erp #ops:not(.hidden)>*:not([data-finance-v6="1"]):not([data-finance-boot="1"]){display:none!important}
 #ops.ofs3-owned,#stok.ofs3-owned{position:relative;min-width:0}
 #ops.ofs3-owned>:not(.ofs3-shell),#stok.ofs3-owned>:not(.ofs3-shell){display:none!important}
 .ofs3-shell{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#103b31;min-width:0;width:100%;padding:2px 0 22px}
