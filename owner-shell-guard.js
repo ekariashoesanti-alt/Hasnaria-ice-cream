@@ -40,7 +40,7 @@
   function dispatchStock(){try{document.dispatchEvent(new CustomEvent('hasnaria:owner-shell-navigate',{detail:{tab:'stok'}}))}catch(_){}}
 
   function claimFinanceHost(){
-    var h=section('ops');if(!h||h.classList.contains('hidden')||financeMounted())return;
+    var h=section('ops');if(!h||h.classList.contains('hidden')||financeMounted()||h.querySelector('[data-finance-boot="1"]'))return;
     h.innerHTML='<div class="fsv2-shell" data-finance-boot="1"><div class="fsv2-head"><div><div class="fsv2-eyebrow">FINANCIAL REPORTING</div><h1>Keuangan</h1><p>Menyiapkan laporan keuangan…</p></div></div><div class="fsv2-report"><div class="fsv2-note">Memuat data…</div></div></div>';
   }
 
