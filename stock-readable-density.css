@@ -1,0 +1,98 @@
+/* Readable desktop density for Stock Control v3.
+ * Keeps the 18-row single-view target without reducing operational text below a readable size.
+ */
+#stok .sc3-boot{min-height:120px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:5px;border:1px solid #dce8e3;border-radius:12px;background:#fbfdfc;color:#173f33}
+#stok .sc3-boot strong{font-size:18px}
+#stok .sc3-boot span{font-size:11px;color:#788881}
+
+@media(min-width:901px){
+#stok .sc3-shell{width:100%;max-width:none;min-width:0;overflow-x:hidden}
+#stok .sc3-head{gap:12px;margin-bottom:8px;align-items:center}
+#stok .sc3-head h2{margin:0 0 2px;font-size:20px;line-height:1.08}
+#stok .sc3-head p{font-size:10px;line-height:1.25;max-width:720px}
+#stok .sc3-eyebrow{font-size:7px;letter-spacing:.13em}
+#stok .sc3-actions{gap:5px}
+#stok .sc3-btn{min-height:30px;height:30px;padding:0 10px;border-radius:8px;font-size:8.5px}
+
+#stok .sc3-kpis{gap:7px;margin-bottom:8px}
+#stok .sc3-kpi{padding:6px 9px;border-radius:9px;gap:1px;min-height:50px;justify-content:center}
+#stok .sc3-kpi span{font-size:7.5px;line-height:1.05}
+#stok .sc3-kpi strong{font-size:18px;line-height:1}
+#stok .sc3-kpi small{font-size:7px;line-height:1.1}
+
+#stok .sc3-alert{margin-bottom:6px;padding:6px 8px;border-radius:8px;font-size:8.5px}
+#stok .sc3-loading{margin-bottom:6px;padding:7px;border-radius:8px;font-size:8.5px}
+#stok .sc3-auxbar{gap:5px;margin-bottom:6px;padding:5px 7px;border-radius:8px;font-size:7.5px;line-height:1.15}
+#stok .sc3-pulse{width:6px;height:6px;flex-basis:6px}
+
+#stok .sc3-formula{grid-template-columns:minmax(0,1fr) 15px minmax(0,1fr) 15px minmax(0,1fr) 15px minmax(0,1.05fr);gap:4px;margin-bottom:6px;padding:5px 7px;border-radius:9px}
+#stok .sc3-formula>div:not(.sc3-formula-note){padding:4px 6px;border-radius:7px;gap:1px}
+#stok .sc3-formula>div span{font-size:6.5px;line-height:1}
+#stok .sc3-formula>div strong{font-size:9px;line-height:1.05}
+#stok .sc3-formula>div small{font-size:6.5px;line-height:1.05}
+#stok .sc3-formula>b{font-size:11px}
+#stok .sc3-formula .sc3-formula-result strong{font-size:9.5px}
+#stok .sc3-formula .sc3-formula-note{padding-top:1px;font-size:6.8px;line-height:1.05}
+
+#stok .sc3-filters{grid-template-columns:minmax(170px,1.2fr) minmax(125px,.65fr) minmax(135px,.7fr) auto;gap:5px;margin-bottom:6px}
+#stok .sc3-filters input,#stok .sc3-filters select{height:30px;min-height:30px;padding:0 8px;border-radius:8px;font-size:8.5px}
+#stok .sc3-filter-links{gap:3px}
+#stok .sc3-filter-links button{height:28px;min-height:28px;padding:0 5px;font-size:7.5px}
+
+#stok .sc3-table-card{border-radius:10px}
+#stok .sc3-table-head{gap:8px;padding:6px 8px}
+#stok .sc3-table-head strong{font-size:9px;line-height:1.05}
+#stok .sc3-table-head span{font-size:6.8px;line-height:1.05}
+#stok .sc3-table-head>span{padding:2px 6px;font-size:6.8px}
+#stok .sc3-table-wrap{width:100%;max-width:100%;overflow-x:hidden;overflow-y:visible}
+#stok .sc3-table{width:100%;min-width:0;table-layout:fixed;font-size:8.3px}
+#stok .sc3-table th{padding:5px 4px;font-size:7px;line-height:1.05;overflow:hidden;text-overflow:ellipsis}
+#stok .sc3-table td{padding:4px 4px;line-height:1.1;overflow:hidden;text-overflow:ellipsis}
+#stok .sc3-table th:nth-child(1){width:16%}
+#stok .sc3-table th:nth-child(2),#stok .sc3-table th:nth-child(3){width:7%}
+#stok .sc3-table th:nth-child(4){width:9%}
+#stok .sc3-table th:nth-child(5),#stok .sc3-table th:nth-child(6),#stok .sc3-table th:nth-child(7){width:6%}
+#stok .sc3-table th:nth-child(8){width:7%}
+#stok .sc3-table th:nth-child(9){width:10%}
+#stok .sc3-table th:nth-child(10){width:10%}
+#stok .sc3-table th:nth-child(11){width:8%}
+#stok .sc3-item{min-width:0}
+#stok .sc3-item strong{max-width:100%;font-size:8.7px;line-height:1.05}
+#stok .sc3-item small,#stok .sc3-opname small,#stok .sc3-balance small,#stok .sc3-cover small{margin-top:1px;font-size:6.3px;line-height:1}
+#stok .sc3-balance strong{font-size:9px}
+#stok .sc3-chip{min-width:62px;max-width:100%;padding:3px 5px;font-size:6.5px;line-height:1;overflow:hidden;text-overflow:ellipsis}
+#stok .sc3-empty{height:46px}
+
+#stok .sc3-pager{position:relative;gap:6px;padding:5px 8px;font-size:7px;min-height:28px}
+#stok .sc3-pager>div{gap:3px}
+#stok .sc3-pager button{min-width:22px;width:22px;height:22px;min-height:22px;padding:0;border-radius:6px;font-size:7px}
+#stok .sc3-pager:after{content:'18 item / halaman · fit 100%';color:#9aa59f;font-size:6.5px;white-space:nowrap}
+#stok .sc3-notes{display:none}
+}
+
+@media(min-width:901px) and (max-height:850px){
+#stok .sc3-head{margin-bottom:6px}
+#stok .sc3-head p{display:none}
+#stok .sc3-kpis{margin-bottom:6px}
+#stok .sc3-kpi{min-height:46px;padding:5px 8px}
+#stok .sc3-kpi strong{font-size:17px}
+#stok .sc3-auxbar{margin-bottom:4px;padding:4px 6px}
+#stok .sc3-formula{margin-bottom:4px;padding:4px 6px}
+#stok .sc3-formula .sc3-formula-note{display:none}
+#stok .sc3-filters{margin-bottom:4px}
+#stok .sc3-table-head{padding:5px 7px}
+#stok .sc3-table-head>div>span{display:none}
+#stok .sc3-table th{padding-top:4px;padding-bottom:4px}
+#stok .sc3-table td{padding-top:3px;padding-bottom:3px}
+#stok .sc3-pager{padding-top:4px;padding-bottom:4px;min-height:26px}
+}
+
+@media(min-width:901px) and (max-height:720px){
+#stok .sc3-auxbar{display:none}
+#stok .sc3-kpi{min-height:42px}
+#stok .sc3-formula{padding:3px 5px}
+#stok .sc3-formula>div:not(.sc3-formula-note){padding:3px 5px}
+#stok .sc3-item small{display:none}
+#stok .sc3-table td{padding-top:2.5px;padding-bottom:2.5px}
+#stok .sc3-pager:after{content:'18 / halaman'}
+}
