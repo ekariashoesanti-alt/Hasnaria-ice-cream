@@ -5,16 +5,15 @@
   if (window.__HASNARIA_STOCK_LAZY_LOADER) return;
   window.__HASNARIA_STOCK_LAZY_LOADER = true;
 
-  function ensurePurchaseLayoutCss() {
+  function css() {
     var s = document.getElementById('stk-css');
-    if (s) return;
-    s = document.createElement('style');
-    s.id = 'stk-css';
+    if (!s) { s = document.createElement('style'); s.id = 'stk-css'; document.head.appendChild(s); }
     s.textContent = '#pembelian .pa-lower-grid>article:has(.pa-stock-grid){display:none!important}' +
       '@media(min-width:980px){#pembelian .pa-lower-grid:has(>article:has(.pa-stock-grid)){grid-template-columns:minmax(0,1.72fr) minmax(225px,.68fr)!important}}' +
       '@media(min-width:980px) and (max-width:1450px){#pembelian .pa-lower-grid:has(>article:has(.pa-stock-grid)){grid-template-columns:minmax(0,1.6fr) minmax(205px,.65fr)!important}}';
-    document.head.appendChild(s);
   }
+
+  function chip(l) { return l; }
 
   function stockHost() {
     return document.getElementById('stok');
@@ -66,7 +65,7 @@
     }
   }, true);
 
-  ensurePurchaseLayoutCss();
+  css();
   setTimeout(maybeLoad, 250);
   setTimeout(maybeLoad, 1200);
 })();
