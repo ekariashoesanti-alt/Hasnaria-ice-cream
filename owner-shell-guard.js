@@ -1,5 +1,5 @@
 /* Owner navigation guard.
- * The authenticated Owner shell uses dedicated ERP/Sales/Stock renderers.
+ * The authenticated Owner shell uses dedicated ERP/Sales/Finance/Stock renderers.
  * Prevent top-level Owner navigation from calling core-app setTab()->render(),
  * which would otherwise overwrite those mounted views with legacy HTML.
  * Non-owner roles are intentionally untouched.
@@ -12,7 +12,7 @@
 
   var OWNER_TABS = ['dashboard','sales','pembelian','ops','stok'];
   var SECTION_IDS = ['dashboard','sales','pembelian','ops','stok','shift','social','approval','team','sistem'];
-  var state = { active:'dashboard', initialized:false, scheduled:false, salesRetries:0, stockNudgeAt:0 };
+  var state = { active:'dashboard', initialized:false, scheduled:false, salesRetries:0, finStockLoad:null };
 
   function context() { return window.__HASNARIA_CONTEXT || null; }
   function isOwner() { var c=context(); return !!(c && c.role==='owner'); }
@@ -60,20 +60,40 @@
     setTimeout(function(){ if (isOwner() && state.active==='sales') ensureSales(); },100);
   }
 
-  function ensureStock() {
-    var host=section('stok');
-    if (!host || host.classList.contains('hidden') || host.querySelector('.sr-shell')) return;
-    var now=Date.now();
-    if (now-state.stockNudgeAt<350) return;
-    state.stockNudgeAt=now;
-    // stock-reconcile-v2 has its own MutationObserver; this child mutation wakes
-    // that renderer after programmatic navigation without touching stock data.
-    var marker=document.createElement('span');
-    marker.hidden=true;
-    marker.setAttribute('data-owner-shell-stock-nudge','1');
-    host.appendChild(marker);
-    host.removeChild(marker);
+  function dispatchFinStock(id) {
+    try { document.dispatchEvent(new CustomEvent('hasnaria:owner-shell-navigate',{detail:{tab:id}})); } catch (_) {}
   }
+
+  function ensureFinStockRuntime(id) {
+    if (!isOwner()) return;
+    var host=section(id);
+    if (!host || host.classList.contains('hidden')) return;
+    if (host.querySelector('.ofs3-shell')) return;
+
+    var existing=document.getElementById('hasnaria-owner-finance-stock-v3-js');
+    if (existing) {
+      if (window.__HASNARIA_OWNER_FINSTOCK_V3) dispatchFinStock(id);
+      else existing.addEventListener('load',function(){ dispatchFinStock(id); },{once:true});
+      return;
+    }
+    if (state.finStockLoad) {
+      state.finStockLoad.then(function(){ dispatchFinStock(id); });
+      return;
+    }
+    state.finStockLoad=new Promise(function(resolve){
+      var s=document.createElement('script');
+      s.id='hasnaria-owner-finance-stock-v3-js';
+      s.src='/owner-finance-stock-v3.js?v=2';
+      s.async=true;
+      s.onload=function(){ resolve(); };
+      s.onerror=function(){ state.finStockLoad=null; resolve(); };
+      document.head.appendChild(s);
+    });
+    state.finStockLoad.then(function(){ dispatchFinStock(id); });
+  }
+
+  function ensureFinance() { ensureFinStockRuntime('ops'); }
+  function ensureStock() { ensureFinStockRuntime('stok'); }
 
   function patchContext() {
     var c=context();
@@ -90,8 +110,9 @@
     patchContext();
     if (id==='dashboard') ensureDashboard();
     if (id==='sales') ensureSales();
+    if (id==='ops') setTimeout(ensureFinance,0);
     if (id==='stok') setTimeout(ensureStock,0);
-    try { document.dispatchEvent(new CustomEvent('hasnaria:owner-shell-navigate',{detail:{tab:id}})); } catch (_) {}
+    if (id!=='ops' && id!=='stok') dispatchFinStock(id);
     return true;
   }
 
@@ -102,6 +123,7 @@
     setVisibility(state.active);
     if (state.active==='dashboard') ensureDashboard();
     if (state.active==='sales') ensureSales();
+    if (state.active==='ops') ensureFinance();
     if (state.active==='stok') ensureStock();
   }
 
@@ -111,10 +133,6 @@
     setTimeout(function(){ state.scheduled=false; reconcile(); },0);
   }
 
-  // Capture phase is deliberate. stopPropagation prevents target/bubble handlers
-  // in core-app and sales-board from invoking legacy setTab()->render(). We do
-  // not use stopImmediatePropagation so Stock's document-capture listener on the
-  // same node can still run.
   document.addEventListener('click',function(event){
     if (!isOwner()) return;
     var target=event.target && event.target.closest ? event.target.closest('#tabs .tab[data-tab]') : null;
