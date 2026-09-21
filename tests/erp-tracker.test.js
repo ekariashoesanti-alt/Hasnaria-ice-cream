@@ -6,6 +6,7 @@ const trackerPath = path.join(root, 'docs', 'HASNARIA_ERP_TRACKER.json');
 const data = JSON.parse(fs.readFileSync(trackerPath, 'utf8'));
 const appSource = fs.readFileSync(path.join(root, 'app.js'), 'utf8');
 const ownerShellSource = fs.readFileSync(path.join(root, 'owner-shell-guard.js'), 'utf8');
+const operationalBridgeSource = fs.readFileSync(path.join(root, 'operational-role-bridge.js'), 'utf8');
 
 function assert(cond, msg) {
   if (!cond) {
@@ -52,4 +53,10 @@ assert(ownerShellSource.includes("typeof window.__hasnariaReloadSales==='functio
 assert(ownerShellSource.includes("data-owner-shell-stock-nudge"), 'Stock reconciliation renderer is explicitly woken after safe navigation');
 assert(!/\.(?:from|insert|update|delete|rpc)\s*\(/.test(ownerShellSource), 'navigation guard contains no database mutation/query path');
 
-console.log('ERP tracker test: PASS (' + data.tasks.length + ' tasks, ' + data.milestones.length + ' milestones; Owner single-render guard wired)');
+assert(operationalBridgeSource.includes("Object.defineProperty(window,'__HASNARIA_OPERATIONS_V1_MOUNT'"), 'Operasional bridge intercepts mount assignment for an idempotency guard');
+assert(operationalBridgeSource.includes("if(!force&&mounted())return"), 'observer-driven non-force Operasional mounts are skipped after the shell exists');
+assert(operationalBridgeSource.includes('__hasnariaOperationalMountGuard'), 'wrapped Operasional mount is marked to prevent duplicate wrapping');
+assert(operationalBridgeSource.includes("s.src='/operational-v1.js?v=3'"), 'Operasional runtime remains lazy-loaded only when needed');
+assert(!/\.(?:from|insert|update|delete|rpc)\s*\(/.test(operationalBridgeSource), 'Operasional bridge remains zero-query and zero-mutation');
+
+console.log('ERP tracker test: PASS (' + data.tasks.length + ' tasks, ' + data.milestones.length + ' milestones; Owner guard + Operasional idempotent mount guard wired)');

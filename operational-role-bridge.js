@@ -1,6 +1,8 @@
 /* Hasnaria Operasional role bridge.
- * Zero database queries on startup. It only exposes the Operasional surface for
- * Head Store, PIC, and Pelaksana; operational-v1 is fetched after the tab opens.
+ * P3 performance guard: zero database queries on startup. It only exposes the
+ * Operasional surface for Head Store, PIC, and Pelaksana; operational-v1 is
+ * fetched after the tab opens. Observer-driven mounts are idempotent once the
+ * workbench exists.
  */
 (function(){
   'use strict';
@@ -10,10 +12,43 @@
   var ALLOWED={head_store:true,pic:true,pelaksana:true};
   var SECTIONS=['dashboard','sales','pembelian','operasional','ops','stok','shift','social','approval','team','sistem'];
   var state={active:false,load:null,scheduled:false};
+  var mountValue=null;
 
   function ctx(){return window.__HASNARIA_CONTEXT||null}
   function allowed(){var c=ctx();return!!(c&&ALLOWED[c.role])}
   function section(){return document.getElementById('operasional')}
+  function mounted(){var h=section();return!!(h&&h.querySelector('[data-operational-v1="1"]'))}
+
+  function wrapMount(fn){
+    if(typeof fn!=='function'||fn.__hasnariaOperationalMountGuard)return fn;
+    var wrapped=function(opts){
+      var force=!!(opts&&opts.force);
+      if(!force&&mounted())return;
+      return fn(opts);
+    };
+    wrapped.__hasnariaOperationalMountGuard=true;
+    wrapped.__hasnariaOriginalMount=fn;
+    return wrapped;
+  }
+
+  function installMountGuard(){
+    try{
+      var current=window.__HASNARIA_OPERATIONS_V1_MOUNT;
+      mountValue=wrapMount(current);
+      var setter=function(fn){mountValue=wrapMount(fn)};
+      setter.__hasnariaOperationalMountSetter=true;
+      Object.defineProperty(window,'__HASNARIA_OPERATIONS_V1_MOUNT',{
+        configurable:true,
+        enumerable:true,
+        get:function(){return mountValue},
+        set:setter
+      });
+    }catch(_){
+      if(typeof window.__HASNARIA_OPERATIONS_V1_MOUNT==='function')window.__HASNARIA_OPERATIONS_V1_MOUNT=wrapMount(window.__HASNARIA_OPERATIONS_V1_MOUNT);
+    }
+  }
+
+  installMountGuard();
 
   function ensureSection(){
     var main=document.querySelector('#app main'),el=section();
