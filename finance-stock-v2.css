@@ -56,3 +56,20 @@
 .finv7-spinner{display:inline-block;width:13px;height:13px;border:2px solid #d7e6df;border-top-color:#176b55;border-radius:50%;animation:finv7spin .8s linear infinite}@keyframes finv7spin{to{transform:rotate(360deg)}}
 @media(max-width:800px){.finv7-compare-head,.finv7-row{grid-template-columns:minmax(0,1fr) 105px 105px}.finv7-note-grid{grid-template-columns:1fr}}
 @media(max-width:560px){.finv7-compare-head,.finv7-row{grid-template-columns:minmax(0,1fr) 1fr}.finv7-compare-head span:nth-child(3),.finv7-row>*:nth-child(3){display:none}}
+
+/* Finance desktop fit + stable paint */
+#ops [data-finance-v6="1"]{width:100%;max-width:none;min-width:0;overflow-x:hidden;contain:layout style}
+#ops [data-finance-v6="1"] .fsv2-head{margin-bottom:10px;gap:12px}
+#ops [data-finance-v6="1"] .fsv2-head h1{font-size:clamp(22px,2vw,27px)}
+#ops [data-finance-v6="1"] .fsv2-pl-grid{grid-template-columns:minmax(0,1fr) clamp(190px,18vw,220px);gap:10px;min-width:0}
+#ops [data-finance-v6="1"] .fsv2-report{min-width:0;padding:clamp(12px,1.35vw,18px);min-height:460px}
+#ops [data-finance-v6="1"] .fsv2-side{min-width:0}
+#ops [data-finance-v6="1"] .fsv2-kpis{gap:6px;margin:10px 0}
+#ops [data-finance-v6="1"] .fsv2-kpi{padding:8px 10px;min-width:0}
+#ops [data-finance-v6="1"] .fsv2-kpi strong{font-size:clamp(13px,1.15vw,16px);white-space:nowrap}
+#ops [data-finance-v6="1"] .finv7-compare-head,#ops [data-finance-v6="1"] .finv7-row{grid-template-columns:minmax(180px,1fr) minmax(105px,140px) minmax(105px,140px);padding-left:10px;padding-right:10px}
+#ops [data-finance-v6="1"] .finv7-blocker{max-height:112px;overflow:auto}
+#ops [data-finance-v6="1"] .finv7-report-tabs{margin-bottom:8px}
+#ops [data-finance-v6="1"] .finv7-health{margin-bottom:8px}
+#ops [data-finance-v6="1"] .fsv2-table-wrap{max-width:100%}
+@media(min-width:901px) and (max-width:1250px){#ops [data-finance-v6="1"] .fsv2-pl-grid{grid-template-columns:minmax(0,1fr) 190px}#ops [data-finance-v6="1"] .fsv2-side .fsv2-btn{padding:10px}#ops [data-finance-v6="1"] .finv7-row{font-size:10.5px}}
