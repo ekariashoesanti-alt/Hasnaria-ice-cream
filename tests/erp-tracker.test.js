@@ -6,6 +6,7 @@ const trackerPath = path.join(root, 'docs', 'HASNARIA_ERP_TRACKER.json');
 const data = JSON.parse(fs.readFileSync(trackerPath, 'utf8'));
 const appSource = fs.readFileSync(path.join(root, 'app.js'), 'utf8');
 const ownerShellSource = fs.readFileSync(path.join(root, 'owner-shell-guard.js'), 'utf8');
+const operationalBridgeSource = fs.readFileSync(path.join(root, 'operational-role-bridge.js'), 'utf8');
 
 function assert(cond, msg) {
   if (!cond) {
@@ -43,7 +44,16 @@ for (const task of data.tasks) {
 }
 
 assert(appSource.includes("var OWNER_SHELL = '/owner-shell-guard.js?v=1';"), 'owner navigation guard is declared in runtime loader');
-assert(appSource.includes("function afterCore(){load(OWNER_SHELL);load('/xlsx-preload.js?v=2')"), 'owner navigation guard loads before Sales/Stock feature modules');
+assert(appSource.includes("var OPERATIONAL_BRIDGE = '/operational-role-bridge.js?v=1';"), 'operational role bridge is declared in runtime loader');
+const ownerLoad = appSource.indexOf('load(OWNER_SHELL)');
+const operationalBridgeLoad = appSource.indexOf('load(OPERATIONAL_BRIDGE)');
+const preloadLoad = appSource.indexOf("load('/xlsx-preload.js?v=2')");
+assert(ownerLoad >= 0, 'owner navigation guard is loaded after core');
+assert(operationalBridgeLoad > ownerLoad, 'operational role bridge loads after owner navigation guard');
+assert(preloadLoad > operationalBridgeLoad, 'operational role bridge loads before heavier feature preload/modules');
+assert(operationalBridgeSource.includes("s.src='/operational-v1.js?v=3'"), 'operational runtime stays lazy behind the role bridge');
+assert(operationalBridgeSource.includes("if(id==='operasional')"), 'operational runtime is activated only from the Operasional tab');
+assert(!/\.(?:from|insert|update|delete|rpc)\s*\(/.test(operationalBridgeSource), 'operational role bridge contains no database query or mutation path');
 assert(ownerShellSource.includes("c.role!=='owner'"), 'guard is scoped to Owner role only');
 assert(ownerShellSource.includes('c.navigate=safeNavigate'), 'ERP module navigation is redirected to the safe Owner navigator');
 assert(ownerShellSource.includes('event.stopPropagation();'), 'Owner top navigation blocks legacy target/bubble tab render');
@@ -52,4 +62,4 @@ assert(ownerShellSource.includes("typeof window.__hasnariaReloadSales==='functio
 assert(ownerShellSource.includes("data-owner-shell-stock-nudge"), 'Stock reconciliation renderer is explicitly woken after safe navigation');
 assert(!/\.(?:from|insert|update|delete|rpc)\s*\(/.test(ownerShellSource), 'navigation guard contains no database mutation/query path');
 
-console.log('ERP tracker test: PASS (' + data.tasks.length + ' tasks, ' + data.milestones.length + ' milestones; Owner single-render guard wired)');
+console.log('ERP tracker test: PASS (' + data.tasks.length + ' tasks, ' + data.milestones.length + ' milestones; Owner guard + lazy zero-query Operasional bridge wired)');
