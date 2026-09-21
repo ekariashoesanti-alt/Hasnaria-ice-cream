@@ -32,3 +32,27 @@
 .fsv2-empty{padding:35px 16px;text-align:center;color:#7a8d85;font-size:11px}
 @media(max-width:900px){.fsv2-pl-grid{grid-template-columns:1fr}.fsv2-side{grid-template-columns:1fr 1fr;grid-template-rows:auto}.fsv2-side-card{grid-column:1/-1}.fsv2-kpis,.fsv2-stock-kpis{grid-template-columns:repeat(2,1fr)}.fsv2-reconcile{grid-template-columns:1fr}.fsv2-ledger-list{grid-template-columns:1fr}.fsv2-head{flex-direction:column}.fsv2-head-right{justify-content:flex-start}}
 @media(max-width:600px){.fsv2-kpis,.fsv2-stock-kpis{grid-template-columns:1fr 1fr}.fsv2-report{padding:14px}.fsv2-report-title{flex-direction:column}.fsv2-table{font-size:10.5px}.fsv2-head-right{width:100%}.fsv2-field{min-width:100%}.fsv2-side{grid-template-columns:1fr}.fsv2-reconcile{grid-template-columns:1fr}.fsv2-stock-card-head{align-items:flex-start;flex-direction:column}.fsv2-stock-card-head .legend{text-align:left}}
+
+/* SAK EMKM finance workspace: static rules kept here so CSP does not depend on inline <style>. */
+.finv7-root{min-height:560px}
+.finv7-root>.fsv2-report:first-child{min-height:220px;display:grid;place-items:center}
+.finv7-headline{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.finv7-framework{font-size:9px;font-weight:900;letter-spacing:.08em;padding:4px 7px;border-radius:999px;background:#e9f6f0;color:#12634f}
+.finv7-report-tabs{display:flex;gap:6px;flex-wrap:wrap;margin:2px 0 11px}
+.finv7-report-tabs button{border:1px solid #d6e5df;background:#fff;color:#315e4f;border-radius:10px;padding:8px 12px;font-size:10.5px;font-weight:900;cursor:pointer}
+.finv7-report-tabs button.on{background:#176b55;border-color:#176b55;color:#fff}
+.finv7-health{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.finv7-health span{border:1px solid #dfeae5;background:#fff;border-radius:999px;padding:5px 8px;font-size:9px;color:#60776e}
+.finv7-health b{color:#173f34}.finv7-health .warn{background:#fff8df;border-color:#f0dda0;color:#735710}.finv7-health .bad{background:#fff0f0;border-color:#efcaca;color:#9a3434}
+.finv7-compare-head,.finv7-row{display:grid;grid-template-columns:minmax(0,1fr) 150px 150px;gap:8px;align-items:center}
+.finv7-compare-head{padding:7px 12px;font-size:9px;font-weight:900;color:#71847c;text-transform:uppercase;letter-spacing:.04em}
+.finv7-row{padding:9px 12px;border-top:1px solid #edf3f0;font-size:11.5px}.finv7-row strong{text-align:right}.finv7-row.sub{background:#f7fbf9;font-weight:800}.finv7-row.total{background:#eaf6f1;font-size:13px;font-weight:900}.finv7-row.warn{background:#fff8df}
+.finv7-section{padding:10px 12px 5px;font-size:10px;font-weight:900;letter-spacing:.08em;color:#0d7b61}
+.finv7-note-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:14px}
+.finv7-note-card{border:1px solid #e0ebe6;border-radius:12px;padding:11px;background:#fbfdfc}.finv7-note-card span{display:block;font-size:9px;color:#75877f;text-transform:uppercase;letter-spacing:.05em}.finv7-note-card b{display:block;font-size:11.5px;margin-top:4px;color:#173f34}
+.finv7-blocker{margin-top:10px;border:1px solid #f0dda0;background:#fff8df;color:#735710;border-radius:12px;padding:10px 12px;font-size:10.5px;line-height:1.5}
+.finv7-statusline{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:10px}.finv7-statusline small{font-size:9px;color:#788b83}.finv7-close[disabled]{opacity:.45;cursor:not-allowed}
+.finv7-empty{padding:32px;text-align:center;color:#75877f}.finv7-modal-status{display:flex;gap:7px;flex-wrap:wrap;padding:11px 0}.finv7-pill{border:1px solid #dfeae5;border-radius:999px;padding:5px 8px;font-size:9.5px}.finv7-table-note{font-size:9px;color:#788b83;margin:7px 0 0}.finv7-neg{color:#a93434}.finv7-muted{color:#89958f}
+.finv7-spinner{display:inline-block;width:13px;height:13px;border:2px solid #d7e6df;border-top-color:#176b55;border-radius:50%;animation:finv7spin .8s linear infinite}@keyframes finv7spin{to{transform:rotate(360deg)}}
+@media(max-width:800px){.finv7-compare-head,.finv7-row{grid-template-columns:minmax(0,1fr) 105px 105px}.finv7-note-grid{grid-template-columns:1fr}}
+@media(max-width:560px){.finv7-compare-head,.finv7-row{grid-template-columns:minmax(0,1fr) 1fr}.finv7-compare-head span:nth-child(3),.finv7-row>*:nth-child(3){display:none}}
