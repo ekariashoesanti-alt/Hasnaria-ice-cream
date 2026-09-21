@@ -18,7 +18,7 @@
   function isOwner() { var c=context(); return !!(c && c.role==='owner'); }
   function section(id) { return document.getElementById(id); }
   function finStockMounted(host) {
-    return !!(host && host.querySelector('.ofs3-shell,[data-finance-v4="1"],[data-stock-v4="1"]'));
+    return !!(host && host.querySelector('.ofs3-shell,[data-finance-v5="1"],[data-finance-v4="1"],[data-stock-v4="1"]'));
   }
 
   function currentActive() {
@@ -72,12 +72,6 @@
     if (l) l.href='/owner-finance-stock-v3.css?v=2';
   }
 
-  /*
-   * Important: MutationObserver-driven reconcile() must never dispatch a finance/stock
-   * navigation event. The v4 renderer mutates the host while loading; dispatching again
-   * from that mutation creates render -> skeleton -> mutation -> render loops (visible
-   * as severe blinking). Only an explicit top-level navigation may request a re-render.
-   */
   function ensureFinStockRuntime(id, requestRender) {
     if (!isOwner()) return;
     var host=section(id);
@@ -97,13 +91,12 @@
     state.finStockLoad=new Promise(function(resolve){
       var s=document.createElement('script');
       s.id='hasnaria-owner-finance-stock-v3-js';
-      s.src='/owner-finance-stock-v3.js?v=4';
+      s.src='/owner-finance-stock-v3.js?v=5';
       s.async=true;
       s.onload=function(){ refreshFinStockCss(); resolve(); };
       s.onerror=function(){ state.finStockLoad=null; resolve(); };
       document.head.appendChild(s);
     });
-    /* Initial visible renderer boots itself. Explicit navigation also gets one event. */
     if (requestRender) state.finStockLoad.then(function(){ refreshFinStockCss(); dispatchFinStock(id); });
   }
 
@@ -151,7 +144,6 @@
     setVisibility(state.active);
     if (state.active==='dashboard') ensureDashboard();
     if (state.active==='sales') ensureSales();
-    /* Reconcile is passive: never emit finance/stock navigation from DOM mutations. */
     if (state.active==='ops') ensureFinance(false);
     if (state.active==='stok') ensureStock(false);
   }
