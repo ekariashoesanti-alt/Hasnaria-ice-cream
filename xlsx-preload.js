@@ -46,11 +46,11 @@
     document.head.appendChild(c);
   }
 
-  /* Owner finance + stock v3: clean report preview, journal/ledger and split inventory tables. */
-  if(!document.getElementById('hasnaria-owner-finance-stock-v3-js')){
+  /* Owner finance + stock v3 fast path: lazy data loading; journal/ledger only load on demand. */
+  if(!document.getElementById('hasnaria-finance-stock-fast-v3-js')){
     var fs=document.createElement('script');
-    fs.id='hasnaria-owner-finance-stock-v3-js';
-    fs.src='/owner-finance-stock-v3.js?v=1';
+    fs.id='hasnaria-finance-stock-fast-v3-js';
+    fs.src='/finance-stock-fast-v3.js?v=2';
     fs.async=true;
     document.head.appendChild(fs);
   }
