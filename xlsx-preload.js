@@ -46,14 +46,8 @@
     document.head.appendChild(c);
   }
 
-  /* Finance + stock reporting v3: fast lazy loading, no global mutation-observer render loop. */
-  if(!document.getElementById('hasnaria-finance-stock-v3-js')){
-    var fs=document.createElement('script');
-    fs.id='hasnaria-finance-stock-v3-js';
-    fs.src='/finance-stock-v3.js?v=1';
-    fs.async=true;
-    document.head.appendChild(fs);
-  }
+  /* Owner Finance/Stock is intentionally NOT loaded here.
+     owner-shell-guard owns that runtime so legacy and v4 renderers cannot race. */
 
   if (window.XLSX) { window.__HASNARIA_XLSX_READY = Promise.resolve(window.XLSX); return; }
   if (window.__HASNARIA_XLSX_READY) return;
