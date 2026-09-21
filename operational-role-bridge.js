@@ -1,8 +1,8 @@
 /* Hasnaria Operasional role bridge.
- * P3 performance guard: zero database queries on startup. It only exposes the
+ * P4 performance guard: zero database queries on startup. It only exposes the
  * Operasional surface for Head Store, PIC, and Pelaksana; operational-v1 is
- * fetched after the tab opens. Observer-driven mounts are idempotent once the
- * workbench exists.
+ * fetched after the tab opens. Observer-driven mounts are idempotent and the
+ * bridge watches only top-level navigation/container changes, not page content.
  */
 (function(){
   'use strict';
@@ -11,7 +11,7 @@
 
   var ALLOWED={head_store:true,pic:true,pelaksana:true};
   var SECTIONS=['dashboard','sales','pembelian','operasional','ops','stok','shift','social','approval','team','sistem'];
-  var state={active:false,load:null,scheduled:false};
+  var state={active:false,load:null,scheduled:false,navObserver:null,mainObserver:null,readyTimer:null,readyAttempts:0};
   var mountValue=null;
 
   function ctx(){return window.__HASNARIA_CONTEXT||null}
@@ -85,7 +85,23 @@
     if(state.active){setVisibility();mount(false)}
   }
 
-  function schedule(){if(state.scheduled)return;state.scheduled=true;setTimeout(function(){state.scheduled=false;sync()},0)}
+  function schedule(){if(state.scheduled)return;state.scheduled=true;setTimeout(function(){state.scheduled=false;sync()},40)}
+
+  function attachScopedObservers(){
+    var tabs=document.getElementById('tabs');
+    var main=document.querySelector('#app main');
+    if(tabs&&!state.navObserver){state.navObserver=new MutationObserver(schedule);state.navObserver.observe(tabs,{childList:true})}
+    if(main&&!state.mainObserver){state.mainObserver=new MutationObserver(schedule);state.mainObserver.observe(main,{childList:true})}
+    return!!(tabs&&main);
+  }
+
+  function awaitReady(){
+    attachScopedObservers();
+    sync();
+    if(allowed())return;
+    state.readyAttempts++;
+    if(state.readyAttempts<80)state.readyTimer=setTimeout(awaitReady,125);
+  }
 
   document.addEventListener('click',function(e){
     var b=e.target&&e.target.closest?e.target.closest('#tabs .tab[data-tab]'):null;if(!b||!allowed())return;
@@ -96,8 +112,8 @@
 
   function start(){
     if(!document.body)return;
-    new MutationObserver(schedule).observe(document.body,{childList:true,subtree:true});
-    schedule();
+    attachScopedObservers();
+    awaitReady();
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
 })();
