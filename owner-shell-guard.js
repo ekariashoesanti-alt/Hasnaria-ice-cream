@@ -97,8 +97,21 @@
     state.finStockLoad.then(function(){ refreshFinStockCss(); dispatchFinStock(id); });
   }
 
+  function nudgeLegacyStockFallback() {
+    var host=section('stok');
+    if (!host || host.classList.contains('hidden') || host.querySelector('.ofs3-shell')) return;
+    var marker=document.createElement('span');
+    marker.hidden=true;
+    marker.setAttribute('data-owner-shell-stock-nudge','1');
+    host.appendChild(marker);
+    host.removeChild(marker);
+  }
+
   function ensureFinance() { ensureFinStockRuntime('ops'); }
-  function ensureStock() { ensureFinStockRuntime('stok'); }
+  function ensureStock() {
+    ensureFinStockRuntime('stok');
+    setTimeout(nudgeLegacyStockFallback,700);
+  }
 
   function patchContext() {
     var c=context();
