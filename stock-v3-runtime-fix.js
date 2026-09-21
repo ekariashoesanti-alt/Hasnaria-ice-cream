@@ -20,6 +20,16 @@
       link.href='/stock-readable-density.css?v=1';
     }
     document.head.appendChild(link);
+
+    var trimId='stock-column-trim-css';
+    var trim=document.getElementById(trimId);
+    if(!trim){
+      trim=document.createElement('link');
+      trim.id=trimId;
+      trim.rel='stylesheet';
+      trim.href='/stock-column-trim.css?v=1';
+    }
+    document.head.appendChild(trim);
   }
 
   function markCanonical(){
