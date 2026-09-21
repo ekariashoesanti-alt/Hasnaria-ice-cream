@@ -74,7 +74,7 @@ async function load(force){
 function schedule(){clearTimeout(timer);timer=setTimeout(function(){var root=document.getElementById('paRoot');if(!root)return;render();if(!rows.length&&!loading)load(false)},60)}
 function boot(){
   db=window.__HASNARIA_DB||null;var tries=0;
-  (function wait(){db=db||window.__HASNARIA_DB||null;var host=document.getElementById('pembelian');if(db&&host){observer=new MutationObserver(schedule);observer.observe(host,{childList:true,subtree:true});document.addEventListener('change',function(e){if(e.target&&((e.target.id==='paPeriod')||(e.target.id==='paScope')))setTimeout(render,20)},true);document.addEventListener('click',function(e){if(e.target&&e.target.closest&&e.target.closest('[data-tab="pembelian"]'))setTimeout(function(){schedule();load(false)},80)},true);schedule();load(false);return}if(tries++<120)setTimeout(wait,100)})();
+  (function wait(){db=db||window.__HASNARIA_DB||null;var host=document.getElementById('pembelian');if(db&&host){observer=new MutationObserver(schedule);observer.observe(host,{childList:true,subtree:false});document.addEventListener('change',function(e){if(e.target&&((e.target.id==='paPeriod')||(e.target.id==='paScope')))setTimeout(render,20)},true);document.addEventListener('click',function(e){if(e.target&&e.target.closest&&e.target.closest('[data-tab="pembelian"]'))setTimeout(function(){schedule();load(false)},80)},true);schedule();load(false);return}if(tries++<120)setTimeout(wait,100)})();
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
