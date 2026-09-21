@@ -1,0 +1,29 @@
+/* Stock table simplification: hide supplemental planning columns from the UI.
+ * Backend calculations remain available for status logic; only presentation is trimmed.
+ */
+#stok .sc3-table th:nth-child(6),
+#stok .sc3-table th:nth-child(7),
+#stok .sc3-table th:nth-child(8),
+#stok .sc3-table th:nth-child(9),
+#stok .sc3-table td:nth-child(6),
+#stok .sc3-table td:nth-child(7),
+#stok .sc3-table td:nth-child(8),
+#stok .sc3-table td:nth-child(9){display:none!important}
+
+/* Rebalance the seven visible columns: Material, Pembelian, Pemakaian,
+ * Stok Opname, Selisih, Status, Saldo. */
+#stok .sc3-table th:nth-child(1){width:28%!important}
+#stok .sc3-table th:nth-child(2),
+#stok .sc3-table th:nth-child(3){width:12%!important}
+#stok .sc3-table th:nth-child(4){width:14%!important}
+#stok .sc3-table th:nth-child(5){width:10%!important}
+#stok .sc3-table th:nth-child(10){width:14%!important}
+#stok .sc3-table th:nth-child(11){width:10%!important}
+
+@media(max-width:900px){
+  #stok .sc3-table{min-width:720px!important}
+}
+
+@media(min-width:901px){
+  #stok .sc3-table{width:100%!important;min-width:0!important;table-layout:fixed}
+}
