@@ -1,7 +1,8 @@
 /* Hasnaria Operasional role bridge.
- * Zero database queries on startup. It only exposes the Operasional surface for
- * Head Store, PIC, and Pelaksana; operational-v1 is fetched after the tab opens.
- * Mount calls triggered by shell observers are idempotent once the workbench exists.
+ * P3 performance guard: zero database queries on startup. It only exposes the
+ * Operasional surface for Head Store, PIC, and Pelaksana; operational-v1 is
+ * fetched after the tab opens. Observer-driven mounts are idempotent once the
+ * workbench exists.
  */
 (function(){
   'use strict';
