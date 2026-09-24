@@ -114,3 +114,24 @@ Every executive KPI must define:
 - drill-down query/source.
 
 No narrative insight may assert a cause unless the underlying data supports it.
+
+## Production architecture review — 24 Sep 2026
+
+### Verified
+- Frontend source-of-truth is GitHub `main`; deployment status is surfaced through the repository's Vercel integration.
+- Production database/auth is Supabase project `bnnhmtkpdjlgehsvgoda` (`Hasnaria Project`).
+- Production migrations are timestamped and mirrored under `supabase/migrations/`.
+- Core ERP tables inspected for Purchasing/Inventory/Finance have RLS enabled.
+- Authorization helpers centralize brand and capability enforcement through `private.same_brand`, `private.has_capability`, and `private.can_import_module`.
+- Purchase import evidence write access is now capability-gated, not only same-brand gated.
+- Purchase→Finance canonical reconciliation is applied in production; `review_required` Purchase rows are excluded from posted Finance journals.
+- Vercel build/audit contract verifies CSP, `Permissions-Policy`, `frame-ancestors 'none'`, and Supabase-only `connect-src`.
+
+### Current production risks / gates
+- Only one real `user_profiles` role exists in production today: `owner`. Full live-role RLS testing for Head Store/Marketing/PIC/Pelaksana/Pending still requires safe test identities.
+- Supabase Auth leaked-password protection remains disabled; enable before final go-live acceptance.
+- Backup/restore procedure is documented separately, but a restore rehearsal in an isolated environment is still required.
+- Authenticated browser E2E remains required for login → Purchase upload → Stock → Finance → refresh/logout/login.
+
+### Review status
+`HSN-1000 Production architecture review`: **REVIEW**. No critical data-leak defect was found in the inspected Purchase/Inventory/Finance path, but final go-live remains gated by RLS role-matrix execution, restore rehearsal, and authenticated E2E.
