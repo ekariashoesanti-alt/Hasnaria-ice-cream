@@ -48,3 +48,36 @@ Default Hasnaria Purchase Request routing:
 ## Security rule
 
 Frontend visibility is UX only. Database capability functions, RLS, controlled RPCs, audit trail, and self-approval prevention remain the authorization boundary.
+
+## RLS matrix audit — 24 Sep 2026
+
+### Static policy coverage verified
+Core domains inspected with RLS enabled: user profile, product, sales, supplier, import jobs, Purchase evidence, Purchase Request, Purchase Order, Goods Receipt, Purchase Invoice/AP, Purchase Payment, inventory movement, Finance journal entry/lines, and accounting period.
+
+Key write boundaries verified from production policies:
+- Product writes: Owner / Head Store / PIC.
+- Sales writes: roles granted `sales.write`.
+- Supplier writes: Owner / Head Store.
+- Purchase import jobs: `private.can_import_module('purchasing')`.
+- Purchase evidence writes: `private.can_import_module('purchasing')` after 24 Sep hardening.
+- Purchase Request create: roles granted `purchase.request`; draft update/delete limited to requester or Owner.
+- Purchase Order manage: `purchase.manage`.
+- Goods Receipt: `purchase.receive`.
+- Purchase Invoice / Purchase Payment: `finance.ap.write`.
+- Finance journal and accounting periods exposed to browser as same-brand read; posting/close mutations are handled through controlled functions/workflows rather than generic browser table writes.
+
+### Runtime execution coverage
+- Production currently contains one real active role only: **Owner**.
+- Owner authenticated read path was executed against production with RLS active and returned only the Hasnaria brand slice for tested Finance/Purchase data.
+- No permanent synthetic auth user was created for security testing.
+
+### Remaining test cases before HSN-1001 DONE
+Execute allow/deny scenarios with isolated identities for:
+1. Head Store.
+2. Marketing.
+3. PIC.
+4. Pelaksana.
+5. Pending/inactive.
+6. Cross-brand identity.
+
+Expected outcomes must follow the capability table above and verify both read isolation and mutation denial. Until those identities are exercised, `HSN-1001` remains **REVIEW**, not DONE.
