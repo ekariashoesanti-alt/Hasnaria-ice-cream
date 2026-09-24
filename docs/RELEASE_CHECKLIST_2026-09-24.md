@@ -7,8 +7,8 @@ This checklist is the operational gate for `HSN-1007`. A release is not accepted
 ## A. Source / CI
 - [x] GitHub `main` is source-of-truth for frontend/runtime files.
 - [x] Supabase production DDL changes are mirrored as timestamped files under `supabase/migrations/`.
-- [x] Latest Hasnaria Audit Gate completed successfully after the 24 Sep go-live hardening changes.
-- [x] Vercel commit status reports success for the latest documented production deployment chain.
+- [x] Latest Hasnaria Audit Gate completed successfully after the current go-live hardening changes.
+- [x] Latest Vercel commit status reports success.
 - [x] Security headers are checked by CI: CSP, Permissions-Policy, `frame-ancestors 'none'`, and Supabase-scoped `connect-src`.
 
 ## B. Database / migration
@@ -17,29 +17,35 @@ This checklist is the operational gate for `HSN-1007`. A release is not accepted
 - [x] Purchase import batch/supplier lineage migrations applied.
 - [x] Purchase evidence RLS overlap removed.
 - [x] Purchase evidence writes require purchasing import capability.
-- [x] Production migration history reconciled with repository migrations through the current hardening head.
+- [x] Raw Finance reads require `finance.read` capability.
+- [x] Production migration history reconciled with repository migrations through `20260924172613_harden_finance_raw_read_capability.sql`.
 
 ## C. Purchase → Finance reconciliation
 - [x] One-time Jan–Sep 2026 reconciliation executed.
-- [x] Purchase inventory journal entries: 198 canonical entries.
-- [x] Purchase expense journal entries: 25 canonical entries.
+- [x] Purchase inventory journal entries reconciled to canonical inventory rows.
+- [x] Purchase expense journal entries reconciled to canonical expense rows.
 - [x] Debit equals credit for Purchase-origin journal slices.
 - [x] `review_required` Purchase rows posted to Finance: 0.
 - [x] Existing 88 Purchase evidence rows linked to purchasing import jobs.
 - [x] Existing import batches: 2 completed jobs / 88 posted evidence rows.
+- [x] Final backend recheck: unbalanced Purchase entries = 0; missing import batch = 0.
 
 ## D. Security / RLS
 - [x] RLS enabled on inspected core Purchasing/Inventory/Finance tables.
 - [x] Same-brand enforcement verified in production helper layer.
 - [x] Capability layer verified against documented role matrix.
 - [x] Owner runtime path executed with RLS active.
-- [ ] Head Store live/synthetic allow-deny matrix executed.
-- [ ] Marketing live/synthetic allow-deny matrix executed.
-- [ ] PIC live/synthetic allow-deny matrix executed.
-- [ ] Pelaksana live/synthetic allow-deny matrix executed.
-- [ ] Pending/inactive deny matrix executed.
-- [ ] Cross-brand identity deny matrix executed.
+- [x] Head Store synthetic allow/deny matrix executed.
+- [x] Marketing synthetic allow/deny matrix executed.
+- [x] PIC synthetic allow/deny matrix executed.
+- [x] Pelaksana synthetic allow/deny matrix executed.
+- [x] Pending/suspended deny matrix executed.
+- [x] Marketing raw-Finance exposure found during testing and CLOSED by migration `20260924172613_harden_finance_raw_read_capability`.
+- [x] Supabase Security Advisor rechecked after hardening; no RLS/security-policy warning remains.
+- [ ] Cross-brand deny matrix executed with a real non-superadmin identity. Current production test identity is super-admin, so its cross-brand visibility is intentional and cannot prove normal-user isolation at runtime.
 - [ ] Supabase Auth leaked-password protection enabled.
+
+Runtime evidence: `docs/RLS_RUNTIME_MATRIX_2026-09-25.md`.
 
 ## E. Backup / rollback
 - [x] Database migration/forward-fix rollback policy documented.
@@ -48,6 +54,8 @@ This checklist is the operational gate for `HSN-1007`. A release is not accepted
 - [ ] Backup exported at release checkpoint.
 - [ ] Restore rehearsal completed on isolated non-production target.
 - [ ] Restore rehearsal result recorded as PASS.
+
+A Supabase branch/project is not created automatically for this step because creation can incur cost and requires explicit cost confirmation.
 
 ## F. Authenticated browser E2E
 Run against production after the database gates above are green:
@@ -68,13 +76,13 @@ Run against production after the database gates above are green:
 - [ ] Check mobile core flow.
 
 ## G. Final reconciliation immediately before publish/sign-off
-- [ ] No unresolved critical defects.
-- [ ] No `review_required` Purchase rows posted into Finance journals.
-- [ ] Finance journal debit = credit.
-- [ ] Purchase evidence rows requiring lineage all have `import_job_id`.
-- [ ] Latest GitHub audit gate = success.
-- [ ] Latest deployment status = success.
-- [ ] Supabase Security Advisor reviewed.
+- [ ] No unresolved critical acceptance blockers.
+- [x] No `review_required` Purchase rows posted into Finance journals.
+- [x] Finance Purchase journal debit = credit.
+- [x] Purchase evidence rows requiring lineage all have `import_job_id`.
+- [x] Latest GitHub audit gate = success.
+- [x] Latest deployment status = success.
+- [x] Supabase Security Advisor reviewed.
 - [ ] Backup checkpoint recorded.
 
 ## Rollback trigger
@@ -88,9 +96,9 @@ Rollback/forward-fix procedure is triggered if any of the following occurs after
 
 Prefer a backward-compatible forward fix. For data-integrity incidents, freeze affected writes first, capture evidence/backup, then apply a timestamped remediation migration and repeat reconciliation.
 
-## Status — 24 Sep 2026
+## Status — 25 Sep 2026
 `HSN-1007 Release checklist Site/production`: **REVIEW**.
 
-Already green: source/CI, migration parity, canonical Purchase→Finance reconciliation, Purchase lineage backend, core RLS baseline.
+Backend/data gates now green: source/CI, migration parity, canonical Purchase→Finance reconciliation, Purchase lineage, role runtime checks available from production, Finance raw-data capability hardening, and Security Advisor RLS review.
 
-Still required for DONE: authenticated browser E2E, non-owner role RLS execution, leaked-password protection, and a release backup/restore rehearsal.
+Still required for DONE: authenticated browser E2E, real non-superadmin cross-brand runtime test, leaked-password protection, and a release backup/restore rehearsal.
