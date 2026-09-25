@@ -62,23 +62,39 @@ Runtime evidence: `docs/RLS_RUNTIME_MATRIX_2026-09-25.md`.
 
 The rehearsal used temporary tables inside a transaction and ended with ROLLBACK, so no paid branch/project or persistent production change was created.
 
-## F. Authenticated browser E2E
-Run against production after the database gates above are green:
+## F. Browser E2E
+Production browser acceptance is split into a public smoke layer and the authenticated Owner flow.
 
+### Public production smoke
+- [x] Real Playwright browser opened `https://hasnaria-business-analyzer.vercel.app` from GitHub Actions.
+- [x] Production returned a non-error HTTP response.
+- [x] Login shell rendered with email, password, and login controls visible.
+- [x] Authenticated app remained hidden before login.
+- [x] Public login shell rendered at desktop 1280px, tablet 768px, and mobile 390px widths.
+- [x] No browser `pageerror` occurred during the public smoke.
+- [x] Workflow run `Hasnaria Production E2E #4` recorded `1 passed` for `tests/e2e/public-smoke.spec.js`.
+
+### Authenticated Owner acceptance
+- [ ] GitHub Actions secrets `HASNARIA_E2E_EMAIL` and `HASNARIA_E2E_PASSWORD` configured.
 - [ ] Login as Owner.
 - [ ] Dashboard renders without blank/freeze.
 - [ ] Open Pembelian.
 - [ ] Upload a controlled Excel test file and verify preview counts before commit.
 - [ ] Upload a controlled Majoo file if available and verify invalid/ignored/duplicate summary.
-- [ ] Confirm upload creates/links `import_job_id`.
-- [ ] Refresh Pembelian; canonical rows persist.
+- [ ] Confirm upload creates/links `import_job_id` using the optional controlled-write gate.
+- [ ] Refresh Pembelian; canonical rows persist after the controlled-write gate.
 - [ ] Open Stok; Purchase-derived stock panel renders independently.
-- [ ] Open Finance; Purchase reconciliation amount matches canonical Purchase classification.
+- [ ] Open Finance; Finance v6 shell mounts and Purchase reconciliation remains consistent.
 - [ ] Refresh browser; session/data remain correct.
 - [ ] Logout and login again; state remains correct.
-- [ ] Check desktop layout.
-- [ ] Check tablet layout.
-- [ ] Check mobile core flow.
+- [ ] Check desktop layout while authenticated.
+- [ ] Check tablet layout while authenticated.
+- [ ] Check mobile core flow while authenticated.
+
+Current automated harness:
+- `tests/e2e/public-smoke.spec.js` — always runs, no credentials, no writes.
+- `tests/e2e/go-live.spec.js` — authenticated safe-mode by default; optional write mode requires `allow_write=true`.
+- `.github/workflows/e2e.yml` — production E2E workflow.
 
 ## G. Final reconciliation immediately before publish/sign-off
 - [ ] No unresolved critical acceptance blockers.
@@ -92,6 +108,7 @@ Run against production after the database gates above are green:
 - [x] Full RLS role/cross-brand acceptance recorded as PASS.
 - [x] Production/repository migration parity verified through current head.
 - [x] Supabase Free-plan Auth limitation explicitly accepted/waived by Owner for this release.
+- [x] Public production browser smoke recorded as PASS.
 
 ## Rollback trigger
 Rollback/forward-fix procedure is triggered if any of the following occurs after release:
@@ -107,6 +124,6 @@ Prefer a backward-compatible forward fix. For data-integrity incidents, freeze a
 ## Status — 25 Sep 2026
 `HSN-1007 Release checklist Site/production`: **REVIEW**.
 
-Backend/data/security gates green: source/CI, migration parity through current production head, canonical Purchase→Finance reconciliation, Purchase lineage, Finance raw-data capability hardening, full role/cross-brand RLS acceptance, Security Advisor RLS review, no-branch logical restore rehearsal, and Free-plan security waiver recorded.
+Backend/data/security/public-browser gates green: source/CI, migration parity through current production head, canonical Purchase→Finance reconciliation, Purchase lineage, Finance raw-data capability hardening, full role/cross-brand RLS acceptance, Security Advisor RLS review, no-branch logical restore rehearsal, Free-plan security waiver, and real public production Playwright smoke.
 
-Still required for DONE: authenticated browser E2E only.
+Still required for DONE: authenticated Owner browser E2E. The only execution blocker is that repository Actions secrets `HASNARIA_E2E_EMAIL` and `HASNARIA_E2E_PASSWORD` are not configured; workflow run #4 therefore correctly skipped the authenticated step rather than reporting a false PASS.
