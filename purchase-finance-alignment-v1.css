@@ -8,14 +8,38 @@
 .pfa-note{margin-top:10px;border-radius:11px;background:#eef8f4;color:#315e4f;padding:9px 11px;font-size:10px;line-height:1.5}.pfa-review-head{margin-top:14px;padding-top:13px;border-top:1px solid #edf3f0}.pfa-table-scroll{overflow:auto;margin-top:8px;border:1px solid #e3ece8;border-radius:12px}.pfa-table{width:100%;border-collapse:collapse;min-width:940px;font-size:10.5px}.pfa-table th{background:#f5f9f7;color:#587067;font-size:9px;text-transform:uppercase;letter-spacing:.04em;position:sticky;top:0}.pfa-table th,.pfa-table td{padding:9px 10px;border-bottom:1px solid #edf3f0;text-align:left;vertical-align:top}.pfa-table tbody tr:last-child td{border-bottom:0}.pfa-table td b{display:block;color:#173f34}.pfa-table td small{display:block;color:#7b8c85;margin-top:2px;max-width:260px}.pfa-table .num{text-align:right;font-weight:800;white-space:nowrap}
 .pfa-status{display:inline-block;border-radius:999px;padding:4px 7px;font-size:9px;font-weight:900;white-space:nowrap}.pfa-status.ok{background:#e7f7ef;color:#176b55}.pfa-status.warn{background:#fff6dc;color:#8a6615}.pfa-status.bad{background:#fff0f0;color:#a13d3d}.pfa-action{margin-top:5px!important;line-height:1.35}.pfa-more,.pfa-empty{padding:10px 2px 0;color:#71847c;font-size:9.5px}.pfa-empty{padding:18px;text-align:center}.pfa-error{color:#a13d3d!important}
 
-/* The Purchase analytics desktop layout uses explicit grid rows 1-5.
-   The Finance classification panel is a direct child of .pa-root, so without
-   an explicit placement it auto-occupies the same row as the analytics cards.
-   Keep it in its own sixth row and span the full workspace. */
+/* Canonical Purchase presentation.
+   Once the Finance reconciliation panel is present, legacy Purchase analytics cards
+   are intentionally removed from layout. Their old chart/ranking renderers are no
+   longer loaded; Stock owns detailed inventory-cycle analysis and Finance owns the
+   accounting reconciliation detail. This prevents overlapping/ghost cards and keeps
+   one authoritative Purchase → Finance reading path. */
+html body #app #pembelian .pa-root:has(>#purchaseFinanceAlignment)>.pa-main-grid,
+html body #app #pembelian .pa-root:has(>#purchaseFinanceAlignment)>.pa-lower-grid,
+html body #app #pembelian .pa-root:has(>#purchaseFinanceAlignment)>.pa-insight{display:none!important}
+
 @media(min-width:980px){
+  html body #app #pembelian .pa-root:has(>#purchaseFinanceAlignment){
+    grid-template-columns:minmax(0,1fr)!important;
+    grid-template-rows:auto auto auto auto!important;
+    column-gap:0!important;
+    row-gap:10px!important;
+    height:auto!important;
+    min-height:0!important;
+    overflow:visible!important;
+  }
+  html body #app #pembelian .pa-root:has(>#purchaseFinanceAlignment)>.pa-title{
+    grid-column:1!important;grid-row:1!important;
+  }
+  html body #app #pembelian .pa-root:has(>#purchaseFinanceAlignment)>.pa-controls{
+    grid-column:1!important;grid-row:2!important;
+  }
+  html body #app #pembelian .pa-root:has(>#purchaseFinanceAlignment)>.pa-kpis{
+    grid-column:1!important;grid-row:3!important;
+  }
   html body #app #pembelian .pa-root>#purchaseFinanceAlignment{
-    grid-column:1/-1!important;
-    grid-row:6!important;
+    grid-column:1!important;
+    grid-row:4!important;
     align-self:start!important;
     justify-self:stretch!important;
     margin:0 0 16px!important;
