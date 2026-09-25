@@ -18,7 +18,8 @@ This checklist is the operational gate for `HSN-1007`. A release is not accepted
 - [x] Purchase evidence RLS overlap removed.
 - [x] Purchase evidence writes require purchasing import capability.
 - [x] Raw Finance reads require `finance.read` capability.
-- [x] Production migration history reconciled with repository migrations through `20260924172613_harden_finance_raw_read_capability.sql`.
+- [x] Production migration history reconciled with repository migrations through `20260925002606_lock_purchase_atomic_rpc_service_only_v1.sql`.
+- [x] Current Purchase/Finance hardening chain exists in GitHub and production: atomic Purchase sync, review close gate, autosync triggers, canonical management Finance alignment, and service-only atomic RPC locking.
 
 ## C. Purchase → Finance reconciliation
 - [x] One-time Jan–Sep 2026 reconciliation executed.
@@ -29,6 +30,7 @@ This checklist is the operational gate for `HSN-1007`. A release is not accepted
 - [x] Existing 88 Purchase evidence rows linked to purchasing import jobs.
 - [x] Existing import batches: 2 completed jobs / 88 posted evidence rows.
 - [x] Final backend recheck: unbalanced Purchase entries = 0; missing import batch = 0.
+- [x] Rollback test residue recheck: temporary Auth user = 0; temporary profile = 0.
 
 ## D. Security / RLS
 - [x] RLS enabled on inspected core Purchasing/Inventory/Finance tables.
@@ -88,6 +90,7 @@ Run against production after the database gates above are green:
 - [x] Supabase Security Advisor reviewed.
 - [x] Backup/restore rehearsal recorded as PASS.
 - [x] Full RLS role/cross-brand acceptance recorded as PASS.
+- [x] Production/repository migration parity verified through current head.
 
 ## Rollback trigger
 Rollback/forward-fix procedure is triggered if any of the following occurs after release:
@@ -103,6 +106,6 @@ Prefer a backward-compatible forward fix. For data-integrity incidents, freeze a
 ## Status — 25 Sep 2026
 `HSN-1007 Release checklist Site/production`: **REVIEW**.
 
-Backend/data/security gates green: source/CI, migration parity, canonical Purchase→Finance reconciliation, Purchase lineage, Finance raw-data capability hardening, full role/cross-brand RLS acceptance, Security Advisor RLS review, and no-branch logical restore rehearsal.
+Backend/data/security gates green: source/CI, migration parity through current production head, canonical Purchase→Finance reconciliation, Purchase lineage, Finance raw-data capability hardening, full role/cross-brand RLS acceptance, Security Advisor RLS review, and no-branch logical restore rehearsal.
 
 Still required for DONE: authenticated browser E2E, plus one Owner decision on the plan-limited leaked-password-protection warning (upgrade to Pro or explicit waiver while remaining on Free).
