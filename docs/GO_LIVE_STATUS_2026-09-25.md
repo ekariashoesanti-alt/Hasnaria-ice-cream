@@ -1,9 +1,9 @@
 # Hasnaria Go-Live Status — 25 Sep 2026
 
 ## State
-**PRE-GO-LIVE / ACCEPTANCE REVIEW**
+**PRE-GO-LIVE / FINAL ACCEPTANCE**
 
-Core backend repair is complete. Remaining work is operational acceptance and security configuration.
+Core backend repair, database hardening, RLS acceptance, and logical restore rehearsal are complete. Remaining work is browser acceptance plus one Supabase Auth configuration toggle.
 
 ## Green gates
 - Supabase production healthy.
@@ -15,18 +15,21 @@ Core backend repair is complete. Remaining work is operational acceptance and se
 - Purchase evidence writes are capability-gated.
 - Raw Finance reads are capability-gated.
 - Production/repository migration parity through `20260924172613_harden_finance_raw_read_capability`.
-- Runtime role checks completed for available role/status paths.
+- Runtime role checks completed for Owner, Head Store, Marketing, PIC, Pelaksana, Pending, and suspended paths.
+- Normal non-superadmin cross-brand deny test: PASS; Hasnaria products, Purchase evidence, and Finance visibility all returned 0.
 - Production architecture review: PASS.
 - Logical backup/restore rehearsal: PASS without creating a branch/project.
 - Seven critical datasets matched source row counts and logical checksums after temporary rehydration.
 - Restored Finance debit = credit at Rp198,690,802.00.
 - Supabase Security Advisor: no RLS policy warning.
-- Latest GitHub Audit Gate: SUCCESS.
-- Latest Vercel deployment: SUCCESS.
+- Latest GitHub Audit Gate / deployment chain has been green after hardening commits.
 - Production error/fatal log check: no current events returned.
 
 ## Closed security finding
 Runtime testing found raw Finance rows visible to a same-brand role without Finance permission. Migration `20260924172613_harden_finance_raw_read_capability` closes that path. Re-test passes.
+
+## Closed tenant-isolation gate
+A rollback-only normal NGODENG user with `is_super_admin=false` was evaluated against Hasnaria data. Hasnaria products, Purchase evidence, and Finance journal visibility all returned 0. The transaction was rolled back and follow-up verification confirmed 0 temporary Auth/profile rows remained.
 
 ## Closed backup/restore finding
 A no-branch transactional restore rehearsal was executed using temporary tables only and ended with ROLLBACK. Row count + checksum matched for products, sales, purchase history/evidence, import jobs, Finance journal entries, and Finance journal lines. No paid Supabase branch/project or persistent production mutation was created.
@@ -40,8 +43,7 @@ Evidence:
 
 ## Remaining gates
 1. Authenticated browser E2E: Owner login → Pembelian → Stok → Finance → refresh/logout/login → responsive checks.
-2. Normal non-superadmin cross-brand runtime acceptance.
-3. Enable Supabase Auth leaked-password protection. This is the only remaining Security Advisor warning.
+2. Enable Supabase Auth leaked-password protection. Supabase documents this under Auth password security; the current connector does not expose an Auth-config mutation action, so it must be enabled through Supabase Auth settings or an authorized Management API workflow.
 
 ## Assessment
-There is no currently known Purchase → Finance canonical accounting defect. Backup/restore logical acceptance is closed without additional infrastructure cost. The project remains PRE-GO-LIVE only because browser acceptance, a real non-superadmin cross-brand test, and the Auth password-security setting are still open.
+There is no currently known Purchase → Finance canonical accounting defect, open RLS tenant-isolation defect, or logical restore blocker. Hasnaria is in FINAL ACCEPTANCE, with browser E2E and the leaked-password-protection toggle remaining before final go-live sign-off.
