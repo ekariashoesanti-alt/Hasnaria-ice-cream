@@ -1,10 +1,13 @@
+/* Hasnaria Purchase — inventory status KPI only.
+ * Detailed Persediaan Kurang/Hapus analysis lives in Stok (HSN-402).
+ * This runtime must not inject legacy lower-grid cards into Pembelian.
+ */
 (function(){
   'use strict';
   if(window.__HASNARIA_PURCHASE_INVENTORY_STATUS)return;
   window.__HASNARIA_PURCHASE_INVENTORY_STATUS=true;
 
   var BRAND='a36d4b4f-3ccc-4a78-8aeb-b868f0407ea4';
-  var MONTHS=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
   var STOCK_CATS={'Makanan':1,'Minuman':1,'Ice Cream':1,'Snack':1,'Kemasan & Supplies':1};
   var db=null,observer=null,timer=0,fetching=null,lastRoot=null;
 
@@ -20,7 +23,6 @@
   function ensureCompactCss(){
     addCss('hasnaria-purchase-compact-css','/purchase-compact.css?v=2');
     addCss('hasnaria-purchase-width-fix-css','/purchase-width-fix.css?v=2');
-    addCss('hasnaria-purchase-equal-height-css','/purchase-equal-height.css?v=1');
   }
   function resetScrollNow(){
     try{
@@ -48,8 +50,6 @@
 
   function clean(v){return String(v==null?'':v).trim().replace(/\s+/g,' ');}
   function norm(v){return clean(v).toUpperCase().replace(/[^A-Z0-9]+/g,'');}
-  function esc(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
-  function periodLabel(p){if(!/^\d{4}-\d{2}/.test(String(p||'')))return'—';return(MONTHS[Number(p.slice(5,7))-1]||p.slice(5,7))+' '+p.slice(0,4);}
   function rawObj(r){if(r&&r.raw_data&&typeof r.raw_data==='object')return r.raw_data;if(r&&typeof r.raw_data==='string'){try{return JSON.parse(r.raw_data);}catch(_){}}return{};}
   function analytics(r){var raw=rawObj(r),cat=raw.analytics_category||raw.category||'',group=raw.analytics_group||'',kind=raw.analytics_kind||(raw.record_type==='RINGKASAN_BIAYA'?'cost_component':'purchase_item');return{category:cat,group:group,kind:kind};}
 
@@ -84,63 +84,45 @@
     data.rules.forEach(function(x){if(x.rule_type!=='inventory_alias'||!x.inventory_item_id)return;var n=norm(x.normalized_source_name||x.source_name);if(n)alias[n]=x.inventory_item_id;});
     return function(r){
       var n=norm(r.item_name),id=alias[n]||invByNorm[n]||null,x=id?inv[id]:null;
-      return{key:id?'inv:'+id:'name:'+n,name:x&&x.item_name?clean(x.item_name):clean(r.item_name),inventory:x||null,stockable:!!x||fallbackStockable(r)};
+      return{key:id?'inv:'+id:'name:'+n,stockable:!!x||fallbackStockable(r)};
     };
   }
 
   function compute(data,selected){
-    var identify=buildIdentity(data),pSet={},meta={},by={};
+    var identify=buildIdentity(data),pSet={},by={};
     data.rows.forEach(function(r){var p=String(r.source_period||'').slice(0,7);if(/^\d{4}-\d{2}$/.test(p))pSet[p]=1;});
     var periods=Object.keys(pSet).sort().filter(function(p){return p<=selected;}),idx=periods.indexOf(selected);
     periods.forEach(function(p){by[p]={};});
-    if(idx<0)return{shortage:[],discontinue:[],periods:periods};
+    if(idx<0)return{shortage:0,discontinue:0};
 
     data.rows.forEach(function(r){
       var p=String(r.source_period||'').slice(0,7);if(periods.indexOf(p)<0||!(Number(r.total_amount||0)>0))return;
       var id=identify(r);if(!id.key||!id.stockable)return;
-      if(!by[p][id.key])by[p][id.key]=0;by[p][id.key]+=Number(r.total_amount||0);
-      if(!meta[id.key])meta[id.key]={name:id.name||clean(r.item_name),category:(id.inventory&&id.inventory.category)||analytics(r).category||'Persediaan'};
+      if(!by[p][id.key])by[p][id.key]=0;
+      by[p][id.key]+=Number(r.total_amount||0);
     });
 
-    var shortage=[],discontinue=[];
-    Object.keys(meta).forEach(function(k){
+    var keys={};
+    periods.forEach(function(p){Object.keys(by[p]).forEach(function(k){keys[k]=1;});});
+    var shortage=0,discontinue=0;
+    Object.keys(keys).forEach(function(k){
       if(by[selected]&&by[selected][k]>0)return;
       var last=-1;
       for(var i=idx-1;i>=0;i--){if(by[periods[i]]&&by[periods[i]][k]>0){last=i;break;}}
       if(last<0)return;
-      var streak=idx-last,item={name:meta[k].name,category:meta[k].category,lastPeriod:periods[last],streak:streak,lastAmount:by[periods[last]][k]||0};
-      if(streak>=3)discontinue.push(item);
-      else if(streak>=1)shortage.push(item);
+      var streak=idx-last;
+      if(streak>=3)discontinue++;
+      else if(streak>=1)shortage++;
     });
-    shortage.sort(function(a,b){return b.lastAmount-a.lastAmount||a.name.localeCompare(b.name);});
-    discontinue.sort(function(a,b){return b.streak-a.streak||b.lastAmount-a.lastAmount||a.name.localeCompare(b.name);});
-    return{shortage:shortage,discontinue:discontinue,periods:periods};
-  }
-
-  function listHtml(arr,type){
-    if(!arr.length)return'<div class="pa-empty">'+(type==='shortage'?'Tidak ada item persediaan yang perlu perhatian pada periode ini.':'Belum ada item yang memenuhi aturan 3 periode tanpa pembelian.')+'</div>';
-    var max=4,shown=arr.slice(0,max),more=arr.length-shown.length;
-    return'<div class="pa-list'+(type==='discontinue'?' pa-list-muted':'')+'">'+shown.map(function(x){var badge=type==='discontinue'?'Discontinue':(x.streak+' / 3 periode');var note='Terakhir dibeli '+periodLabel(x.lastPeriod)+(type==='discontinue'?' · '+x.streak+' periode data valid tanpa pembelian':' · cek stok / reorder');return'<div><span>'+esc(x.name)+'</span><b>'+esc(badge)+'</b><small>'+esc(note)+'</small></div>';}).join('')+'</div>'+(more>0?'<div class="pa-stock-more">+'+more.toLocaleString('id-ID')+' item lainnya</div>':'');
+    return{shortage:shortage,discontinue:discontinue};
   }
 
   function patch(status,root){
     if(!root||!root.isConnected)return;
     var kpis=root.querySelectorAll('.pa-kpis article');
-    if(kpis.length){
-      var k=kpis[kpis.length-1];
-      k.innerHTML='<span>Status Persediaan</span><strong>'+status.shortage.length.toLocaleString('id-ID')+' kurang · '+status.discontinue.length.toLocaleString('id-ID')+' hapus</strong><small>bahan baku & perlengkapan stockable</small>';
-    }
-    var lower=root.querySelectorAll('.pa-lower-grid article');
-    if(lower.length){
-      var card=lower[lower.length-1];
-      card.innerHTML='<div class="pa-stock-grid"><section class="pa-stock-section"><div class="pa-stock-head"><h2>Persediaan Kurang</h2><span class="pa-stock-count">'+status.shortage.length.toLocaleString('id-ID')+' item</span></div><p class="pa-sub">Tidak dibeli lagi selama 1–2 periode data valid.</p>'+listHtml(status.shortage,'shortage')+'</section><section class="pa-stock-section"><div class="pa-stock-head"><h2>Persediaan Hapus</h2><span class="pa-stock-count">'+status.discontinue.length.toLocaleString('id-ID')+' item</span></div><p class="pa-sub">Tidak dibeli ≥3 periode data valid berturut-turut.</p>'+listHtml(status.discontinue,'discontinue')+'</section></div>';
-    }
-    var insight=root.querySelector('.pa-insight ol');
-    if(insight){
-      var li=Array.prototype.slice.call(insight.querySelectorAll('li')).filter(function(x){return /item tidak muncul|discontinue|persediaan/i.test(x.textContent||'');})[0];
-      var msg=status.shortage.length+' item masuk Persediaan Kurang dan '+status.discontinue.length+' item masuk Persediaan Hapus / Discontinue berdasarkan periode data valid.';
-      if(li)li.textContent=msg;else if(status.shortage.length||status.discontinue.length){li=document.createElement('li');li.textContent=msg;insight.appendChild(li);}
-    }
+    if(!kpis.length)return;
+    var k=kpis[kpis.length-1];
+    k.innerHTML='<span>Status Persediaan</span><strong>'+status.shortage.toLocaleString('id-ID')+' kurang · '+status.discontinue.toLocaleString('id-ID')+' hapus</strong><small>bahan baku & perlengkapan stockable</small>';
   }
 
   function refresh(force){
