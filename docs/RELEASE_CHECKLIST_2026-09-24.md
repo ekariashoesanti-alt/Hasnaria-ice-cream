@@ -46,7 +46,7 @@ This checklist is the operational gate for `HSN-1007`. A release is not accepted
 - [x] Supabase Security Advisor rechecked after hardening; no RLS/security-policy warning remains.
 - [x] Cross-brand deny matrix executed with a rollback-only normal non-superadmin identity; Hasnaria products, Purchase evidence, and Finance visibility all returned 0.
 - [x] Supabase organization plan verified as Free.
-- [ ] Auth leaked-password protection decision: Supabase documents this feature as Pro-and-above. On the current Free plan it cannot be enabled; final sign-off therefore requires either upgrade to Pro or an explicit Owner waiver/acceptance of this platform limitation.
+- [x] Owner explicitly elects to remain on Supabase Free for this release and accepts/waives the plan-limited leaked-password-protection warning. Evidence: `docs/SECURITY_WAIVER_SUPABASE_FREE_2026-09-25.md`.
 
 Runtime evidence: `docs/RLS_RUNTIME_MATRIX_2026-09-25.md`.
 
@@ -91,6 +91,7 @@ Run against production after the database gates above are green:
 - [x] Backup/restore rehearsal recorded as PASS.
 - [x] Full RLS role/cross-brand acceptance recorded as PASS.
 - [x] Production/repository migration parity verified through current head.
+- [x] Supabase Free-plan Auth limitation explicitly accepted/waived by Owner for this release.
 
 ## Rollback trigger
 Rollback/forward-fix procedure is triggered if any of the following occurs after release:
@@ -106,6 +107,6 @@ Prefer a backward-compatible forward fix. For data-integrity incidents, freeze a
 ## Status — 25 Sep 2026
 `HSN-1007 Release checklist Site/production`: **REVIEW**.
 
-Backend/data/security gates green: source/CI, migration parity through current production head, canonical Purchase→Finance reconciliation, Purchase lineage, Finance raw-data capability hardening, full role/cross-brand RLS acceptance, Security Advisor RLS review, and no-branch logical restore rehearsal.
+Backend/data/security gates green: source/CI, migration parity through current production head, canonical Purchase→Finance reconciliation, Purchase lineage, Finance raw-data capability hardening, full role/cross-brand RLS acceptance, Security Advisor RLS review, no-branch logical restore rehearsal, and Free-plan security waiver recorded.
 
-Still required for DONE: authenticated browser E2E, plus one Owner decision on the plan-limited leaked-password-protection warning (upgrade to Pro or explicit waiver while remaining on Free).
+Still required for DONE: authenticated browser E2E only.
