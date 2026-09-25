@@ -1,0 +1,55 @@
+name: Hasnaria Production E2E
+
+on:
+  workflow_dispatch:
+    inputs:
+      allow_write:
+        description: 'Run controlled Purchase write + lineage + cleanup test'
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  production-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      HASNARIA_BASE_URL: https://hasnaria-business-analyzer.vercel.app
+      HASNARIA_E2E_EMAIL: ${{ secrets.HASNARIA_E2E_EMAIL }}
+      HASNARIA_E2E_PASSWORD: ${{ secrets.HASNARIA_E2E_PASSWORD }}
+      HASNARIA_E2E_ALLOW_WRITE: ${{ inputs.allow_write && '1' || '0' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate E2E credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${HASNARIA_E2E_EMAIL}" || { echo 'Missing HASNARIA_E2E_EMAIL repository secret.' >&2; exit 1; }
+          test -n "${HASNARIA_E2E_PASSWORD}" || { echo 'Missing HASNARIA_E2E_PASSWORD repository secret.' >&2; exit 1; }
+
+      - name: Install isolated E2E dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm init -y >/dev/null 2>&1
+          npm install --no-save @playwright/test@1.55.0 xlsx@0.18.5
+          npx playwright install --with-deps chromium
+
+      - name: Run production browser E2E
+        run: npx playwright test tests/e2e/go-live.spec.js --reporter=line
+
+      - name: Upload Playwright artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hasnaria-e2e-failure-${{ github.run_id }}
+          path: |
+            test-results
+            playwright-report
+          if-no-files-found: ignore
+          retention-days: 3
