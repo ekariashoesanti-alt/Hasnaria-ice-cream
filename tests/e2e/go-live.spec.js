@@ -169,7 +169,7 @@ test.describe.serial('Hasnaria production go-live E2E', () => {
     await expect(page.locator('#stok')).not.toBeEmpty();
 
     await openTab(page, 'ops');
-    await expect(page.locator('#ops')).not.toBeEmpty();
+    await expect(page.locator('#ops [data-finance-v6="1"]')).toBeVisible({ timeout: 20000 });
 
     await page.reload({ waitUntil: 'domcontentloaded' });
     await expect(page.locator('#app')).not.toHaveClass(/hidden/, { timeout: 45000 });
@@ -217,7 +217,7 @@ test.describe.serial('Hasnaria production go-live E2E', () => {
     await openTab(page, 'stok');
     await expect(page.locator('#stok')).not.toBeEmpty();
     await openTab(page, 'ops');
-    await expect(page.locator('#ops')).not.toBeEmpty();
+    await expect(page.locator('#ops [data-finance-v6="1"]')).toBeVisible({ timeout: 20000 });
 
     const cleanup = await cleanupFixture(page, sourceFile);
     expect(cleanup.evidenceRemaining).toBe(0);
