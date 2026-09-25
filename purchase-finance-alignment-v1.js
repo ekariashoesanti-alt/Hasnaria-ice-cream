@@ -1,13 +1,13 @@
 (function(){
 'use strict';
-if(window.__HASNARIA_PURCHASE_FINANCE_ALIGNMENT_V4)return;
-window.__HASNARIA_PURCHASE_FINANCE_ALIGNMENT_V4=true;
+if(window.__HASNARIA_PURCHASE_FINANCE_ALIGNMENT_V5)return;
+window.__HASNARIA_PURCHASE_FINANCE_ALIGNMENT_V5=true;
 window.__HASNARIA_PURCHASE_FINANCE_ALIGNMENT_V3=true;
 window.__HASNARIA_PURCHASE_FINANCE_ALIGNMENT_V2=true;
 window.__HASNARIA_PURCHASE_FINANCE_ALIGNMENT_V1=true;
 
 var BRAND='a36d4b4f-3ccc-4a78-8aeb-b868f0407ea4';
-var SYNC_KEY='hasnaria-purchase-finance-sync-20260925-v1';
+var SYNC_KEY='hasnaria-purchase-finance-sync-20260925-v2';
 var db=null,rows=[],loading=false,error='',observer=null,timer=0,loadedAt=0,syncing=false,syncMsg='';
 
 function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
@@ -103,7 +103,7 @@ async function autoSyncFinance(){
   if(!db||syncing||syncDone()||syncSuppressed())return;
   syncing=true;syncMsg='';render();
   try{
-    var r=await db.rpc('rebuild_finance_journal_v1',{p_from:'2026-06-01',p_to:'2026-09-30'});
+    var r=await db.rpc('rebuild_finance_journal_v1',{p_from:'2026-01-01',p_to:'2026-09-30'});
     if(r.error)throw r.error;
     markSyncDone();syncMsg='jurnal diperbarui';
     rows=[];loadedAt=0;
