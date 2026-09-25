@@ -79,7 +79,7 @@ function schedule(forceSync){clearTimeout(timer);timer=setTimeout(async function
 function boot(){
   db=window.__HASNARIA_DB||null;var tries=0;
   (function wait(){db=db||window.__HASNARIA_DB||null;if(db&&isOwner()){
-    css();var h=document.getElementById('ops');if(h){observer=new MutationObserver(function(){if(root())schedule(false)});observer.observe(h,{childList:true,subtree:true})}
+    css();var h=document.getElementById('ops');if(h){observer=new MutationObserver(function(){if(root())schedule(false)});observer.observe(h,{childList:true,subtree:false})}
     document.addEventListener('change',function(e){if(e.target&&e.target.id==='financeV6Period')schedule(false)},true);
     document.addEventListener('click',function(e){var b=e.target&&e.target.closest?e.target.closest('[data-tab="ops"]'):null;if(b)setTimeout(function(){schedule(true)},180)},true);
     document.addEventListener('visibilitychange',function(){if(!document.hidden&&root())syncAll(false)});
