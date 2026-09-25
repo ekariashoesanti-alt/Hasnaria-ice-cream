@@ -3,7 +3,7 @@
 ## State
 **PRE-GO-LIVE / FINAL ACCEPTANCE**
 
-Core backend repair, database hardening, RLS acceptance, and logical restore rehearsal are complete. Remaining work is browser acceptance plus one Supabase Auth configuration toggle.
+Core backend repair, database hardening, RLS acceptance, and logical restore rehearsal are complete. Remaining work is browser acceptance plus one plan-level security decision.
 
 ## Green gates
 - Supabase production healthy.
@@ -22,7 +22,7 @@ Core backend repair, database hardening, RLS acceptance, and logical restore reh
 - Seven critical datasets matched source row counts and logical checksums after temporary rehydration.
 - Restored Finance debit = credit at Rp198,690,802.00.
 - Supabase Security Advisor: no RLS policy warning.
-- Latest GitHub Audit Gate / deployment chain has been green after hardening commits.
+- Latest deployment chain has been green after hardening commits.
 - Production error/fatal log check: no current events returned.
 
 ## Closed security finding
@@ -34,6 +34,13 @@ A rollback-only normal NGODENG user with `is_super_admin=false` was evaluated ag
 ## Closed backup/restore finding
 A no-branch transactional restore rehearsal was executed using temporary tables only and ended with ROLLBACK. Row count + checksum matched for products, sales, purchase history/evidence, import jobs, Finance journal entries, and Finance journal lines. No paid Supabase branch/project or persistent production mutation was created.
 
+## Supabase Auth plan limitation
+The Hasnaria Supabase organization is currently on the **Free** plan. Supabase documentation states leaked-password protection is available on **Pro Plan and above**. Therefore the remaining Security Advisor warning cannot be closed on the current plan by simply enabling a toggle.
+
+For final sign-off there are two legitimate options:
+1. Upgrade Supabase organization to Pro, then enable leaked-password protection in Auth settings; or
+2. Remain on Free and record an explicit Owner acceptance/waiver of this platform limitation.
+
 Evidence:
 - `docs/RLS_RUNTIME_MATRIX_2026-09-25.md`
 - `docs/PRODUCTION_ARCHITECTURE_REVIEW_2026-09-25.md`
@@ -43,7 +50,7 @@ Evidence:
 
 ## Remaining gates
 1. Authenticated browser E2E: Owner login → Pembelian → Stok → Finance → refresh/logout/login → responsive checks.
-2. Enable Supabase Auth leaked-password protection. Supabase documents this under Auth password security; the current connector does not expose an Auth-config mutation action, so it must be enabled through Supabase Auth settings or an authorized Management API workflow.
+2. Owner decision on leaked-password protection: upgrade to Pro or explicitly accept/waive the Free-plan limitation.
 
 ## Assessment
-There is no currently known Purchase → Finance canonical accounting defect, open RLS tenant-isolation defect, or logical restore blocker. Hasnaria is in FINAL ACCEPTANCE, with browser E2E and the leaked-password-protection toggle remaining before final go-live sign-off.
+There is no currently known Purchase → Finance canonical accounting defect, open RLS tenant-isolation defect, or logical restore blocker. Hasnaria is in FINAL ACCEPTANCE, with browser E2E and one plan-level security decision remaining before final go-live sign-off.
