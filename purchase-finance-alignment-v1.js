@@ -1,22 +1,24 @@
 (function(){
 'use strict';
-if(window.__HASNARIA_PURCHASE_FINANCE_ALIGNMENT_V2)return;
+if(window.__HASNARIA_PURCHASE_FINANCE_ALIGNMENT_V3)return;
+window.__HASNARIA_PURCHASE_FINANCE_ALIGNMENT_V3=true;
 window.__HASNARIA_PURCHASE_FINANCE_ALIGNMENT_V2=true;
 window.__HASNARIA_PURCHASE_FINANCE_ALIGNMENT_V1=true;
 
 var BRAND='a36d4b4f-3ccc-4a78-8aeb-b868f0407ea4';
 var db=null,rows=[],loading=false,error='',observer=null,timer=0,loadedAt=0;
 
-function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[c]})}
+function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function n(v){v=Number(v);return isFinite(v)?v:0}
 function money(v){var x=n(v),a=Math.abs(x);if(a>=1e9)return'Rp '+(x/1e9).toLocaleString('id-ID',{maximumFractionDigits:2})+' M';if(a>=1e6)return'Rp '+(x/1e6).toLocaleString('id-ID',{maximumFractionDigits:2})+' jt';if(a>=1e3)return'Rp '+(x/1e3).toLocaleString('id-ID',{maximumFractionDigits:0})+' rb';return'Rp '+x.toLocaleString('id-ID',{maximumFractionDigits:0})}
 function periodKey(v){var s=String(v||'');return /^\d{4}-\d{2}/.test(s)?s.slice(0,7):''}
 function dateLabel(v){var s=String(v||'');return /^\d{4}-\d{2}-\d{2}/.test(s)?s.slice(8,10)+'/'+s.slice(5,7)+'/'+s.slice(0,4):'—'}
 function total(a){return a.reduce(function(s,r){return s+n(r.total_amount)},0)}
 function isReview(r){return r.finance_status==='review_required'||r.accounting_treatment==='payment_review'||r.accounting_treatment==='classification_review'||r.accounting_treatment==='asset_review'||r.accounting_treatment==='expense_review'}
-function isSynced(r){return !isReview(r)&&(r.finance_status==='posted'||r.finance_status==='provisional')}
-function statusClass(r){if(isReview(r))return'bad';return r.finance_status==='provisional'?'warn':'ok'}
-function statusLabel(r){if(isReview(r))return'Review · belum diposting';return r.finance_status==='provisional'?'Sinkron · provisional':'Sinkron / posted'}
+function isZero(r){return !isReview(r)&&Math.abs(n(r.total_amount))<.01}
+function isSynced(r){return !isReview(r)&&!isZero(r)&&(r.finance_status==='posted'||r.finance_status==='provisional')}
+function statusClass(r){if(isReview(r))return'bad';if(isZero(r))return'warn';return r.finance_status==='provisional'?'warn':'ok'}
+function statusLabel(r){if(isReview(r))return'Review · belum diposting';if(isZero(r))return'Nilai 0 · tidak perlu jurnal';return r.finance_status==='provisional'?'Sinkron · provisional':'Sinkron / posted'}
 function accountLabel(code,name){if(!code)return'—';return esc(code+' · '+(name||'Akun Finance'))}
 function scopeValue(){var s=document.getElementById('paScope');return s?s.value:'all'}
 function periodValue(){var p=document.getElementById('paPeriod');return p?periodKey(p.value):''}
@@ -33,6 +35,7 @@ function patchCoreLabels(root){
 function card(label,value,sub,cls){return'<article class="pfa-card '+(cls||'')+'"><span>'+esc(label)+'</span><strong>'+esc(value)+'</strong><small>'+esc(sub)+'</small></article>'}
 function rowNote(r){
   if(isReview(r))return r.required_action||'Kode 1990 dipakai sebagai akun review; transaksi belum diposting ke ledger final.';
+  if(isZero(r))return'Nilai transaksi Rp0, sehingga tidak dibuat jurnal Finance.';
   if(r.finance_status==='provisional'&&r.counter_account_code==='2190')return'Metode pembayaran tidak tersedia di sumber. Nilai dan akun debit sudah masuk Finance; akun lawan sementara 2190.';
   if(r.finance_status==='provisional')return'Nilai dan akun debit sudah masuk Finance; akun lawan masih provisional.';
   return'Akun transaksi sudah terhubung ke Finance.';
@@ -62,7 +65,7 @@ function render(){
   if(loading){wrap.innerHTML='<div class="pfa-head"><div><h2>Pembelian ↔ Keuangan</h2><p>Memuat kode akun dan status sinkronisasi…</p></div></div>';target.insertAdjacentElement('afterend',wrap);return}
   if(error){wrap.innerHTML='<div class="pfa-head"><div><h2>Pembelian ↔ Keuangan</h2><p class="pfa-error">'+esc(error)+'</p></div><button id="pfaRetry" type="button">Muat ulang</button></div>';target.insertAdjacentElement('afterend',wrap);var rb=document.getElementById('pfaRetry');if(rb)rb.onclick=function(){load(true)};return}
   var a=scoped();
-  var inventory=a.filter(function(r){return r.accounting_treatment==='inventory'}),expense=a.filter(function(r){return r.accounting_treatment==='expense'}),reviews=reviewRows(a),provisional=a.filter(function(r){return !isReview(r)&&r.finance_status==='provisional'}),posted=a.filter(function(r){return !isReview(r)&&r.finance_status==='posted'}),synced=a.filter(isSynced);
+  var inventory=a.filter(function(r){return r.accounting_treatment==='inventory'}),expense=a.filter(function(r){return r.accounting_treatment==='expense'}),reviews=reviewRows(a),zeroRows=a.filter(isZero),provisional=a.filter(function(r){return !isReview(r)&&!isZero(r)&&r.finance_status==='provisional'}),posted=a.filter(function(r){return !isReview(r)&&!isZero(r)&&r.finance_status==='posted'}),synced=a.filter(isSynced);
   var expenseAccounts={};expense.forEach(function(r){var k=r.debit_account_code||'—';if(!expenseAccounts[k])expenseAccounts[k]={name:r.debit_account_name||'Beban',amount:0};expenseAccounts[k].amount+=n(r.total_amount)});
   var breakdown=Object.keys(expenseAccounts).sort().map(function(k){return'<span><b>'+esc(k)+'</b> '+esc(expenseAccounts[k].name)+' <strong>'+esc(money(expenseAccounts[k].amount))+'</strong></span>'}).join('');
   var provisional2190=provisional.filter(function(r){return r.counter_account_code==='2190'});
@@ -73,9 +76,9 @@ function render(){
       card('Akun lawan provisional',money(total(provisional)),provisional.length+' transaksi; '+provisional2190.length+' memakai 2190','expense')+
       card('Perlu review',money(total(reviews)),reviews.length+' transaksi belum boleh diposting','review')+
     '</div>'+
-    '<div class="pfa-meta"><div><b>Rincian akun beban</b>'+(breakdown||'<span>Tidak ada beban langsung pada periode/filter ini.</span>')+'</div><div><b>Status ledger</b><span>'+posted.length.toLocaleString('id-ID')+' posted/final</span><span>'+provisional.length.toLocaleString('id-ID')+' sinkron tetapi provisional</span><span>'+reviews.length.toLocaleString('id-ID')+' review dan belum diposting</span></div></div>'+
+    '<div class="pfa-meta"><div><b>Rincian akun beban</b>'+(breakdown||'<span>Tidak ada beban langsung pada periode/filter ini.</span>')+'</div><div><b>Status ledger</b><span>'+posted.length.toLocaleString('id-ID')+' posted/final</span><span>'+provisional.length.toLocaleString('id-ID')+' sinkron tetapi provisional</span><span>'+reviews.length.toLocaleString('id-ID')+' review dan belum diposting</span><span>'+zeroRows.length.toLocaleString('id-ID')+' nilai Rp0 dan tidak perlu jurnal</span></div></div>'+
     '<div class="pfa-note"><b>Catatan:</b> akun 2190 bukan transaksi hilang. Itu akun lawan sementara ketika file sumber tidak memberikan metode pembayaran. Sistem tidak menebak Cash/Bank/Utang agar rekonsiliasi tetap dapat diaudit.</div>'+
-    '<div class="pfa-review-head"><div><h3>Transaksi ↔ Keuangan</h3><p>Seluruh transaksi periode terpilih beserta kode akun dan status pencatatannya.</p></div><span>'+synced.length.toLocaleString('id-ID')+' sinkron · '+reviews.length.toLocaleString('id-ID')+' review</span></div>'+renderAllTable(a)+
+    '<div class="pfa-review-head"><div><h3>Transaksi ↔ Keuangan</h3><p>Seluruh transaksi periode terpilih beserta kode akun dan status pencatatannya.</p></div><span>'+synced.length.toLocaleString('id-ID')+' sinkron · '+reviews.length.toLocaleString('id-ID')+' review · '+zeroRows.length.toLocaleString('id-ID')+' nilai 0</span></div>'+renderAllTable(a)+
     '<div class="pfa-review-head"><div><h3>Prioritas Review</h3><p>Hanya transaksi yang belum boleh menjadi pencatatan final.</p></div><span>'+reviews.length.toLocaleString('id-ID')+' perlu review</span></div>'+renderReviewTable(a);
   target.insertAdjacentElement('afterend',wrap);
 }
