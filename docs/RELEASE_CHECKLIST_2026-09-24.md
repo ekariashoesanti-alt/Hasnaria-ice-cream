@@ -42,7 +42,7 @@ This checklist is the operational gate for `HSN-1007`. A release is not accepted
 - [x] Pending/suspended deny matrix executed.
 - [x] Marketing raw-Finance exposure found during testing and CLOSED by migration `20260924172613_harden_finance_raw_read_capability`.
 - [x] Supabase Security Advisor rechecked after hardening; no RLS/security-policy warning remains.
-- [ ] Cross-brand deny matrix executed with a real non-superadmin identity. Current production test identity is super-admin, so its cross-brand visibility is intentional and cannot prove normal-user isolation at runtime.
+- [x] Cross-brand deny matrix executed with a rollback-only normal non-superadmin identity; Hasnaria products, Purchase evidence, and Finance visibility all returned 0.
 - [ ] Supabase Auth leaked-password protection enabled.
 
 Runtime evidence: `docs/RLS_RUNTIME_MATRIX_2026-09-25.md`.
@@ -86,6 +86,7 @@ Run against production after the database gates above are green:
 - [x] Latest deployment status = success.
 - [x] Supabase Security Advisor reviewed.
 - [x] Backup/restore rehearsal recorded as PASS.
+- [x] Full RLS role/cross-brand acceptance recorded as PASS.
 
 ## Rollback trigger
 Rollback/forward-fix procedure is triggered if any of the following occurs after release:
@@ -101,6 +102,6 @@ Prefer a backward-compatible forward fix. For data-integrity incidents, freeze a
 ## Status — 25 Sep 2026
 `HSN-1007 Release checklist Site/production`: **REVIEW**.
 
-Backend/data gates green: source/CI, migration parity, canonical Purchase→Finance reconciliation, Purchase lineage, role runtime checks available from production, Finance raw-data capability hardening, Security Advisor RLS review, and no-branch logical restore rehearsal.
+Backend/data/security gates green: source/CI, migration parity, canonical Purchase→Finance reconciliation, Purchase lineage, Finance raw-data capability hardening, full role/cross-brand RLS acceptance, Security Advisor RLS review, and no-branch logical restore rehearsal.
 
-Still required for DONE: authenticated browser E2E, real non-superadmin cross-brand runtime test, and Supabase Auth leaked-password protection.
+Still required for DONE: authenticated browser E2E and Supabase Auth leaked-password protection.
