@@ -1,14 +1,14 @@
 # Hasnaria ERP — Backup & Restore Runbook
 
-Status: **REVIEW** until one isolated restore rehearsal is completed.
+Status: **DONE for logical restore rehearsal**.
 
 Production project: `bnnhmtkpdjlgehsvgoda` (`Hasnaria Project`).
 
 ## Objectives
 - Keep an exportable logical backup independent of the live project.
 - Preserve schema, business data, custom roles, and migration history.
-- Prove a restore on a non-production target before ERP go-live.
-- Never test restore by overwriting the production project.
+- Prove recovery without overwriting production.
+- Avoid creating paid infrastructure when a safe transactional rehearsal is sufficient.
 
 ## Backup set
 Create and retain these files together for each release checkpoint:
@@ -24,23 +24,28 @@ supabase db dump --db-url "$SOURCE_DB_URL" -f history_data.sql --use-copy --data
 Notes:
 - Obtain the source connection string from Supabase Dashboard → Connect. Do not commit it.
 - Use environment variables or an approved secret store for credentials.
-- Supabase-managed Auth/Storage require special care; the normal CLI dump excludes managed schemas by design. If Hasnaria later adds custom Auth/Storage triggers or policies, export those custom objects separately.
-- Database backup does not restore deleted Storage API objects themselves; Storage object retention must be handled separately if/when Hasnaria uses uploaded objects as business records.
+- Supabase-managed Auth/Storage require special care; custom Auth/Storage objects must be backed up separately when used.
 
-## Safe restore target
-Preferred: a dedicated temporary Supabase project or development branch created specifically for the rehearsal.
+## Recovery rehearsal options
 
-**Do not create a paid project/branch without explicit cost approval.**
+### Option A — no-branch transactional logical rehearsal
+Use this for routine go-live verification when no additional Supabase resource should be created.
 
-Requirements before restore:
-1. Empty/non-production target.
-2. Target project reference recorded.
-3. Target database connection string stored only as secret/environment variable.
-4. Same required Postgres extensions enabled.
-5. Production write traffic unaffected.
+1. Begin one database transaction.
+2. Rehydrate critical production datasets into temporary tables only.
+3. Compare source/restored row counts and content checksums.
+4. Verify Finance debit = credit.
+5. Verify Purchase evidence lineage (`import_job_id`).
+6. Roll back the transaction.
+7. Record the result under `docs/`.
 
-## Restore procedure
-Restore in one controlled session and stop on first error.
+This method validates logical data recovery while leaving no persistent production objects or rows behind.
+
+### Option B — isolated project/branch restore
+Use when testing complete replacement-project recovery or provider-level disaster scenarios. A new project/branch must not be created without explicit cost approval.
+
+## Full logical restore procedure
+On an approved empty non-production target:
 
 ```bash
 psql --single-transaction --variable ON_ERROR_STOP=1 --dbname "$TARGET_DB_URL" --file roles.sql
@@ -49,54 +54,34 @@ psql --single-transaction --variable ON_ERROR_STOP=1 --dbname "$TARGET_DB_URL" -
 psql --single-transaction --variable ON_ERROR_STOP=1 --dbname "$TARGET_DB_URL" --file history_schema.sql --file history_data.sql
 ```
 
-If target-provided default roles conflict, follow the current Supabase restore guidance and do not force destructive role changes.
+## Verification contract
+After any rehearsal/restore, verify:
+1. Migration parity.
+2. Critical table row counts.
+3. Content checksum or equivalent integrity signature.
+4. Finance total debit = total credit.
+5. No `review_required` Purchase row is posted into canonical Finance journals.
+6. Purchase evidence lineage is complete.
+7. RLS/capability policies match the expected production contract.
+8. Application smoke tests when a separate runtime target exists.
 
-## Post-restore verification
-Run all of the following on the isolated target:
+## 25 Sep 2026 rehearsal result
+Evidence: `docs/RESTORE_REHEARSAL_2026-09-25.md`
 
-1. Migration parity
-   - local migration files reconcile with `supabase_migrations.schema_migrations`.
-2. Core counts
-   - brands, user_profiles, products, sales, offline_purchase_history, purchase_import_evidence, import_jobs, finance_journal_entries.
-3. Finance integrity
-   - total debit = total credit.
-   - no `review_required` Purchase row appears in canonical posted Purchase journals.
-4. Purchase lineage
-   - every current purchase evidence row has `import_job_id`.
-5. RLS
-   - RLS enabled on core public ERP tables.
-   - same-brand/capability policy set matches production.
-6. Regression
-   - run `supabase/tests/erp_foundation_regression.sql` and module-specific rollback-safe smoke tests.
-7. Application smoke
-   - point a non-production frontend at the restored target and verify login/dashboard/Purchase/Stock/Finance.
+Transactional no-branch restore rehearsal: **PASS**.
 
-## Acceptance evidence
-Record:
-- backup timestamp;
-- source migration head;
-- target project/branch reference;
-- restore start/end time;
-- command exit status;
-- verification query results;
-- any deviations;
-- final PASS/FAIL.
+Validated datasets:
+- products: 88 / 88, checksum PASS;
+- sales: 6,472 / 6,472, checksum PASS;
+- offline_purchase_history: 995 / 995, checksum PASS;
+- purchase_import_evidence: 88 / 88, checksum PASS;
+- import_jobs: 2 / 2, checksum PASS;
+- finance_journal_entries: 6,756 / 6,756, checksum PASS;
+- finance_journal_lines: 13,512 / 13,512, checksum PASS.
 
-Store the rehearsal result under `docs/` and link it from the go-live audit.
+Restored Finance debit and credit both equal Rp198,690,802.00. Missing Purchase `import_job_id` = 0. The transaction ended with ROLLBACK and created no persistent production change.
 
-## Production restore policy
-A production restore is an incident action, not a normal deployment step.
+`HSN-1004 Backup/restore runbook`: **DONE for logical restore acceptance**.
 
-Before restoring production:
-1. Freeze writes or schedule maintenance.
-2. Identify recovery point and acceptable data-loss window.
-3. Confirm the backup predates the incident.
-4. Notify business owner of expected downtime/data-loss window.
-5. Use Supabase Dashboard backup/PITR restore when available, or the approved logical restore procedure for a replacement project.
-6. Re-run Finance reconciliation, RLS/security advisor, and authenticated smoke before reopening writes.
-
-## Current gate status — 24 Sep 2026
-- Runbook: **documented**.
-- Production backup capability: available through Supabase-supported backup mechanisms/CLI.
-- Isolated restore rehearsal: **NOT YET EXECUTED** because no safe temporary target has been created/approved.
-- `HSN-1004`: **REVIEW** until the isolated restore rehearsal passes.
+## Limitation
+This rehearsal validates logical data recovery, not a simulated total Supabase infrastructure loss. For an actual project-loss incident, use Supabase Dashboard backup/PITR when available or restore the approved logical backup into a replacement project, then rerun Finance/RLS/application verification before reopening writes.
