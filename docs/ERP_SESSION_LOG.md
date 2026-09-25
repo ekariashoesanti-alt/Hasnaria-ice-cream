@@ -2,6 +2,28 @@
 
 Append-only working journal. Newest session goes at the top.
 
+## 2026-09-25 — HSN-300 Purchase canonical render cleanup
+
+**Scope**
+- Audited the overlapping/ghost-card defect on Pembelian between the KPI strip and `Rekonsiliasi Transaksi Pembelian`.
+- Confirmed the page was layering multiple independent Purchase patch runtimes on the same DOM: ranking, chart redesign, inventory-status lower-grid injection, and Finance reconciliation.
+- Stopped loading the obsolete Purchase ranking and chart-redesign patchers.
+- Changed `purchase-inventory-status.js` to KPI-only; detailed Persediaan Kurang/Hapus remains owned by Stok per HSN-402.
+- Made the Purchase → Finance reconciliation panel the canonical detail immediately below the KPI strip and removed legacy analytics grids from layout when that panel is present.
+- Cache-busted the Purchase preload/inventory runtime and added regression assertions so the obsolete render layers cannot be silently reintroduced.
+
+**Production data audit**
+- September effective-date Purchase: 75 rows / Rp35,697,930.
+- 70 sync-eligible provisional rows / Rp33,882,485 reconcile exactly to Finance.
+- Missing journals 0; duplicate journals 0; amount/date/debit-account/counter-account mismatch 0.
+- Unbalanced Purchase journals 0.
+- 5 review-required rows / Rp1,815,445 remain intentionally unposted; review rows incorrectly posted = 0.
+- Therefore the screenshot defect was presentation-only; current evidence does not show Purchase data being lost between Purchase and Finance.
+
+**Acceptance**
+- Detailed evidence: `docs/PURCHASE_RENDER_FINANCE_AUDIT_2026-09-25.md`.
+- HSN-300 remains REVIEW until authenticated production visual acceptance confirms the overlap is gone after deployment.
+
 ## 2026-09-25 — HSN-510 temporary no-HPP profit view
 
 **Scope**
