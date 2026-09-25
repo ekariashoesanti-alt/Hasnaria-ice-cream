@@ -2,15 +2,6 @@
 (function(){
   'use strict';
 
-  /* Pembelian ranking patch: keep Top Most/Fewest in sync with the selected period. */
-  if(!document.getElementById('hasnaria-purchase-rankings-five-js')){
-    var p=document.createElement('script');
-    p.id='hasnaria-purchase-rankings-five-js';
-    p.src='/purchase-rankings-five.js?v=1';
-    p.async=true;
-    document.head.appendChild(p);
-  }
-
   /* Majoo exports may carry a stale worksheet dimension (for example A1:U4)
      even though real data extends farther. Repair !ref before sheet_to_json reads it. */
   if(!document.getElementById('hasnaria-purchase-majoo-range-fix-js')){
@@ -37,21 +28,14 @@
     document.head.appendChild(d);
   }
 
-  /* Pembelian chart redesign: larger trend chart + horizontal composition chart. */
-  if(!document.getElementById('hasnaria-purchase-chart-redesign-js')){
-    var c=document.createElement('script');
-    c.id='hasnaria-purchase-chart-redesign-js';
-    c.src='/purchase-chart-redesign.js?v=4';
-    c.async=true;
-    document.head.appendChild(c);
-  }
-
-  /* Purchase → Finance alignment: expose canonical accounting treatment and reconciliation status. */
+  /* Purchase → Finance alignment is the canonical detail below the Purchase KPI strip.
+     Legacy ranking/chart patchers are intentionally not loaded here because they race
+     the same Purchase DOM and duplicate information already owned by Finance/Stock. */
   if(!document.getElementById('hasnaria-purchase-finance-alignment-css')){
     var afc=document.createElement('link');
     afc.id='hasnaria-purchase-finance-alignment-css';
     afc.rel='stylesheet';
-    afc.href='/purchase-finance-alignment-v1.css?v=1';
+    afc.href='/purchase-finance-alignment-v1.css?v=2';
     document.head.appendChild(afc);
   }
   if(!document.getElementById('hasnaria-purchase-finance-alignment-js')){
