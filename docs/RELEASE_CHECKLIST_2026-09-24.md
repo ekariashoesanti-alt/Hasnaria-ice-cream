@@ -51,11 +51,13 @@ Runtime evidence: `docs/RLS_RUNTIME_MATRIX_2026-09-25.md`.
 - [x] Database migration/forward-fix rollback policy documented.
 - [x] Logical backup/restore runbook documented in `docs/BACKUP_RESTORE_RUNBOOK.md`.
 - [x] Release can be rolled forward with later timestamped remediation migration.
-- [ ] Backup exported at release checkpoint.
-- [ ] Restore rehearsal completed on isolated non-production target.
-- [ ] Restore rehearsal result recorded as PASS.
+- [x] No-branch transactional logical restore rehearsal completed.
+- [x] Seven critical datasets matched source row counts and logical checksums after rehydration.
+- [x] Restored Finance debit = credit at Rp198,690,802.00.
+- [x] Restored Purchase evidence missing batch = 0.
+- [x] Restore rehearsal result recorded as PASS in `docs/RESTORE_REHEARSAL_2026-09-25.md`.
 
-A Supabase branch/project is not created automatically for this step because creation can incur cost and requires explicit cost confirmation.
+The rehearsal used temporary tables inside a transaction and ended with ROLLBACK, so no paid branch/project or persistent production change was created.
 
 ## F. Authenticated browser E2E
 Run against production after the database gates above are green:
@@ -83,7 +85,7 @@ Run against production after the database gates above are green:
 - [x] Latest GitHub audit gate = success.
 - [x] Latest deployment status = success.
 - [x] Supabase Security Advisor reviewed.
-- [ ] Backup checkpoint recorded.
+- [x] Backup/restore rehearsal recorded as PASS.
 
 ## Rollback trigger
 Rollback/forward-fix procedure is triggered if any of the following occurs after release:
@@ -99,6 +101,6 @@ Prefer a backward-compatible forward fix. For data-integrity incidents, freeze a
 ## Status — 25 Sep 2026
 `HSN-1007 Release checklist Site/production`: **REVIEW**.
 
-Backend/data gates now green: source/CI, migration parity, canonical Purchase→Finance reconciliation, Purchase lineage, role runtime checks available from production, Finance raw-data capability hardening, and Security Advisor RLS review.
+Backend/data gates green: source/CI, migration parity, canonical Purchase→Finance reconciliation, Purchase lineage, role runtime checks available from production, Finance raw-data capability hardening, Security Advisor RLS review, and no-branch logical restore rehearsal.
 
-Still required for DONE: authenticated browser E2E, real non-superadmin cross-brand runtime test, leaked-password protection, and a release backup/restore rehearsal.
+Still required for DONE: authenticated browser E2E, real non-superadmin cross-brand runtime test, and Supabase Auth leaked-password protection.
