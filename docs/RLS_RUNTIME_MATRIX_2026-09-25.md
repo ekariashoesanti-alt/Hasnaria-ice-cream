@@ -26,11 +26,18 @@ for raw Finance records including journal entries/lines, adjustments, fixed asse
 
 `finance_accounts` remains same-brand readable because it is a reference taxonomy used by purchasing/account mapping rather than a raw transaction ledger.
 
-## Tenant isolation note
-The production identity available to this test has super-admin authority, and the existing `private.same_brand()` design intentionally grants super-admin cross-brand access. Runtime cross-brand acceptance for a normal non-superadmin identity therefore still requires a dedicated non-superadmin test identity.
+## Tenant isolation acceptance
+A rollback-only normal-user test identity was evaluated as an active Owner for NGODENG with `is_super_admin=false`.
+
+Expected deny against Hasnaria passed:
+- Hasnaria products visible: 0
+- Hasnaria Purchase evidence visible: 0
+- Hasnaria Finance journal entries visible: 0
+
+The transaction was rolled back. Follow-up verification confirmed no temporary Auth user or `user_profiles` row remained.
 
 ## Security advisor
 After Finance RLS hardening, Supabase Security Advisor reports no RLS/security-policy warnings. The only remaining warning is the account-level Auth setting `auth_leaked_password_protection` being disabled.
 
 ## Acceptance state
-HSN-1001 remains REVIEW only because normal non-superadmin cross-brand runtime acceptance is still outstanding. The discovered raw-Finance exposure is CLOSED and all other executed role/status paths pass.
+`HSN-1001 RLS full matrix test suite`: **DONE** for the production RLS acceptance scope. Role/status allow-deny checks pass, normal non-superadmin cross-brand isolation passes, and the raw-Finance exposure discovered during testing is closed.
