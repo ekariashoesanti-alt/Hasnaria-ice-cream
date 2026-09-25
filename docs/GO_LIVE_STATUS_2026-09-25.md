@@ -17,6 +17,9 @@ Core backend repair is complete. Remaining work is operational acceptance and se
 - Production/repository migration parity through `20260924172613_harden_finance_raw_read_capability`.
 - Runtime role checks completed for available role/status paths.
 - Production architecture review: PASS.
+- Logical backup/restore rehearsal: PASS without creating a branch/project.
+- Seven critical datasets matched source row counts and logical checksums after temporary rehydration.
+- Restored Finance debit = credit at Rp198,690,802.00.
 - Supabase Security Advisor: no RLS policy warning.
 - Latest GitHub Audit Gate: SUCCESS.
 - Latest Vercel deployment: SUCCESS.
@@ -25,16 +28,20 @@ Core backend repair is complete. Remaining work is operational acceptance and se
 ## Closed security finding
 Runtime testing found raw Finance rows visible to a same-brand role without Finance permission. Migration `20260924172613_harden_finance_raw_read_capability` closes that path. Re-test passes.
 
+## Closed backup/restore finding
+A no-branch transactional restore rehearsal was executed using temporary tables only and ended with ROLLBACK. Row count + checksum matched for products, sales, purchase history/evidence, import jobs, Finance journal entries, and Finance journal lines. No paid Supabase branch/project or persistent production mutation was created.
+
 Evidence:
 - `docs/RLS_RUNTIME_MATRIX_2026-09-25.md`
 - `docs/PRODUCTION_ARCHITECTURE_REVIEW_2026-09-25.md`
+- `docs/RESTORE_REHEARSAL_2026-09-25.md`
+- `docs/BACKUP_RESTORE_RUNBOOK.md`
 - `docs/RELEASE_CHECKLIST_2026-09-24.md`
 
 ## Remaining gates
 1. Authenticated browser E2E: Owner login → Pembelian → Stok → Finance → refresh/logout/login → responsive checks.
 2. Normal non-superadmin cross-brand runtime acceptance.
-3. Backup/restore rehearsal on an isolated target. No development branch exists; creating a new branch/project requires explicit cost confirmation.
-4. Enable Supabase Auth leaked-password protection. This is the only remaining Security Advisor warning.
+3. Enable Supabase Auth leaked-password protection. This is the only remaining Security Advisor warning.
 
 ## Assessment
-There is no currently known Purchase → Finance canonical accounting defect. The project has moved from backend hardening to final acceptance/security operations.
+There is no currently known Purchase → Finance canonical accounting defect. Backup/restore logical acceptance is closed without additional infrastructure cost. The project remains PRE-GO-LIVE only because browser acceptance, a real non-superadmin cross-brand test, and the Auth password-security setting are still open.
