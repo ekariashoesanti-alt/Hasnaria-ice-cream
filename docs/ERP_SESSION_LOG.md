@@ -2,6 +2,24 @@
 
 Append-only working journal. Newest session goes at the top.
 
+## 2026-09-25 — HSN-510 temporary no-HPP profit view
+
+**Scope**
+- Owner explicitly chose to defer recipe/HPP completion temporarily.
+- Added `finance-no-hpp-mode-v1.js` and loaded it from the Owner finance compatibility shim.
+- When HPP is incomplete, the main Laba Rugi screen now shows a clearly-labelled **Hasil Sementara Sebelum HPP** instead of hiding all profit figures.
+- HPP remains `Belum dihitung`; Gross Profit remains not calculated because it cannot be stated correctly without HPP.
+- Temporary result formula is `Revenue + Other Income - Operating Expense - Finance Expense - Tax`, deliberately excluding inventory purchases from expense/HPP.
+- The UI carries `BUKAN LABA FINAL` and `Mode sementara · HPP dilewati` warnings.
+- When `is_final_hpp=true`, the temporary override stops automatically and the canonical verified-HPP report remains authoritative.
+
+**Integrity / verification**
+- No database schema, ledger posting, auth, RLS, purchase classification, or inventory data was changed for this UI mode.
+- Purchase ↔ Finance journal sync remains canonical and already reconciled separately.
+- August 2026 temporary result before HPP = Rp17,296,500; July 2026 = Rp12,242,460, based only on recorded revenue/other income/opex/finance/tax.
+- HSN-510 remains REVIEW because true operating profit still depends on HSN-507/508 verified COGS/HPP.
+- Vercel deployment for commit `3c12e78db262ca0627a9f43d37fcf03e46eff0da` succeeded and Hasnaria Audit Gate #834 passed.
+
 ## 2026-09-20 — HSN-402 Persediaan Kurang/Hapus moved to Stok
 
 **Scope**
