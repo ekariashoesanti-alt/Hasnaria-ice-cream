@@ -43,7 +43,8 @@ This checklist is the operational gate for `HSN-1007`. A release is not accepted
 - [x] Marketing raw-Finance exposure found during testing and CLOSED by migration `20260924172613_harden_finance_raw_read_capability`.
 - [x] Supabase Security Advisor rechecked after hardening; no RLS/security-policy warning remains.
 - [x] Cross-brand deny matrix executed with a rollback-only normal non-superadmin identity; Hasnaria products, Purchase evidence, and Finance visibility all returned 0.
-- [ ] Supabase Auth leaked-password protection enabled.
+- [x] Supabase organization plan verified as Free.
+- [ ] Auth leaked-password protection decision: Supabase documents this feature as Pro-and-above. On the current Free plan it cannot be enabled; final sign-off therefore requires either upgrade to Pro or an explicit Owner waiver/acceptance of this platform limitation.
 
 Runtime evidence: `docs/RLS_RUNTIME_MATRIX_2026-09-25.md`.
 
@@ -104,4 +105,4 @@ Prefer a backward-compatible forward fix. For data-integrity incidents, freeze a
 
 Backend/data/security gates green: source/CI, migration parity, canonical Purchase→Finance reconciliation, Purchase lineage, Finance raw-data capability hardening, full role/cross-brand RLS acceptance, Security Advisor RLS review, and no-branch logical restore rehearsal.
 
-Still required for DONE: authenticated browser E2E and Supabase Auth leaked-password protection.
+Still required for DONE: authenticated browser E2E, plus one Owner decision on the plan-limited leaked-password-protection warning (upgrade to Pro or explicit waiver while remaining on Free).
