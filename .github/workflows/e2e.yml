@@ -37,14 +37,13 @@ jobs:
         run: |
           if [[ -n "${HASNARIA_E2E_EMAIL}" && -n "${HASNARIA_E2E_PASSWORD}" ]]; then
             echo 'available=true' >> "$GITHUB_OUTPUT"
-            echo 'E2E credentials are available; running safe browser acceptance.'
+            echo 'E2E credentials are available; authenticated acceptance will run.'
           else
             echo 'available=false' >> "$GITHUB_OUTPUT"
-            echo 'E2E credentials are not configured. Safe skip; production was not touched.'
+            echo 'Authenticated E2E credentials are not configured. Public production smoke will still run.'
           fi
 
       - name: Install isolated E2E dependencies
-        if: steps.creds.outputs.available == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -52,12 +51,15 @@ jobs:
           npm install --no-save @playwright/test@1.55.0 xlsx@0.18.5
           npx playwright install --with-deps chromium
 
-      - name: Run production browser E2E
+      - name: Run public production smoke
+        run: npx playwright test tests/e2e/public-smoke.spec.js --reporter=line
+
+      - name: Run authenticated production browser E2E
         if: steps.creds.outputs.available == 'true'
         run: npx playwright test tests/e2e/go-live.spec.js --reporter=line
 
       - name: Upload Playwright artifacts on failure
-        if: failure() && steps.creds.outputs.available == 'true'
+        if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: hasnaria-e2e-failure-${{ github.run_id }}
