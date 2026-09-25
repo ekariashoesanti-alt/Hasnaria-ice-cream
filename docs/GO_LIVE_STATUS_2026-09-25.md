@@ -1,9 +1,9 @@
 # Hasnaria Go-Live Status — 25 Sep 2026
 
 ## State
-**PRE-GO-LIVE / FINAL BROWSER ACCEPTANCE**
+**PRE-GO-LIVE / FINAL AUTHENTICATED BROWSER ACCEPTANCE**
 
-Core backend repair, database hardening, RLS acceptance, logical restore rehearsal, migration parity, and the Supabase Free-plan security decision are complete. The only remaining release gate is authenticated browser E2E.
+Core backend repair, database hardening, RLS acceptance, logical restore rehearsal, migration parity, the Supabase Free-plan security decision, and public production browser smoke are complete. The only remaining release gate is authenticated Owner browser E2E.
 
 ## Green gates
 - Supabase production healthy.
@@ -27,8 +27,7 @@ Core backend repair, database hardening, RLS acceptance, logical restore rehears
 - Final backend recheck after RLS tests: Purchase journal imbalance 0; Purchase evidence missing batch 0; rollback-test Auth/profile residue 0.
 - Production error/fatal log check: no current events returned.
 - Supabase Free-plan leaked-password-protection limitation explicitly accepted/waived by Owner for the current release.
-- Browser E2E harness added at `tests/e2e/go-live.spec.js` with manual workflow `.github/workflows/e2e.yml`.
-- E2E workflow self-check completed safely: repository login secrets are not configured, so browser execution was skipped and production was not touched.
+- Public production Playwright smoke: PASS via GitHub Actions, including HTTP response, login shell, no page errors, and 1280/768/390 responsive checks.
 
 ## Closed security finding
 Runtime testing found raw Finance rows visible to a same-brand role without Finance permission. Migration `20260924172613_harden_finance_raw_read_capability` closes that path. Re-test passes.
@@ -46,33 +45,44 @@ The waiver is narrowly scoped to leaked-password protection and does not waive d
 
 Evidence: `docs/SECURITY_WAIVER_SUPABASE_FREE_2026-09-25.md`.
 
-## Browser E2E harness
-The production acceptance harness now covers:
-- Owner login and Dashboard render.
-- Pembelian navigation.
-- Controlled Excel preview with native confirmation dismissed in safe mode.
-- Controlled Majoo preview including Void/non-Selesai handling with confirmation dismissed in safe mode.
-- Stok and Keuangan navigation.
-- session persistence after refresh.
-- desktop/tablet/mobile viewport checks.
+## Browser acceptance status
+The E2E harness is now split into two layers.
+
+### Public production smoke — PASS
+Workflow `Hasnaria Production E2E #4` ran a real Playwright Chromium session against `https://hasnaria-business-analyzer.vercel.app` and recorded `1 passed` for `tests/e2e/public-smoke.spec.js`.
+
+Verified:
+- production returned a non-error HTTP response;
+- login shell rendered;
+- email/password/login controls were visible;
+- authenticated app remained hidden before login;
+- 1280px, 768px, and 390px viewport checks passed;
+- no browser `pageerror` occurred.
+
+### Authenticated Owner E2E — OPEN
+The authenticated harness `tests/e2e/go-live.spec.js` covers:
+- Owner login and Dashboard render;
+- Pembelian navigation;
+- controlled Excel preview with confirmation dismissed in safe mode;
+- controlled Majoo preview including Void/non-Selesai handling with confirmation dismissed in safe mode;
+- Stok navigation;
+- Finance v6 shell mount through `#ops [data-finance-v6="1"]`;
+- session persistence after refresh;
+- desktop/tablet/mobile viewport checks;
 - logout and re-login.
 
-An optional full write mode can be run with `allow_write=true`. It uses an isolated 2099 Purchase fixture, verifies Purchase evidence plus `import_job_id`, refresh persistence, Stok/Finance navigation, then deletes E2E evidence/history rows and marks the import batch `rolled_back` for audit traceability.
+Optional full write mode can be run with `allow_write=true`. It uses an isolated 2099 Purchase fixture, verifies Purchase evidence plus `import_job_id`, refresh persistence, Stok/Finance navigation, then deletes E2E evidence/history rows and marks the import batch `rolled_back` for audit traceability.
 
 ## Current browser blocker
-1. GitHub Actions secrets `HASNARIA_E2E_EMAIL` and `HASNARIA_E2E_PASSWORD` are not configured. The self-check workflow verified both are currently empty and safely skipped the browser test.
-2. The ChatGPT Vercel connection currently exposes only team `jakgunn20-4556s-projects`, while Hasnaria is deployed under `ekariashoesanti-9951s-projects`; therefore the connected Vercel tool cannot open the Hasnaria deployment.
-3. The current chat runtime cannot download a local Chromium binary because its external DNS access to the Playwright CDN is unavailable.
+GitHub Actions secrets `HASNARIA_E2E_EMAIL` and `HASNARIA_E2E_PASSWORD` are not configured. Workflow run #4 confirms both environment values are empty, so the authenticated step was correctly skipped while the public smoke still passed.
 
-None of these three items is evidence of an application failure; they are execution-access blockers for the final browser acceptance.
+This is an execution-access blocker, not evidence of an application failure. The connected GitHub tool can edit repository files and inspect Actions runs but does not expose repository Actions-secret mutation, so the credentials cannot be securely installed from this chat connection.
 
 ## Remaining gate
-Authenticated browser E2E only:
-Owner login → Dashboard → Pembelian → controlled upload/preview → Stok → Finance → refresh → logout/login → desktop/tablet/mobile checks.
+Authenticated Owner browser E2E only:
+Owner login → Dashboard → Pembelian → controlled preview → Stok → Finance → refresh → logout/login → desktop/tablet/mobile checks.
 
-The fastest unblock is either:
-- configure the two GitHub Actions E2E secrets and run `Hasnaria Production E2E` in safe mode first, then full `allow_write=true`; or
-- extend the Vercel ChatGPT connection authorization to team `ekariashoesanti-9951s-projects`, then execute the browser acceptance through that authorized project path.
+After safe authenticated mode passes, the optional `allow_write=true` gate is the remaining way to prove browser-level `import_job_id` lineage and refresh persistence with cleanup. It must not be enabled without explicit authorization because it performs controlled production writes before cleanup.
 
 ## Assessment
-There is no currently known Purchase → Finance canonical accounting defect, open RLS tenant-isolation defect, logical restore blocker, migration parity gap, or unresolved plan-level security decision. Hasnaria is in FINAL BROWSER ACCEPTANCE; authenticated browser E2E is the last gate before final go-live sign-off.
+There is no currently known Purchase → Finance canonical accounting defect, open RLS tenant-isolation defect, logical restore blocker, migration parity gap, unresolved plan-level security decision, or public production rendering blocker. Hasnaria is in FINAL AUTHENTICATED BROWSER ACCEPTANCE; authenticated Owner E2E is the last release gate before final go-live sign-off.
