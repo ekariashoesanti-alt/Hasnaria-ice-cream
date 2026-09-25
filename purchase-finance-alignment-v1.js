@@ -1,12 +1,14 @@
 (function(){
 'use strict';
-if(window.__HASNARIA_PURCHASE_FINANCE_ALIGNMENT_V3)return;
+if(window.__HASNARIA_PURCHASE_FINANCE_ALIGNMENT_V4)return;
+window.__HASNARIA_PURCHASE_FINANCE_ALIGNMENT_V4=true;
 window.__HASNARIA_PURCHASE_FINANCE_ALIGNMENT_V3=true;
 window.__HASNARIA_PURCHASE_FINANCE_ALIGNMENT_V2=true;
 window.__HASNARIA_PURCHASE_FINANCE_ALIGNMENT_V1=true;
 
 var BRAND='a36d4b4f-3ccc-4a78-8aeb-b868f0407ea4';
-var db=null,rows=[],loading=false,error='',observer=null,timer=0,loadedAt=0;
+var SYNC_KEY='hasnaria-purchase-finance-sync-20260925-v1';
+var db=null,rows=[],loading=false,error='',observer=null,timer=0,loadedAt=0,syncing=false,syncMsg='';
 
 function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function n(v){v=Number(v);return isFinite(v)?v:0}
@@ -24,6 +26,10 @@ function scopeValue(){var s=document.getElementById('paScope');return s?s.value:
 function periodValue(){var p=document.getElementById('paPeriod');return p?periodKey(p.value):''}
 function scoped(){var p=periodValue(),s=scopeValue();return rows.filter(function(r){if(periodKey(r.effective_date||r.source_period)!==p)return false;return s==='all'||r.analytics_group===s})}
 function reviewRows(a){return a.filter(isReview).sort(function(a,b){return n(b.total_amount)-n(a.total_amount)})}
+function syncDone(){try{return localStorage.getItem(SYNC_KEY)==='done'}catch(e){return false}}
+function markSyncDone(){try{localStorage.setItem(SYNC_KEY,'done')}catch(e){}}
+function suppressSyncThisSession(){try{sessionStorage.setItem(SYNC_KEY,'skip')}catch(e){}}
+function syncSuppressed(){try{return sessionStorage.getItem(SYNC_KEY)==='skip'}catch(e){return false}}
 function patchCoreLabels(root){
   var sub=root.querySelector('.pa-title p');
   if(sub)sub.textContent='Monitoring pembelian, kode akun, dan status rekonsiliasi ke Keuangan berdasarkan tanggal transaksi efektif.';
@@ -62,23 +68,24 @@ function render(){
   var old=document.getElementById('purchaseFinanceAlignment');if(old)old.remove();
   var target=root.querySelector('.pa-kpis')||root.querySelector('.pa-controls');if(!target)return;
   var wrap=document.createElement('section');wrap.id='purchaseFinanceAlignment';wrap.className='pfa-wrap';
-  if(loading){wrap.innerHTML='<div class="pfa-head"><div><h2>Pembelian ↔ Keuangan</h2><p>Memuat kode akun dan status sinkronisasi…</p></div></div>';target.insertAdjacentElement('afterend',wrap);return}
+  if(loading){wrap.innerHTML='<div class="pfa-head"><div><h2>Pembelian ↔ Keuangan</h2><p>Memuat kode akun dan status rekonsiliasi…</p></div></div>';target.insertAdjacentElement('afterend',wrap);return}
   if(error){wrap.innerHTML='<div class="pfa-head"><div><h2>Pembelian ↔ Keuangan</h2><p class="pfa-error">'+esc(error)+'</p></div><button id="pfaRetry" type="button">Muat ulang</button></div>';target.insertAdjacentElement('afterend',wrap);var rb=document.getElementById('pfaRetry');if(rb)rb.onclick=function(){load(true)};return}
   var a=scoped();
   var inventory=a.filter(function(r){return r.accounting_treatment==='inventory'}),expense=a.filter(function(r){return r.accounting_treatment==='expense'}),reviews=reviewRows(a),zeroRows=a.filter(isZero),provisional=a.filter(function(r){return !isReview(r)&&!isZero(r)&&r.finance_status==='provisional'}),posted=a.filter(function(r){return !isReview(r)&&!isZero(r)&&r.finance_status==='posted'}),synced=a.filter(isSynced);
   var expenseAccounts={};expense.forEach(function(r){var k=r.debit_account_code||'—';if(!expenseAccounts[k])expenseAccounts[k]={name:r.debit_account_name||'Beban',amount:0};expenseAccounts[k].amount+=n(r.total_amount)});
   var breakdown=Object.keys(expenseAccounts).sort().map(function(k){return'<span><b>'+esc(k)+'</b> '+esc(expenseAccounts[k].name)+' <strong>'+esc(money(expenseAccounts[k].amount))+'</strong></span>'}).join('');
   var provisional2190=provisional.filter(function(r){return r.counter_account_code==='2190'});
-  wrap.innerHTML='<div class="pfa-head"><div><div class="pfa-eyebrow">PEMBELIAN ↔ FINANCE · COA CANONICAL</div><h2>Rekonsiliasi Transaksi Pembelian</h2><p><b>Sinkron</b> berarti nilai dan akun debit sudah masuk Keuangan. <b>Provisional</b> berarti hanya metode pembayaran/akun lawan yang belum tersedia dari sumber.</p></div><span class="pfa-sync">'+a.length.toLocaleString('id-ID')+' transaksi periode ini</span></div>'+
+  var syncLine=syncing?' · sinkronisasi jurnal berjalan':syncMsg?(' · '+syncMsg):'';
+  wrap.innerHTML='<div class="pfa-head"><div><div class="pfa-eyebrow">PEMBELIAN ↔ FINANCE · COA CANONICAL</div><h2>Rekonsiliasi Transaksi Pembelian</h2><p><b>Sinkron</b> berarti nilai dan akun debit sudah masuk Keuangan. <b>Provisional</b> berarti hanya metode pembayaran/akun lawan yang belum tersedia dari sumber.</p></div><span class="pfa-sync">'+a.length.toLocaleString('id-ID')+' transaksi periode ini'+esc(syncLine)+'</span></div>'+
     '<div class="pfa-cards">'+
-      card('Sinkron ke Finance',money(total(synced)),synced.length+' transaksi sudah masuk ledger','inventory')+
+      card('Sinkron ke Finance',money(total(synced)),synced.length+' transaksi canonical siap/terhubung','inventory')+
       card('Persediaan · 1300',money(total(inventory)),inventory.length+' transaksi persediaan','inventory')+
       card('Akun lawan provisional',money(total(provisional)),provisional.length+' transaksi; '+provisional2190.length+' memakai 2190','expense')+
       card('Perlu review',money(total(reviews)),reviews.length+' transaksi belum boleh diposting','review')+
     '</div>'+
-    '<div class="pfa-meta"><div><b>Rincian akun beban</b>'+(breakdown||'<span>Tidak ada beban langsung pada periode/filter ini.</span>')+'</div><div><b>Status ledger</b><span>'+posted.length.toLocaleString('id-ID')+' posted/final</span><span>'+provisional.length.toLocaleString('id-ID')+' sinkron tetapi provisional</span><span>'+reviews.length.toLocaleString('id-ID')+' review dan belum diposting</span><span>'+zeroRows.length.toLocaleString('id-ID')+' nilai Rp0 dan tidak perlu jurnal</span></div></div>'+
-    '<div class="pfa-note"><b>Catatan:</b> akun 2190 bukan transaksi hilang. Itu akun lawan sementara ketika file sumber tidak memberikan metode pembayaran. Sistem tidak menebak Cash/Bank/Utang agar rekonsiliasi tetap dapat diaudit.</div>'+
-    '<div class="pfa-review-head"><div><h3>Transaksi ↔ Keuangan</h3><p>Seluruh transaksi periode terpilih beserta kode akun dan status pencatatannya.</p></div><span>'+synced.length.toLocaleString('id-ID')+' sinkron · '+reviews.length.toLocaleString('id-ID')+' review · '+zeroRows.length.toLocaleString('id-ID')+' nilai 0</span></div>'+renderAllTable(a)+
+    '<div class="pfa-meta"><div><b>Rincian akun beban</b>'+(breakdown||'<span>Tidak ada beban langsung pada periode/filter ini.</span>')+'</div><div><b>Status canonical</b><span>'+posted.length.toLocaleString('id-ID')+' posted/final</span><span>'+provisional.length.toLocaleString('id-ID')+' provisional</span><span>'+reviews.length.toLocaleString('id-ID')+' review</span><span>'+zeroRows.length.toLocaleString('id-ID')+' nilai Rp0</span></div></div>'+
+    '<div class="pfa-note"><b>Catatan:</b> akun 2190 bukan transaksi hilang. Itu akun lawan sementara ketika file sumber tidak memberikan metode pembayaran. Rebuild jurnal hanya dijalankan lewat RPC Owner resmi.</div>'+
+    '<div class="pfa-review-head"><div><h3>Transaksi ↔ Keuangan</h3><p>Seluruh transaksi periode terpilih beserta kode akun dan status pencatatannya.</p></div><span>'+synced.length.toLocaleString('id-ID')+' siap sinkron · '+reviews.length.toLocaleString('id-ID')+' review · '+zeroRows.length.toLocaleString('id-ID')+' nilai 0</span></div>'+renderAllTable(a)+
     '<div class="pfa-review-head"><div><h3>Prioritas Review</h3><p>Hanya transaksi yang belum boleh menjadi pencatatan final.</p></div><span>'+reviews.length.toLocaleString('id-ID')+' perlu review</span></div>'+renderReviewTable(a);
   target.insertAdjacentElement('afterend',wrap);
 }
@@ -92,10 +99,34 @@ async function load(force){
   }catch(e){error='Gagal memuat klasifikasi Finance: '+(e&&e.message?e.message:String(e));}
   loading=false;render();
 }
+async function autoSyncFinance(){
+  if(!db||syncing||syncDone()||syncSuppressed())return;
+  syncing=true;syncMsg='';render();
+  try{
+    var r=await db.rpc('rebuild_finance_journal_v1',{p_from:'2026-06-01',p_to:'2026-09-30'});
+    if(r.error)throw r.error;
+    markSyncDone();syncMsg='jurnal diperbarui';
+    rows=[];loadedAt=0;
+    await load(true);
+    try{window.dispatchEvent(new CustomEvent('hasnaria:finance-rebuilt',{detail:r.data||null}))}catch(e){}
+  }catch(e){
+    var msg=e&&e.message?String(e.message):String(e||'');
+    if(/permission|not authorized|not allowed|row-level|jwt|auth/i.test(msg))suppressSyncThisSession();
+    syncMsg='sync jurnal menunggu sesi Owner';
+    if(window.console&&console.warn)console.warn('Hasnaria Purchase→Finance auto-sync pending:',e);
+  }finally{syncing=false;render()}
+}
 function schedule(){clearTimeout(timer);timer=setTimeout(function(){var root=document.getElementById('paRoot');if(!root)return;render();if(!rows.length&&!loading)load(false)},60)}
 function boot(){
   db=window.__HASNARIA_DB||null;var tries=0;
-  (function wait(){db=db||window.__HASNARIA_DB||null;var host=document.getElementById('pembelian');if(db&&host){observer=new MutationObserver(schedule);observer.observe(host,{childList:true,subtree:false});document.addEventListener('change',function(e){if(e.target&&((e.target.id==='paPeriod')||(e.target.id==='paScope')))setTimeout(render,20)},true);document.addEventListener('click',function(e){if(e.target&&e.target.closest&&e.target.closest('[data-tab="pembelian"]'))setTimeout(function(){schedule();load(false)},80)},true);schedule();load(false);return}if(tries++<120)setTimeout(wait,100)})();
+  (function wait(){db=db||window.__HASNARIA_DB||null;var host=document.getElementById('pembelian');if(db&&host){
+    observer=new MutationObserver(schedule);observer.observe(host,{childList:true,subtree:false});
+    document.addEventListener('change',function(e){if(e.target&&((e.target.id==='paPeriod')||(e.target.id==='paScope')))setTimeout(render,20)},true);
+    document.addEventListener('click',function(e){if(e.target&&e.target.closest&&e.target.closest('[data-tab="pembelian"]'))setTimeout(function(){schedule();load(false);autoSyncFinance()},80)},true);
+    schedule();
+    load(false).then(function(){setTimeout(autoSyncFinance,250)});
+    return
+  }if(tries++<120)setTimeout(wait,100)})();
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
