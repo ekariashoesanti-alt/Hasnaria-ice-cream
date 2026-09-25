@@ -14,7 +14,8 @@ Core backend repair, database hardening, RLS acceptance, and logical restore reh
 - Completed purchasing import jobs: 2 / 88 posted rows.
 - Purchase evidence writes are capability-gated.
 - Raw Finance reads are capability-gated.
-- Production/repository migration parity through `20260924172613_harden_finance_raw_read_capability`.
+- Production/repository migration parity verified through `20260925002606_lock_purchase_atomic_rpc_service_only_v1`.
+- The current Purchase/Finance hardening chain present in both production history and GitHub includes atomic Purchase sync, Finance close review gate, Purchase→Finance autosync triggers, canonical management Finance alignment, and service-only atomic RPC locking.
 - Runtime role checks completed for Owner, Head Store, Marketing, PIC, Pelaksana, Pending, and suspended paths.
 - Normal non-superadmin cross-brand deny test: PASS; Hasnaria products, Purchase evidence, and Finance visibility all returned 0.
 - Production architecture review: PASS.
@@ -22,7 +23,8 @@ Core backend repair, database hardening, RLS acceptance, and logical restore reh
 - Seven critical datasets matched source row counts and logical checksums after temporary rehydration.
 - Restored Finance debit = credit at Rp198,690,802.00.
 - Supabase Security Advisor: no RLS policy warning.
-- Latest deployment chain has been green after hardening commits.
+- Latest GitHub Audit Gate and Vercel deployment are SUCCESS.
+- Final backend recheck after RLS tests: Purchase journal imbalance 0; Purchase evidence missing batch 0; rollback-test Auth/profile residue 0.
 - Production error/fatal log check: no current events returned.
 
 ## Closed security finding
@@ -53,4 +55,4 @@ Evidence:
 2. Owner decision on leaked-password protection: upgrade to Pro or explicitly accept/waive the Free-plan limitation.
 
 ## Assessment
-There is no currently known Purchase → Finance canonical accounting defect, open RLS tenant-isolation defect, or logical restore blocker. Hasnaria is in FINAL ACCEPTANCE, with browser E2E and one plan-level security decision remaining before final go-live sign-off.
+There is no currently known Purchase → Finance canonical accounting defect, open RLS tenant-isolation defect, logical restore blocker, or migration parity gap. Hasnaria is in FINAL ACCEPTANCE, with browser E2E and one plan-level security decision remaining before final go-live sign-off.
