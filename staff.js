@@ -4,13 +4,17 @@
   var SB_URL='https://bnnhmtkpdjlgehsvgoda.supabase.co';
   var SB_KEY='sb_publishable_eXrgSxWTXoa9q-hVpLx-sQ_IaEiUbeO';
   var STAFF_TOKEN_KEY='hasnaria-staff-session-v1';
-  var OWNER_STORAGE_KEY='hasnaria-staff-owner-auth-v1';
+  var OWNER_STORAGE_KEY='hasnaria-auth-v2';
   var MODULES={
     absensi:{label:'Absensi',icon:'✓',desc:'Masuk, pulang, dan aktivitas shift'},
-    kasir:{label:'Kasir',icon:'▣',desc:'Penjualan dan transaksi kasir'},
+    kasir:{label:'Kasir',icon:'▣',desc:'Transaksi keuangan Penjualan dan Pembelian'},
     gudang:{label:'Gudang',icon:'□',desc:'Stok, penerimaan, dan opname'}
   };
-  var state={view:'login',directory:[],staff:null,staffToken:'',activeModule:'home',owner:null,ownerRows:[],edit:null,busy:false,msg:''};
+  var KASIR_SUBMENU={
+    penjualan:{label:'Penjualan',icon:'↑',desc:'Catat transaksi penjualan dan penerimaan pembayaran'},
+    pembelian:{label:'Pembelian',icon:'↓',desc:'Catat transaksi pembelian dan pengeluaran usaha'}
+  };
+  var state={view:'login',directory:[],staff:null,staffToken:'',activeModule:'home',activeSubmodule:'',owner:null,ownerRows:[],edit:null,busy:false,msg:''};
   var db=null;
 
   function root(){return document.getElementById('staffRoot')}
@@ -43,6 +47,7 @@
     state.staffToken=token;
     state.view='home';
     state.activeModule='home';
+    state.activeSubmodule='';
     return true;
   }
 
@@ -71,14 +76,26 @@
     return '<div class="staff-shell">'+topBar('Keluar','staff-logout')+'<section class="staff-content"><div class="staff-card staff-greeting"><div class="staff-eyebrow">Selamat bekerja</div><h1>Halo, '+esc(state.staff.fullName)+'</h1><p>Pilih fungsi yang kamu butuhkan hari ini.</p><div class="staff-tiles">'+tile('absensi')+tile('kasir')+tile('gudang')+'</div></div></section>'+bottomNav()+'</div>';
   }
 
+  function kasirMenuView(){
+    var m=MODULES.kasir;
+    return '<div class="staff-shell">'+topBar(state.staff?state.staff.fullName:'Staff','staff-profile')+'<section class="staff-content"><div class="staff-card"><div class="staff-module-head"><div class="big-icon">'+m.icon+'</div><div><div class="staff-eyebrow">Workspace Staff</div><h1>'+m.label+'</h1><p>'+m.desc+'</p></div></div><div class="staff-tiles">'+Object.keys(KASIR_SUBMENU).map(function(key){var x=KASIR_SUBMENU[key];return '<button type="button" class="staff-tile" data-kasir-menu="'+key+'"><span class="tile-icon">'+x.icon+'</span><span><strong>'+x.label+'</strong><small>'+x.desc+'</small></span><span class="arrow">›</span></button>';}).join('')+'</div></div></section>'+bottomNav()+'</div>';
+  }
+
+  function kasirSubView(key){
+    var x=KASIR_SUBMENU[key];
+    if(!x)return kasirMenuView();
+    return '<div class="staff-shell">'+topBar('Kembali','kasir-back')+'<section class="staff-content"><div class="staff-card"><div class="staff-module-head"><div class="big-icon">'+x.icon+'</div><div><div class="staff-eyebrow">Kasir · Transaksi Keuangan</div><h1>'+x.label+'</h1><p>'+x.desc+'</p></div></div><div class="staff-coming">Menu '+x.label+' sudah disiapkan di bawah Kasir.<br>Transaksi akan menggunakan sesi PIN staff yang sama.</div></div></section>'+bottomNav()+'</div>';
+  }
+
   function moduleView(key){
     var m=MODULES[key];
     if(!m||!hasModule(key))return homeView();
+    if(key==='kasir')return state.activeSubmodule?kasirSubView(state.activeSubmodule):kasirMenuView();
     return '<div class="staff-shell">'+topBar(state.staff?state.staff.fullName:'Staff','staff-profile')+'<section class="staff-content"><div class="staff-card"><div class="staff-module-head"><div class="big-icon">'+m.icon+'</div><div><div class="staff-eyebrow">Workspace Staff</div><h1>'+m.label+'</h1><p>'+m.desc+'</p></div></div><div class="staff-coming">Akses '+m.label+' sudah aktif untuk akun ini.<br>Halaman kerja '+m.label+' akan menggunakan sesi PIN staff yang sama.</div></div></section>'+bottomNav()+'</div>';
   }
 
   function ownerLoginView(){
-    return '<div class="staff-shell">'+topBar('Kembali','back-login')+'<section class="staff-content"><div class="staff-card staff-hero"><div class="staff-eyebrow">Setup Staff</div><h1>Masuk sebagai Owner</h1><p>Gunakan akun Owner Hasnaria yang sudah ada. Login ini hanya untuk membuat akun staff, mengatur penugasan, dan menetapkan PIN.</p><label class="staff-field"><span>Email Owner</span><input id="ownerEmail" type="email" autocomplete="email"></label><label class="staff-field"><span>Password Owner</span><input id="ownerPassword" type="password" autocomplete="current-password"></label><button class="staff-btn primary" type="button" data-action="owner-login">Masuk sebagai Owner</button>'+(state.msg?'<div class="staff-msg">'+esc(state.msg)+'</div>':'')+'</div></section></div>';
+    return '<div class="staff-shell">'+topBar('Kembali','back-login')+'<section class="staff-content"><div class="staff-card staff-hero"><div class="staff-eyebrow">Setup Staff</div><h1>Masuk sebagai Owner</h1><p>Gunakan akun Owner Hasnaria yang sama dengan web utama. Jika Owner sudah login di browser ini, sesi tersebut akan digunakan otomatis.</p><label class="staff-field"><span>Email Owner</span><input id="ownerEmail" type="email" autocomplete="email"></label><label class="staff-field"><span>Password Owner</span><input id="ownerPassword" type="password" autocomplete="current-password"></label><button class="staff-btn primary" type="button" data-action="owner-login">Masuk sebagai Owner</button>'+(state.msg?'<div class="staff-msg">'+esc(state.msg)+'</div>':'')+'</div></section></div>';
   }
 
   function personRow(row){
@@ -118,14 +135,14 @@
       state.staffToken=row.session_token;
       setStoredToken(row.session_token);
       state.staff={employeeId:row.employee_id,fullName:row.full_name,modules:row.modules||[],expiresAt:row.expires_at};
-      state.view='home';state.activeModule='home';state.msg='';
+      state.view='home';state.activeModule='home';state.activeSubmodule='';state.msg='';
     }catch(e){state.view='login';state.msg=errorText(e)}finally{state.busy=false;render()}
   }
 
   async function staffLogout(){
     var token=state.staffToken||getStoredToken();
     try{if(token)await client().rpc('staff_logout',{p_token:token})}catch(_){}
-    setStoredToken('');state.staffToken='';state.staff=null;state.activeModule='home';state.view='login';state.msg='';
+    setStoredToken('');state.staffToken='';state.staff=null;state.activeModule='home';state.activeSubmodule='';state.view='login';state.msg='';
     try{await loadDirectory()}catch(e){state.msg=errorText(e)}
     render();
   }
@@ -195,13 +212,16 @@
   document.addEventListener('click',function(e){
     var edit=e.target&&e.target.closest?e.target.closest('[data-edit-staff]'):null;
     if(edit){openEdit(edit.getAttribute('data-edit-staff'));return}
+    var kasirMenu=e.target&&e.target.closest?e.target.closest('[data-kasir-menu]'):null;
+    if(kasirMenu&&state.staff&&hasModule('kasir')){state.activeModule='kasir';state.activeSubmodule=kasirMenu.getAttribute('data-kasir-menu')||'';state.view='home';state.msg='';render();return}
     var mod=e.target&&e.target.closest?e.target.closest('[data-module]'):null;
-    if(mod&&!mod.disabled&&state.staff){state.activeModule=mod.getAttribute('data-module')||'home';state.view='home';state.msg='';render();return}
+    if(mod&&!mod.disabled&&state.staff){state.activeModule=mod.getAttribute('data-module')||'home';state.activeSubmodule='';state.view='home';state.msg='';render();return}
     var btn=e.target&&e.target.closest?e.target.closest('[data-action]'):null;
     if(!btn)return;
     var action=btn.getAttribute('data-action');
     if(action==='staff-login')staffLogin();
     else if(action==='staff-logout'||action==='staff-profile')staffLogout();
+    else if(action==='kasir-back'){state.activeModule='kasir';state.activeSubmodule='';state.view='home';render()}
     else if(action==='owner-open'){state.msg='';resumeOwnerIfAny().then(function(ok){state.view=ok?'owner':'owner-login';render()})}
     else if(action==='owner-login')ownerLogin();
     else if(action==='owner-logout')ownerLogout();
