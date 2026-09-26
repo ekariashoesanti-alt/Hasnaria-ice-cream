@@ -15,6 +15,8 @@ const purchaseInventorySource = fs.readFileSync(path.join(root, 'purchase-invent
 const purchaseFinanceSource = fs.readFileSync(path.join(root, 'purchase-finance-alignment-v1.js'), 'utf8');
 const purchaseFinanceCss = fs.readFileSync(path.join(root, 'purchase-finance-alignment-v1.css'), 'utf8');
 const purchaseSplitMigration = fs.readFileSync(path.join(root, 'supabase', 'migrations', '20260926082000_purchase_value_expense_stock_quantity_split.sql'), 'utf8');
+const financePeriodFastPath = fs.readFileSync(path.join(root, 'supabase', 'migrations', '20260926094000_finance_period_pack_fast_path.sql'), 'utf8');
+const financeReportingFastPath = fs.readFileSync(path.join(root, 'supabase', 'migrations', '20260926094500_finance_reporting_pack_fast_path.sql'), 'utf8');
 
 function assert(cond, msg) {
   if (!cond) {
@@ -61,12 +63,18 @@ assert(ownerShellSource.includes("typeof window.__hasnariaReloadSales==='functio
 assert(ownerShellSource.includes("data-owner-shell-stock-nudge"), 'Stock reconciliation renderer is explicitly woken after safe navigation');
 assert(!/\.(?:from|insert|update|delete|rpc)\s*\(/.test(ownerShellSource), 'navigation guard contains no database mutation/query path');
 
-assert(ownerFinanceStockSource.includes("finance-purchase-basis-v1.js?v=1"), 'Owner Finance must load Purchase-basis reporting');
+assert(ownerFinanceStockSource.includes("finance-purchase-basis-v1.js?v=2"), 'Owner Finance must load Purchase-basis reporting v2');
 assert(!ownerFinanceStockSource.includes('finance-no-hpp-mode-v1.js'), 'legacy no-HPP override must stay retired');
 assert(!ownerFinanceStockSource.includes('finance-provisional-sync-v1.js'), 'legacy provisional HPP panel must stay retired');
 assert(!ownerShellSource.includes('finance-hpp-p3.js'), 'HPP workbench must not be loaded by Owner shell');
 assert(purchaseBasisSource.includes("finance_income_statement_purchase_basis_v1"), 'Finance Purchase-basis UI must read the canonical Purchase-basis view');
+assert(purchaseBasisSource.includes('__HASNARIA_FINANCE_PURCHASE_BASIS_V2'), 'Finance Purchase-basis runtime must use the v2 idempotency guard');
+assert(purchaseBasisSource.includes('renderIncomeFallback'), 'Finance Purchase-basis UI must keep Laba Rugi visible if the formal period pack is delayed');
+assert(purchaseBasisSource.includes('patchHealth(r)'), 'Finance Purchase-basis UI must remove the legacy HPP health chip independently of report detail');
 assert(purchaseBasisSource.includes('Beban Administrasi') && purchaseBasisSource.includes('Beban Pemeliharaan') && purchaseBasisSource.includes('Beban Bahan Baku') && purchaseBasisSource.includes('Beban Kepegawaian'), 'Finance report must expose the four approved expense categories');
+assert(financePeriodFastPath.includes('with tb as materialized'), 'period reporting pack must materialize the trial balance once');
+assert(financePeriodFastPath.includes("'hpp_status','tidak digunakan pada model aktif'"), 'period reporting pack must keep HPP retired in report notes');
+assert(financeReportingFastPath.includes("'income','[]'::jsonb"), 'reporting-pack bootstrap must stay lightweight and defer detail to the selected-period RPC');
 
 assert(!purchasePreloadSource.includes('purchase-rankings-five.js'), 'legacy Purchase ranking patch must not load beside canonical Finance reconciliation');
 assert(!purchasePreloadSource.includes('purchase-chart-redesign.js'), 'legacy Purchase chart patch must not race the canonical Purchase DOM');
