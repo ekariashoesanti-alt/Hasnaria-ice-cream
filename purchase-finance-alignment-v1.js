@@ -1,10 +1,10 @@
 (function(){
 'use strict';
-if(window.__HASNARIA_PURCHASE_FINANCE_ALIGNMENT_V7)return;
-window.__HASNARIA_PURCHASE_FINANCE_ALIGNMENT_V7=true;
+if(window.__HASNARIA_PURCHASE_FINANCE_ALIGNMENT_V8)return;
+window.__HASNARIA_PURCHASE_FINANCE_ALIGNMENT_V8=true;
 
 var BRAND='a36d4b4f-3ccc-4a78-8aeb-b868f0407ea4';
-var db=null,rows=[],loading=false,error='',observer=null,timer=0,loadedAt=0,syncingStock=false,lastStockSync='';
+var db=null,rows=[],loading=false,error='',observer=null,timer=0,loadedAt=0,loadedPeriod='',syncingStock=false,lastStockSync='';
 
 function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function n(v){v=Number(v);return isFinite(v)?v:0}
@@ -24,11 +24,17 @@ function stockReview(a){return a.filter(function(r){return r.stock_status==='sto
 
 function monthRange(){var p=periodValue();if(!/^\d{4}-\d{2}$/.test(p))return null;var y=+p.slice(0,4),m=+p.slice(5,7);var end=new Date(Date.UTC(y,m,0)).toISOString().slice(0,10);return{from:p+'-01',to:end,key:p}}
 async function syncStockForPeriod(force){
-  var r=monthRange();if(!db||!r||syncingStock||(!force&&lastStockSync===r.key))return;
+  var r=monthRange();if(!db||!r||syncingStock||(!force&&lastStockSync===r.key))return false;
   syncingStock=true;
-  try{var q=await db.rpc('sync_purchase_quantity_stock_v1',{p_from:r.from,p_to:r.to});if(q.error)throw q.error;lastStockSync=r.key;rows=[];loadedAt=0}
-  catch(e){if(window.console&&console.warn)console.warn('Purchase quantity → Stock sync:',e)}
-  finally{syncingStock=false}
+  try{
+    var q=await db.rpc('sync_purchase_quantity_stock_v1',{p_from:r.from,p_to:r.to});
+    if(q.error)throw q.error;
+    lastStockSync=r.key;rows=[];loadedAt=0;loadedPeriod='';
+    return true;
+  }catch(e){
+    if(window.console&&console.warn)console.warn('Purchase quantity → Stock sync:',e);
+    return false;
+  }finally{syncingStock=false}
 }
 
 function patchCore(root){
@@ -52,7 +58,7 @@ function render(){
   var old=document.getElementById('purchaseFinanceAlignment');if(old)old.remove();
   var target=root.querySelector('.pa-kpis')||root.querySelector('.pa-controls');if(!target)return;
   var wrap=document.createElement('section');wrap.id='purchaseFinanceAlignment';wrap.className='pfa-wrap';
-  if(loading){wrap.innerHTML='<div class="pfa-head"><div><h2>Pembelian → Beban + Stok</h2><p>Memuat akun beban dan sinkronisasi jumlah stok…</p></div></div>';target.insertAdjacentElement('afterend',wrap);return}
+  if(loading){wrap.innerHTML='<div class="pfa-head"><div><h2>Pembelian → Beban + Stok</h2><p>Memuat periode terpilih…</p></div></div>';target.insertAdjacentElement('afterend',wrap);return}
   if(error){wrap.innerHTML='<div class="pfa-head"><div><h2>Pembelian → Beban + Stok</h2><p class="pfa-error">'+esc(error)+'</p></div><button id="pfaRetry" type="button">Muat ulang</button></div>';target.insertAdjacentElement('afterend',wrap);var rb=document.getElementById('pfaRetry');if(rb)rb.onclick=function(){load(true)};return}
   var a=scoped(),admin=byCat(a,'Beban Administrasi'),maint=byCat(a,'Beban Pemeliharaan'),raw=byCat(a,'Beban Bahan Baku'),people=byCat(a,'Beban Kepegawaian'),rr=reviews(a),sp=stockPosted(a),sr=stockReady(a),sm=stockReview(a);
   wrap.innerHTML='<div class="pfa-head"><div><div class="pfa-eyebrow">PEMBELIAN → FINANCE + STOCK</div><h2>Pembelian → Beban + Stok</h2><p><b>Nilai rupiah</b> masuk akun beban. <b>Jumlah barang</b> masuk stok bila item dan satuannya sudah terpetakan. Tidak ada HPP pada model aktif.</p></div><span class="pfa-sync">'+a.length.toLocaleString('id-ID')+' transaksi · '+esc(money(total(a)))+'</span></div>'+
@@ -68,15 +74,59 @@ function render(){
   target.insertAdjacentElement('afterend',wrap);
 }
 async function load(force){
-  if(loading)return;if(!force&&rows.length&&Date.now()-loadedAt<60000){render();return}db=db||window.__HASNARIA_DB;if(!db)return;loading=true;error='';render();
+  var p=periodValue();
+  if(!p||loading)return;
+  if(!force&&rows.length&&loadedPeriod===p&&Date.now()-loadedAt<60000){render();return}
+  db=db||window.__HASNARIA_DB;if(!db)return;
+  loading=true;error='';render();
   try{
-    var q=await db.from('finance_purchase_dual_posting_v1').select('source_history_id,source_period,effective_date,period_month,item_name,total_amount,payment_method,analytics_group,analytics_category,expense_category,category_status,expense_account_code,inventory_item_name,stock_mapping_status,ready_for_inventory,source_stock_qty,source_stock_unit,posted_stock_qty,posted_stock_unit,stock_status').eq('brand_id',BRAND).order('effective_date',{ascending:true}).limit(10000);
-    if(q.error)throw q.error;rows=q.data||[];loadedAt=Date.now();
-    if(rows.some(function(r){return r.stock_status==='ready_to_stock'})){await syncStockForPeriod(false);if(!rows.length){loading=false;return load(true)}}
-  }catch(e){error='Gagal memuat akun beban / stok: '+(e&&e.message?e.message:String(e))}
+    var q=await db.rpc('get_purchase_dual_posting_period_v1',{p_brand:BRAND,p_period:p+'-01'});
+    if(q.error)throw q.error;
+    rows=Array.isArray(q.data)?q.data:[];loadedAt=Date.now();loadedPeriod=p;
+    if(rows.some(function(r){return r.stock_status==='ready_to_stock'})){
+      var synced=await syncStockForPeriod(false);
+      if(synced){loading=false;return load(true)}
+    }
+  }catch(e){
+    rows=[];loadedPeriod='';loadedAt=0;
+    error='Gagal memuat akun beban / stok: '+(e&&e.message?e.message:String(e));
+  }
   loading=false;render();
 }
-function schedule(){clearTimeout(timer);timer=setTimeout(function(){if(document.getElementById('paRoot')){render();if(!rows.length&&!loading)load(false)}},60)}
-function boot(){db=window.__HASNARIA_DB||null;var tries=0;(function wait(){db=db||window.__HASNARIA_DB||null;var host=document.getElementById('pembelian');if(db&&host){observer=new MutationObserver(schedule);observer.observe(host,{childList:true,subtree:false});document.addEventListener('change',function(e){if(e.target&&(e.target.id==='paPeriod'||e.target.id==='paScope')){lastStockSync='';schedule()}},true);document.addEventListener('click',function(e){var b=e.target&&e.target.closest?e.target.closest('#paUpload,#purchaseExcelBtn,#purchaseMajooBtn,[data-tab="pembelian"]'):null;if(b)setTimeout(function(){rows=[];loadedAt=0;if(b.matches('#paUpload,#purchaseExcelBtn,#purchaseMajooBtn'))lastStockSync='';load(true)},250)},true);load(true);return}if(tries++<150)setTimeout(wait,100)})()}
+function schedule(){
+  clearTimeout(timer);
+  timer=setTimeout(function(){
+    if(!document.getElementById('paRoot'))return;
+    render();
+    if(!loading&&(!rows.length||loadedPeriod!==periodValue()))load(false);
+  },60)
+}
+function boot(){
+  db=window.__HASNARIA_DB||null;var tries=0;
+  (function wait(){
+    db=db||window.__HASNARIA_DB||null;var host=document.getElementById('pembelian');
+    if(db&&host){
+      observer=new MutationObserver(schedule);observer.observe(host,{childList:true,subtree:false});
+      document.addEventListener('change',function(e){
+        if(!e.target)return;
+        if(e.target.id==='paPeriod'){
+          rows=[];loadedAt=0;loadedPeriod='';lastStockSync='';load(true);return;
+        }
+        if(e.target.id==='paScope')schedule();
+      },true);
+      document.addEventListener('click',function(e){
+        var b=e.target&&e.target.closest?e.target.closest('#paUpload,#purchaseExcelBtn,#purchaseMajooBtn,[data-tab="pembelian"]'):null;
+        if(!b)return;
+        if(b.matches('#paUpload,#purchaseExcelBtn,#purchaseMajooBtn')){
+          setTimeout(function(){rows=[];loadedAt=0;loadedPeriod='';lastStockSync='';load(true)},250);
+        }else{
+          setTimeout(schedule,120);
+        }
+      },true);
+      load(true);return;
+    }
+    if(tries++<150)setTimeout(wait,100)
+  })()
+}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
