@@ -57,7 +57,7 @@ for (const task of data.tasks) {
 }
 
 assert(appSource.includes("var OWNER_SHELL = '/owner-shell-guard.js?v=3';"), 'owner navigation guard cache version is current');
-assert(appSource.includes("function afterCore(){load(OWNER_SHELL);load('/xlsx-preload.js?v=5')"), 'Purchase preload must load once after Owner shell');
+assert(appSource.includes("function afterCore(){load(OWNER_SHELL);load('/xlsx-preload.js?v=6')"), 'Purchase preload must load once after Owner shell');
 assert(!appSource.includes("load('/finance-purchase-basis-v1.js"), 'Finance management runtime must be lazy-owned by the Owner Finance shell');
 assert(ownerShellSource.includes("c.role!=='owner'"), 'guard is scoped to Owner role only');
 assert(ownerShellSource.includes('c.navigate=safeNavigate'), 'ERP module navigation is redirected to the safe Owner navigator');
@@ -87,15 +87,18 @@ assert(financeReportingFastPath.includes("'income','[]'::jsonb"), 'reporting-pac
 
 assert(!purchasePreloadSource.includes('purchase-rankings-five.js'), 'legacy Purchase ranking patch must not load beside canonical Finance reconciliation');
 assert(!purchasePreloadSource.includes('purchase-chart-redesign.js'), 'legacy Purchase chart patch must not race the canonical Purchase DOM');
-assert(purchasePreloadSource.includes("purchase-finance-alignment-v1.css?v=3"), 'canonical Purchase layout cache version must be current');
-assert(purchasePreloadSource.includes("purchase-finance-alignment-v1.js?v=4"), 'canonical Purchase runtime cache version must be current');
+assert(purchasePreloadSource.includes("purchase-finance-alignment-v1.css?v=4"), 'canonical Purchase layout cache version must be current');
+assert(purchasePreloadSource.includes("purchase-finance-alignment-v1.js?v=5"), 'canonical Purchase runtime cache version must be current');
 assert(!purchaseInventorySource.includes('pa-stock-grid'), 'Purchase inventory helper must not inject detailed Stock cards back into Pembelian');
 assert(!purchaseInventorySource.includes("querySelectorAll('.pa-lower-grid article')"), 'Purchase inventory helper must remain KPI-only');
 assert(purchaseFinanceCss.includes(':has(>#purchaseFinanceAlignment)'), 'Purchase canonical layout must activate only when reconciliation is present');
 assert(purchaseFinanceCss.includes('>.pa-kpis') && purchaseFinanceCss.includes('>.pa-main-grid') && purchaseFinanceCss.includes('>.pa-lower-grid'), 'legacy Purchase KPI and analytics grids must be removed from canonical layout');
 assert(purchaseFinanceSource.includes("get_purchase_control_period_v1"), 'Purchase screen must use one selected-period detail/control RPC');
-assert(purchaseFinanceSource.includes('__HASNARIA_PURCHASE_FINANCE_ALIGNMENT_V9'), 'Purchase runtime must use the v9 idempotency guard');
+assert(purchaseFinanceSource.includes('__HASNARIA_PURCHASE_FINANCE_ALIGNMENT_V10'), 'Purchase runtime must use the v10 idempotency guard');
 assert(purchaseFinanceSource.includes('finance_link_status') && purchaseFinanceSource.includes('purchase_journal_delta'), 'Purchase screen must show the Finance reconciliation result');
+assert(purchaseFinanceSource.includes('id="pfaCategory"'), 'Purchase canonical expense filter must be owned by the canonical panel');
+assert(purchaseFinanceSource.includes("legacyScope.closest('label').style.display='none'"), 'legacy analytics scope must be hidden instead of repurposed');
+assert(!purchaseFinanceSource.includes("e.target.id==='paScope'"), 'canonical category filter must not race the legacy Purchase renderer');
 assert(purchaseFinanceSource.includes("sync_purchase_quantity_stock_v1"), 'Purchase screen must sync eligible quantities into Stock');
 assert(purchaseFinanceSource.includes('6100 · Administrasi') && purchaseFinanceSource.includes('6110 · Pemeliharaan') && purchaseFinanceSource.includes('6120 · Bahan Baku') && purchaseFinanceSource.includes('6200 · Kepegawaian'), 'Purchase screen must expose the four expense account codes');
 assert(!purchaseFinanceSource.includes('Persediaan · 1300'), 'Purchase screen must not present inventory value as the management expense model');
