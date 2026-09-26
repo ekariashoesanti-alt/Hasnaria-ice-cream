@@ -51,7 +51,7 @@ for (const task of data.tasks) {
 }
 
 assert(appSource.includes("var OWNER_SHELL = '/owner-shell-guard.js?v=2';"), 'owner navigation guard cache version is current');
-assert(appSource.includes("function afterCore(){load(OWNER_SHELL);load('/xlsx-preload.js?v=3')"), 'owner navigation guard loads before Sales/Stock feature modules');
+assert(appSource.includes("function afterCore(){load(OWNER_SHELL);load('/finance-purchase-basis-v1.js?v=1');load('/xlsx-preload.js?v=3')"), 'Purchase-basis retirement patch loads globally after core before business modules');
 assert(ownerShellSource.includes("c.role!=='owner'"), 'guard is scoped to Owner role only');
 assert(ownerShellSource.includes('c.navigate=safeNavigate'), 'ERP module navigation is redirected to the safe Owner navigator');
 assert(ownerShellSource.includes('event.stopPropagation();'), 'Owner top navigation blocks legacy target/bubble tab render');
