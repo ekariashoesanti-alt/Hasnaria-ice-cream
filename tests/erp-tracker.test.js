@@ -6,10 +6,13 @@ const trackerPath = path.join(root, 'docs', 'HASNARIA_ERP_TRACKER.json');
 const data = JSON.parse(fs.readFileSync(trackerPath, 'utf8'));
 const appSource = fs.readFileSync(path.join(root, 'app.js'), 'utf8');
 const ownerShellSource = fs.readFileSync(path.join(root, 'owner-shell-guard.js'), 'utf8');
+const ownerFinanceStockSource = fs.readFileSync(path.join(root, 'owner-finance-stock-v3.js'), 'utf8');
+const purchaseBasisSource = fs.readFileSync(path.join(root, 'finance-purchase-basis-v1.js'), 'utf8');
 const operationalBridgeSource = fs.readFileSync(path.join(root, 'operational-role-bridge.js'), 'utf8');
 const operationalSource = fs.readFileSync(path.join(root, 'operational-v1.js'), 'utf8');
 const purchasePreloadSource = fs.readFileSync(path.join(root, 'xlsx-preload.js'), 'utf8');
 const purchaseInventorySource = fs.readFileSync(path.join(root, 'purchase-inventory-status.js'), 'utf8');
+const purchaseFinanceSource = fs.readFileSync(path.join(root, 'purchase-finance-alignment-v1.js'), 'utf8');
 const purchaseFinanceCss = fs.readFileSync(path.join(root, 'purchase-finance-alignment-v1.css'), 'utf8');
 
 function assert(cond, msg) {
@@ -47,7 +50,7 @@ for (const task of data.tasks) {
   }
 }
 
-assert(appSource.includes("var OWNER_SHELL = '/owner-shell-guard.js?v=1';"), 'owner navigation guard is declared in runtime loader');
+assert(appSource.includes("var OWNER_SHELL = '/owner-shell-guard.js?v=2';"), 'owner navigation guard cache version is current');
 assert(appSource.includes("function afterCore(){load(OWNER_SHELL);load('/xlsx-preload.js?v=3')"), 'owner navigation guard loads before Sales/Stock feature modules');
 assert(ownerShellSource.includes("c.role!=='owner'"), 'guard is scoped to Owner role only');
 assert(ownerShellSource.includes('c.navigate=safeNavigate'), 'ERP module navigation is redirected to the safe Owner navigator');
@@ -57,6 +60,13 @@ assert(ownerShellSource.includes("typeof window.__hasnariaReloadSales==='functio
 assert(ownerShellSource.includes("data-owner-shell-stock-nudge"), 'Stock reconciliation renderer is explicitly woken after safe navigation');
 assert(!/\.(?:from|insert|update|delete|rpc)\s*\(/.test(ownerShellSource), 'navigation guard contains no database mutation/query path');
 
+assert(ownerFinanceStockSource.includes("finance-purchase-basis-v1.js?v=1"), 'Owner Finance must load Purchase-basis reporting');
+assert(!ownerFinanceStockSource.includes('finance-no-hpp-mode-v1.js'), 'legacy no-HPP override must stay retired');
+assert(!ownerFinanceStockSource.includes('finance-provisional-sync-v1.js'), 'legacy provisional HPP panel must stay retired');
+assert(!ownerShellSource.includes('finance-hpp-p3.js'), 'HPP workbench must not be loaded by Owner shell');
+assert(purchaseBasisSource.includes("finance_income_statement_purchase_basis_v1"), 'Finance Purchase-basis UI must read the canonical Purchase-basis view');
+assert(purchaseBasisSource.includes('Beban Administrasi') && purchaseBasisSource.includes('Beban Pemeliharaan') && purchaseBasisSource.includes('Beban Bahan Baku') && purchaseBasisSource.includes('Beban Kepegawaian'), 'Finance report must expose the four approved expense categories');
+
 assert(!purchasePreloadSource.includes('purchase-rankings-five.js'), 'legacy Purchase ranking patch must not load beside canonical Finance reconciliation');
 assert(!purchasePreloadSource.includes('purchase-chart-redesign.js'), 'legacy Purchase chart patch must not race the canonical Purchase DOM');
 assert(purchasePreloadSource.includes("purchase-finance-alignment-v1.css?v=2"), 'canonical Purchase Finance layout cache version must be current');
@@ -64,6 +74,8 @@ assert(!purchaseInventorySource.includes('pa-stock-grid'), 'Purchase inventory h
 assert(!purchaseInventorySource.includes("querySelectorAll('.pa-lower-grid article')"), 'Purchase inventory helper must remain KPI-only');
 assert(purchaseFinanceCss.includes(':has(>#purchaseFinanceAlignment)'), 'Purchase canonical layout must activate only when Finance reconciliation is present');
 assert(purchaseFinanceCss.includes('>.pa-main-grid') && purchaseFinanceCss.includes('>.pa-lower-grid'), 'legacy Purchase analytics grids must be removed from canonical layout');
+assert(purchaseFinanceSource.includes("finance_purchase_expense_category_v1"), 'Purchase screen must read the four-category expense view');
+assert(!purchaseFinanceSource.includes('Persediaan · 1300'), 'Purchase screen must not present inventory as the primary management expense model');
 
 assert(operationalBridgeSource.includes("Object.defineProperty(window,'__HASNARIA_OPERATIONS_V1_MOUNT'"), 'Operasional bridge intercepts mount assignment for an idempotency guard');
 assert(operationalBridgeSource.includes("if(!force&&mounted())return"), 'observer-driven non-force Operasional mounts are skipped after the shell exists');
@@ -88,4 +100,4 @@ assert(saveItemSource.includes('Object.assign(item,row)'), 'single-row save must
 assert(!saveItemSource.includes('loadItemPage('), 'single-row save must not reload the 25-row detail page');
 assert(!saveItemSource.includes('loadRuns('), 'single-row save must not reload the 30-run header list');
 
-console.log('ERP tracker test: PASS (' + data.tasks.length + ' tasks, ' + data.milestones.length + ' milestones; Owner guard + canonical Purchase render + scoped Operasional bridge + loading budget locked)');
+console.log('ERP tracker test: PASS (' + data.tasks.length + ' tasks, ' + data.milestones.length + ' milestones; Owner guard + Purchase-basis Finance + canonical Purchase render + scoped Operasional bridge + loading budget locked)');
