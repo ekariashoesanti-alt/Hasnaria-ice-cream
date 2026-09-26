@@ -28,9 +28,7 @@
     document.head.appendChild(d);
   }
 
-  /* Purchase → Finance alignment is the canonical detail below the Purchase KPI strip.
-     Legacy ranking/chart patchers are intentionally not loaded here because they race
-     the same Purchase DOM and duplicate information already owned by Finance/Stock. */
+  /* Purchase → Finance + Stock dual posting owns the canonical detail below the Purchase KPI strip. */
   if(!document.getElementById('hasnaria-purchase-finance-alignment-css')){
     var afc=document.createElement('link');
     afc.id='hasnaria-purchase-finance-alignment-css';
@@ -41,7 +39,7 @@
   if(!document.getElementById('hasnaria-purchase-finance-alignment-js')){
     var af=document.createElement('script');
     af.id='hasnaria-purchase-finance-alignment-js';
-    af.src='/purchase-finance-alignment-v1.js?v=1';
+    af.src='/purchase-finance-alignment-v1.js?v=2';
     af.async=true;
     document.head.appendChild(af);
   }
