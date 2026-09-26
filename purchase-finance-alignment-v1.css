@@ -3,48 +3,24 @@
 .pfa-head h2,.pfa-review-head h3{margin:2px 0 4px;color:#173f34}.pfa-head h2{font-size:17px}.pfa-review-head h3{font-size:14px}
 .pfa-head p,.pfa-review-head p{margin:0;color:#667b72;font-size:11.5px;line-height:1.55}.pfa-head p{max-width:760px}
 .pfa-eyebrow{font-size:9px;font-weight:900;letter-spacing:.09em;color:#0d7b61}.pfa-sync,.pfa-review-head>span{border:1px solid #d8e8e1;background:#f5fbf8;color:#176b55;border-radius:999px;padding:6px 9px;font-size:9.5px;font-weight:800;white-space:nowrap}
-.pfa-cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin-top:13px}.pfa-card{border:1px solid #e0ebe6;border-radius:13px;padding:12px;background:#fbfdfc;min-width:0}.pfa-card span,.pfa-card small{display:block;color:#70837a;font-size:9.5px}.pfa-card strong{display:block;margin:4px 0 2px;font-size:16px;color:#173f34}.pfa-card.inventory{border-left:3px solid #176b55}.pfa-card.expense{border-left:3px solid #3b7d68}.pfa-card.asset{border-left:3px solid #b78322}.pfa-card.review{border-left:3px solid #b94747}
-.pfa-meta{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}.pfa-meta>div{border:1px solid #e5eee9;border-radius:12px;padding:10px 11px;background:#fafcfb}.pfa-meta b{display:block;font-size:10px;color:#315e4f;margin-bottom:5px}.pfa-meta span{display:flex;justify-content:space-between;gap:10px;padding:3px 0;font-size:9.5px;color:#687d74}.pfa-meta span strong{margin-left:auto;color:#173f34}
+.pfa-cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin-top:13px}.pfa-cards-five{grid-template-columns:repeat(5,minmax(0,1fr))}.pfa-card{border:1px solid #e0ebe6;border-radius:13px;padding:12px;background:#fbfdfc;min-width:0}.pfa-card span,.pfa-card small{display:block;color:#70837a;font-size:9.5px}.pfa-card strong{display:block;margin:4px 0 2px;font-size:16px;color:#173f34}.pfa-card.inventory{border-left:3px solid #176b55}.pfa-card.expense{border-left:3px solid #3b7d68}.pfa-card.total{border-left:3px solid #0d7b61;background:#f2faf6}.pfa-card.review{border-left:3px solid #b94747}
+.pfa-control-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:10px}.pfa-control-grid>div{border:1px solid #e5eee9;border-radius:12px;padding:10px 11px;background:#fafcfb}.pfa-control-grid b{display:block;font-size:10px;color:#315e4f;margin-bottom:5px}.pfa-control-grid>div>span{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:3px 0;font-size:9.5px;color:#687d74}.pfa-control-grid>div>span strong{margin-left:auto;color:#173f34}
 .pfa-note{margin-top:10px;border-radius:11px;background:#eef8f4;color:#315e4f;padding:9px 11px;font-size:10px;line-height:1.5}.pfa-review-head{margin-top:14px;padding-top:13px;border-top:1px solid #edf3f0}.pfa-table-scroll{overflow:auto;margin-top:8px;border:1px solid #e3ece8;border-radius:12px}.pfa-table{width:100%;border-collapse:collapse;min-width:940px;font-size:10.5px}.pfa-table th{background:#f5f9f7;color:#587067;font-size:9px;text-transform:uppercase;letter-spacing:.04em;position:sticky;top:0}.pfa-table th,.pfa-table td{padding:9px 10px;border-bottom:1px solid #edf3f0;text-align:left;vertical-align:top}.pfa-table tbody tr:last-child td{border-bottom:0}.pfa-table td b{display:block;color:#173f34}.pfa-table td small{display:block;color:#7b8c85;margin-top:2px;max-width:260px}.pfa-table .num{text-align:right;font-weight:800;white-space:nowrap}
-.pfa-status{display:inline-block;border-radius:999px;padding:4px 7px;font-size:9px;font-weight:900;white-space:nowrap}.pfa-status.ok{background:#e7f7ef;color:#176b55}.pfa-status.warn{background:#fff6dc;color:#8a6615}.pfa-status.bad{background:#fff0f0;color:#a13d3d}.pfa-action{margin-top:5px!important;line-height:1.35}.pfa-more,.pfa-empty{padding:10px 2px 0;color:#71847c;font-size:9.5px}.pfa-empty{padding:18px;text-align:center}.pfa-error{color:#a13d3d!important}
+.pfa-status{display:inline-block!important;border-radius:999px;padding:4px 7px!important;font-size:9px!important;font-weight:900!important;white-space:nowrap;width:auto!important}.pfa-status.ok{background:#e7f7ef;color:#176b55}.pfa-status.warn{background:#fff6dc;color:#8a6615}.pfa-status.bad{background:#fff0f0;color:#a13d3d}.pfa-action{margin-top:5px!important;line-height:1.35}.pfa-more,.pfa-empty{padding:10px 2px 0;color:#71847c;font-size:9.5px}.pfa-empty{padding:18px;text-align:center}.pfa-error{color:#a13d3d!important}
 
-/* Canonical Purchase presentation.
-   Once the Finance reconciliation panel is present, legacy Purchase analytics cards
-   are intentionally removed from layout. Their old chart/ranking renderers are no
-   longer loaded; Stock owns detailed inventory-cycle analysis and Finance owns the
-   accounting reconciliation detail. This prevents overlapping/ghost cards and keeps
-   one authoritative Purchase → Finance reading path. */
+/* Canonical Purchase screen: controls + one authoritative Purchase/Finance/Stock panel.
+   Legacy analytics KPI/chart/ranking sections are hidden to avoid duplicate concepts. */
+html body #app #pembelian .pa-root:has(>#purchaseFinanceAlignment)>.pa-kpis,
 html body #app #pembelian .pa-root:has(>#purchaseFinanceAlignment)>.pa-main-grid,
 html body #app #pembelian .pa-root:has(>#purchaseFinanceAlignment)>.pa-lower-grid,
 html body #app #pembelian .pa-root:has(>#purchaseFinanceAlignment)>.pa-insight{display:none!important}
 
 @media(min-width:980px){
-  html body #app #pembelian .pa-root:has(>#purchaseFinanceAlignment){
-    grid-template-columns:minmax(0,1fr)!important;
-    grid-template-rows:auto auto auto auto!important;
-    column-gap:0!important;
-    row-gap:10px!important;
-    height:auto!important;
-    min-height:0!important;
-    overflow:visible!important;
-  }
-  html body #app #pembelian .pa-root:has(>#purchaseFinanceAlignment)>.pa-title{
-    grid-column:1!important;grid-row:1!important;
-  }
-  html body #app #pembelian .pa-root:has(>#purchaseFinanceAlignment)>.pa-controls{
-    grid-column:1!important;grid-row:2!important;
-  }
-  html body #app #pembelian .pa-root:has(>#purchaseFinanceAlignment)>.pa-kpis{
-    grid-column:1!important;grid-row:3!important;
-  }
-  html body #app #pembelian .pa-root>#purchaseFinanceAlignment{
-    grid-column:1!important;
-    grid-row:4!important;
-    align-self:start!important;
-    justify-self:stretch!important;
-    margin:0 0 16px!important;
-    position:relative!important;
-    z-index:0!important;
-  }
+  html body #app #pembelian .pa-root:has(>#purchaseFinanceAlignment){grid-template-columns:minmax(0,1fr)!important;grid-template-rows:auto auto auto!important;column-gap:0!important;row-gap:10px!important;height:auto!important;min-height:0!important;overflow:visible!important}
+  html body #app #pembelian .pa-root:has(>#purchaseFinanceAlignment)>.pa-title{grid-column:1!important;grid-row:1!important}
+  html body #app #pembelian .pa-root:has(>#purchaseFinanceAlignment)>.pa-controls{grid-column:1!important;grid-row:2!important}
+  html body #app #pembelian .pa-root>#purchaseFinanceAlignment{grid-column:1!important;grid-row:3!important;align-self:start!important;justify-self:stretch!important;margin:0 0 16px!important;position:relative!important;z-index:0!important}
 }
-@media(max-width:900px){.pfa-cards{grid-template-columns:repeat(2,minmax(0,1fr))}.pfa-meta{grid-template-columns:1fr}}@media(max-width:560px){.pfa-wrap{padding:12px}.pfa-cards{grid-template-columns:1fr 1fr}.pfa-card strong{font-size:14px}.pfa-head p{font-size:10.5px}}
+@media(max-width:1100px){.pfa-cards-five{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:900px){.pfa-cards,.pfa-cards-five{grid-template-columns:repeat(2,minmax(0,1fr))}.pfa-control-grid{grid-template-columns:1fr}}
+@media(max-width:560px){.pfa-wrap{padding:12px}.pfa-cards,.pfa-cards-five{grid-template-columns:1fr 1fr}.pfa-card strong{font-size:14px}.pfa-head p{font-size:10.5px}}
