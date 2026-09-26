@@ -28,18 +28,18 @@
     document.head.appendChild(d);
   }
 
-  /* Purchase → Finance + Stock dual posting owns the canonical detail below the Purchase KPI strip. */
+  /* Canonical Purchase source: value → expense journal, quantity → Stock. */
   if(!document.getElementById('hasnaria-purchase-finance-alignment-css')){
     var afc=document.createElement('link');
     afc.id='hasnaria-purchase-finance-alignment-css';
     afc.rel='stylesheet';
-    afc.href='/purchase-finance-alignment-v1.css?v=2';
+    afc.href='/purchase-finance-alignment-v1.css?v=3';
     document.head.appendChild(afc);
   }
   if(!document.getElementById('hasnaria-purchase-finance-alignment-js')){
     var af=document.createElement('script');
     af.id='hasnaria-purchase-finance-alignment-js';
-    af.src='/purchase-finance-alignment-v1.js?v=3';
+    af.src='/purchase-finance-alignment-v1.js?v=4';
     af.async=true;
     document.head.appendChild(af);
   }
