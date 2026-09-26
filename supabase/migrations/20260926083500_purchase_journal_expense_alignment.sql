@@ -21,44 +21,50 @@ begin
     raise exception 'Purchase Finance reconciliation permission required';
   end if;
 
-  -- Reclassify existing Purchase journal headers to the expense-based management model.
   update public.finance_journal_entries e
-  set description=x.expense_category||' · '||coalesce(x.item_name,'(tanpa nama)'),
-      status=case when x.category_status='classified' and x.source_finance_status='posted' then 'posted' else 'provisional' end,
+  set description=c.expense_category||' · '||coalesce(c.item_name,'(tanpa nama)'),
+      status=case when c.category_status='classified' and c.finance_status='posted' then 'posted' else 'provisional' end,
       metadata=e.metadata||jsonb_build_object(
-        'expense_category',x.expense_category,
-        'expense_account_code',x.expense_account_code,
-        'stock_status',x.stock_status,
+        'expense_category',c.expense_category,
+        'expense_account_code',case c.expense_category
+          when 'Beban Administrasi' then '6100'
+          when 'Beban Pemeliharaan' then '6110'
+          when 'Beban Bahan Baku' then '6120'
+          when 'Beban Kepegawaian' then '6200'
+          else '6000' end,
         'management_basis','purchase_value_expense_stock_quantity',
         'reconciled_by','purchase_journal_expense_alignment'
       ),
       updated_at=now()
-  from public.finance_purchase_dual_posting_v1 x
+  from public.finance_purchase_expense_category_v1 c
   where e.brand_id=p_brand
     and e.entry_date between p_from and p_to
     and e.source_type in ('purchase','purchase_expense')
-    and e.source_id=x.source_history_id
-    and x.brand_id=e.brand_id;
+    and e.source_id=c.source_history_id
+    and c.brand_id=e.brand_id;
   get diagnostics v_entries=row_count;
 
-  -- Rupiah value goes to the approved expense account, never account 1300.
   update public.finance_journal_lines l
-  set account_code=x.expense_account_code,
-      memo=x.expense_category,
+  set account_code=case c.expense_category
+        when 'Beban Administrasi' then '6100'
+        when 'Beban Pemeliharaan' then '6110'
+        when 'Beban Bahan Baku' then '6120'
+        when 'Beban Kepegawaian' then '6200'
+        else '6000' end,
+      memo=c.expense_category,
       metadata=l.metadata||jsonb_build_object('purchase_value_role','expense')
   from public.finance_journal_entries e,
-       public.finance_purchase_dual_posting_v1 x
+       public.finance_purchase_expense_category_v1 c
   where l.entry_id=e.id
     and l.brand_id=e.brand_id
     and l.line_no=1
     and e.brand_id=p_brand
     and e.entry_date between p_from and p_to
     and e.source_type in ('purchase','purchase_expense')
-    and e.source_id=x.source_history_id
-    and x.brand_id=e.brand_id;
+    and e.source_id=c.source_history_id
+    and c.brand_id=e.brand_id;
   get diagnostics v_lines=row_count;
 
-  -- HPP is retired from active reporting. Preserve source rows but make them non-posting.
   update public.finance_journal_entries e
   set status='void',
       metadata=e.metadata||jsonb_build_object(
@@ -87,44 +93,55 @@ end;
 $function$;
 
 -- Apply the same alignment immediately to currently open periods.
+with x as materialized (
+  select c.*
+  from public.finance_purchase_expense_category_v1 c
+  join public.accounting_periods ap
+    on ap.brand_id=c.brand_id and ap.period_start=c.period_month and ap.status='open'
+)
 update public.finance_journal_entries e
 set description=x.expense_category||' · '||coalesce(x.item_name,'(tanpa nama)'),
-    status=case when x.category_status='classified' and x.source_finance_status='posted' then 'posted' else 'provisional' end,
+    status=case when x.category_status='classified' and x.finance_status='posted' then 'posted' else 'provisional' end,
     metadata=e.metadata||jsonb_build_object(
       'expense_category',x.expense_category,
-      'expense_account_code',x.expense_account_code,
-      'stock_status',x.stock_status,
+      'expense_account_code',case x.expense_category
+        when 'Beban Administrasi' then '6100'
+        when 'Beban Pemeliharaan' then '6110'
+        when 'Beban Bahan Baku' then '6120'
+        when 'Beban Kepegawaian' then '6200'
+        else '6000' end,
       'management_basis','purchase_value_expense_stock_quantity',
       'reconciled_by','purchase_journal_expense_alignment'
     ),
     updated_at=now()
-from public.finance_purchase_dual_posting_v1 x
+from x
 where e.source_type in ('purchase','purchase_expense')
   and e.source_id=x.source_history_id
-  and x.brand_id=e.brand_id
-  and exists(
-    select 1 from public.accounting_periods ap
-    where ap.brand_id=e.brand_id and ap.status='open'
-      and e.entry_date between ap.period_start and ap.period_end
-  );
+  and x.brand_id=e.brand_id;
 
+with x as materialized (
+  select c.*
+  from public.finance_purchase_expense_category_v1 c
+  join public.accounting_periods ap
+    on ap.brand_id=c.brand_id and ap.period_start=c.period_month and ap.status='open'
+)
 update public.finance_journal_lines l
-set account_code=x.expense_account_code,
+set account_code=case x.expense_category
+      when 'Beban Administrasi' then '6100'
+      when 'Beban Pemeliharaan' then '6110'
+      when 'Beban Bahan Baku' then '6120'
+      when 'Beban Kepegawaian' then '6200'
+      else '6000' end,
     memo=x.expense_category,
     metadata=l.metadata||jsonb_build_object('purchase_value_role','expense')
 from public.finance_journal_entries e,
-     public.finance_purchase_dual_posting_v1 x
+     x
 where l.entry_id=e.id
   and l.brand_id=e.brand_id
   and l.line_no=1
   and e.source_type in ('purchase','purchase_expense')
   and e.source_id=x.source_history_id
-  and x.brand_id=e.brand_id
-  and exists(
-    select 1 from public.accounting_periods ap
-    where ap.brand_id=e.brand_id and ap.status='open'
-      and e.entry_date between ap.period_start and ap.period_end
-  );
+  and x.brand_id=e.brand_id;
 
 update public.finance_journal_entries e
 set status='void',
