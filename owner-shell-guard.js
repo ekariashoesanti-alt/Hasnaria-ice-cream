@@ -42,10 +42,13 @@
   }
 
   function ensureFinanceWorkbenches(){
-    if(!document.getElementById('hasnaria-finance-hpp-p3-js')){
-      var p3=document.createElement('script');
-      p3.id='hasnaria-finance-hpp-p3-js';p3.src='/finance-hpp-p3.js?v=1';p3.async=true;document.head.appendChild(p3);
+    /* Active management reporting is Purchase-basis. HPP workbench is retired from the Owner UI. */
+    if(!document.getElementById('hasnaria-finance-purchase-basis-v1-js')){
+      var pb=document.createElement('script');
+      pb.id='hasnaria-finance-purchase-basis-v1-js';pb.src='/finance-purchase-basis-v1.js?v=1';pb.async=true;document.head.appendChild(pb);
     }
+    var stale=document.querySelector('[data-fin-hpp-p3-open]');if(stale)stale.remove();
+    var staleModal=document.getElementById('finHppP3Modal');if(staleModal)staleModal.remove();
     if(!document.getElementById('hasnaria-finance-p4-js')){
       var p4=document.createElement('script');
       p4.id='hasnaria-finance-p4-js';p4.src='/finance-accounting-p4.js?v=1';p4.async=true;document.head.appendChild(p4);
@@ -112,7 +115,7 @@
     if(state.finStockLoad){state.finStockLoad.then(function(){afterRuntime(id,requestRender)});return}
 
     state.finStockLoad=new Promise(function(resolve){
-      var s=document.createElement('script');s.id='hasnaria-owner-finance-stock-v3-js';s.src='/owner-finance-stock-v3.js?v=7';s.async=true;
+      var s=document.createElement('script');s.id='hasnaria-owner-finance-stock-v3-js';s.src='/owner-finance-stock-v3.js?v=8';s.async=true;
       s.onload=function(){resolve()};s.onerror=function(){state.finStockLoad=null;resolve()};document.head.appendChild(s);
     });
     state.finStockLoad.then(function(){afterRuntime(id,requestRender)});
