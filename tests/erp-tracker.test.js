@@ -14,6 +14,7 @@ const purchasePreloadSource = fs.readFileSync(path.join(root, 'xlsx-preload.js')
 const purchaseInventorySource = fs.readFileSync(path.join(root, 'purchase-inventory-status.js'), 'utf8');
 const purchaseFinanceSource = fs.readFileSync(path.join(root, 'purchase-finance-alignment-v1.js'), 'utf8');
 const purchaseFinanceCss = fs.readFileSync(path.join(root, 'purchase-finance-alignment-v1.css'), 'utf8');
+const purchaseSplitMigration = fs.readFileSync(path.join(root, 'supabase', 'migrations', '20260926082000_purchase_value_expense_stock_quantity_split.sql'), 'utf8');
 
 function assert(cond, msg) {
   if (!cond) {
@@ -70,12 +71,22 @@ assert(purchaseBasisSource.includes('Beban Administrasi') && purchaseBasisSource
 assert(!purchasePreloadSource.includes('purchase-rankings-five.js'), 'legacy Purchase ranking patch must not load beside canonical Finance reconciliation');
 assert(!purchasePreloadSource.includes('purchase-chart-redesign.js'), 'legacy Purchase chart patch must not race the canonical Purchase DOM');
 assert(purchasePreloadSource.includes("purchase-finance-alignment-v1.css?v=2"), 'canonical Purchase Finance layout cache version must be current');
+assert(purchasePreloadSource.includes("purchase-finance-alignment-v1.js?v=2"), 'Purchase expense-stock split runtime cache version must be current');
 assert(!purchaseInventorySource.includes('pa-stock-grid'), 'Purchase inventory helper must not inject detailed Stock cards back into Pembelian');
 assert(!purchaseInventorySource.includes("querySelectorAll('.pa-lower-grid article')"), 'Purchase inventory helper must remain KPI-only');
 assert(purchaseFinanceCss.includes(':has(>#purchaseFinanceAlignment)'), 'Purchase canonical layout must activate only when Finance reconciliation is present');
 assert(purchaseFinanceCss.includes('>.pa-main-grid') && purchaseFinanceCss.includes('>.pa-lower-grid'), 'legacy Purchase analytics grids must be removed from canonical layout');
-assert(purchaseFinanceSource.includes("finance_purchase_expense_category_v1"), 'Purchase screen must read the four-category expense view');
-assert(!purchaseFinanceSource.includes('Persediaan · 1300'), 'Purchase screen must not present inventory as the primary management expense model');
+assert(purchaseFinanceSource.includes("finance_purchase_dual_posting_v1"), 'Purchase screen must read the dual expense-and-stock view');
+assert(purchaseFinanceSource.includes("sync_purchase_quantity_stock_v1"), 'Purchase screen must sync eligible quantities into Stock');
+assert(purchaseFinanceSource.includes('6100 · Beban Administrasi') && purchaseFinanceSource.includes('6110 · Beban Pemeliharaan') && purchaseFinanceSource.includes('6120 · Beban Bahan Baku') && purchaseFinanceSource.includes('6200 · Beban Kepegawaian'), 'Purchase screen must expose the four expense account codes');
+assert(!purchaseFinanceSource.includes('Persediaan · 1300'), 'Purchase screen must not present inventory value as the management expense model');
+
+assert(purchaseSplitMigration.includes("'6110','Beban Pemeliharaan','EXPENSE'"), 'migration must create maintenance expense account');
+assert(purchaseSplitMigration.includes("'6120','Beban Bahan Baku','EXPENSE'"), 'migration must create raw-material expense account');
+assert(purchaseSplitMigration.includes("set name='Beban Kepegawaian'"), 'migration must align personnel expense naming');
+assert(purchaseSplitMigration.includes('when rule_type is null and inventory_match_count=1 then quantity_numeric'), 'exact inventory-name purchases must post quantity 1:1');
+assert(purchaseSplitMigration.includes("unit_cost=null"), 'Purchase-to-Stock upsert must remain quantity-only');
+assert(purchaseSplitMigration.includes('finance_purchase_dual_posting_v1'), 'migration must expose dual finance/stock audit view');
 
 assert(operationalBridgeSource.includes("Object.defineProperty(window,'__HASNARIA_OPERATIONS_V1_MOUNT'"), 'Operasional bridge intercepts mount assignment for an idempotency guard');
 assert(operationalBridgeSource.includes("if(!force&&mounted())return"), 'observer-driven non-force Operasional mounts are skipped after the shell exists');
@@ -100,4 +111,4 @@ assert(saveItemSource.includes('Object.assign(item,row)'), 'single-row save must
 assert(!saveItemSource.includes('loadItemPage('), 'single-row save must not reload the 25-row detail page');
 assert(!saveItemSource.includes('loadRuns('), 'single-row save must not reload the 30-run header list');
 
-console.log('ERP tracker test: PASS (' + data.tasks.length + ' tasks, ' + data.milestones.length + ' milestones; Owner guard + Purchase-basis Finance + canonical Purchase render + scoped Operasional bridge + loading budget locked)');
+console.log('ERP tracker test: PASS (' + data.tasks.length + ' tasks, ' + data.milestones.length + ' milestones; Purchase value→expense + quantity→stock split locked)');
