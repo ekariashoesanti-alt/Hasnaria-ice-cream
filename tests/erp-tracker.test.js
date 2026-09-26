@@ -15,6 +15,7 @@ const purchaseInventorySource = fs.readFileSync(path.join(root, 'purchase-invent
 const purchaseFinanceSource = fs.readFileSync(path.join(root, 'purchase-finance-alignment-v1.js'), 'utf8');
 const purchaseFinanceCss = fs.readFileSync(path.join(root, 'purchase-finance-alignment-v1.css'), 'utf8');
 const purchaseSplitMigration = fs.readFileSync(path.join(root, 'supabase', 'migrations', '20260926082000_purchase_value_expense_stock_quantity_split.sql'), 'utf8');
+const purchasePeriodRpcFastPath = fs.readFileSync(path.join(root, 'supabase', 'migrations', '20260926104000_purchase_period_rpc_fast_path.sql'), 'utf8');
 const financePeriodFastPath = fs.readFileSync(path.join(root, 'supabase', 'migrations', '20260926094000_finance_period_pack_fast_path.sql'), 'utf8');
 const financeReportingFastPath = fs.readFileSync(path.join(root, 'supabase', 'migrations', '20260926094500_finance_reporting_pack_fast_path.sql'), 'utf8');
 
@@ -54,7 +55,7 @@ for (const task of data.tasks) {
 }
 
 assert(appSource.includes("var OWNER_SHELL = '/owner-shell-guard.js?v=2';"), 'owner navigation guard cache version is current');
-assert(appSource.includes("function afterCore(){load(OWNER_SHELL);load('/finance-purchase-basis-v1.js?v=1');load('/xlsx-preload.js?v=3')"), 'Purchase-basis retirement patch loads globally after core before business modules');
+assert(appSource.includes("function afterCore(){load(OWNER_SHELL);load('/finance-purchase-basis-v1.js?v=1');load('/xlsx-preload.js?v=4')"), 'Purchase-basis retirement patch loads globally after core before business modules');
 assert(ownerShellSource.includes("c.role!=='owner'"), 'guard is scoped to Owner role only');
 assert(ownerShellSource.includes('c.navigate=safeNavigate'), 'ERP module navigation is redirected to the safe Owner navigator');
 assert(ownerShellSource.includes('event.stopPropagation();'), 'Owner top navigation blocks legacy target/bubble tab render');
@@ -79,15 +80,19 @@ assert(financeReportingFastPath.includes("'income','[]'::jsonb"), 'reporting-pac
 assert(!purchasePreloadSource.includes('purchase-rankings-five.js'), 'legacy Purchase ranking patch must not load beside canonical Finance reconciliation');
 assert(!purchasePreloadSource.includes('purchase-chart-redesign.js'), 'legacy Purchase chart patch must not race the canonical Purchase DOM');
 assert(purchasePreloadSource.includes("purchase-finance-alignment-v1.css?v=2"), 'canonical Purchase Finance layout cache version must be current');
-assert(purchasePreloadSource.includes("purchase-finance-alignment-v1.js?v=2"), 'Purchase expense-stock split runtime cache version must be current');
+assert(purchasePreloadSource.includes("purchase-finance-alignment-v1.js?v=3"), 'Purchase selected-period runtime cache version must be current');
 assert(!purchaseInventorySource.includes('pa-stock-grid'), 'Purchase inventory helper must not inject detailed Stock cards back into Pembelian');
 assert(!purchaseInventorySource.includes("querySelectorAll('.pa-lower-grid article')"), 'Purchase inventory helper must remain KPI-only');
 assert(purchaseFinanceCss.includes(':has(>#purchaseFinanceAlignment)'), 'Purchase canonical layout must activate only when Finance reconciliation is present');
 assert(purchaseFinanceCss.includes('>.pa-main-grid') && purchaseFinanceCss.includes('>.pa-lower-grid'), 'legacy Purchase analytics grids must be removed from canonical layout');
-assert(purchaseFinanceSource.includes("finance_purchase_dual_posting_v1"), 'Purchase screen must read the dual expense-and-stock view');
+assert(purchaseFinanceSource.includes("get_purchase_dual_posting_period_v1"), 'Purchase screen must use the selected-period RPC instead of full-view REST reads');
+assert(purchaseFinanceSource.includes('__HASNARIA_PURCHASE_FINANCE_ALIGNMENT_V8'), 'Purchase selected-period runtime must use the v8 idempotency guard');
 assert(purchaseFinanceSource.includes("sync_purchase_quantity_stock_v1"), 'Purchase screen must sync eligible quantities into Stock');
 assert(purchaseFinanceSource.includes('6100 · Beban Administrasi') && purchaseFinanceSource.includes('6110 · Beban Pemeliharaan') && purchaseFinanceSource.includes('6120 · Beban Bahan Baku') && purchaseFinanceSource.includes('6200 · Beban Kepegawaian'), 'Purchase screen must expose the four expense account codes');
 assert(!purchaseFinanceSource.includes('Persediaan · 1300'), 'Purchase screen must not present inventory value as the management expense model');
+assert(purchasePeriodRpcFastPath.includes('security definer'), 'Purchase period RPC must run behind one authenticated brand check');
+assert(purchasePeriodRpcFastPath.includes('private.same_brand(p_brand)'), 'Purchase period RPC must validate brand access once');
+assert(purchasePeriodRpcFastPath.includes('x.period_month=v_period'), 'Purchase period RPC must filter to the requested month server-side');
 
 assert(purchaseSplitMigration.includes("'6110','Beban Pemeliharaan','EXPENSE'"), 'migration must create maintenance expense account');
 assert(purchaseSplitMigration.includes("'6120','Beban Bahan Baku','EXPENSE'"), 'migration must create raw-material expense account');
