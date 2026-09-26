@@ -1,11 +1,11 @@
 (function(){
 'use strict';
-if(window.__HASNARIA_PURCHASE_FINANCE_ALIGNMENT_V9)return;
-window.__HASNARIA_PURCHASE_FINANCE_ALIGNMENT_V9=true;
+if(window.__HASNARIA_PURCHASE_FINANCE_ALIGNMENT_V10)return;
+window.__HASNARIA_PURCHASE_FINANCE_ALIGNMENT_V10=true;
 
 var BRAND='a36d4b4f-3ccc-4a78-8aeb-b868f0407ea4';
 var CATS=['Beban Administrasi','Beban Pemeliharaan','Beban Bahan Baku','Beban Kepegawaian'];
-var db=null,rows=[],control={},loading=false,error='',observer=null,timer=0,loadedAt=0,loadedPeriod='',syncingStock=false,lastStockSync='';
+var db=null,rows=[],control={},loading=false,error='',observer=null,timer=0,loadedAt=0,loadedPeriod='',syncingStock=false,lastStockSync='',category='all';
 
 function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function n(v){v=Number(v);return isFinite(v)?v:0}
@@ -15,24 +15,15 @@ function periodKey(v){var s=String(v||'');return /^\d{4}-\d{2}/.test(s)?s.slice(
 function dateLabel(v){var s=String(v||'');return /^\d{4}-\d{2}-\d{2}/.test(s)?s.slice(8,10)+'/'+s.slice(5,7)+'/'+s.slice(0,4):'—'}
 function total(a){return a.reduce(function(s,r){return s+n(r.total_amount)},0)}
 function periodValue(){var p=document.getElementById('paPeriod');return p?periodKey(p.value):''}
-function scopeValue(){var s=document.getElementById('paScope');return s?s.value:'all'}
-function scoped(){var s=scopeValue();return rows.filter(function(r){return s==='all'||r.expense_category===s})}
+function categoryValue(){var s=document.getElementById('pfaCategory');return s?s.value:category}
+function scoped(){var s=categoryValue();return rows.filter(function(r){return s==='all'||r.expense_category===s})}
 function byCat(a,cat){return a.filter(function(r){return r.expense_category===cat})}
-function stockPosted(a){return a.filter(function(r){return r.stock_status==='posted_to_stock'})}
-function stockReady(a){return a.filter(function(r){return r.stock_status==='ready_to_stock'})}
-function stockReview(a){return a.filter(function(r){return r.stock_status==='stock_review_required'})}
 function monthRange(){var p=periodValue();if(!/^\d{4}-\d{2}$/.test(p))return null;var y=+p.slice(0,4),m=+p.slice(5,7);return{from:p+'-01',to:new Date(Date.UTC(y,m,0)).toISOString().slice(0,10),key:p}}
 
-function patchScope(root){
-  var s=root.querySelector('#paScope');if(!s)return;
-  var wanted=['all'].concat(CATS),same=s.options.length===wanted.length;
-  if(same){for(var i=0;i<wanted.length;i++){if(s.options[i].value!==wanted[i]){same=false;break}}}
-  if(!same){var current=CATS.indexOf(s.value)>=0?s.value:'all';s.innerHTML='<option value="all">Semua kategori beban</option>'+CATS.map(function(x){return'<option value="'+esc(x)+'">'+esc(x)+'</option>'}).join('');s.value=current}
-  var label=s.closest('label');if(label){var text=label.childNodes[0];if(text&&text.nodeType===3)text.textContent='Kategori '}
-}
 function patchCore(root){
   var sub=root.querySelector('.pa-title p');if(sub)sub.textContent='Satu sumber Pembelian: nilai rupiah → akun beban, jumlah barang → Stok.';
-  patchScope(root);
+  var legacyScope=root.querySelector('#paScope');if(legacyScope&&legacyScope.closest('label'))legacyScope.closest('label').style.display='none';
+  var branch=root.querySelector('.pa-controls select[disabled]');if(branch&&branch.closest('label'))branch.closest('label').style.display='none';
 }
 function card(label,value,sub,cls){return'<article class="pfa-card '+(cls||'')+'"><span>'+esc(label)+'</span><strong>'+esc(value)+'</strong><small>'+esc(sub||'')+'</small></article>'}
 function statusPill(text,type){return'<span class="pfa-status '+(type||'')+'">'+esc(text)+'</span>'}
@@ -56,6 +47,7 @@ function controlMarkup(){
     '<div><b>Kelengkapan sumber</b><span>Jurnal provisional <strong>'+n(control.provisional_journal_rows).toLocaleString('id-ID')+'</strong></span><span>Non-stok <strong>'+n(control.non_stock_rows).toLocaleString('id-ID')+'</strong></span><span>Mismatch qty <strong>'+n(control.stock_qty_mismatch_rows).toLocaleString('id-ID')+'</strong></span></div>'+
   '</div>'
 }
+function filterMarkup(){return'<div class="pfa-filter"><label>Kategori beban<select id="pfaCategory"><option value="all"'+(category==='all'?' selected':'')+'>Semua kategori</option>'+CATS.map(function(x){return'<option value="'+esc(x)+'"'+(category===x?' selected':'')+'>'+esc(x)+'</option>'}).join('')+'</select></label></div>'}
 function render(){
   var root=document.getElementById('paRoot');if(!root)return;patchCore(root);
   var old=document.getElementById('purchaseFinanceAlignment');if(old)old.remove();
@@ -63,8 +55,8 @@ function render(){
   var wrap=document.createElement('section');wrap.id='purchaseFinanceAlignment';wrap.className='pfa-wrap';
   if(loading){wrap.innerHTML='<div class="pfa-head"><div><div class="pfa-eyebrow">PEMBELIAN · SUMBER DATA</div><h2>Pembelian → Beban + Stok</h2><p>Memuat periode terpilih…</p></div></div>';target.insertAdjacentElement('afterend',wrap);return}
   if(error){wrap.innerHTML='<div class="pfa-head"><div><h2>Pembelian → Beban + Stok</h2><p class="pfa-error">'+esc(error)+'</p></div><button id="pfaRetry" type="button">Muat ulang</button></div>';target.insertAdjacentElement('afterend',wrap);var rb=document.getElementById('pfaRetry');if(rb)rb.onclick=function(){load(true)};return}
-  var a=scoped(),admin=byCat(a,'Beban Administrasi'),maint=byCat(a,'Beban Pemeliharaan'),raw=byCat(a,'Beban Bahan Baku'),people=byCat(a,'Beban Kepegawaian'),sp=stockPosted(a),sr=stockReady(a),sm=stockReview(a);
-  wrap.innerHTML='<div class="pfa-head"><div><div class="pfa-eyebrow">SATU SUMBER · DUA RELASI</div><h2>Pembelian → Beban + Stok</h2><p>Nilai rupiah dicatat satu kali sebagai beban. Barang yang stockable menambah kuantitas Stok tanpa menambah nilai persediaan/HPP.</p></div><span class="pfa-sync">'+a.length.toLocaleString('id-ID')+' transaksi · '+esc(money(total(a)))+'</span></div>'+
+  var a=scoped(),admin=byCat(a,'Beban Administrasi'),maint=byCat(a,'Beban Pemeliharaan'),raw=byCat(a,'Beban Bahan Baku'),people=byCat(a,'Beban Kepegawaian');
+  wrap.innerHTML='<div class="pfa-head"><div><div class="pfa-eyebrow">SATU SUMBER · DUA RELASI</div><h2>Pembelian → Beban + Stok</h2><p>Nilai rupiah dicatat satu kali sebagai beban. Barang yang stockable menambah kuantitas Stok tanpa menambah nilai persediaan/HPP.</p></div><span class="pfa-sync">'+a.length.toLocaleString('id-ID')+' transaksi · '+esc(money(total(a)))+'</span></div>'+filterMarkup()+
     '<div class="pfa-cards pfa-cards-five">'+
       card('Total Pembelian',money(total(a)),a.length+' transaksi','total')+
       card('6100 · Administrasi',money(total(admin)),admin.length+' transaksi','expense')+
@@ -97,8 +89,8 @@ function boot(){
   db=window.__HASNARIA_DB||null;var tries=0;
   (function wait(){db=db||window.__HASNARIA_DB||null;var host=document.getElementById('pembelian');if(db&&host){
     observer=new MutationObserver(schedule);observer.observe(host,{childList:true,subtree:false});
-    document.addEventListener('change',function(e){if(!e.target)return;if(e.target.id==='paPeriod'){rows=[];control={};loadedAt=0;loadedPeriod='';lastStockSync='';load(true);return}if(e.target.id==='paScope')render()},true);
-    document.addEventListener('click',function(e){var b=e.target&&e.target.closest?e.target.closest('#paUpload,#purchaseExcelBtn,#purchaseMajooBtn,[data-tab="pembelian"]'):null;if(!b)return;if(b.matches('#paUpload,#purchaseExcelBtn,#purchaseMajooBtn'))setTimeout(function(){rows=[];control={};loadedAt=0;loadedPeriod='';lastStockSync='';load(true)},350);else setTimeout(schedule,120)},true);
+    document.addEventListener('change',function(e){if(!e.target)return;if(e.target.id==='paPeriod'){rows=[];control={};loadedAt=0;loadedPeriod='';lastStockSync='';category='all';load(true);return}if(e.target.id==='pfaCategory'){category=e.target.value;render()}},true);
+    document.addEventListener('click',function(e){var b=e.target&&e.target.closest?e.target.closest('#paUpload,#purchaseExcelBtn,#purchaseMajooBtn,[data-tab="pembelian"]'):null;if(!b)return;if(b.matches('#paUpload,#purchaseExcelBtn,#purchaseMajooBtn'))setTimeout(function(){rows=[];control={};loadedAt=0;loadedPeriod='';lastStockSync='';category='all';load(true)},350);else setTimeout(schedule,120)},true);
     load(true);return
   }if(tries++<150)setTimeout(wait,100)})()
 }
