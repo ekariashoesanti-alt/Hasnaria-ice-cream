@@ -76,21 +76,22 @@ assert(!/function afterCore\(\)[\s\S]*?load\(STOCK[,)]/.test(appSource), 'Stock 
 assert(coreSource.includes('scheduleLegacyTabData(tab);'), 'core app must show/render before lazy legacy data finishes');
 assert(coreSource.includes('legacyRequirements(id, force)') && coreSource.includes('if (role === "owner") return [];'), 'Owner startup must bypass legacy bulk datasets');
 assert(!coreSource.includes('await loadAll();\n      show("app");'), 'app shell must not wait for legacy loadAll before becoming visible');
-assert(ownerShellSource.includes("c.role!=='owner'"), 'guard is scoped to Owner role only');
-assert(ownerShellSource.includes('c.navigate=safeNavigate'), 'ERP module navigation is redirected to the safe Owner navigator');
-assert(ownerShellSource.includes('event.stopPropagation();'), 'Owner top navigation blocks legacy target/bubble tab render');
-assert(!ownerShellSource.includes('event.stopImmediatePropagation();'), 'Stock capture listener remains able to run on the same document node');
-assert(ownerShellSource.includes("typeof window.__hasnariaReloadSales==='function'"), 'Sales renderer is explicitly restored when needed');
-assert(ownerShellSource.includes("typeof window.__HASNARIA_LOAD_SALES==='function'"), 'Owner shell must request the lazy Sales runtime only on navigation');
-assert(ownerShellSource.includes("data-owner-shell-stock-nudge"), 'Stock reconciliation renderer is explicitly woken after safe navigation');
-assert(ownerShellSource.includes("finance-purchase-basis-v1.js?v=3"), 'Owner shell must load canonical purchase-journal Finance v3');
-assert(ownerShellSource.includes("owner-finance-stock-v3.js?v=10"), 'Owner Finance/Stock runtime cache version must be current');
-assert(!/\.(?:from|insert|update|delete|rpc)\s*\(/.test(ownerShellSource), 'navigation guard contains no database mutation/query path');
+
+assert(ownerShellSource.includes('window.__HASNARIA_OWNER_SHELL_BOOTSTRAPPED'), 'Owner executive guard must remain idempotent');
+assert(ownerShellSource.includes("var EXEC_SRC='/owner-executive-v1.js?v=1'"), 'Owner shell must load the executive one-view runtime');
+assert(ownerShellSource.includes("return !!(c&&c.role==='owner')"), 'Owner shell must remain scoped to Owner role');
+assert(ownerShellSource.includes('window.__HASNARIA_EXECUTIVE_OWNER'), 'legacy navigation blocking must activate only in executive mode');
+assert(ownerShellSource.includes('event.stopPropagation();'), 'Owner executive navigation must block legacy bubble handlers');
+assert(!ownerShellSource.includes('event.stopImmediatePropagation();'), 'Owner guard must not suppress unrelated capture listeners');
+assert(ownerShellSource.includes('c.navigate=safeNavigate'), 'Owner context navigation must be redirected to executive safe navigation');
+assert(ownerShellSource.includes('if(++tries<80)setTimeout(boot,100)'), 'Owner executive bootstrap retry must stay bounded');
+assert(!ownerShellSource.includes('owner-finance-stock-v3.js'), 'Owner shell must not load the legacy Finance/Stock shell in executive mode');
+assert(!ownerShellSource.includes('finance-hpp-p3.js'), 'HPP workbench must not be loaded by Owner shell');
+assert(!/\.(?:from|insert|update|delete|rpc)\s*\(/.test(ownerShellSource), 'Owner navigation guard contains no database mutation/query path');
 
 assert(ownerFinanceStockSource.includes("finance-purchase-basis-v1.js?v=3"), 'Owner Finance shim must load Purchase-journal reporting v3');
 assert(!ownerFinanceStockSource.includes('finance-no-hpp-mode-v1.js'), 'legacy no-HPP override must stay retired');
 assert(!ownerFinanceStockSource.includes('finance-provisional-sync-v1.js'), 'legacy provisional HPP panel must stay retired');
-assert(!ownerShellSource.includes('finance-hpp-p3.js'), 'HPP workbench must not be loaded by Owner shell');
 assert(purchaseBasisSource.includes("get_finance_management_period_v1"), 'Finance management UI must read the journal-based management period RPC');
 assert(purchaseBasisSource.includes('__HASNARIA_FINANCE_PURCHASE_BASIS_V3'), 'Finance management runtime must use the v3 idempotency guard');
 assert(purchaseBasisSource.includes('purchase_control_current'), 'Finance Laba Rugi must surface Purchase-to-journal reconciliation control');
