@@ -8,6 +8,8 @@ const appSource = fs.readFileSync(path.join(root, 'app.js'), 'utf8');
 const ownerShellSource = fs.readFileSync(path.join(root, 'owner-shell-guard.js'), 'utf8');
 const ownerFinanceStockSource = fs.readFileSync(path.join(root, 'owner-finance-stock-v3.js'), 'utf8');
 const purchaseBasisSource = fs.readFileSync(path.join(root, 'finance-purchase-basis-v1.js'), 'utf8');
+const salesBoardSource = fs.readFileSync(path.join(root, 'sales-board.js'), 'utf8');
+const salesHourlySource = fs.readFileSync(path.join(root, 'sales-hourly-chart.js'), 'utf8');
 const operationalBridgeSource = fs.readFileSync(path.join(root, 'operational-role-bridge.js'), 'utf8');
 const operationalSource = fs.readFileSync(path.join(root, 'operational-v1.js'), 'utf8');
 const purchasePreloadSource = fs.readFileSync(path.join(root, 'xlsx-preload.js'), 'utf8');
@@ -20,6 +22,7 @@ const canonicalPurchaseFinanceMigration = fs.readFileSync(path.join(root, 'supab
 const purchaseControlRpcMigration = fs.readFileSync(path.join(root, 'supabase', 'migrations', '20260926132000_purchase_control_period_rpc.sql'), 'utf8');
 const financePeriodFastPath = fs.readFileSync(path.join(root, 'supabase', 'migrations', '20260926094000_finance_period_pack_fast_path.sql'), 'utf8');
 const financeReportingFastPath = fs.readFileSync(path.join(root, 'supabase', 'migrations', '20260926094500_finance_reporting_pack_fast_path.sql'), 'utf8');
+const performanceMigration = fs.readFileSync(path.join(root, 'supabase', 'migrations', '20260927005000_performance_runtime_reduce_roundtrips.sql'), 'utf8');
 
 function assert(cond, msg) {
   if (!cond) {
@@ -57,13 +60,18 @@ for (const task of data.tasks) {
 }
 
 assert(appSource.includes("var OWNER_SHELL = '/owner-shell-guard.js?v=4';"), 'owner navigation guard cache version is current');
-assert(appSource.includes("function afterCore(){load(OWNER_SHELL);load('/xlsx-preload.js?v=6')"), 'Purchase preload must load once after Owner shell');
+assert(appSource.includes("load('/xlsx-preload.js?v=6');"), 'Purchase preload must load once after Owner shell');
 assert(!appSource.includes("load('/finance-purchase-basis-v1.js"), 'Finance management runtime must be lazy-owned by the Owner Finance shell');
+assert(appSource.includes("var SALES = '/sales-board.js?v=47';"), 'Sales lazy runtime cache version is current');
+assert(appSource.includes('window.__HASNARIA_LOAD_SALES=ensureSalesRuntime'), 'Sales runtime must be exposed as a lazy loader');
+assert(!appSource.includes('purchase-inventory-status.js'), 'startup must not load the legacy 10k-row Purchase inventory helper');
+assert(!/function afterCore\(\)[\s\S]*?load\(SALES[,)]/.test(appSource), 'Sales must not be fetched unconditionally during application startup');
 assert(ownerShellSource.includes("c.role!=='owner'"), 'guard is scoped to Owner role only');
 assert(ownerShellSource.includes('c.navigate=safeNavigate'), 'ERP module navigation is redirected to the safe Owner navigator');
 assert(ownerShellSource.includes('event.stopPropagation();'), 'Owner top navigation blocks legacy target/bubble tab render');
 assert(!ownerShellSource.includes('event.stopImmediatePropagation();'), 'Stock capture listener remains able to run on the same document node');
 assert(ownerShellSource.includes("typeof window.__hasnariaReloadSales==='function'"), 'Sales renderer is explicitly restored when needed');
+assert(ownerShellSource.includes("typeof window.__HASNARIA_LOAD_SALES==='function'"), 'Owner shell must request the lazy Sales runtime only on navigation');
 assert(ownerShellSource.includes("data-owner-shell-stock-nudge"), 'Stock reconciliation renderer is explicitly woken after safe navigation');
 assert(ownerShellSource.includes("finance-purchase-basis-v1.js?v=3"), 'Owner shell must load canonical purchase-journal Finance v3');
 assert(ownerShellSource.includes("owner-finance-stock-v3.js?v=10"), 'Owner Finance/Stock runtime cache version must be current');
@@ -84,6 +92,16 @@ assert(!purchaseBasisSource.includes("observe(document.body,{childList:true,subt
 assert(financePeriodFastPath.includes('with tb as materialized'), 'period reporting pack must materialize the trial balance once');
 assert(financePeriodFastPath.includes("'hpp_status','tidak digunakan pada model aktif'"), 'period reporting pack must keep HPP retired in report notes');
 assert(financeReportingFastPath.includes("'income','[]'::jsonb"), 'reporting-pack bootstrap must stay lightweight and defer detail to the selected-period RPC');
+assert(performanceMigration.includes('get_sales_hourly_month_v1'), 'Sales hourly aggregation must live in a server-side RPC');
+assert(performanceMigration.includes('finance_journal_entries_purchase_provisional_idx'), 'Purchase provisional alert path must be indexed');
+assert(performanceMigration.includes('PURCHASE_PAYMENT_PROVISIONAL'), 'Finance alerts must use the active Purchase-journal concept');
+assert(!performanceMigration.includes('HPP_RECIPE_MISSING'), 'active Finance alerts must not restore retired HPP blockers');
+
+assert(salesHourlySource.includes("db.rpc('get_sales_hourly_month_v1'"), 'hourly Sales chart must read the aggregated monthly RPC');
+assert(!salesHourlySource.includes("from('sales')"), 'hourly Sales chart must not download raw Sales rows');
+assert(!salesHourlySource.includes('limit(50000)'), '50k-row Sales fetch must stay retired');
+assert(salesHourlySource.includes("host.classList.contains('hidden')"), 'hourly chart must not query while Sales is hidden');
+assert(!salesBoardSource.includes('sales-hourly-chart.js'), 'Sales board must not inject a duplicate hourly runtime');
 
 assert(!purchasePreloadSource.includes('purchase-rankings-five.js'), 'legacy Purchase ranking patch must not load beside canonical Finance reconciliation');
 assert(!purchasePreloadSource.includes('purchase-chart-redesign.js'), 'legacy Purchase chart patch must not race the canonical Purchase DOM');
@@ -143,4 +161,4 @@ assert(saveItemSource.includes('Object.assign(item,row)'), 'single-row save must
 assert(!saveItemSource.includes('loadItemPage('), 'single-row save must not reload the 25-row detail page');
 assert(!saveItemSource.includes('loadRuns('), 'single-row save must not reload the 30-run header list');
 
-console.log('ERP tracker test: PASS (' + data.tasks.length + ' tasks, ' + data.milestones.length + ' milestones; canonical Purchase → expense journal + Stock quantity SOP locked)');
+console.log('ERP tracker test: PASS (' + data.tasks.length + ' tasks, ' + data.milestones.length + ' milestones; canonical Purchase/Finance + lazy performance contract locked)');
