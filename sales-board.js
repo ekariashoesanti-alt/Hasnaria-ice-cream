@@ -1,6 +1,8 @@
-/* Hasnaria sales-board multipart loader v46 — byte-exact source + Majoo importer v2 */
+/* Hasnaria sales-board multipart loader v47 — lazy-loaded by app runtime */
 (function () {
   'use strict';
+  if(window.__HASNARIA_SALES_BOARD_LOADER_V47)return;
+  window.__HASNARIA_SALES_BOARD_LOADER_V47=true;
   var PARTS = [
     '/sales-board.part0.js?v=41',
     '/sales-board.part1.js?v=41',
@@ -53,6 +55,5 @@
       if(typeof window.__HASNARIA_IMPORT_V2!=='function')throw new Error('Importer Majoo v2 gagal diinisialisasi.');
       code=patchSource(code);
       var s=document.createElement('script');s.text=code;document.head.appendChild(s);watchSalesTab();
-      var hourly=document.createElement('script');hourly.src='/sales-hourly-chart.js?v=2';hourly.async=true;document.head.appendChild(hourly);
     }).catch(fail);
 })();
