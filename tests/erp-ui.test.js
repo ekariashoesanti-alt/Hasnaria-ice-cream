@@ -30,7 +30,10 @@ function assertShellIntegration() {
   assert.ok(context < mount, 'brand/user/role context exists before ERP mount');
   assert.ok(salesRender > mount, 'legacy Sales module still renders after ERP dashboard mount');
   for (const marker of ['$("pembelian").innerHTML =','$("ops").innerHTML =','$("stok").innerHTML =']) assert.ok(coreSource.includes(marker), `core-app still owns existing module: ${marker}`);
-  for (const contract of ['get_ui_bootstrap_v4','ui_erp_action_queue_v4','ui_inventory_items','ui_hpp_blockers','ui_recent_erp_audit']) assert.ok(source.includes(contract), `ERP UI keeps backend contract ${contract}`);
+  for (const contract of ['get_ui_bootstrap_v5','ui_erp_action_queue_v4','ui_inventory_items','ui_recent_erp_audit']) assert.ok(source.includes(contract), `ERP UI keeps backend contract ${contract}`);
+  assert.ok(!source.includes('ui_hpp_blockers'), 'active owner dashboard must not read the retired HPP blocker surface');
+  assert.ok(!source.includes('Produk siap HPP') && !source.includes('Kesiapan HPP'), 'active owner dashboard must not render retired HPP controls');
+  assert.ok(source.includes('total_purchase_expense') && source.includes('profit_after_tax'), 'owner dashboard uses Purchase-basis expense and profit fields');
   assert.ok(source.includes('context().navigate(value)'), 'ERP detail actions route back into existing modules');
   assert.ok(source.includes('/erp-actions.js?v=1'), 'ERP action forms are lazy-loaded as a production runtime asset');
   assert.ok(source.includes('hasnaria:erp-action-resolved'), 'successful ERP action resolution refreshes dashboard contracts');
@@ -100,8 +103,8 @@ async function renderFixture(data, error) {
   const nodes = new Map();
   const document = {head:{appendChild(){}},addEventListener(){},createElement(){return {};},getElementById(id) {if (!nodes.has(id)) nodes.set(id, {innerHTML:'', classList:{add(){}}, close(){}, showModal(){}});return nodes.get(id);}};
   let calls = 0;
-  const window = {__HASNARIA_CONTEXT:{brandId:'hasnaria',userId:'owner',role:'owner'},__HASNARIA_DB:{rpc(name) {assert.equal(name, 'get_ui_bootstrap_v4');calls++;return {abortSignal:async()=>({data,error})};}}};
-  vm.runInNewContext(source, {window,document,AbortSignal,Date,console});
+  const window = {__HASNARIA_CONTEXT:{brandId:'hasnaria',userId:'owner',role:'owner'},__HASNARIA_DB:{rpc(name) {assert.equal(name, 'get_ui_bootstrap_v5');calls++;return {abortSignal:async()=>({data,error})};}}};
+  vm.runInNewContext(source, {window,document,AbortSignal,Date,console,Set});
   window.HasnariaERP.mount();
   await new Promise(resolve=>setImmediate(resolve));
   return {html:nodes.get('dashboard').innerHTML,calls};
@@ -110,15 +113,16 @@ async function renderFixture(data, error) {
 (async()=>{
   assertShellIntegration();
   assertActionContracts();
-  const empty = await renderFixture({owner:{brand_id:'hasnaria'},monthly_trend:[{month:'2026-09-01',gross_profit_verified:null,operating_profit_verified:null}]});
+  const empty = await renderFixture({owner:{brand_id:'hasnaria'},monthly_trend:[{month:'2026-09-01',total_purchase_expense:null,profit_after_tax:null}]});
   assert.equal(empty.calls,1);
   assert.match(empty.html,/Belum tersedia/);
   assert.doesNotMatch(empty.html,/Rp0/);
+  assert.match(empty.html,/basis Pembelian/i);
   const scoped = await renderFixture({owner:{brand_id:'other-brand'}});
   assert.match(scoped.html,/Data tidak sesuai brand akun/);
   assert.doesNotMatch(scoped.html,/Tren omzet bulanan/);
   const failure=await renderFixture(null,{message:'Statement timeout'});
   assert.match(failure.html,/Coba lagi/);
   assert.match(failure.html,/Statement timeout/);
-  console.log('ERP UI verified metrics, brand boundary and retry: PASS');
+  console.log('ERP UI Purchase-basis metrics, brand boundary and retry: PASS');
 })().catch(error=>{console.error(error);process.exitCode=1;});
