@@ -1,196 +1,69 @@
-/* Owner navigation guard.
- * Owner top-level pages are owned by dedicated renderers. This guard prevents
- * legacy core-app render() calls from becoming visible or racing dedicated UIs.
+/* Hasnaria Owner shell — Executive Dashboard only.
+ * Keeps legacy heavy renderers out of Owner navigation.
  */
 (function(){
   'use strict';
   if(window.__HASNARIA_OWNER_SHELL_BOOTSTRAPPED)return;
   window.__HASNARIA_OWNER_SHELL_BOOTSTRAPPED=true;
 
-  var OWNER_TABS=['dashboard','sales','pembelian','operasional','ops','stok'];
-  var SECTION_IDS=['dashboard','sales','pembelian','operasional','ops','stok','shift','social','approval','team','sistem'];
-  var state={active:'dashboard',initialized:false,scheduled:false,salesRetries:0,finStockLoad:null,operationalLoad:null};
+  var EXEC_SRC='/owner-executive-v1.js?v=1';
+  var tries=0,loaded=false,guardBound=false;
 
-  function context(){return window.__HASNARIA_CONTEXT||null}
-  function isOwner(){var c=context();return!!(c&&c.role==='owner')}
-  function section(id){return document.getElementById(id)}
-  function financeMounted(){var h=section('ops');return!!(h&&h.querySelector('[data-finance-v6="1"]'))}
-  function stockMounted(){var h=section('stok');return!!(h&&h.querySelector('[data-stock-v4="1"],.ofs3-shell'))}
-  function operationalMounted(){var h=section('operasional');return!!(h&&h.querySelector('[data-operational-v1="1"]'))}
+  function context(){return window.__HASNARIA_CONTEXT||null;}
+  function isOwner(){var c=context();return !!(c&&c.role==='owner');}
 
-  function ensureOperationalSurface(){
-    var main=document.querySelector('#app main'),h=section('operasional');
-    if(main&&!h){
-      h=document.createElement('section');h.id='operasional';h.className='hidden';
-      var finance=section('ops');main.insertBefore(h,finance||null);
-    }
-    var tabs=document.getElementById('tabs'),b=tabs&&tabs.querySelector('.tab[data-tab="operasional"]');
-    if(tabs&&!b){
-      b=document.createElement('button');b.type='button';b.className='tab';b.setAttribute('data-tab','operasional');
-      b.id='userSettingsTab';b.textContent='Operasional';b.setAttribute('aria-label','Operasional');
-      var financeTab=tabs.querySelector('.tab[data-tab="ops"]');tabs.insertBefore(b,financeTab||null);
-    }
-    if(b){b.textContent='Operasional';b.setAttribute('aria-label','Operasional');b.style.display=''}
-    return h;
+  function blockLegacyBubble(event){
+    if(!window.__HASNARIA_EXECUTIVE_OWNER)return;
+    var t=event.target&&event.target.closest?event.target.closest('#tabs [data-tab]'):null;
+    if(!t)return;
+    /* Executive listener is registered before this guard. Stop the event before
+       old button-level listeners can call core-app render/load paths. */
+    event.preventDefault();
+    event.stopPropagation();
   }
 
-  function ensureShellCss(){
-    var l=document.getElementById('ofs3-css');
-    if(!l){l=document.createElement('link');l.id='ofs3-css';l.rel='stylesheet';l.href='/owner-finance-stock-v3.css?v=3';document.head.appendChild(l)}
-    else if(l.getAttribute('href')!=='/owner-finance-stock-v3.css?v=3')l.href='/owner-finance-stock-v3.css?v=3';
+  function bindGuard(){
+    if(guardBound)return;
+    guardBound=true;
+    document.addEventListener('click',blockLegacyBubble,true);
   }
-
-  function ensureFinanceWorkbenches(){
-    /* Active management reporting is Purchase-journal basis. HPP workbench is retired from the Owner UI. */
-    if(!document.getElementById('hasnaria-finance-purchase-basis-v1-js')){
-      var pb=document.createElement('script');
-      pb.id='hasnaria-finance-purchase-basis-v1-js';pb.src='/finance-purchase-basis-v1.js?v=3';pb.async=true;document.head.appendChild(pb);
-    }
-    var stale=document.querySelector('[data-fin-hpp-p3-open]');if(stale)stale.remove();
-    var staleModal=document.getElementById('finHppP3Modal');if(staleModal)staleModal.remove();
-    if(!document.getElementById('hasnaria-finance-p4-js')){
-      var p4=document.createElement('script');
-      p4.id='hasnaria-finance-p4-js';p4.src='/finance-accounting-p4.js?v=1';p4.async=true;document.head.appendChild(p4);
-    }
-    if(!document.getElementById('hasnaria-finance-p5-js')){
-      var p5=document.createElement('script');
-      p5.id='hasnaria-finance-p5-js';p5.src='/finance-archive-p5.js?v=1';p5.async=true;document.head.appendChild(p5);
-    }
-  }
-
-  function currentActive(){
-    ensureOperationalSurface();
-    var on=document.querySelector('#tabs .tab.on[data-tab]'),id=on&&on.getAttribute('data-tab');
-    if(OWNER_TABS.indexOf(id)>=0)return id;
-    for(var i=0;i<OWNER_TABS.length;i++){var el=section(OWNER_TABS[i]);if(el&&!el.classList.contains('hidden'))return OWNER_TABS[i]}
-    return'dashboard';
-  }
-
-  function setVisibility(id){
-    ensureOperationalSurface();
-    SECTION_IDS.forEach(function(name){var el=section(name);if(el)el.classList.toggle('hidden',name!==id)});
-    Array.prototype.forEach.call(document.querySelectorAll('#tabs .tab[data-tab]'),function(b){b.classList.toggle('on',b.getAttribute('data-tab')===id)});
-  }
-
-  function ensureDashboard(){var h=section('dashboard');if(!h||h.classList.contains('hidden')||h.querySelector('.erp-top'))return;if(window.HasnariaERP&&typeof window.HasnariaERP.mount==='function')window.HasnariaERP.mount()}
-  function ensureSales(){
-    var h=section('sales');if(!h||h.classList.contains('hidden'))return;
-    if(h.querySelector('.sale-board')){state.salesRetries=0;return}
-    if(typeof window.__hasnariaReloadSales==='function'){state.salesRetries=0;window.__hasnariaReloadSales();return}
-    if(typeof window.__HASNARIA_LOAD_SALES==='function'){
-      window.__HASNARIA_LOAD_SALES().then(function(){if(isOwner()&&state.active==='sales'){state.salesRetries=0;setTimeout(ensureSales,30)}});
-      return;
-    }
-    if(state.salesRetries>=40)return;state.salesRetries++;setTimeout(function(){if(isOwner()&&state.active==='sales')ensureSales()},100)
-  }
-  function dispatchStock(){try{document.dispatchEvent(new CustomEvent('hasnaria:owner-shell-navigate',{detail:{tab:'stok'}}))}catch(_){}}
-
-  function claimFinanceHost(){
-    var h=section('ops');if(!h||h.classList.contains('hidden')||financeMounted()||h.querySelector('[data-finance-boot="1"]'))return;
-    h.innerHTML='<div class="fsv2-shell" data-finance-boot="1"><div class="fsv2-head"><div><div class="fsv2-eyebrow">FINANCIAL REPORTING</div><h1>Keuangan</h1><p>Menyiapkan laporan keuangan…</p></div></div><div class="fsv2-report"><div class="fsv2-note">Memuat data…</div></div></div>';
-  }
-
-  function mountFinance(force){
-    if(!isOwner())return false;
-    var h=section('ops');if(!h||h.classList.contains('hidden'))return false;
-    ensureShellCss();ensureFinanceWorkbenches();claimFinanceHost();
-    if(typeof window.__HASNARIA_FINANCE_V6_MOUNT==='function'){window.__HASNARIA_FINANCE_V6_MOUNT({force:!!force});return true}
-    return false;
-  }
-
-  function afterRuntime(id,requestRender){
-    ensureShellCss();
-    if(id==='ops'){
-      if(!mountFinance(!!requestRender)){
-        var js=document.getElementById('hasnaria-finance-accuracy-v6-js');
-        if(js&&!js.__hasnariaMountHook){js.__hasnariaMountHook=true;js.addEventListener('load',function(){if(isOwner()&&state.active==='ops')mountFinance(!!requestRender)},{once:true})}
-      }
-      return;
-    }
-    if(id==='stok'&&requestRender)dispatchStock();
-  }
-
-  function ensureFinStockRuntime(id,requestRender){
-    if(!isOwner())return;
-    var h=section(id);if(!h||h.classList.contains('hidden'))return;
-    ensureShellCss();
-    if(id==='ops'&&financeMounted()){ensureFinanceWorkbenches();return}
-    if(id==='stok'&&stockMounted())return;
-    if(id==='ops')claimFinanceHost();
-
-    var existing=document.getElementById('hasnaria-owner-finance-stock-v3-js');
-    if(existing){afterRuntime(id,requestRender);return}
-    if(state.finStockLoad){state.finStockLoad.then(function(){afterRuntime(id,requestRender)});return}
-
-    state.finStockLoad=new Promise(function(resolve){
-      var s=document.createElement('script');s.id='hasnaria-owner-finance-stock-v3-js';s.src='/owner-finance-stock-v3.js?v=10';s.async=true;
-      s.onload=function(){resolve()};s.onerror=function(){state.finStockLoad=null;resolve()};document.head.appendChild(s);
-    });
-    state.finStockLoad.then(function(){afterRuntime(id,requestRender)});
-  }
-
-  function ensureOperational(requestRender){
-    if(!isOwner())return;
-    var h=ensureOperationalSurface();if(!h||h.classList.contains('hidden'))return;
-    if(typeof window.__HASNARIA_OPERATIONS_V1_MOUNT==='function'){window.__HASNARIA_OPERATIONS_V1_MOUNT({force:!!requestRender});return}
-    if(state.operationalLoad){state.operationalLoad.then(function(){if(isOwner()&&state.active==='operasional'&&typeof window.__HASNARIA_OPERATIONS_V1_MOUNT==='function')window.__HASNARIA_OPERATIONS_V1_MOUNT({force:!!requestRender})});return}
-    state.operationalLoad=new Promise(function(resolve){
-      var s=document.createElement('script');s.id='hasnaria-operational-v1-js';s.src='/operational-v1.js?v=1';s.async=true;
-      s.onload=function(){resolve()};s.onerror=function(){state.operationalLoad=null;resolve()};document.head.appendChild(s);
-    });
-    state.operationalLoad.then(function(){if(isOwner()&&state.active==='operasional'&&typeof window.__HASNARIA_OPERATIONS_V1_MOUNT==='function')window.__HASNARIA_OPERATIONS_V1_MOUNT({force:!!requestRender})});
-  }
-
-  function nudgeLegacyStockFallback(){
-    var h=section('stok');
-    if(!h||h.classList.contains('hidden')||stockMounted())return;
-    var marker=document.createElement('span');marker.hidden=true;marker.setAttribute('data-owner-shell-stock-nudge','1');h.appendChild(marker);h.removeChild(marker);
-  }
-
-  function ensureFinance(requestRender){ensureFinStockRuntime('ops',!!requestRender)}
-  function ensureStock(requestRender){ensureFinStockRuntime('stok',!!requestRender);setTimeout(nudgeLegacyStockFallback,700)}
-  function patchContext(){var c=context();if(!c||c.role!=='owner')return;if(c.navigate!==safeNavigate)c.navigate=safeNavigate}
 
   function safeNavigate(id){
-    if(!isOwner()||OWNER_TABS.indexOf(id)<0)return false;
-    state.active=id;state.initialized=true;state.salesRetries=0;setVisibility(id);patchContext();
-    if(id==='dashboard')ensureDashboard();
-    if(id==='sales')ensureSales();
-    if(id==='operasional')ensureOperational(true);
-    if(id==='ops')ensureFinance(true);
-    if(id==='stok')ensureStock(true);
+    if(!isOwner())return false;
+    var b=document.querySelector('#tabs [data-tab="'+String(id||'')+'"]');
+    if(!b)return false;
+    b.click();
     return true;
   }
 
-  function reconcile(){
-    if(!isOwner())return;
-    ensureOperationalSurface();ensureShellCss();
-    if(!state.initialized){state.active=currentActive();state.initialized=true}
-    patchContext();setVisibility(state.active);
-    if(state.active==='dashboard')ensureDashboard();
-    if(state.active==='sales')ensureSales();
-    if(state.active==='operasional')ensureOperational(false);
-    if(state.active==='ops')ensureFinance(false);
-    if(state.active==='stok')ensureStock(false);
+  function patchContext(){
+    var c=context();
+    if(c&&c.role==='owner')c.navigate=safeNavigate;
   }
 
-  function scheduleReconcile(){if(state.scheduled)return;state.scheduled=true;setTimeout(function(){state.scheduled=false;reconcile()},0)}
-
-  document.addEventListener('click',function(event){
-    if(!isOwner())return;
-    var t=event.target&&event.target.closest?event.target.closest('#tabs .tab[data-tab]'):null;if(!t)return;
-    var id=t.getAttribute('data-tab');if(OWNER_TABS.indexOf(id)<0)return;
-    event.preventDefault();event.stopPropagation();safeNavigate(id);
-  },true);
-
-  function start(){
-    if(!document.body)return;
-    ensureOperationalSurface();ensureShellCss();
-    var tabs=document.getElementById('tabs'),main=document.querySelector('#app main');
-    if(tabs)new MutationObserver(scheduleReconcile).observe(tabs,{childList:true});
-    if(main)new MutationObserver(scheduleReconcile).observe(main,{childList:true});
-    scheduleReconcile();
+  function loadExecutive(){
+    if(loaded||!isOwner())return;
+    var existing=document.getElementById('hasnaria-owner-executive-v1-js');
+    if(existing){loaded=true;bindGuard();patchContext();return;}
+    loaded=true;
+    var s=document.createElement('script');
+    s.id='hasnaria-owner-executive-v1-js';
+    s.src=EXEC_SRC;
+    s.async=true;
+    s.onload=function(){bindGuard();patchContext();};
+    s.onerror=function(){loaded=false;console.error('Hasnaria Executive Dashboard gagal dimuat.');};
+    document.head.appendChild(s);
   }
-  window.__HASNARIA_OWNER_SHELL={navigate:safeNavigate,isOwner:isOwner,getActive:function(){return state.active},reconcile:reconcile};
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
+
+  function boot(){
+    if(isOwner()){loadExecutive();return;}
+    if(++tries<80)setTimeout(boot,100);
+  }
+
+  window.__HASNARIA_OWNER_SHELL={
+    navigate:safeNavigate,
+    isOwner:isOwner,
+    reconcile:function(){if(isOwner()){patchContext();loadExecutive();}}
+  };
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
