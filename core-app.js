@@ -28,6 +28,8 @@
   var today = function () { return new Date(Date.now() + 7 * 3600 * 1000).toISOString().slice(0, 10); };
   var esc = function (s) { return String(s == null ? "" : s).replace(/&/g, "&"+"amp;").replace(/</g, "&"+"lt;").replace(/>/g, "&"+"gt;"); };
   var db, me = null, role = "pending", metrics = [], expenses = [], social = [], roster = [], stock = [], tab = "dashboard";
+  var legacyLoaded = { metrics:false, expenses:false, purchases:false, social:false, stock:false };
+  var legacyLoading = {};
 
   function wrap(st, n) { return (TAG[st] || TAG.recorded) + (n || ""); }
   function parseNotes(raw) {
@@ -161,35 +163,89 @@
     if (q.data.brand_id !== BRAND) throw new Error("Profil akun tidak terhubung ke brand Hasnaria.");
     me = profileMember(q.data);
     role = me.role;
-    await loadRoster();
-    if (role === "owner") await seedPar();
+  }
+  function legacyFromDate() {
+    var from = new Date(); from.setDate(from.getDate() - 89);
+    return from.toISOString().slice(0, 10);
+  }
+  function onceLegacy(key, loader, force) {
+    if (force) legacyLoaded[key] = false;
+    if (legacyLoaded[key]) return Promise.resolve();
+    if (legacyLoading[key]) return legacyLoading[key];
+    legacyLoading[key] = Promise.resolve().then(loader).then(function () {
+      legacyLoaded[key] = true;
+    }).finally(function () { legacyLoading[key] = null; });
+    return legacyLoading[key];
+  }
+  function loadLegacyMetrics(force) {
+    return onceLegacy('metrics', async function () {
+      var r = await db.from("daily_metrics").select("*").eq("brand_id", BRAND).gte("metric_date", legacyFromDate()).order("metric_date");
+      if (r.error) throw r.error;
+      metrics = (r.data || []).map(function (x) { x.pay = parsePay(x.notes); x.cash_revenue = Number(x.cash_revenue || 0); return x; });
+    }, force);
+  }
+  function loadLegacyExpenses(force) {
+    return onceLegacy('expenses', async function () {
+      var r = await db.from("expenses").select("*").eq("brand_id", BRAND).gte("expense_date", legacyFromDate()).order("expense_date", { ascending: false });
+      if (r.error) throw r.error;
+      expenses = (r.data || []).map(function (x) {
+        var p = parseNotes(x.notes);
+        return Object.assign({}, x, { amount: Number(x.amount || 0), status: p.status, displayNotes: p.notes });
+      });
+    }, force);
+  }
+  function loadLegacyPurchases(force) {
+    return onceLegacy('purchases', async function () {
+      var r = await db.from("offline_purchase_history").select("*").eq("brand_id", BRAND).order("purchase_date", { ascending: false }).limit(5000);
+      if (r.error) throw r.error;
+      purchaseImportRows = r.data || [];
+    }, force);
+  }
+  function loadLegacySocial(force) {
+    return onceLegacy('social', async function () {
+      var r = await db.from("social_contents").select("*").eq("brand_id", BRAND).gte("posted_at", legacyFromDate()).order("posted_at", { ascending: false });
+      if (r.error) throw r.error;
+      social = r.data || [];
+    }, force);
+  }
+  function loadLegacyStock(force) {
+    return onceLegacy('stock', async function () {
+      var r = await db.from("products").select("id,name,selling_price").eq("brand_id", BRAND).like("name", "HASNARIA_PAR|%");
+      if (r.error) throw r.error;
+      stock = (r.data || []).map(function (row) {
+        var p = parsePar(row.name, row.selling_price);
+        if (p) p.id = row.id;
+        return p;
+      }).filter(Boolean);
+      var cfg = await db.from("products").select("selling_price").eq("brand_id", BRAND).like("name", "HASNARIA_CFG|daily_target%").maybeSingle();
+      if (cfg.data && Number(cfg.data.selling_price) > 0) TARGET = Number(cfg.data.selling_price);
+    }, force);
+  }
+  function legacyRequirements(id, force) {
+    if (role === "owner") return [];
+    if (id === "dashboard") return [loadLegacyMetrics(force), loadLegacyExpenses(force), loadLegacySocial(force), loadLegacyStock(force)];
+    if (id === "sales") return [loadLegacyMetrics(force)];
+    if (id === "pembelian") return [loadLegacyExpenses(force), loadLegacyPurchases(force)];
+    if (id === "ops" || id === "approval") return [loadLegacyExpenses(force)];
+    if (id === "stok") return [loadLegacyStock(force)];
+    if (id === "shift" || id === "social") return [loadLegacySocial(force)];
+    if (id === "team") return [loadLegacySocial(force), loadRoster()];
+    return [];
+  }
+  function ensureLegacyForTab(id, force) {
+    var jobs = legacyRequirements(id || tab, !!force);
+    return jobs.length ? Promise.all(jobs) : Promise.resolve();
+  }
+  function scheduleLegacyTabData(id) {
+    var target = id || tab;
+    ensureLegacyForTab(target, false).then(function () {
+      if (tab === target) render();
+    }).catch(function (e) {
+      if (console && console.warn) console.warn('Hasnaria lazy data:', e);
+    });
   }
   async function loadAll() {
-    var from = new Date(); from.setDate(from.getDate() - 89);
-    var f = from.toISOString().slice(0, 10);
-    var r = await db.from("daily_metrics").select("*").eq("brand_id", BRAND).gte("metric_date", f).order("metric_date");
-    if (r.error) throw r.error;
-    metrics = (r.data || []).map(function (x) { x.pay = parsePay(x.notes); x.cash_revenue = Number(x.cash_revenue || 0); return x; });
-    r = await db.from("expenses").select("*").eq("brand_id", BRAND).gte("expense_date", f).order("expense_date", { ascending: false });
-    if (r.error) throw r.error;
-    expenses = (r.data || []).map(function (x) {
-      var p = parseNotes(x.notes);
-      return Object.assign({}, x, { amount: Number(x.amount || 0), status: p.status, displayNotes: p.notes });
-    });
-    r = await db.from("offline_purchase_history").select("*").eq("brand_id", BRAND).order("purchase_date", { ascending: false }).limit(5000);
-    if (!r.error) purchaseImportRows = r.data || [];
-    r = await db.from("social_contents").select("*").eq("brand_id", BRAND).gte("posted_at", f).order("posted_at", { ascending: false });
-    if (r.error) throw r.error;
-    social = r.data || [];
-    r = await db.from("products").select("id,name,selling_price").eq("brand_id", BRAND).like("name", "HASNARIA_PAR|%");
-    if (r.error) throw r.error;
-    stock = (r.data || []).map(function (row) {
-      var p = parsePar(row.name, row.selling_price);
-      if (p) p.id = row.id;
-      return p;
-    }).filter(Boolean);
-    var cfg = await db.from("products").select("selling_price").eq("brand_id", BRAND).like("name", "HASNARIA_CFG|daily_target%").maybeSingle();
-    if (cfg.data && Number(cfg.data.selling_price) > 0) TARGET = Number(cfg.data.selling_price);
+    await ensureLegacyForTab(tab, true);
   }
   function show(id) { ["auth", "pending", "app"].forEach(function (x) { $(x).classList.toggle("hidden", x !== id); }); }
   function setTab(id) {
@@ -198,6 +254,7 @@
     ["dashboard", "sales", "pembelian", "ops", "stok", "shift", "social", "approval", "team", "sistem"].forEach(function (x) { $(x).classList.toggle("hidden", x !== id); });
     document.querySelectorAll(".tab").forEach(function (b) { b.classList.toggle("on", b.getAttribute("data-tab") === id); });
     render();
+    scheduleLegacyTabData(id);
   }
   function tabs() {
     if (role === "owner") {
@@ -363,7 +420,7 @@
     document.querySelectorAll("[data-purchase-height]").forEach(function(el){el.style.width="65%";el.style.maxWidth="55px";el.style.height=Number(el.getAttribute("data-purchase-height"))+"px";el.style.background="var(--g)";el.style.borderRadius="6px 6px 2px 2px";});
     var purchaseReadyRows=null;
     if($("purchaseUploadBtn"))$("purchaseUploadBtn").onclick=function(){if(purchaseReadyRows&&purchaseReadyRows.length){var commit=$("purchaseCommit");if(commit)commit.click();}else $("purchaseFile").click();};
-    if($("purchaseFile"))$("purchaseFile").onchange=async function(){var f=this.files&&this.files[0];if(!f)return;purchaseReadyRows=null;$("purchaseFileName").textContent=f.name;$("purchaseUploadBtn").textContent="Membaca…";$("purchaseUploadBtn").disabled=true;$("purchaseUploadStatus").textContent="Membaca file…";$("purchasePreview").innerHTML="";try{var rows=await purchaseParseFile(f);if(!rows.length)throw new Error("Data pembelian tidak ditemukan. Pastikan file memiliki kolom TGL, NAMA BAHAN, JUMLAH, dan nilai pembayaran.");purchaseReadyRows=rows;var total=rows.reduce(function(a,x){return a+Number(x.total_amount||0);},0);$("purchaseUploadBtn").textContent="Upload";$("purchaseUploadBtn").disabled=!canStock(role);$("purchaseUploadStatus").textContent=rows.length.toLocaleString("id-ID")+" transaksi terbaca · "+rp(total);$("purchasePreview").innerHTML='<button id="purchaseCommit" type="button" style="display:none"></button>';$("purchaseCommit").onclick=async function(){$("purchaseUploadBtn").disabled=true;$("purchaseUploadBtn").textContent="Mengupload…";$("purchaseUploadStatus").textContent="Menyimpan 0/"+rows.length+"…";try{for(var z=0;z<rows.length;z+=150){var rr=await db.from("offline_purchase_history").upsert(rows.slice(z,z+150),{onConflict:"brand_id,source_file,row_no"});if(rr.error)throw rr.error;$("purchaseUploadStatus").textContent="Menyimpan "+Math.min(z+150,rows.length)+"/"+rows.length+"…";}$("purchaseUploadStatus").textContent="Upload berhasil. Data Pembelian sudah diperbarui.";purchaseReadyRows=null;await loadAll();render();}catch(e){$("purchaseUploadStatus").textContent="Gagal menyimpan: "+e.message;$("purchaseUploadBtn").disabled=false;$("purchaseUploadBtn").textContent="Upload";}};}catch(e){purchaseReadyRows=null;$("purchaseUploadStatus").textContent="Gagal membaca: "+e.message;$("purchaseUploadBtn").disabled=!canStock(role);$("purchaseUploadBtn").textContent="Pilih file Excel";}};
+    if($("purchaseFile"))$("purchaseFile").onchange=async function(){var f=this.files&&this.files[0];if(!f)return;purchaseReadyRows=null;$("purchaseFileName").textContent=f.name;$("purchaseUploadBtn").textContent="Membaca…";$("purchaseUploadBtn").disabled=true;$("purchaseUploadStatus").textContent="Membaca file…";$("purchasePreview").innerHTML="";try{var rows=await purchaseParseFile(f);if(!rows.length)throw new Error("Data pembelian tidak ditemukan. Pastikan file memiliki kolom TGL, NAMA BAHAN, JUMLAH, dan nilai pembayaran.");purchaseReadyRows=rows;var total=rows.reduce(function(a,x){return a+Number(x.total_amount||0);},0);$("purchaseUploadBtn").textContent="Upload";$("purchaseUploadBtn").disabled=!canStock(role);$("purchaseUploadStatus").textContent=rows.length.toLocaleString("id-ID")+" transaksi terbaca · "+rp(total);$("purchasePreview").innerHTML='<button id="purchaseCommit" type="button" style="display:none"></button>';$("purchaseCommit").onclick=async function(){$("purchaseUploadBtn").disabled=true;$("purchaseUploadBtn").textContent="Mengupload…";$("purchaseUploadStatus").textContent="Menyimpan 0/"+rows.length+"…";try{for(var z=0;z<rows.length;z+=150){var rr=await db.from("offline_purchase_history").upsert(rows.slice(z,z+150),{onConflict:"brand_id,source_file,row_no"});if(rr.error)throw rr.error;$("purchaseUploadStatus").textContent="Menyimpan "+Math.min(z+150,rows.length)+"/"+rows.length+"…";}$("purchaseUploadStatus").textContent="Upload berhasil. Data Pembelian sudah diperbarui.";purchaseReadyRows=null;try{document.dispatchEvent(new CustomEvent("hasnaria:purchase-imported",{detail:{period:rows[0]&&rows[0].source_period||""}}));}catch(_){}await loadAll();render();}catch(e){$("purchaseUploadStatus").textContent="Gagal menyimpan: "+e.message;$("purchaseUploadBtn").disabled=false;$("purchaseUploadBtn").textContent="Upload";}};}catch(e){purchaseReadyRows=null;$("purchaseUploadStatus").textContent="Gagal membaca: "+e.message;$("purchaseUploadBtn").disabled=!canStock(role);$("purchaseUploadBtn").textContent="Pilih file Excel";}};
     function purchaseHint(){ if(!$("pCat")||!$("pAmt")||!$("pHint")||!$("pSave"))return; var d=decide(role,$("pCat").value,Number($("pAmt").value||0)); $("pHint").textContent=d.msg; $("pSave").textContent=d.status==="pending_approval"?"Ajukan ke atasan":"Simpan transaksi"; }
     if($("pAmt")){$("pAmt").addEventListener("input",purchaseHint);$("pCat").addEventListener("change",purchaseHint);}
     if($("pSave"))$("pSave").addEventListener("click",async function(){if(!canOps(role))return;var cat=$("pCat").value,amt=Number($("pAmt").value||0),d=decide(role,cat,amt);if(!(amt>0)){ $("pMsg").textContent="Nominal harus lebih dari 0.";return;} $("pMsg").textContent="Menyimpan…";try{var note=($("pVendor").value||"").trim();if($("pNotes").value)note+=(note?" · ":"")+$("pNotes").value.trim();var r=await db.from("expenses").insert({brand_id:BRAND,expense_date:$("pDate").value,category:cat,amount:amt,notes:wrap(d.status,note)});if(r.error)throw r.error;$("pMsg").textContent=d.status==="pending_approval"?"Diajukan. Menunggu persetujuan.":"Transaksi tercatat.";await loadAll();render();}catch(e){$("pMsg").textContent=e.message;}});
@@ -575,9 +632,9 @@
         show("pending");
         return;
       }
-      await loadAll();
       show("app");
       render();
+      scheduleLegacyTabData(tab);
     } catch (e) {
       setAuthMessage("Gagal memuat: " + (e && e.message ? e.message : e));
       show("auth");

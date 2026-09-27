@@ -1,8 +1,9 @@
 (function () {
   'use strict';
-  var CORE = '/core-app.js?v=7';
+  var CORE = '/core-app.js?v=8';
   var OWNER_SHELL = '/owner-shell-guard.js?v=4';
   var STOCK = '/stock-monitor.js?v=28';
+  var PURCHASE = '/xlsx-preload.js?v=6';
   var SALES = '/sales-board.js?v=47';
   var SALES_HOURLY = '/sales-hourly-chart.js?v=6';
   var SALES_FALLBACK = false;
@@ -40,16 +41,25 @@
   var salesRuntimePromise=null;
   function ensureSalesRuntime(){if(salesRuntimePromise)return salesRuntimePromise;salesRuntimePromise=loadOnce('hasnaria-sales-board-runtime',SALES).then(function(){return Promise.all([loadOnce('hasnaria-sales-ui-runtime',SALES_UI),loadOnce('hasnaria-sales-hourly-runtime',SALES_HOURLY)]);});return salesRuntimePromise;}
   window.__HASNARIA_LOAD_SALES=ensureSalesRuntime;
+  var purchaseRuntimePromise=null;
+  function ensurePurchaseRuntime(){if(purchaseRuntimePromise)return purchaseRuntimePromise;purchaseRuntimePromise=loadOnce('hasnaria-purchase-runtime',PURCHASE);return purchaseRuntimePromise;}
+  window.__HASNARIA_LOAD_PURCHASE=ensurePurchaseRuntime;
+  var stockRuntimePromise=null;
+  function ensureStockRuntime(){if(stockRuntimePromise)return stockRuntimePromise;stockRuntimePromise=loadOnce('hasnaria-stock-runtime',STOCK).then(function(){fixStockLayout();setTimeout(fixStockLayout,150);setTimeout(fixStockLayout,500);});return stockRuntimePromise;}
+  window.__HASNARIA_LOAD_STOCK=ensureStockRuntime;
   function fixStockLayout(){var host=document.getElementById('stok');if(!host)return;var form=host.querySelector('.stk-form');if(form){form.style.minWidth='0';form.style.maxWidth='100%';}var price=host.querySelector('#stkBuyPrice'),priceBox=price&&price.parentElement;if(priceBox){var units=priceBox.querySelectorAll('.unit');if(units.length)units[units.length-1].textContent='/ pcs';}}
   function afterCore(){
     load(OWNER_SHELL);
-    load('/xlsx-preload.js?v=6');
-    load(STOCK,function(){fixStockLayout();setTimeout(fixStockLayout,150);setTimeout(fixStockLayout,500);setTimeout(fixStockLayout,1200);});
     document.addEventListener('click',function(e){
-      var tab=e.target&&e.target.closest?e.target.closest('[data-tab="sales"]'):null;if(tab)ensureSalesRuntime();
+      var tab=e.target&&e.target.closest?e.target.closest('[data-tab]'):null;
+      if(tab){var target=tab.getAttribute('data-tab');if(target==='sales')ensureSalesRuntime();else if(target==='pembelian')ensurePurchaseRuntime();else if(target==='stok')ensureStockRuntime();}
       var b=e.target&&e.target.closest?e.target.closest('button'):null;if(!b)return;var id=b.id||'',watch=id==='sSave'||id==='oSave'||id==='cSave'||id==='lzSave'||id==='svOpen'||id==='svHand'||id==='svClose'||b.hasAttribute('data-stk')||b.hasAttribute('data-ok')||b.hasAttribute('data-no')||b.hasAttribute('data-lzok')||b.hasAttribute('data-lzno');if(!watch)return;if(b.getAttribute('data-busy')==='1'){e.preventDefault();e.stopImmediatePropagation();return;}b.setAttribute('data-busy','1');setTimeout(function(){try{b.removeAttribute('data-busy');}catch(_){}},1800);
     },true);
-    setTimeout(function(){var s=document.getElementById('sales');if(s&&!s.classList.contains('hidden'))ensureSalesRuntime();},250);
+    setTimeout(function(){
+      var sales=document.getElementById('sales');if(sales&&!sales.classList.contains('hidden'))ensureSalesRuntime();
+      var purchase=document.getElementById('pembelian');if(purchase&&!purchase.classList.contains('hidden'))ensurePurchaseRuntime();
+      var stock=document.getElementById('stok');if(stock&&!stock.classList.contains('hidden'))ensureStockRuntime();
+    },250);
   }
   window.hasnariaGoogleHref=function(){return '#';};
   function startCore(){load(CORE,afterCore);}

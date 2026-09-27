@@ -1,7 +1,7 @@
 (function(){
 'use strict';
-if(window.__HASNARIA_PURCHASE_FINANCE_ALIGNMENT_V10)return;
-window.__HASNARIA_PURCHASE_FINANCE_ALIGNMENT_V10=true;
+if(window.__HASNARIA_PURCHASE_FINANCE_ALIGNMENT_V11)return;
+window.__HASNARIA_PURCHASE_FINANCE_ALIGNMENT_V11=true;
 
 var BRAND='a36d4b4f-3ccc-4a78-8aeb-b868f0407ea4';
 var CATS=['Beban Administrasi','Beban Pemeliharaan','Beban Bahan Baku','Beban Kepegawaian'];
@@ -80,7 +80,6 @@ async function load(force){
   try{
     var q=await db.rpc('get_purchase_control_period_v1',{p_brand:BRAND,p_period:p+'-01'});if(q.error)throw q.error;
     var pack=q.data||{};rows=Array.isArray(pack.rows)?pack.rows:[];control=pack.control||{};loadedAt=Date.now();loadedPeriod=p;
-    if(n(control.stock_ready_rows)>0){var synced=await syncStockForPeriod();if(synced){loading=false;rows=[];control={};loadedAt=0;loadedPeriod='';return load(true)}}
   }catch(e){rows=[];control={};loadedPeriod='';loadedAt=0;error='Gagal memuat hubungan Pembelian / Finance / Stok: '+(e&&e.message?e.message:String(e))}
   loading=false;render();
 }
@@ -91,6 +90,7 @@ function boot(){
     observer=new MutationObserver(schedule);observer.observe(host,{childList:true,subtree:false});
     document.addEventListener('change',function(e){if(!e.target)return;if(e.target.id==='paPeriod'){rows=[];control={};loadedAt=0;loadedPeriod='';lastStockSync='';category='all';load(true);return}if(e.target.id==='pfaCategory'){category=e.target.value;render()}},true);
     document.addEventListener('click',function(e){var b=e.target&&e.target.closest?e.target.closest('#paUpload,#purchaseExcelBtn,#purchaseMajooBtn,[data-tab="pembelian"]'):null;if(!b)return;if(b.matches('#paUpload,#purchaseExcelBtn,#purchaseMajooBtn'))setTimeout(function(){rows=[];control={};loadedAt=0;loadedPeriod='';lastStockSync='';category='all';load(true)},350);else setTimeout(schedule,120)},true);
+    document.addEventListener('hasnaria:purchase-imported',function(){lastStockSync='';syncStockForPeriod().then(function(){rows=[];control={};loadedAt=0;loadedPeriod='';load(true)})},true);
     load(true);return
   }if(tries++<150)setTimeout(wait,100)})()
 }
