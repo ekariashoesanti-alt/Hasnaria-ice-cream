@@ -73,7 +73,16 @@
   }
 
   function ensureDashboard(){var h=section('dashboard');if(!h||h.classList.contains('hidden')||h.querySelector('.erp-top'))return;if(window.HasnariaERP&&typeof window.HasnariaERP.mount==='function')window.HasnariaERP.mount()}
-  function ensureSales(){var h=section('sales');if(!h||h.classList.contains('hidden'))return;if(h.querySelector('.sale-board')){state.salesRetries=0;return}if(typeof window.__hasnariaReloadSales==='function'){state.salesRetries=0;window.__hasnariaReloadSales();return}if(state.salesRetries>=40)return;state.salesRetries++;setTimeout(function(){if(isOwner()&&state.active==='sales')ensureSales()},100)}
+  function ensureSales(){
+    var h=section('sales');if(!h||h.classList.contains('hidden'))return;
+    if(h.querySelector('.sale-board')){state.salesRetries=0;return}
+    if(typeof window.__hasnariaReloadSales==='function'){state.salesRetries=0;window.__hasnariaReloadSales();return}
+    if(typeof window.__HASNARIA_LOAD_SALES==='function'){
+      window.__HASNARIA_LOAD_SALES().then(function(){if(isOwner()&&state.active==='sales'){state.salesRetries=0;setTimeout(ensureSales,30)}});
+      return;
+    }
+    if(state.salesRetries>=40)return;state.salesRetries++;setTimeout(function(){if(isOwner()&&state.active==='sales')ensureSales()},100)
+  }
   function dispatchStock(){try{document.dispatchEvent(new CustomEvent('hasnaria:owner-shell-navigate',{detail:{tab:'stok'}}))}catch(_){}}
 
   function claimFinanceHost(){
