@@ -61,7 +61,7 @@ for (const task of data.tasks) {
   }
 }
 
-assert(appSource.includes("var OWNER_SHELL = '/owner-shell-guard.js?v=4';"), 'owner navigation guard cache version is current');
+assert(appSource.includes("var OWNER_SHELL = '/owner-shell-guard.js?v=5';"), 'owner navigation guard cache version is current');
 assert(!appSource.includes("load('/xlsx-preload.js?v=6');"), 'Purchase/XLSX must not load unconditionally at startup');
 assert(appSource.includes('window.__HASNARIA_LOAD_PURCHASE=ensurePurchaseRuntime'), 'Purchase runtime must be exposed as a lazy loader');
 assert(appSource.includes('window.__HASNARIA_LOAD_STOCK=ensureStockRuntime'), 'Stock runtime must be exposed as a lazy loader');
@@ -74,8 +74,8 @@ assert(!appSource.includes('purchase-inventory-status.js'), 'startup must not lo
 assert(!/function afterCore\(\)[\s\S]*?load\(SALES[,)]/.test(appSource), 'Sales must not be fetched unconditionally during application startup');
 assert(!/function afterCore\(\)[\s\S]*?load\(STOCK[,)]/.test(appSource), 'Stock must not be fetched unconditionally during application startup');
 assert(coreSource.includes('scheduleLegacyTabData(tab);'), 'core app must show/render before lazy legacy data finishes');
-assert(coreSource.includes('legacyRequirements(id, force)') && coreSource.includes('if (role === \"owner\") return [];'), 'Owner startup must bypass legacy bulk datasets');
-assert(!coreSource.includes('await loadAll();\n      show(\"app\");'), 'app shell must not wait for legacy loadAll before becoming visible');
+assert(coreSource.includes('legacyRequirements(id, force)') && coreSource.includes('if (role === "owner") return [];'), 'Owner startup must bypass legacy bulk datasets');
+assert(!coreSource.includes('await loadAll();\n      show("app");'), 'app shell must not wait for legacy loadAll before becoming visible');
 assert(ownerShellSource.includes("c.role!=='owner'"), 'guard is scoped to Owner role only');
 assert(ownerShellSource.includes('c.navigate=safeNavigate'), 'ERP module navigation is redirected to the safe Owner navigator');
 assert(ownerShellSource.includes('event.stopPropagation();'), 'Owner top navigation blocks legacy target/bubble tab render');
@@ -136,7 +136,6 @@ assert(purchasePeriodRpcFastPath.includes('security definer'), 'legacy selected-
 assert(purchaseControlRpcMigration.includes('private.same_brand(p_brand)'), 'Purchase control RPC must validate brand access once');
 assert(purchaseControlRpcMigration.includes('finance_purchase_reconciliation_monthly_v1'), 'Purchase control RPC must return Purchase/Finance/Stock reconciliation');
 assert(purchaseControlRpcMigration.includes('x.period_month=v_period'), 'Purchase control RPC must filter to the requested month server-side');
-
 assert(purchaseSplitMigration.includes("'6110','Beban Pemeliharaan','EXPENSE'"), 'migration must create maintenance expense account');
 assert(purchaseSplitMigration.includes("'6120','Beban Bahan Baku','EXPENSE'"), 'migration must create raw-material expense account');
 assert(purchaseSplitMigration.includes("set name='Beban Kepegawaian'"), 'migration must align personnel expense naming');
