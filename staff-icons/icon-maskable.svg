@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#125644"/>
+  <g transform="translate(0 30) scale(.82) translate(56 42)">
+    <path d="M252 188c-38-51-94-72-127-112 63 3 116 24 148 65 19 25 28 55 25 85-17-8-32-20-46-38Z" fill="#62d332"/>
+    <path d="M271 188c35-55 86-87 144-104-7 62-38 106-87 126-22 9-43 13-64 12 0-12 2-23 7-34Z" fill="#8be34c"/>
+    <text x="256" y="326" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="72" font-weight="900" fill="#fff">HASNARIA</text>
+    <text x="256" y="374" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="700" letter-spacing="5" fill="#dff3eb">STAFF</text>
+  </g>
+</svg>
