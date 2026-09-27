@@ -8,7 +8,7 @@
   function q(sel,root){return (root||document).querySelector(sel);}
   function qa(sel,root){return Array.prototype.slice.call((root||document).querySelectorAll(sel));}
   function text(el){return el?(el.textContent||'').trim():'';}
-  function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[c];});}
+  function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
   function shell(){return q('#staffRoot .staff-shell');}
   function overlay(){return q('#hasnariaMobileOverlay');}
   function mobileNav(){return q('#hasnariaMobileNav');}
@@ -191,8 +191,11 @@
 
   function ensureNav(){
     var s=shell();if(!s||isLogin())return;
-    var owner=isOwner();var active=activeTarget(owner);var old=mobileNav();if(old)old.remove();
-    var nav=document.createElement('nav');nav.id='hasnariaMobileNav';nav.className='mobile-app-nav '+(owner?'owner-nav':'staff-nav-v2');
+    var owner=isOwner();var active=activeTarget(owner);var old=mobileNav();
+    var key=(owner?'owner':'staff')+':'+active;
+    if(old&&old.getAttribute('data-mobile-key')===key)return;
+    if(old)old.remove();
+    var nav=document.createElement('nav');nav.id='hasnariaMobileNav';nav.className='mobile-app-nav '+(owner?'owner-nav':'staff-nav-v2');nav.setAttribute('data-mobile-key',key);
     nav.innerHTML=navButton('home','Beranda','home',active,false)+navButton('explore','Jelajah','grid',active,false)+navButton('action',owner?'Persetujuan':'Absensi',owner?'check':'finger',active,true)+(owner?navButton('location','Lokasi','pin',active,false):navButton('approval','Persetujuan','check',active,false))+navButton('profile','Profil','user',active,false);
     s.appendChild(nav);
   }
