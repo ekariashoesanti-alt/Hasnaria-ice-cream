@@ -1,17 +1,18 @@
-/* Hasnaria — Rata-rata Jam Penjualan Harian UI patch v4 */
+/* Hasnaria — Rata-rata Jam Penjualan Harian UI patch v6 */
 (function () {
   'use strict';
+  if(window.__HASNARIA_SALES_HOURLY_V6)return;
+  window.__HASNARIA_SALES_HOURLY_V6=true;
 
   var BRAND = 'a36d4b4f-3ccc-4a78-8aeb-b868f0407ea4';
   var host = null;
   var observer = null;
   var timer = null;
+  var cache = {month:'',pack:null,at:0,promise:null};
 
-  function apiBase() { return String(window.HASNARIA_SB || '').replace(/\/$/, ''); }
-  function apiKey() { return window.HASNARIA_KEY || ''; }
   function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
-      return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c];
+      return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'})[c];
     });
   }
   function daysInMonth(ym) {
@@ -33,41 +34,22 @@
   function moneyNumber(v) { var n = Number(v); return isFinite(n) ? n : 0; }
 
   async function loadHourly(ym) {
-    if (!ym) return [];
-    var first = ym + '-01';
-    var last = ym + '-' + String(daysInMonth(ym)).padStart(2, '0');
-    /* Prefer the shared Supabase client so the hourly chart uses the same
-       project/session/RLS context as the rest of the Sales dashboard. */
-    try {
-      if (window.__HASNARIA_DB && window.__HASNARIA_DB.from) {
-        var q = await window.__HASNARIA_DB.from('sales')
-          .select('sold_at,sold_hour,transaction_count')
-          .eq('brand_id', BRAND)
-          .gte('sold_at', first)
-          .lte('sold_at', last)
-          .order('sold_at', { ascending: true })
-          .limit(50000);
-        if (q && q.error) throw q.error;
-        return (q && q.data) || [];
-      }
-    } catch (e) {
-      console.warn('Hourly chart shared client query failed; using REST fallback.', e);
-    }
-    var base = apiBase(), key = apiKey();
-    if (!base || !key) throw new Error('Supabase connection is not ready.');
-    var url = base + '/rest/v1/sales?brand_id=eq.' + encodeURIComponent(BRAND) +
-      '&sold_at=gte.' + encodeURIComponent(first) +
-      '&sold_at=lte.' + encodeURIComponent(last) +
-      '&select=sold_at,sold_hour,transaction_count&limit=50000&order=sold_at.asc';
-    var r = await fetch(url, {
-      headers: { apikey: key, Authorization: 'Bearer ' + key },
-      cache: 'no-store'
-    });
-    if (!r.ok) throw new Error('Hourly sales HTTP ' + r.status);
-    return await r.json();
+    if (!ym) return {rows:[],source_rows:0,valid_hour_rows:0};
+    if(cache.month===ym && cache.pack && Date.now()-cache.at<60000)return cache.pack;
+    if(cache.month===ym && cache.promise)return cache.promise;
+    var db=window.__HASNARIA_DB;
+    if(!db||!db.rpc)throw new Error('Supabase connection is not ready.');
+    cache.month=ym;
+    cache.promise=db.rpc('get_sales_hourly_month_v1',{p_brand:BRAND,p_period:ym+'-01'}).then(function(q){
+      if(q&&q.error)throw q.error;
+      cache.pack=q&&q.data?q.data:{rows:[],source_rows:0,valid_hour_rows:0};
+      cache.at=Date.now();
+      return cache.pack;
+    }).finally(function(){cache.promise=null;});
+    return cache.promise;
   }
 
-  function buildChart(rows, ym) {
+  function buildChart(rows, ym, sourceRows) {
     var sums = Array(24).fill(0), validCount = 0;
     (rows || []).forEach(function (r) {
       var h = Number(r && r.sold_hour);
@@ -83,7 +65,7 @@
     if (!validCount) {
       return '<div class="sb-empty-chart sb-hourly-empty">' +
         '<b>Data jam transaksi belum tersedia</b>' +
-        '<br><small>' + (rows || []).length.toLocaleString('id-ID') + ' transaksi untuk <b>' + esc(ym) + '</b> sudah tersimpan, tetapi belum memiliki waktu transaksi asli (<code>sold_hour</code>).</small>' +
+        '<br><small>' + Number(sourceRows||0).toLocaleString('id-ID') + ' transaksi untuk <b>' + esc(ym) + '</b> sudah tersimpan, tetapi belum memiliki waktu transaksi asli (<code>sold_hour</code>).</small>' +
         '<br><small>Grafik tidak akan menggunakan <code>created_at</code> atau membuat jam berdasarkan asumsi.</small>' +
         '</div>';
     }
@@ -120,7 +102,7 @@
 
   async function render() {
     host = document.getElementById('sales');
-    if (!host || !host.isConnected) return;
+    if (!host || !host.isConnected || host.classList.contains('hidden')) return;
     if (!isDailyMode()) return;
     var grid = host.querySelector('.sb-grid-main');
     var trend = grid && grid.querySelector('.sb-trend');
@@ -142,10 +124,10 @@
     grid.appendChild(card);
 
     try {
-      var rows = await loadHourly(ym);
+      var pack = await loadHourly(ym);
       if (!card.isConnected) return;
       var body = card.querySelector('.sb-hourly-body');
-      if (body) body.innerHTML = buildChart(rows, ym);
+      if (body) body.innerHTML = buildChart(pack.rows||[], ym, pack.source_rows||0);
     } catch (e) {
       var b = card.querySelector('.sb-hourly-body');
       if (b) b.innerHTML = '<div class="sb-empty-chart">Data jam transaksi gagal dimuat. Silakan refresh halaman.</div>';
@@ -155,7 +137,7 @@
 
   function schedule() {
     clearTimeout(timer);
-    timer = setTimeout(function () { render(); }, 80);
+    timer = setTimeout(function () { render(); }, 100);
   }
 
   function init() {
@@ -164,6 +146,7 @@
     if (observer) observer.disconnect();
     observer = new MutationObserver(schedule);
     observer.observe(host, { childList: true, subtree: true });
+    document.addEventListener('click',function(e){if(e.target&&e.target.closest&&e.target.closest('[data-tab="sales"]'))setTimeout(schedule,80)},true);
     schedule();
   }
 
