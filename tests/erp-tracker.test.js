@@ -56,7 +56,7 @@ for (const task of data.tasks) {
   }
 }
 
-assert(appSource.includes("var OWNER_SHELL = '/owner-shell-guard.js?v=3';"), 'owner navigation guard cache version is current');
+assert(appSource.includes("var OWNER_SHELL = '/owner-shell-guard.js?v=4';"), 'owner navigation guard cache version is current');
 assert(appSource.includes("function afterCore(){load(OWNER_SHELL);load('/xlsx-preload.js?v=6')"), 'Purchase preload must load once after Owner shell');
 assert(!appSource.includes("load('/finance-purchase-basis-v1.js"), 'Finance management runtime must be lazy-owned by the Owner Finance shell');
 assert(ownerShellSource.includes("c.role!=='owner'"), 'guard is scoped to Owner role only');
