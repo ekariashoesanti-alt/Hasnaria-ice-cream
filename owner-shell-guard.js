@@ -183,7 +183,14 @@
     event.preventDefault();event.stopPropagation();safeNavigate(id);
   },true);
 
-  function start(){if(!document.body)return;ensureOperationalSurface();ensureShellCss();new MutationObserver(scheduleReconcile).observe(document.body,{childList:true,subtree:true});scheduleReconcile()}
+  function start(){
+    if(!document.body)return;
+    ensureOperationalSurface();ensureShellCss();
+    var tabs=document.getElementById('tabs'),main=document.querySelector('#app main');
+    if(tabs)new MutationObserver(scheduleReconcile).observe(tabs,{childList:true});
+    if(main)new MutationObserver(scheduleReconcile).observe(main,{childList:true});
+    scheduleReconcile();
+  }
   window.__HASNARIA_OWNER_SHELL={navigate:safeNavigate,isOwner:isOwner,getActive:function(){return state.active},reconcile:reconcile};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
 })();
