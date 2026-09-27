@@ -1,7 +1,7 @@
 (function () {
   'use strict';
   var CORE = '/core-app.js?v=8';
-  var OWNER_SHELL = '/owner-shell-guard.js?v=4';
+  var OWNER_SHELL = '/owner-shell-guard.js?v=5';
   var STOCK = '/stock-monitor.js?v=28';
   var PURCHASE = '/xlsx-preload.js?v=6';
   var SALES = '/sales-board.js?v=47';
@@ -51,11 +51,13 @@
   function afterCore(){
     load(OWNER_SHELL);
     document.addEventListener('click',function(e){
+      if(window.__HASNARIA_EXECUTIVE_OWNER)return;
       var tab=e.target&&e.target.closest?e.target.closest('[data-tab]'):null;
       if(tab){var target=tab.getAttribute('data-tab');if(target==='sales')ensureSalesRuntime();else if(target==='pembelian')ensurePurchaseRuntime();else if(target==='stok')ensureStockRuntime();}
       var b=e.target&&e.target.closest?e.target.closest('button'):null;if(!b)return;var id=b.id||'',watch=id==='sSave'||id==='oSave'||id==='cSave'||id==='lzSave'||id==='svOpen'||id==='svHand'||id==='svClose'||b.hasAttribute('data-stk')||b.hasAttribute('data-ok')||b.hasAttribute('data-no')||b.hasAttribute('data-lzok')||b.hasAttribute('data-lzno');if(!watch)return;if(b.getAttribute('data-busy')==='1'){e.preventDefault();e.stopImmediatePropagation();return;}b.setAttribute('data-busy','1');setTimeout(function(){try{b.removeAttribute('data-busy');}catch(_){}},1800);
     },true);
     setTimeout(function(){
+      if(window.__HASNARIA_EXECUTIVE_OWNER)return;
       var sales=document.getElementById('sales');if(sales&&!sales.classList.contains('hidden'))ensureSalesRuntime();
       var purchase=document.getElementById('pembelian');if(purchase&&!purchase.classList.contains('hidden'))ensurePurchaseRuntime();
       var stock=document.getElementById('stok');if(stock&&!stock.classList.contains('hidden'))ensureStockRuntime();
