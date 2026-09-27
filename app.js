@@ -3,8 +3,9 @@
   var CORE = '/core-app.js?v=7';
   var OWNER_SHELL = '/owner-shell-guard.js?v=4';
   var STOCK = '/stock-monitor.js?v=28';
-  var SALES = '/sales-board.js?v=46';
+  var SALES = '/sales-board.js?v=47';
   var SALES_HOURLY = '/sales-hourly-chart.js?v=6';
+  var SALES_FALLBACK = false;
   var SALES_UI = '/sales-ui-patch.js?v=12';
   var AUTH_URL = window.HASNARIA_SB;
   var AUTH_KEY = window.HASNARIA_KEY;
