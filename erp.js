@@ -4,7 +4,7 @@
   const esc = value => String(value == null ? '' : value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const number = value => value == null ? 'Belum tersedia' : Number(value).toLocaleString('id-ID');
   const money = value => value == null ? 'Belum tersedia' : 'Rp' + Number(value).toLocaleString('id-ID', {maximumFractionDigits:0});
-  const state = {key:null,page:'overview',data:null,loading:false,error:'',generation:0,month:'',query:'',priority:'',type:'',details:{},detailError:'',lazyLoaded:{actions:false,trend:false,quality:false},lazyLoading:{actions:false,trend:false,quality:false},lazyError:{actions:'',trend:'',quality:''}};
+  const state = {key:null,page:'overview',data:null,loading:false,error:'',generation:0,month:'',query:'',priority:'',type:'',actionLimit:100,details:{},detailError:'',detailLoading:false,lazyLoaded:{actions:false,trend:false,quality:false},lazyLoading:{actions:false,trend:false,quality:false},lazyError:{actions:'',trend:'',quality:''}};
   const pages = {overview:'Ringkasan CEO',actions:'Prioritas owner',inventory:'Persediaan',finance:'Arus kas',quality:'Kelengkapan data',audit:'Aktivitas ERP'};
   const views = {actions:['ui_erp_action_queue_v4','action_rank'],inventory:['ui_inventory_items','item_name'],audit:['ui_recent_erp_audit','created_at']};
   const RETIRED_ACTIONS = new Set(['missing_recipe','missing_component_cost','recipe_verification']);
@@ -60,7 +60,7 @@
 
   async function load() {
     const generation=++state.generation;
-    state.loading=true;state.error='';state.details={};state.detailError='';state.lazyLoaded={actions:false,trend:false,quality:false};state.lazyLoading={actions:false,trend:false,quality:false};state.lazyError={actions:'',trend:'',quality:''};render();
+    state.loading=true;state.error='';state.details={};state.detailError='';state.detailLoading=false;state.actionLimit=100;state.lazyLoaded={actions:false,trend:false,quality:false};state.lazyLoading={actions:false,trend:false,quality:false};state.lazyError={actions:'',trend:'',quality:''};render();
     try {
       const result=await window.__HASNARIA_DB.rpc('get_ui_bootstrap_v6').abortSignal(AbortSignal.timeout(30000));
       if(result.error)throw result.error;
@@ -75,13 +75,14 @@
     finally {if(generation===state.generation){state.loading=false;render();ensurePageData(state.page);}}
   }
 
-  async function loadDetails(page) {
+  async function loadDetails(page,preserve=false) {
     const generation=state.generation;
-    state.details[page]=null;state.detailError='';render();
+    if(!preserve)state.details[page]=null;
+    state.detailError='';state.detailLoading=true;render();
     try {
       let result;
       if(page==='actions'){
-        result=await window.__HASNARIA_DB.rpc('get_ui_action_queue_active_v1',{p_brand:context().brandId,p_limit:500}).abortSignal(AbortSignal.timeout(15000));
+        result=await window.__HASNARIA_DB.rpc('get_ui_action_queue_active_v1',{p_brand:context().brandId,p_limit:state.actionLimit}).abortSignal(AbortSignal.timeout(15000));
       }else{
         const [view,order]=views[page];
         result=await window.__HASNARIA_DB.from(view).select('*').eq('brand_id',context().brandId).order(order,{ascending:page!=='audit'}).limit(500).abortSignal(AbortSignal.timeout(30000));
@@ -91,7 +92,7 @@
       if(page==='actions')rows=activeActions(rows);
       if(generation===state.generation)state.details[page]=rows;
     } catch(error){if(generation===state.generation)state.detailError=error.message;}
-    if(generation===state.generation)render();
+    if(generation===state.generation){state.detailLoading=false;render();}
   }
 
   function actionsTable(items) {
@@ -180,7 +181,10 @@
     const rows=state.details[state.page]||[];
     if(state.page==='actions'){
       const selected=rows.filter(x=>(!state.priority||x.priority===state.priority)&&(!state.type||x.action_type===state.type)&&(x.subject+' '+x.action_type).toLowerCase().includes(state.query.toLowerCase()));
-      return panel('Antrean keputusan','<div class="erp-controls"><label>Cari<input id="erp-search" type="search" value="'+esc(state.query)+'" placeholder="Cari produk atau masalah"></label><label>Prioritas<select id="erp-priority"><option value="">Semua prioritas</option>'+['high','medium','low'].map(x=>'<option '+(state.priority===x?'selected':'')+'>'+x+'</option>').join('')+'</select></label><label>Jenis<select id="erp-type"><option value="">Semua jenis</option>'+[...new Set(rows.map(x=>x.action_type))].map(x=>'<option value="'+esc(x)+'" '+(state.type===x?'selected':'')+'>'+esc(names[x]||x)+'</option>').join('')+'</select></label></div>'+actionsTable(selected)+'<p class="erp-meta">Maksimal 500 tindakan. Nilai terkait dapat merujuk transaksi yang sama; jangan dijumlahkan sebagai kerugian.</p>');
+      const total=Number(d.owner?.total_open_actions);
+      const loadedNote=Number.isFinite(total)&&total>0?'Menampilkan '+number(rows.length)+' dari '+number(total)+' tindakan.':'Menampilkan '+number(rows.length)+' tindakan.';
+      const hasMore=!state.detailLoading&&rows.length>=state.actionLimit&&state.actionLimit<500;
+      return panel('Antrean keputusan','<div class="erp-controls"><label>Cari<input id="erp-search" type="search" value="'+esc(state.query)+'" placeholder="Cari produk atau masalah"></label><label>Prioritas<select id="erp-priority"><option value="">Semua prioritas</option>'+['high','medium','low'].map(x=>'<option '+(state.priority===x?'selected':'')+'>'+x+'</option>').join('')+'</select></label><label>Jenis<select id="erp-type"><option value="">Semua jenis</option>'+[...new Set(rows.map(x=>x.action_type))].map(x=>'<option value="'+esc(x)+'" '+(state.type===x?'selected':'')+'>'+esc(names[x]||x)+'</option>').join('')+'</select></label></div>'+actionsTable(selected)+'<div class="erp-row"><p class="erp-meta">'+esc(loadedNote)+' '+(hasMore?'Pencarian/filter berlaku pada data yang sudah dimuat. ':'')+'Nilai terkait dapat merujuk transaksi yang sama; jangan dijumlahkan sebagai kerugian.</p>'+(hasMore?btn('Muat lebih banyak','more:actions'):'')+'</div>');
     }
     if(state.page==='inventory')return panel('Persediaan & status pemantauan',table(['Bahan','Satuan','Stok ledger','Status'],rows.map(x=>[esc(x.item_name),esc(x.unit),x.tracking_active?number(x.ledger_qty):'Belum terpantau',badge(x.ui_status||x.status)])),btn('Kelola stok & opname','nav:stok'))+'<p class="erp-note">Persediaan adalah kontrol kuantitas. Nilai rupiah Pembelian sudah masuk sebagai beban dan tidak dibebankan lagi saat stok digunakan.</p>';
     if(state.page==='finance')return panel('Arus kas & hasil usaha bulanan',table(['Bulan','Omzet','Beban Pembelian','Laba / Rugi Bersih','Kas masuk','Kas keluar','Pergerakan bersih','Status'],list(d.monthly_trend).map(x=>[esc(String(x.month).slice(0,7)),money(x.sales_revenue),money(x.total_purchase_expense),money(x.profit_after_tax),money(x.known_cash_in),money(x.known_cash_out),money(x.net_known_cash_movement),badge(x.cashflow_data_status)])),btn('Buka keuangan','nav:ops'))+'<p class="erp-note">Hasil usaha memakai basis Pembelian. Paylater/utang tidak otomatis menjadi kas keluar sampai pembayaran kasnya terverifikasi.</p>';
@@ -200,6 +204,7 @@
       if(action==='retry')loadDetails(state.page);
       if(action==='lazy'&&value==='trend')loadMonthlyTrend(true);
       if(action==='lazy'&&value==='quality')loadQualityRequirements(true);
+      if(action==='more'&&value==='actions'&&!state.detailLoading){state.actionLimit=Math.min(500,state.actionLimit+100);loadDetails('actions',true);}
       if(action==='nav'){$('erp-dialog').close();context().navigate(value);window.scrollTo({top:0});}
       if(action==='close')$('erp-dialog').close();
       if(action==='action'){
@@ -214,7 +219,7 @@
   function mount(){
     if(!context())return;
     const key=[context().brandId,context().userId,context().role].join(':');
-    if(state.key!==key){state.key=key;state.data=null;state.details={};state.error='';state.generation++;state.loading=false;state.lazyLoaded={actions:false,trend:false,quality:false};state.lazyLoading={actions:false,trend:false,quality:false};state.lazyError={actions:'',trend:'',quality:''};}
+    if(state.key!==key){state.key=key;state.data=null;state.details={};state.error='';state.generation++;state.loading=false;state.detailLoading=false;state.actionLimit=100;state.lazyLoaded={actions:false,trend:false,quality:false};state.lazyLoading={actions:false,trend:false,quality:false};state.lazyError={actions:'',trend:'',quality:''};}
     render();if(!state.data&&!state.loading&&!state.error)load();
   }
 
