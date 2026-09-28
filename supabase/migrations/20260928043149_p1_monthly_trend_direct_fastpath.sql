@@ -1,0 +1,3 @@
+-- Remote migration history contains two consecutive records for the final monthly-trend fast path.
+-- This first version is retained as a no-op marker so repository migration versions stay aligned.
+-- The canonical idempotent CREATE OR REPLACE FUNCTION is in 20260928043150_p1_monthly_trend_direct_fastpath.sql.
