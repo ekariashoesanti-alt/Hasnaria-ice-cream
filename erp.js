@@ -110,6 +110,7 @@
       const owner=state.data.owner||(state.data.owner={});
       owner.total_open_actions=summary.total ?? owner.total_open_actions ?? null;
       owner.high_priority_actions=summary.high ?? owner.high_priority_actions ?? null;
+      owner.purchase_control=summary.purchase_control||owner.purchase_control||{};
       state.data.top_actions=activeActions(summary.top_actions||[]);
       state.lazyLoaded.actions=true;
     }catch(error){if(generation===state.generation)state.lazyError.actions=error.message;}
