@@ -1,0 +1,175 @@
+from pathlib import Path
+
+
+def replace_once(text, old, new, label):
+    if old not in text:
+        raise SystemExit(f'P1 patch anchor missing: {label}')
+    return text.replace(old, new, 1)
+
+
+p = Path('erp.js')
+s = p.read_text()
+s = replace_once(
+    s,
+    "  const state = {key:null,page:'overview',data:null,loading:false,error:'',generation:0,month:'',query:'',priority:'',type:'',details:{},detailError:''};",
+    "  const state = {key:null,page:'overview',data:null,loading:false,error:'',generation:0,month:'',query:'',priority:'',type:'',details:{},detailError:'',lazyLoaded:{trend:false,quality:false},lazyLoading:{trend:false,quality:false},lazyError:{trend:'',quality:''}};",
+    'erp state lazy flags',
+)
+s = replace_once(s, 'get_ui_bootstrap_v5', 'get_ui_bootstrap_v6', 'bootstrap v6')
+
+old = """      const [view,order]=views[page];
+      const result=await window.__HASNARIA_DB.from(view).select('*').eq('brand_id',context().brandId).order(order,{ascending:page!=='audit'}).limit(500).abortSignal(AbortSignal.timeout(30000));
+      if(result.error)throw result.error;
+      let rows=scoped(result.data);
+      if(page==='actions')rows=activeActions(rows);
+      if(generation===state.generation)state.details[page]=rows;"""
+new = """      let result;
+      if(page==='actions'){
+        result=await window.__HASNARIA_DB.rpc('get_ui_action_queue_active_v1',{p_brand:context().brandId,p_limit:500}).abortSignal(AbortSignal.timeout(15000));
+      }else{
+        const [view,order]=views[page];
+        result=await window.__HASNARIA_DB.from(view).select('*').eq('brand_id',context().brandId).order(order,{ascending:page!=='audit'}).limit(500).abortSignal(AbortSignal.timeout(30000));
+      }
+      if(result.error)throw result.error;
+      let rows=scoped(result.data);
+      if(page==='actions')rows=activeActions(rows);
+      if(generation===state.generation)state.details[page]=rows;"""
+s = replace_once(s, old, new, 'action queue secure RPC')
+
+anchor = """  function actionsTable(items) {
+    return table(['Urutan','Prioritas','Perlu ditindaklanjuti','Nilai terkait',''],activeActions(items).map(a=>[number(a.action_rank),badge(a.priority),'<b>'+esc(a.subject)+'</b><small class=\"erp-block\">'+esc(names[a.action_type]||a.action_type)+'</small>',money(a.financial_impact),btn('Lihat detail','action:'+a.action_rank)]));
+  }
+
+"""
+block = anchor + """  async function loadMonthlyTrend(force=false) {
+    if(!state.data||!context()||state.lazyLoading.trend||(!force&&state.lazyLoaded.trend))return;
+    const generation=state.generation;
+    state.lazyLoading.trend=true;state.lazyError.trend='';render();
+    try{
+      const result=await window.__HASNARIA_DB.rpc('get_ui_monthly_trend_v1',{p_brand:context().brandId,p_limit:12}).abortSignal(AbortSignal.timeout(20000));
+      if(result.error)throw result.error;
+      if(generation!==state.generation)return;
+      state.data.monthly_trend=scoped(result.data||[]);
+      state.lazyLoaded.trend=true;
+      const months=list(state.data.monthly_trend);
+      if(!months.some(m=>m.month===state.month))state.month=months[0]?.month||'';
+    }catch(error){if(generation===state.generation)state.lazyError.trend=error.message;}
+    finally{if(generation===state.generation){state.lazyLoading.trend=false;render();}}
+  }
+
+  async function loadQualityRequirements(force=false) {
+    if(!state.data||!context()||state.lazyLoading.quality||(!force&&state.lazyLoaded.quality))return;
+    const generation=state.generation;
+    state.lazyLoading.quality=true;state.lazyError.quality='';render();
+    try{
+      const result=await window.__HASNARIA_DB.rpc('get_ui_manual_input_requirements_v1',{p_brand:context().brandId}).abortSignal(AbortSignal.timeout(15000));
+      if(result.error)throw result.error;
+      if(generation!==state.generation)return;
+      state.data.manual_input_requirements=scoped(result.data||[]);
+      state.lazyLoaded.quality=true;
+    }catch(error){if(generation===state.generation)state.lazyError.quality=error.message;}
+    finally{if(generation===state.generation){state.lazyLoading.quality=false;render();}}
+  }
+
+  function ensurePageData(page) {
+    if(!state.data)return;
+    if(page==='overview'||page==='finance')loadMonthlyTrend(false);
+    if(page==='quality')loadQualityRequirements(false);
+    if(views[page]&&!state.details[page])loadDetails(page);
+  }
+
+"""
+s = replace_once(s, anchor, block, 'lazy trend and quality loaders')
+s = replace_once(
+    s,
+    "    finally {if(generation===state.generation){state.loading=false;render();if(views[state.page]&&state.data)loadDetails(state.page);}}\n",
+    "    finally {if(generation===state.generation){state.loading=false;render();ensurePageData(state.page);}}\n",
+    'nonblocking page data after bootstrap',
+)
+s = replace_once(
+    s,
+    """  function body() {
+    const d=state.data;
+    if(state.page==='overview')return overview();
+""",
+    """  function body() {
+    const d=state.data;
+    if(state.page==='overview')return overview();
+    if(state.page==='finance'&&!state.lazyLoaded.trend)return panel('Arus kas & hasil usaha bulanan',state.lazyError.trend?'<p role=\"alert\">'+esc(state.lazyError.trend)+'</p>'+btn('Coba lagi','lazy:trend'):'<p role=\"status\">Memuat tren bulanan…</p>');
+    if(state.page==='quality'&&!state.lazyLoaded.quality)return panel('Kelengkapan data',state.lazyError.quality?'<p role=\"alert\">'+esc(state.lazyError.quality)+'</p>'+btn('Coba lagi','lazy:quality'):'<p role=\"status\">Memuat kebutuhan data…</p>');
+""",
+    'lazy page loading states',
+)
+s = replace_once(
+    s,
+    """(state.page==='overview'?'<label>Periode ringkasan<select id=\"erp-month\">'+list(state.data.monthly_trend).map(x=>'<option value=\"'+esc(x.month)+'\" '+(x.month===state.month?'selected':'')+'>'+esc(String(x.month).slice(0,7))+'</option>').join('')+'</select></label>':'')""",
+    """(state.page==='overview'?(state.lazyLoaded.trend?'<label>Periode ringkasan<select id=\"erp-month\">'+list(state.data.monthly_trend).map(x=>'<option value=\"'+esc(x.month)+'\" '+(x.month===state.month?'selected':'')+'>'+esc(String(x.month).slice(0,7))+'</option>').join('')+'</select></label>':'<span class=\"erp-meta\">'+(state.lazyError.trend?'Tren bulanan belum tersedia':'Memuat tren bulanan…')+'</span>'):'')""",
+    'overview trend loading control',
+)
+s = replace_once(
+    s,
+    "      if(action==='page'){state.page=value;state.detailError='';render();if(views[value]&&!state.details[value])loadDetails(value);}\n",
+    "      if(action==='page'){state.page=value;state.detailError='';render();ensurePageData(value);}\n",
+    'page lazy dispatcher',
+)
+s = replace_once(
+    s,
+    "      if(action==='retry')loadDetails(state.page);\n",
+    "      if(action==='retry')loadDetails(state.page);\n      if(action==='lazy'&&value==='trend')loadMonthlyTrend(true);\n      if(action==='lazy'&&value==='quality')loadQualityRequirements(true);\n",
+    'lazy retry actions',
+)
+s = replace_once(
+    s,
+    "    if(state.key!==key){state.key=key;state.data=null;state.details={};state.error='';state.generation++;state.loading=false;}\n",
+    "    if(state.key!==key){state.key=key;state.data=null;state.details={};state.error='';state.generation++;state.loading=false;state.lazyLoaded={trend:false,quality:false};state.lazyLoading={trend:false,quality:false};state.lazyError={trend:'',quality:''};}\n",
+    'mount resets lazy state',
+)
+s = replace_once(
+    s,
+    "    state.loading=true;state.error='';state.details={};state.detailError='';render();\n",
+    "    state.loading=true;state.error='';state.details={};state.detailError='';state.lazyLoaded={trend:false,quality:false};state.lazyLoading={trend:false,quality:false};state.lazyError={trend:'',quality:''};render();\n",
+    'refresh resets lazy state',
+)
+p.write_text(s)
+
+p = Path('index.html')
+s = p.read_text()
+s = replace_once(s, '/erp.js?v=ui1', '/erp.js?v=ui2', 'ERP P1 cache bust')
+p.write_text(s)
+
+p = Path('tests/erp-tracker.test.js')
+s = p.read_text()
+s = replace_once(
+    s,
+    "const coreSource = fs.readFileSync(path.join(root, 'core-app.js'), 'utf8');\n",
+    "const coreSource = fs.readFileSync(path.join(root, 'core-app.js'), 'utf8');\nconst erpSource = fs.readFileSync(path.join(root, 'erp.js'), 'utf8');\n",
+    'test ERP source',
+)
+perf_decl = "const performanceMigration = fs.readFileSync(path.join(root, 'supabase', 'migrations', '20260927005000_performance_runtime_reduce_roundtrips.sql'), 'utf8');\n"
+s = replace_once(
+    s,
+    perf_decl,
+    perf_decl + "const p1ActionFastPath = fs.readFileSync(path.join(root, 'supabase', 'migrations', '20260928010000_p1_dashboard_action_queue_fast_path.sql'), 'utf8');\nconst p1LazyBootstrap = fs.readFileSync(path.join(root, 'supabase', 'migrations', '20260928011000_p1_bootstrap_lazy_monthly_trend.sql'), 'utf8');\n",
+    'test P1 migrations',
+)
+p0_anchor = "assert(!coreSource.includes('await loadAll();\\n      show(\"app\");'), 'app shell must not wait for legacy loadAll before becoming visible');\n"
+s = replace_once(
+    s,
+    p0_anchor,
+    p0_anchor + """
+assert(indexSource.includes('/erp.js?v=ui2'), 'P1 ERP runtime cache version must be current');
+assert(erpSource.includes("get_ui_bootstrap_v6"), 'Owner dashboard must use the P1 lightweight bootstrap');
+assert(!erpSource.includes("get_ui_bootstrap_v5"), 'Owner dashboard must not call the superseded blocking bootstrap');
+assert(erpSource.includes("get_ui_action_queue_active_v1"), 'Owner action queue must use the secure server-side fast path');
+assert(erpSource.includes("get_ui_manual_input_requirements_v1"), 'Quality requirements must be loaded on demand');
+assert(erpSource.includes("get_ui_monthly_trend_v1"), 'monthly management trend must be loaded on demand');
+assert(erpSource.includes("ensurePageData(state.page)"), 'secondary Owner data must load after the blocking bootstrap has rendered');
+assert(p1ActionFastPath.includes('security definer') && p1ActionFastPath.includes("set search_path=''"), 'P1 action RPC must keep a fixed definer security boundary');
+assert(p1ActionFastPath.includes('private.same_brand(p_brand)'), 'P1 action RPC must authorize the brand once');
+assert(p1ActionFastPath.includes("action_type not in ('missing_recipe','missing_component_cost','recipe_verification')"), 'retired HPP/recipe actions must stay outside the active queue');
+assert(p1LazyBootstrap.includes('get_ui_bootstrap_v6') && p1LazyBootstrap.includes("'monthly_trend','[]'::jsonb"), 'P1 bootstrap must keep monthly trend off the critical path');
+assert(p1LazyBootstrap.includes('get_ui_monthly_trend_v1') && p1LazyBootstrap.includes('private.same_brand(p_brand)'), 'lazy monthly trend RPC must retain authenticated brand isolation');
+""",
+    'P1 acceptance tests',
+)
+p.write_text(s)
