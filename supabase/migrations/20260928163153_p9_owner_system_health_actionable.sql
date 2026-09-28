@@ -183,25 +183,25 @@ begin
   end if;
 
   if position('v_system_health:=private.purchase_reconciliation_status(v_brand,v_month);' in v_def)=0 then
-    v_old := $$    v_alerts:=jsonb_build_array(
+    v_old := $marker$    v_alerts:=jsonb_build_array(
       jsonb_build_object('type','validation','count',coalesce((v_validation->>'submitted')::int,0)+coalesce((v_validation->>'revision_required')::int,0),'label','Validasi staff perlu perhatian'),
       jsonb_build_object('type','stock','count',coalesce(v_low,0),'label','Item stok rendah'),
       jsonb_build_object('type','payroll','count',case when v_payroll_status in ('submitted','approved') then 1 else 0 end,'label','Payroll menunggu penyelesaian')
-    );$$;
-    v_new := $$    v_system_health:=private.purchase_reconciliation_status(v_brand,v_month);
+    );$marker$;
+    v_new := $marker$    v_system_health:=private.purchase_reconciliation_status(v_brand,v_month);
     v_alerts:=jsonb_build_array(
       jsonb_build_object('type','validation','count',coalesce((v_validation->>'submitted')::int,0)+coalesce((v_validation->>'revision_required')::int,0),'label','Validasi staff perlu perhatian'),
       jsonb_build_object('type','stock','count',coalesce(v_low,0),'label','Item stok rendah'),
       jsonb_build_object('type','reconciliation','count',case when v_system_health->>'status'='healthy' then 0 else greatest(coalesce((v_system_health->>'stock_review')::int,0),1) end,'label','Reconciliation system health'),
       jsonb_build_object('type','payroll','count',case when v_payroll_status in ('submitted','approved') then 1 else 0 end,'label','Payroll menunggu penyelesaian')
-    );$$;
+    );$marker$;
     if position(v_old in v_def)=0 then raise exception 'owner executive alerts marker not found'; end if;
     v_def := replace(v_def,v_old,v_new);
   end if;
 
-  if position($$'system_health',v_system_health$$ in v_def)=0 then
-    v_old := $$'trend',v_trend,'alerts',v_alerts);$$;
-    v_new := $$'trend',v_trend,'alerts',v_alerts,'system_health',v_system_health);$$;
+  if position($marker$'system_health',v_system_health$marker$ in v_def)=0 then
+    v_old := $marker$'trend',v_trend,'alerts',v_alerts);$marker$;
+    v_new := $marker$'trend',v_trend,'alerts',v_alerts,'system_health',v_system_health);$marker$;
     if position(v_old in v_def)=0 then raise exception 'owner executive dashboard return marker not found'; end if;
     v_def := replace(v_def,v_old,v_new);
   end if;
