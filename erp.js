@@ -4,7 +4,7 @@
   const esc = value => String(value == null ? '' : value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const number = value => value == null ? 'Belum tersedia' : Number(value).toLocaleString('id-ID');
   const money = value => value == null ? 'Belum tersedia' : 'Rp' + Number(value).toLocaleString('id-ID', {maximumFractionDigits:0});
-  const state = {key:null,page:'overview',data:null,loading:false,error:'',generation:0,month:'',query:'',priority:'',type:'',details:{},detailError:'',lazyLoaded:{trend:false,quality:false},lazyLoading:{trend:false,quality:false},lazyError:{trend:'',quality:''}};
+  const state = {key:null,page:'overview',data:null,loading:false,error:'',generation:0,month:'',query:'',priority:'',type:'',details:{},detailError:'',lazyLoaded:{actions:false,trend:false,quality:false},lazyLoading:{actions:false,trend:false,quality:false},lazyError:{actions:'',trend:'',quality:''}};
   const pages = {overview:'Ringkasan CEO',actions:'Prioritas owner',inventory:'Persediaan',finance:'Arus kas',quality:'Kelengkapan data',audit:'Aktivitas ERP'};
   const views = {actions:['ui_erp_action_queue_v4','action_rank'],inventory:['ui_inventory_items','item_name'],audit:['ui_recent_erp_audit','created_at']};
   const RETIRED_ACTIONS = new Set(['missing_recipe','missing_component_cost','recipe_verification']);
@@ -60,7 +60,7 @@
 
   async function load() {
     const generation=++state.generation;
-    state.loading=true;state.error='';state.details={};state.detailError='';state.lazyLoaded={trend:false,quality:false};state.lazyLoading={trend:false,quality:false};state.lazyError={trend:'',quality:''};render();
+    state.loading=true;state.error='';state.details={};state.detailError='';state.lazyLoaded={actions:false,trend:false,quality:false};state.lazyLoading={actions:false,trend:false,quality:false};state.lazyError={actions:'',trend:'',quality:''};render();
     try {
       const result=await window.__HASNARIA_DB.rpc('get_ui_bootstrap_v6').abortSignal(AbortSignal.timeout(30000));
       if(result.error)throw result.error;
@@ -98,6 +98,24 @@
     return table(['Urutan','Prioritas','Perlu ditindaklanjuti','Nilai terkait',''],activeActions(items).map(a=>[number(a.action_rank),badge(a.priority),'<b>'+esc(a.subject)+'</b><small class="erp-block">'+esc(names[a.action_type]||a.action_type)+'</small>',money(a.financial_impact),btn('Lihat detail','action:'+a.action_rank)]));
   }
 
+  async function loadActionSummary(force=false) {
+    if(!state.data||!context()||state.lazyLoading.actions||(!force&&state.lazyLoaded.actions))return;
+    const generation=state.generation;
+    state.lazyLoading.actions=true;state.lazyError.actions='';
+    try{
+      const result=await window.__HASNARIA_DB.rpc('get_ui_action_summary_v1',{p_brand:context().brandId}).abortSignal(AbortSignal.timeout(15000));
+      if(result.error)throw result.error;
+      if(generation!==state.generation)return;
+      const summary=scoped(result.data||{});
+      const owner=state.data.owner||(state.data.owner={});
+      owner.total_open_actions=summary.total ?? owner.total_open_actions ?? null;
+      owner.high_priority_actions=summary.high ?? owner.high_priority_actions ?? null;
+      state.data.top_actions=activeActions(summary.top_actions||[]);
+      state.lazyLoaded.actions=true;
+    }catch(error){if(generation===state.generation)state.lazyError.actions=error.message;}
+    finally{if(generation===state.generation){state.lazyLoading.actions=false;render();}}
+  }
+
   async function loadMonthlyTrend(force=false) {
     if(!state.data||!context()||state.lazyLoading.trend||(!force&&state.lazyLoaded.trend))return;
     const generation=state.generation;
@@ -130,6 +148,7 @@
 
   function ensurePageData(page) {
     if(!state.data)return;
+    if(page==='overview')loadActionSummary(false);
     if(page==='overview'||page==='finance')loadMonthlyTrend(false);
     if(page==='quality')loadQualityRequirements(false);
     if(views[page]&&!state.details[page])loadDetails(page);
@@ -194,7 +213,7 @@
   function mount(){
     if(!context())return;
     const key=[context().brandId,context().userId,context().role].join(':');
-    if(state.key!==key){state.key=key;state.data=null;state.details={};state.error='';state.generation++;state.loading=false;state.lazyLoaded={trend:false,quality:false};state.lazyLoading={trend:false,quality:false};state.lazyError={trend:'',quality:''};}
+    if(state.key!==key){state.key=key;state.data=null;state.details={};state.error='';state.generation++;state.loading=false;state.lazyLoaded={actions:false,trend:false,quality:false};state.lazyLoading={actions:false,trend:false,quality:false};state.lazyError={actions:'',trend:'',quality:''};}
     render();if(!state.data&&!state.loading&&!state.error)load();
   }
 
