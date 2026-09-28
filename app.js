@@ -50,7 +50,7 @@
   window.__HASNARIA_LOAD_STOCK=ensureStockRuntime;
   function fixStockLayout(){var host=document.getElementById('stok');if(!host)return;var form=host.querySelector('.stk-form');if(form){form.style.minWidth='0';form.style.maxWidth='100%';}var price=host.querySelector('#stkBuyPrice'),priceBox=price&&price.parentElement;if(priceBox){var units=priceBox.querySelectorAll('.unit');if(units.length)units[units.length-1].textContent='/ pcs';}}
   function afterCore(){
-    load(OWNER_SHELL);
+    if(!window.__HASNARIA_OWNER_SHELL_BOOTSTRAPPED)load(OWNER_SHELL);
     load(AUTH_ONBOARDING);
     document.addEventListener('click',function(e){
       if(window.__HASNARIA_EXECUTIVE_OWNER)return;
