@@ -30,7 +30,7 @@ function assertShellIntegration() {
   assert.ok(context < mount, 'brand/user/role context exists before ERP mount');
   assert.ok(salesRender > mount, 'legacy Sales module still renders after ERP dashboard mount');
   for (const marker of ['$("pembelian").innerHTML =','$("ops").innerHTML =','$("stok").innerHTML =']) assert.ok(coreSource.includes(marker), `core-app still owns existing module: ${marker}`);
-  for (const contract of ['get_ui_bootstrap_v6','get_ui_action_queue_active_v1','ui_inventory_items','ui_recent_erp_audit']) assert.ok(source.includes(contract), `ERP UI keeps backend contract ${contract}`);
+  for (const contract of ['get_ui_bootstrap_v6','get_ui_action_summary_v1','get_ui_action_queue_active_v1','ui_inventory_items','ui_recent_erp_audit']) assert.ok(source.includes(contract), `ERP UI keeps backend contract ${contract}`);
   assert.ok(!source.includes('ui_hpp_blockers'), 'active owner dashboard must not read the retired HPP blocker surface');
   assert.ok(!source.includes('Produk siap HPP') && !source.includes('Kesiapan HPP'), 'active owner dashboard must not render retired HPP controls');
   assert.ok(source.includes('total_purchase_expense') && source.includes('profit_after_tax'), 'owner dashboard uses Purchase-basis expense and profit fields');
@@ -107,6 +107,7 @@ async function renderFixture(data, error) {
   const window = {__HASNARIA_CONTEXT:{brandId:'hasnaria',userId:'owner',role:'owner'},__HASNARIA_DB:{rpc(name) {
     calls++;
     if(name==='get_ui_bootstrap_v6')return {abortSignal:async()=>({data:bootstrapData,error})};
+    if(name==='get_ui_action_summary_v1')return {abortSignal:async()=>({data:{total:data?.owner?.total_open_actions??null,high:data?.owner?.high_priority_actions??null,top_actions:data?.top_actions||[]},error:null})};
     if(name==='get_ui_monthly_trend_v1')return {abortSignal:async()=>({data:(data&&data.monthly_trend)||[],error:null})};
     throw new Error('Unexpected ERP fixture RPC: '+name);
   }}};
@@ -120,7 +121,7 @@ async function renderFixture(data, error) {
   assertShellIntegration();
   assertActionContracts();
   const empty = await renderFixture({owner:{brand_id:'hasnaria'},monthly_trend:[{month:'2026-09-01',total_purchase_expense:null,profit_after_tax:null}]});
-  assert.equal(empty.calls,2);
+  assert.equal(empty.calls,3);
   assert.match(empty.html,/Belum tersedia/);
   assert.doesNotMatch(empty.html,/Rp0/);
   assert.match(empty.html,/basis Pembelian/i);
