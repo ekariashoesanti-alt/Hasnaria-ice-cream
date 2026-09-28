@@ -10,229 +10,54 @@ var AUTH_KEY='hasnaria-auth-v2';
 var db=null,context=null,contextToken='',ctxLoading=null,overlayState=null,observer=null;
 var ownerSupervisorState=null,ownerSupervisorRows=[],ownerSupervisorLoading=false;
 
-function client(){
-  if(db)return db;
-  if(!window.supabase)return null;
-  db=window.supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false,storageKey:AUTH_KEY}});
-  return db;
-}
+function client(){if(db)return db;if(!window.supabase)return null;db=window.supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false,storageKey:AUTH_KEY}});return db}
 function token(){try{return localStorage.getItem(TOKEN_KEY)||''}catch(_){return''}}
 function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
-function rp(v){try{return new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',maximumFractionDigits:0}).format(Number(v||0))}catch(_){return 'Rp '+Math.round(Number(v||0)).toLocaleString('id-ID')}}
+function rp(v){try{return new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',maximumFractionDigits:0}).format(Number(v||0))}catch(_){return'Rp '+Math.round(Number(v||0)).toLocaleString('id-ID')}}
 function num(v){try{return new Intl.NumberFormat('id-ID',{maximumFractionDigits:2}).format(Number(v||0))}catch(_){return String(Number(v||0))}}
-function jakartaDate(){
-  try{
-    var parts=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Jakarta',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());
-    var out={};parts.forEach(function(x){out[x.type]=x.value});
-    return out.year+'-'+out.month+'-'+out.day;
-  }catch(_){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
-}
-function today(){return jakartaDate()}
+function today(){try{var parts=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Jakarta',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date()),out={};parts.forEach(function(x){out[x.type]=x.value});return out.year+'-'+out.month+'-'+out.day}catch(_){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}}
 function statusLabel(s){return({draft:'Draft',submitted:'Menunggu Supervisor',revision_required:'Perlu Revisi',approved:'Disetujui',rejected:'Ditolak',posted:'Posted'})[s]||s||'Draft'}
 function statusClass(s){if(s==='approved')return'approved';if(s==='revision_required'||s==='submitted')return'wait';if(s==='rejected')return'bad';return''}
 async function rpc(name,args){var c=client();if(!c)throw new Error('Layanan data belum siap');var r=await c.rpc(name,args||{});if(r.error)throw r.error;return r.data}
-async function loadContext(force){
-  var t=token();
-  if(!t){context=null;contextToken='';return null}
-  if(context&&contextToken===t&&!force)return context;
-  if(ctxLoading)return ctxLoading;
-  ctxLoading=rpc('staff_session_context_v2',{p_token:t}).then(function(data){
-    var x=Array.isArray(data)?data[0]:data;
-    if(!x){context=null;contextToken='';return null}
-    context={employeeId:x.employee_id,fullName:x.full_name,brandId:x.brand_id,outletId:x.outlet_id,modules:x.modules||[],expiresAt:x.expires_at,isSupervisor:!!x.is_supervisor};
-    contextToken=t;
-    return context;
-  }).catch(function(){context=null;contextToken='';return null}).finally(function(){ctxLoading=null});
-  return ctxLoading;
-}
-function hasModule(m){return !!(context&&context.modules&&context.modules.indexOf(m)>=0)}
+
+async function loadContext(force){var t=token();if(!t){context=null;contextToken='';return null}if(context&&contextToken===t&&!force)return context;if(ctxLoading)return ctxLoading;ctxLoading=rpc('staff_session_context_v2',{p_token:t}).then(function(data){var x=Array.isArray(data)?data[0]:data;if(!x){context=null;contextToken='';return null}context={employeeId:x.employee_id,fullName:x.full_name,brandId:x.brand_id,outletId:x.outlet_id,modules:x.modules||[],expiresAt:x.expires_at,isSupervisor:!!x.is_supervisor};contextToken=t;return context}).catch(function(){context=null;contextToken='';return null}).finally(function(){ctxLoading=null});return ctxLoading}
+function hasModule(m){return!!(context&&context.modules&&context.modules.indexOf(m)>=0)}
 function closeOverlay(){var x=document.getElementById('hswOverlay');if(x)x.remove();overlayState=null}
 function msg(text,error){if(!overlayState)return;overlayState.msg=text||'';overlayState.error=!!error;renderOverlay()}
-async function loadDay(module){
-  var t=token();if(!t)throw new Error('Sesi staff sudah berakhir');
-  var data=await rpc('staff_daily_context_v1',{p_token:t,p_date:today()});
-  overlayState=overlayState||{};
-  overlayState.module=module||overlayState.module||'kasir';
-  overlayState.day=data||{status:'draft',purchases:[],stock:[]};
-  overlayState.msg='';overlayState.error=false;
-  if(overlayState.module==='gudang'&&!overlayState.inventory){
-    var opts=await rpc('staff_inventory_options_v1',{p_token:t});
-    overlayState.inventory=Array.isArray(opts)?opts:[];
-  }
-  renderOverlay();
-}
+async function loadDay(module){var t=token();if(!t)throw new Error('Sesi staff sudah berakhir');var data=await rpc('staff_daily_context_v1',{p_token:t,p_date:today()});overlayState=overlayState||{};overlayState.module=module||overlayState.module||'kasir';overlayState.day=data||{status:'draft',purchases:[],stock:[]};overlayState.msg='';overlayState.error=false;if(overlayState.module==='gudang'&&!overlayState.inventory){var opts=await rpc('staff_inventory_options_v1',{p_token:t});overlayState.inventory=Array.isArray(opts)?opts:[]}renderOverlay()}
 function dayEditable(){var s=overlayState&&overlayState.day&&overlayState.day.status;return !s||s==='draft'||s==='revision_required'}
-function top(){return '<div class="hsw-top"><div><h1>'+esc(overlayState.module==='kasir'?'Operasional Kasir':'Operasional Gudang')+'</h1><p>'+esc(context&&context.fullName||'Staff')+' · '+esc(today())+'</p></div><button class="hsw-icon-btn" data-hsw="close">Tutup</button></div>'}
-function statusBar(){var d=overlayState.day||{},s=d.status||'draft';return '<div class="hsw-status"><div><b>Status Hari Ini</b><span>'+esc(d.review_reason||'Data operasional harian')+'</span></div><i class="hsw-pill '+statusClass(s)+'">'+esc(statusLabel(s))+'</i></div>'}
-function nav(){return '<div class="hsw-nav"><button class="'+(overlayState.module==='kasir'?'on':'')+'" data-hsw-mod="kasir">Kasir</button><button class="'+(overlayState.module==='gudang'?'on':'')+'" data-hsw-mod="gudang">Gudang</button><button data-hsw="refresh">Refresh</button></div>'}
+function top(){return'<div class="hsw-top"><div><h1>'+esc(overlayState.module==='kasir'?'Operasional Kasir':'Operasional Gudang')+'</h1><p>'+esc(context&&context.fullName||'Staff')+' · '+esc(today())+'</p></div><button class="hsw-icon-btn" data-hsw="close">Tutup</button></div>'}
+function statusBar(){var d=overlayState.day||{},s=d.status||'draft';return'<div class="hsw-status"><div><b>Status Hari Ini</b><span>'+esc(d.review_reason||'Data operasional harian')+'</span></div><i class="hsw-pill '+statusClass(s)+'">'+esc(statusLabel(s))+'</i></div>'}
+function nav(){return'<div class="hsw-nav"><button class="'+(overlayState.module==='kasir'?'on':'')+'" data-hsw-mod="kasir">Kasir</button><button class="'+(overlayState.module==='gudang'?'on':'')+'" data-hsw-mod="gudang">Gudang</button><button data-hsw="refresh">Refresh</button></div>'}
 function message(){return overlayState.msg?'<div class="hsw-msg '+(overlayState.error?'error':'')+'">'+esc(overlayState.msg)+'</div>':''}
-function salesCard(){
-  var d=overlayState.day||{},s=d.sales||{},edit=dayEditable();
-  var total=Number(s.cash_amount||0)+Number(s.qris_amount||0)+Number(s.transfer_amount||0);
-  return '<div class="hsw-card"><h2>Penjualan Hari Ini</h2><p>Isi rekap, bukan transaksi satu per satu. Total dihitung dari payment mix.</p><div class="hsw-kpis"><div class="hsw-kpi"><span>Total</span><strong>'+rp(total)+'</strong></div><div class="hsw-kpi"><span>Transaksi</span><strong>'+num(s.transaction_count||0)+'</strong></div><div class="hsw-kpi"><span>Status</span><strong>'+esc(statusLabel(d.status))+'</strong></div></div><div class="hsw-grid"><label class="hsw-field"><span>Jumlah transaksi</span><input id="hswTx" type="number" min="1" value="'+esc(s.transaction_count||'')+'" '+(edit?'':'disabled')+'></label><label class="hsw-field"><span>Cash</span><input id="hswCash" type="number" min="0" value="'+esc(s.cash_amount||0)+'" '+(edit?'':'disabled')+'></label><label class="hsw-field"><span>QRIS</span><input id="hswQris" type="number" min="0" value="'+esc(s.qris_amount||0)+'" '+(edit?'':'disabled')+'></label><label class="hsw-field"><span>Transfer</span><input id="hswTf" type="number" min="0" value="'+esc(s.transfer_amount||0)+'" '+(edit?'':'disabled')+'></label><label class="hsw-field full"><span>Catatan</span><textarea id="hswSalesNotes" '+(edit?'':'disabled')+'>'+esc(s.notes||'')+'</textarea></label></div>'+(edit?'<div class="hsw-actions"><button class="hsw-btn primary" data-hsw="save-sales">Simpan Rekap</button></div>':'')+'</div>';
-}
-function purchaseCard(){
-  var rows=(overlayState.day&&overlayState.day.purchases)||[],edit=dayEditable();
-  return '<div class="hsw-card"><h2>Pembelian</h2><p>Nilai rupiah menjadi beban. Barang stockable menambah quantity stok setelah Supervisor menyetujui dan memposting data.</p>'+(edit?'<div class="hsw-grid"><label class="hsw-field full"><span>Item</span><input id="hswPItem" placeholder="Nama barang"></label><label class="hsw-field"><span>Qty</span><input id="hswPQty" type="number" min="0.001" step="any"></label><label class="hsw-field"><span>Satuan</span><input id="hswPUnit" placeholder="pcs / kg / liter"></label><label class="hsw-field"><span>Harga satuan</span><input id="hswPPrice" type="number" min="0"></label><label class="hsw-field"><span>Total</span><input id="hswPTotal" type="number" min="0" placeholder="otomatis bila kosong"></label><label class="hsw-field"><span>Pembayaran</span><select id="hswPPay"><option value="">Belum ditentukan</option><option>CASH</option><option>QRIS</option><option>TRANSFER</option><option>UTANG</option></select></label><label class="hsw-field full"><span>Catatan</span><input id="hswPNotes"></label></div><div class="hsw-actions"><button class="hsw-btn primary" data-hsw="add-purchase">Tambah Pembelian</button></div>':'')+'<div class="hsw-list hsw-list-spaced">'+(rows.length?rows.map(function(x){return '<div class="hsw-row"><div><b>'+esc(x.item_name)+'</b><small>'+num(x.quantity)+' '+esc(x.unit_text||'')+' · '+esc(x.payment_method||'provisional')+'</small></div><div class="hsw-row-actions"><span class="amt">'+rp(x.total_amount)+'</span>'+(edit?'<button class="hsw-mini" data-hsw-remove-purchase="'+esc(x.id)+'">Hapus</button>':'')+'</div></div>'}).join(''):'<div class="hsw-empty">Belum ada pembelian hari ini.</div>')+'</div></div>';
-}
-function stockCard(){
-  var rows=(overlayState.day&&overlayState.day.stock)||[],items=overlayState.inventory||[],edit=dayEditable();
-  return '<div class="hsw-card"><h2>Gudang & Stok</h2><p>Catat hanya waste, adjustment, atau koreksi opname. Penerimaan Pembelian diposting otomatis setelah validasi Supervisor selesai.</p>'+(edit?'<div class="hsw-grid"><label class="hsw-field full"><span>Item stok</span><select id="hswSItem"><option value="">Pilih item</option>'+items.map(function(x){return '<option value="'+esc(x.inventory_item_id)+'">'+esc(x.item_name)+' · '+num(x.ledger_qty)+' '+esc(x.unit||'')+'</option>'}).join('')+'</select></label><label class="hsw-field"><span>Jenis</span><select id="hswSType"><option value="WASTE">Waste</option><option value="ADJUSTMENT">Adjustment</option><option value="OPNAME_CORRECTION">Koreksi Opname</option></select></label><label class="hsw-field"><span>Qty perubahan (+/-)</span><input id="hswSQty" type="number" step="any"></label><label class="hsw-field full"><span>Catatan</span><input id="hswSNotes" placeholder="Alasan perubahan"></label></div><div class="hsw-actions"><button class="hsw-btn primary" data-hsw="add-stock">Tambah Pergerakan</button></div>':'')+'<div class="hsw-list hsw-list-spaced">'+(rows.length?rows.map(function(x){return '<div class="hsw-row"><div><b>'+esc(x.item_name)+'</b><small>'+esc(x.movement_type)+' · '+esc(x.notes||'')+'</small></div><div class="hsw-row-actions"><span class="amt">'+num(x.qty_delta)+'</span>'+(edit?'<button class="hsw-mini" data-hsw-remove-stock="'+esc(x.id)+'">Hapus</button>':'')+'</div></div>'}).join(''):'<div class="hsw-empty">Belum ada perubahan stok hari ini.</div>')+'</div></div>';
-}
-function submitBar(){
-  var d=overlayState.day||{},s=d.status||'draft',edit=dayEditable();
-  if(s==='posted')return '<div class="hsw-submit"><div><b>Hari ini sudah Posted</b><span>Data resmi sudah masuk Sales / Purchase / Stok.</span></div><i class="hsw-pill">Selesai</i></div>';
-  if(s==='approved')return '<div class="hsw-submit"><div><b>Sudah disetujui Supervisor</b><span>Menunggu Supervisor memposting data ke sistem.</span></div><i class="hsw-pill approved">Approved</i></div>';
-  if(s==='submitted')return '<div class="hsw-submit"><div><b>Menunggu Supervisor</b><span>Entry terkunci sampai diputuskan.</span></div><i class="hsw-pill wait">Submitted</i></div>';
-  if(s==='rejected')return '<div class="hsw-submit"><div><b>Entry ditolak</b><span>'+esc(d.review_reason||'Hubungi Supervisor/Owner')+'</span></div><i class="hsw-pill bad">Ditolak</i></div>';
-  return '<div class="hsw-submit"><div><b>'+(s==='revision_required'?'Perbaiki lalu kirim ulang':'Selesai mengisi?')+'</b><span>'+esc(d.review_reason||'Supervisor akan memvalidasi data hari ini.')+'</span></div><button class="hsw-btn primary" data-hsw="submit" '+(edit?'':'disabled')+'>Submit Hari Ini</button></div>';
-}
+function salesCard(){var d=overlayState.day||{},s=d.sales||{},edit=dayEditable(),total=Number(s.cash_amount||0)+Number(s.qris_amount||0)+Number(s.transfer_amount||0);return'<div class="hsw-card"><h2>Penjualan Hari Ini</h2><p>Isi rekap, bukan transaksi satu per satu. Total dihitung dari payment mix.</p><div class="hsw-kpis"><div class="hsw-kpi"><span>Total</span><strong>'+rp(total)+'</strong></div><div class="hsw-kpi"><span>Transaksi</span><strong>'+num(s.transaction_count||0)+'</strong></div><div class="hsw-kpi"><span>Status</span><strong>'+esc(statusLabel(d.status))+'</strong></div></div><div class="hsw-grid"><label class="hsw-field"><span>Jumlah transaksi</span><input id="hswTx" type="number" min="1" value="'+esc(s.transaction_count||'')+'" '+(edit?'':'disabled')+'></label><label class="hsw-field"><span>Cash</span><input id="hswCash" type="number" min="0" value="'+esc(s.cash_amount||0)+'" '+(edit?'':'disabled')+'></label><label class="hsw-field"><span>QRIS</span><input id="hswQris" type="number" min="0" value="'+esc(s.qris_amount||0)+'" '+(edit?'':'disabled')+'></label><label class="hsw-field"><span>Transfer</span><input id="hswTf" type="number" min="0" value="'+esc(s.transfer_amount||0)+'" '+(edit?'':'disabled')+'></label><label class="hsw-field full"><span>Catatan</span><textarea id="hswSalesNotes" '+(edit?'':'disabled')+'>'+esc(s.notes||'')+'</textarea></label></div>'+(edit?'<div class="hsw-actions"><button class="hsw-btn primary" data-hsw="save-sales">Simpan Rekap</button></div>':'')+'</div>'}
+function purchaseCard(){var rows=(overlayState.day&&overlayState.day.purchases)||[],edit=dayEditable();return'<div class="hsw-card"><h2>Pembelian</h2><p>Nilai rupiah menjadi beban. Barang stockable menambah quantity stok setelah Supervisor menyetujui dan memposting data.</p>'+(edit?'<div class="hsw-grid"><label class="hsw-field full"><span>Item</span><input id="hswPItem" placeholder="Nama barang"></label><label class="hsw-field"><span>Qty</span><input id="hswPQty" type="number" min="0.001" step="any"></label><label class="hsw-field"><span>Satuan</span><input id="hswPUnit" placeholder="pcs / kg / liter"></label><label class="hsw-field"><span>Harga satuan</span><input id="hswPPrice" type="number" min="0"></label><label class="hsw-field"><span>Total</span><input id="hswPTotal" type="number" min="0" placeholder="otomatis bila kosong"></label><label class="hsw-field"><span>Pembayaran</span><select id="hswPPay"><option value="">Belum ditentukan</option><option>CASH</option><option>QRIS</option><option>TRANSFER</option><option>UTANG</option></select></label><label class="hsw-field full"><span>Catatan</span><input id="hswPNotes"></label></div><div class="hsw-actions"><button class="hsw-btn primary" data-hsw="add-purchase">Tambah Pembelian</button></div>':'')+'<div class="hsw-list hsw-list-spaced">'+(rows.length?rows.map(function(x){return'<div class="hsw-row"><div><b>'+esc(x.item_name)+'</b><small>'+num(x.quantity)+' '+esc(x.unit_text||'')+' · '+esc(x.payment_method||'provisional')+'</small></div><div class="hsw-row-actions"><span class="amt">'+rp(x.total_amount)+'</span>'+(edit?'<button class="hsw-mini" data-hsw-remove-purchase="'+esc(x.id)+'">Hapus</button>':'')+'</div></div>'}).join(''):'<div class="hsw-empty">Belum ada pembelian hari ini.</div>')+'</div></div>'}
+function stockCard(){var rows=(overlayState.day&&overlayState.day.stock)||[],items=overlayState.inventory||[],edit=dayEditable();return'<div class="hsw-card"><h2>Gudang & Stok</h2><p>Catat hanya waste, adjustment, atau koreksi opname. Penerimaan Pembelian diposting otomatis setelah validasi Supervisor selesai.</p>'+(edit?'<div class="hsw-grid"><label class="hsw-field full"><span>Item stok</span><select id="hswSItem"><option value="">Pilih item</option>'+items.map(function(x){return'<option value="'+esc(x.inventory_item_id)+'">'+esc(x.item_name)+' · '+num(x.ledger_qty)+' '+esc(x.unit||'')+'</option>'}).join('')+'</select></label><label class="hsw-field"><span>Jenis</span><select id="hswSType"><option value="WASTE">Waste</option><option value="ADJUSTMENT">Adjustment</option><option value="OPNAME_CORRECTION">Koreksi Opname</option></select></label><label class="hsw-field"><span>Qty perubahan (+/-)</span><input id="hswSQty" type="number" step="any"></label><label class="hsw-field full"><span>Catatan</span><input id="hswSNotes" placeholder="Alasan perubahan"></label></div><div class="hsw-actions"><button class="hsw-btn primary" data-hsw="add-stock">Tambah Pergerakan</button></div>':'')+'<div class="hsw-list hsw-list-spaced">'+(rows.length?rows.map(function(x){return'<div class="hsw-row"><div><b>'+esc(x.item_name)+'</b><small>'+esc(x.movement_type)+' · '+esc(x.notes||'')+'</small></div><div class="hsw-row-actions"><span class="amt">'+num(x.qty_delta)+'</span>'+(edit?'<button class="hsw-mini" data-hsw-remove-stock="'+esc(x.id)+'">Hapus</button>':'')+'</div></div>'}).join(''):'<div class="hsw-empty">Belum ada perubahan stok hari ini.</div>')+'</div></div>'}
+function submitBar(){var d=overlayState.day||{},s=d.status||'draft',edit=dayEditable();if(s==='posted')return'<div class="hsw-submit"><div><b>Hari ini sudah Posted</b><span>Data resmi sudah masuk Sales / Purchase / Stok.</span></div><i class="hsw-pill">Selesai</i></div>';if(s==='approved')return'<div class="hsw-submit"><div><b>Sudah disetujui Supervisor</b><span>Menunggu Supervisor memposting data ke sistem.</span></div><i class="hsw-pill approved">Approved</i></div>';if(s==='submitted')return'<div class="hsw-submit"><div><b>Menunggu Supervisor</b><span>Entry terkunci sampai diputuskan.</span></div><i class="hsw-pill wait">Submitted</i></div>';if(s==='rejected')return'<div class="hsw-submit"><div><b>Entry ditolak</b><span>'+esc(d.review_reason||'Hubungi Supervisor/Owner')+'</span></div><i class="hsw-pill bad">Ditolak</i></div>';return'<div class="hsw-submit"><div><b>'+(s==='revision_required'?'Perbaiki lalu kirim ulang':'Selesai mengisi?')+'</b><span>'+esc(d.review_reason||'Supervisor akan memvalidasi data hari ini.')+'</span></div><button class="hsw-btn primary" data-hsw="submit" '+(edit?'':'disabled')+'>Submit Hari Ini</button></div>'}
 function renderOverlay(){var root=document.getElementById('hswOverlay');if(!root||!overlayState)return;root.innerHTML='<div class="hsw-shell">'+top()+statusBar()+nav()+message()+(overlayState.module==='kasir'?(salesCard()+purchaseCard()):stockCard())+'</div>'+submitBar()}
-async function openWorkflow(module){
-  if(module==='kasir'&&!hasModule('kasir'))return;
-  if(module==='gudang'&&!hasModule('gudang'))return;
-  closeOverlay();
-  var x=document.createElement('div');x.id='hswOverlay';x.className='hsw-overlay';
-  x.innerHTML='<div class="hsw-shell"><div class="hsw-top"><div><h1>Memuat operasional…</h1><p>'+esc(today())+'</p></div><button class="hsw-icon-btn" data-hsw="close">Tutup</button></div></div>';
-  document.body.appendChild(x);
-  overlayState={module:module,day:{status:'draft',purchases:[],stock:[]},inventory:null,msg:'',error:false};
-  try{await loadDay(module)}catch(e){msg(e.message||e,true)}
-}
+async function openWorkflow(module){if(module==='kasir'&&!hasModule('kasir'))return;if(module==='gudang'&&!hasModule('gudang'))return;closeOverlay();var x=document.createElement('div');x.id='hswOverlay';x.className='hsw-overlay';x.innerHTML='<div class="hsw-shell"><div class="hsw-top"><div><h1>Memuat operasional…</h1><p>'+esc(today())+'</p></div><button class="hsw-icon-btn" data-hsw="close">Tutup</button></div></div>';document.body.appendChild(x);overlayState={module:module,day:{status:'draft',purchases:[],stock:[]},inventory:null,msg:'',error:false};try{await loadDay(module)}catch(e){msg(e.message||e,true)}}
 async function saveSales(){var tx=Number(document.getElementById('hswTx').value||0),cash=Number(document.getElementById('hswCash').value||0),qris=Number(document.getElementById('hswQris').value||0),tf=Number(document.getElementById('hswTf').value||0),notes=document.getElementById('hswSalesNotes').value||'';await rpc('staff_daily_save_sales_v1',{p_token:token(),p_date:today(),p_transaction_count:tx,p_cash:cash,p_qris:qris,p_transfer:tf,p_notes:notes||null});await loadDay('kasir');msg('Rekap penjualan tersimpan.',false)}
 async function addPurchase(){var item=document.getElementById('hswPItem').value.trim(),qty=Number(document.getElementById('hswPQty').value||0),unit=document.getElementById('hswPUnit').value.trim(),price=Number(document.getElementById('hswPPrice').value||0),totalRaw=document.getElementById('hswPTotal').value,total=totalRaw===''?qty*price:Number(totalRaw||0),pay=document.getElementById('hswPPay').value,notes=document.getElementById('hswPNotes').value.trim();await rpc('staff_daily_add_purchase_v1',{p_token:token(),p_date:today(),p_item_name:item,p_quantity:qty,p_unit_text:unit||null,p_unit_price:price||null,p_total_amount:total,p_payment_method:pay||null,p_notes:notes||null});await loadDay('kasir');msg('Pembelian ditambahkan.',false)}
 async function addStock(){var item=document.getElementById('hswSItem').value,type=document.getElementById('hswSType').value,qty=Number(document.getElementById('hswSQty').value||0),notes=document.getElementById('hswSNotes').value.trim();await rpc('staff_daily_add_stock_v1',{p_token:token(),p_date:today(),p_inventory_item_id:item,p_movement_type:type,p_qty_delta:qty,p_notes:notes||null});await loadDay('gudang');msg('Pergerakan stok ditambahkan.',false)}
 async function submitDay(){await rpc('staff_daily_submit_v1',{p_token:token(),p_date:today()});await loadDay(overlayState.module);msg('Data hari ini dikirim ke Supervisor.',false)}
 
 function closeSupervisor(){var x=document.getElementById('hswSupervisorModal');if(x)x.remove()}
-function queueActions(x){
-  if(x.status==='submitted')return '<div class="hsw-actions"><button class="hsw-btn primary" data-hsw-decision="approve" data-batch="'+esc(x.batch_id)+'">Setujui</button><button class="hsw-btn warn" data-hsw-decision="revision" data-batch="'+esc(x.batch_id)+'">Minta Revisi</button><button class="hsw-btn danger" data-hsw-decision="reject" data-batch="'+esc(x.batch_id)+'">Tolak</button></div>';
-  if(x.status==='approved')return '<div class="hsw-actions"><button class="hsw-btn primary" data-hsw-post="'+esc(x.batch_id)+'">Post ke Sistem</button></div>';
-  return '';
-}
-async function openSupervisor(){
-  closeSupervisor();
-  var back=document.createElement('div');back.id='hswSupervisorModal';back.className='hsw-modal-back';
-  back.innerHTML='<div class="hsw-modal"><div class="hsw-modal-head"><div><h2>Validasi Hari Ini</h2><small>Setujui dulu, lalu posting sebagai langkah terpisah.</small></div><button class="hsw-icon-btn" data-hsw-super="close">Tutup</button></div><div id="hswSupervisorBody"><div class="hsw-empty">Memuat antrean…</div></div></div>';
-  document.body.appendChild(back);
-  try{var rows=await rpc('staff_supervisor_queue_v1',{p_token:token(),p_date:today()});renderSupervisor(Array.isArray(rows)?rows:[])}catch(e){var body=document.getElementById('hswSupervisorBody');if(body)body.innerHTML='<div class="hsw-msg error">'+esc(e.message||e)+'</div>'}
-}
-function renderSupervisor(rows){
-  var body=document.getElementById('hswSupervisorBody');if(!body)return;
-  body.innerHTML=rows.length?rows.map(function(x){return '<div class="hsw-queue-card"><div class="hsw-queue-head"><div><h3>'+esc(x.full_name)+'</h3><p>'+esc(statusLabel(x.status))+' · '+esc(x.business_date)+'</p></div><i class="hsw-pill '+statusClass(x.status)+'">'+esc(statusLabel(x.status))+'</i></div><div class="hsw-queue-meta"><div><span>Penjualan</span><b>'+rp(x.sales_total)+'</b></div><div><span>Pembelian</span><b>'+rp(x.purchase_total)+'</b></div><div><span>Stok</span><b>'+num(x.stock_count)+' entry</b></div></div>'+(x.review_reason?'<p>Catatan: '+esc(x.review_reason)+'</p>':'')+'<div class="hsw-actions"><button class="hsw-btn" data-hsw-detail="'+esc(x.batch_id)+'">Lihat Detail</button></div>'+queueActions(x)+'</div>'}).join(''):'<div class="hsw-empty">Tidak ada entry staff untuk divalidasi hari ini.</div>';
-}
-async function decide(action,batch){
-  var reason=null;
-  if(action!=='approve'){reason=prompt(action==='revision'?'Alasan revisi:':'Alasan penolakan:')||'';if(!reason.trim())return}
-  await rpc('staff_supervisor_decide_v1',{p_token:token(),p_batch_id:batch,p_action:action,p_reason:reason||null});
-  await openSupervisor();
-}
-async function postApproved(batch){
-  await rpc('staff_supervisor_post_approved_v1',{p_token:token(),p_batch_id:batch});
-  await openSupervisor();
-}
-function renderDetail(data){
-  var sales=data.sales||{},purchases=data.purchases||[],stock=data.stock||[];
-  var salesHtml=data.sales?'<div class="hsw-detail-grid"><div><span>Total Penjualan</span><b>'+rp(sales.total_amount)+'</b></div><div><span>Transaksi</span><b>'+num(sales.transaction_count)+'</b></div><div><span>Cash</span><b>'+rp(sales.cash_amount)+'</b></div><div><span>QRIS</span><b>'+rp(sales.qris_amount)+'</b></div><div><span>Transfer</span><b>'+rp(sales.transfer_amount)+'</b></div></div>'+(sales.notes?'<p class="hsw-detail-note">'+esc(sales.notes)+'</p>'):'<div class="hsw-empty">Tidak ada rekap penjualan.</div>';
-  var purchaseHtml=purchases.length?purchases.map(function(x){return '<div class="hsw-row"><div><b>'+esc(x.item_name)+'</b><small>'+num(x.quantity)+' '+esc(x.unit_text||'')+' · '+esc(x.payment_method||'belum ditentukan')+'</small></div><span class="amt">'+rp(x.total_amount)+'</span></div>'}).join(''):'<div class="hsw-empty">Tidak ada pembelian.</div>';
-  var stockHtml=stock.length?stock.map(function(x){return '<div class="hsw-row"><div><b>'+esc(x.item_name)+'</b><small>'+esc(x.movement_type)+' · '+esc(x.notes||'')+'</small></div><span class="amt">'+num(x.qty_delta)+'</span></div>'}).join(''):'<div class="hsw-empty">Tidak ada pergerakan stok.</div>';
-  return '<div class="hsw-detail-head"><div><h3>'+esc(data.full_name||'Staff')+'</h3><p>'+esc(data.business_date)+' · '+esc(statusLabel(data.status))+'</p></div><i class="hsw-pill '+statusClass(data.status)+'">'+esc(statusLabel(data.status))+'</i></div><section class="hsw-detail-section"><h3>Penjualan</h3>'+salesHtml+'</section><section class="hsw-detail-section"><h3>Pembelian</h3><div class="hsw-list">'+purchaseHtml+'</div></section><section class="hsw-detail-section"><h3>Stok</h3><div class="hsw-list">'+stockHtml+'</div></section>'+(data.review_reason?'<div class="hsw-msg">Catatan validasi: '+esc(data.review_reason)+'</div>':'')+queueActions(data);
-}
-async function openSupervisorDetail(batch){
-  var body=document.getElementById('hswSupervisorBody');if(!body)return;
-  body.innerHTML='<div class="hsw-empty">Memuat detail…</div>';
-  try{
-    var data=await rpc('staff_supervisor_batch_detail_v1',{p_token:token(),p_batch_id:batch});
-    body.innerHTML='<div class="hsw-actions hsw-actions-top"><button class="hsw-btn" data-hsw-super="open">← Kembali ke Antrean</button></div>'+renderDetail(data||{});
-  }catch(e){body.innerHTML='<div class="hsw-msg error">'+esc(e.message||e)+'</div><div class="hsw-actions"><button class="hsw-btn" data-hsw-super="open">Kembali</button></div>'}
-}
-function ensureSupervisorFab(){
-  var old=document.getElementById('hswSupervisorFab');
-  if(!context||!context.isSupervisor||document.querySelector('#staffRoot .owner-mobile-nav')){if(old)old.remove();return}
-  if(old)return;
-  var b=document.createElement('button');b.id='hswSupervisorFab';b.className='hsw-supervisor-fab';b.type='button';b.setAttribute('data-hsw-super','open');b.textContent='Validasi Hari Ini';document.body.appendChild(b);
-}
+function queueActions(x){if(x.status==='submitted')return'<div class="hsw-actions"><button class="hsw-btn primary" data-hsw-decision="approve" data-batch="'+esc(x.batch_id)+'">Setujui</button><button class="hsw-btn warn" data-hsw-decision="revision" data-batch="'+esc(x.batch_id)+'">Minta Revisi</button><button class="hsw-btn danger" data-hsw-decision="reject" data-batch="'+esc(x.batch_id)+'">Tolak</button></div>';if(x.status==='approved')return'<div class="hsw-actions"><button class="hsw-btn primary" data-hsw-post="'+esc(x.batch_id)+'">Post ke Sistem</button></div>';return''}
+async function openSupervisor(){closeSupervisor();var back=document.createElement('div');back.id='hswSupervisorModal';back.className='hsw-modal-back';back.innerHTML='<div class="hsw-modal"><div class="hsw-modal-head"><div><h2>Validasi Hari Ini</h2><small>Setujui dulu, lalu posting sebagai langkah terpisah.</small></div><button class="hsw-icon-btn" data-hsw-super="close">Tutup</button></div><div id="hswSupervisorBody"><div class="hsw-empty">Memuat antrean…</div></div></div>';document.body.appendChild(back);try{var rows=await rpc('staff_supervisor_queue_v1',{p_token:token(),p_date:today()});renderSupervisor(Array.isArray(rows)?rows:[])}catch(e){var body=document.getElementById('hswSupervisorBody');if(body)body.innerHTML='<div class="hsw-msg error">'+esc(e.message||e)+'</div>'}}
+function renderSupervisor(rows){var body=document.getElementById('hswSupervisorBody');if(!body)return;body.innerHTML=rows.length?rows.map(function(x){return'<div class="hsw-queue-card"><div class="hsw-queue-head"><div><h3>'+esc(x.full_name)+'</h3><p>'+esc(statusLabel(x.status))+' · '+esc(x.business_date)+'</p></div><i class="hsw-pill '+statusClass(x.status)+'">'+esc(statusLabel(x.status))+'</i></div><div class="hsw-queue-meta"><div><span>Penjualan</span><b>'+rp(x.sales_total)+'</b></div><div><span>Pembelian</span><b>'+rp(x.purchase_total)+'</b></div><div><span>Stok</span><b>'+num(x.stock_count)+' entry</b></div></div>'+(x.review_reason?'<p>Catatan: '+esc(x.review_reason)+'</p>':'')+'<div class="hsw-actions"><button class="hsw-btn" data-hsw-detail="'+esc(x.batch_id)+'">Lihat Detail</button></div>'+queueActions(x)+'</div>'}).join(''):'<div class="hsw-empty">Tidak ada entry staff untuk divalidasi hari ini.</div>'}
+async function decide(action,batch){var reason=null;if(action!=='approve'){reason=prompt(action==='revision'?'Alasan revisi:':'Alasan penolakan:')||'';if(!reason.trim())return}await rpc('staff_supervisor_decide_v1',{p_token:token(),p_batch_id:batch,p_action:action,p_reason:reason||null});await openSupervisor()}
+async function postApproved(batch){await rpc('staff_supervisor_post_approved_v1',{p_token:token(),p_batch_id:batch});await openSupervisor()}
+function renderDetail(data){var sales=data.sales||{},purchases=data.purchases||[],stock=data.stock||[];var salesHtml;if(data.sales){salesHtml='<div class="hsw-detail-grid"><div><span>Total Penjualan</span><b>'+rp(sales.total_amount)+'</b></div><div><span>Transaksi</span><b>'+num(sales.transaction_count)+'</b></div><div><span>Cash</span><b>'+rp(sales.cash_amount)+'</b></div><div><span>QRIS</span><b>'+rp(sales.qris_amount)+'</b></div><div><span>Transfer</span><b>'+rp(sales.transfer_amount)+'</b></div></div>'+(sales.notes?'<p class="hsw-detail-note">'+esc(sales.notes)+'</p>':'')}else{salesHtml='<div class="hsw-empty">Tidak ada rekap penjualan.</div>'}var purchaseHtml=purchases.length?purchases.map(function(x){return'<div class="hsw-row"><div><b>'+esc(x.item_name)+'</b><small>'+num(x.quantity)+' '+esc(x.unit_text||'')+' · '+esc(x.payment_method||'belum ditentukan')+'</small></div><span class="amt">'+rp(x.total_amount)+'</span></div>'}).join(''):'<div class="hsw-empty">Tidak ada pembelian.</div>';var stockHtml=stock.length?stock.map(function(x){return'<div class="hsw-row"><div><b>'+esc(x.item_name)+'</b><small>'+esc(x.movement_type)+' · '+esc(x.notes||'')+'</small></div><span class="amt">'+num(x.qty_delta)+'</span></div>'}).join(''):'<div class="hsw-empty">Tidak ada pergerakan stok.</div>';return'<div class="hsw-detail-head"><div><h3>'+esc(data.full_name||'Staff')+'</h3><p>'+esc(data.business_date)+' · '+esc(statusLabel(data.status))+'</p></div><i class="hsw-pill '+statusClass(data.status)+'">'+esc(statusLabel(data.status))+'</i></div><section class="hsw-detail-section"><h3>Penjualan</h3>'+salesHtml+'</section><section class="hsw-detail-section"><h3>Pembelian</h3><div class="hsw-list">'+purchaseHtml+'</div></section><section class="hsw-detail-section"><h3>Stok</h3><div class="hsw-list">'+stockHtml+'</div></section>'+(data.review_reason?'<div class="hsw-msg">Catatan validasi: '+esc(data.review_reason)+'</div>':'')+queueActions(data)}
+async function openSupervisorDetail(batch){var body=document.getElementById('hswSupervisorBody');if(!body)return;body.innerHTML='<div class="hsw-empty">Memuat detail…</div>';try{var data=await rpc('staff_supervisor_batch_detail_v1',{p_token:token(),p_batch_id:batch});body.innerHTML='<div class="hsw-actions hsw-actions-top"><button class="hsw-btn" data-hsw-super="open">← Kembali ke Antrean</button></div>'+renderDetail(data||{})}catch(e){body.innerHTML='<div class="hsw-msg error">'+esc(e.message||e)+'</div><div class="hsw-actions"><button class="hsw-btn" data-hsw-super="open">Kembali</button></div>'}}
+function ensureSupervisorFab(){var old=document.getElementById('hswSupervisorFab');if(!context||!context.isSupervisor||document.querySelector('#staffRoot .owner-mobile-nav')){if(old)old.remove();return}if(old)return;var b=document.createElement('button');b.id='hswSupervisorFab';b.className='hsw-supervisor-fab';b.type='button';b.setAttribute('data-hsw-super','open');b.textContent='Validasi Hari Ini';document.body.appendChild(b)}
 
-async function loadOwnerSupervisor(force){
-  if(ownerSupervisorLoading)return;
-  if(ownerSupervisorState&&!force)return;
-  ownerSupervisorLoading=true;
-  try{
-    var pair=await Promise.all([rpc('staff_owner_supervisor_state_v1',{}),rpc('staff_owner_list',{})]);
-    ownerSupervisorState=(Array.isArray(pair[0])?pair[0][0]:pair[0])||{};
-    ownerSupervisorRows=Array.isArray(pair[1])?pair[1]:[];
-  }finally{ownerSupervisorLoading=false}
-}
-function ownerSupervisorMarkup(){
-  var cur=ownerSupervisorState||{};
-  var eligible=ownerSupervisorRows.filter(function(x){return x.staff_active&&x.pin_set});
-  var opts='<option value="">Pilih staff aktif</option>'+eligible.map(function(x){return '<option value="'+esc(x.employee_id)+'" '+(cur.employee_id===x.employee_id?'selected':'')+'>'+esc(x.full_name)+'</option>'}).join('');
-  return '<div class="hsw-owner-supervisor-head"><div><div class="staff-eyebrow">Supervisor Operasional</div><h2>Validasi Harian</h2><p>Hanya satu Supervisor aktif. Supervisor tidak dapat menyetujui entry miliknya sendiri.</p></div>'+(cur.employee_id?'<i class="hsw-pill approved">Aktif</i>':'<i class="hsw-pill wait">Belum diset</i>')+'</div>'+(cur.employee_id?'<div class="hsw-owner-supervisor-current"><span>Supervisor saat ini</span><b>'+esc(cur.full_name||'')+'</b></div>':'')+'<label class="staff-field"><span>Pilih Supervisor</span><select id="hswOwnerSupervisorSelect">'+opts+'</select></label><div class="hsw-actions"><button class="hsw-btn primary" data-hsw-owner-supervisor="save">Tetapkan Supervisor</button>'+(cur.employee_id?'<button class="hsw-btn danger" data-hsw-owner-supervisor="clear">Nonaktifkan Supervisor</button>':'')+'</div>'+(eligible.length?'<p class="hsw-owner-supervisor-note">Kandidat hanya akun staff aktif yang sudah memiliki PIN.</p>':'<div class="hsw-empty">Belum ada staff aktif ber-PIN yang dapat dijadikan Supervisor.</div>');
-}
-async function ensureOwnerSupervisorCard(){
-  var ownerNav=document.querySelector('#staffRoot .owner-mobile-nav');
-  var list=document.querySelector('#staffRoot .owner-list');
-  if(!ownerNav||!list){var stale=document.getElementById('hswOwnerSupervisor');if(stale)stale.remove();return}
-  var card=document.getElementById('hswOwnerSupervisor');
-  if(!card){card=document.createElement('div');card.id='hswOwnerSupervisor';card.className='staff-card hsw-owner-supervisor-card';list.parentNode.insertBefore(card,list)}
-  card.innerHTML='<div class="hsw-empty">Memuat Supervisor…</div>';
-  try{await loadOwnerSupervisor(true);card.innerHTML=ownerSupervisorMarkup()}catch(e){card.innerHTML='<div class="hsw-msg error">'+esc(e.message||e)+'</div><button class="hsw-btn" data-hsw-owner-supervisor="reload">Coba Lagi</button>'}
-}
-async function ownerSupervisorAction(action){
-  if(action==='reload'){ownerSupervisorState=null;await ensureOwnerSupervisorCard();return}
-  var current=ownerSupervisorState||{};
-  if(action==='clear'){
-    if(!current.employee_id)throw new Error('Belum ada Supervisor aktif');
-    await rpc('staff_owner_set_supervisor_v1',{p_employee_id:current.employee_id,p_active:false,p_note:'Dinonaktifkan dari Owner Mobile'});
-  }else{
-    var sel=document.getElementById('hswOwnerSupervisorSelect');var id=sel&&sel.value;
-    if(!id)throw new Error('Pilih staff yang akan dijadikan Supervisor');
-    await rpc('staff_owner_set_supervisor_v1',{p_employee_id:id,p_active:true,p_note:'Ditugaskan dari Owner Mobile'});
-  }
-  ownerSupervisorState=null;
-  await ensureOwnerSupervisorCard();
-}
+async function loadOwnerSupervisor(force){if(ownerSupervisorLoading)return;if(ownerSupervisorState&&!force)return;ownerSupervisorLoading=true;try{var pair=await Promise.all([rpc('staff_owner_supervisor_state_v1',{}),rpc('staff_owner_list',{})]);ownerSupervisorState=(Array.isArray(pair[0])?pair[0][0]:pair[0])||{};ownerSupervisorRows=Array.isArray(pair[1])?pair[1]:[]}finally{ownerSupervisorLoading=false}}
+function ownerSupervisorMarkup(){var cur=ownerSupervisorState||{},eligible=ownerSupervisorRows.filter(function(x){return x.staff_active&&x.pin_set}),opts='<option value="">Pilih staff aktif</option>'+eligible.map(function(x){return'<option value="'+esc(x.employee_id)+'" '+(cur.employee_id===x.employee_id?'selected':'')+'>'+esc(x.full_name)+'</option>'}).join('');return'<div class="hsw-owner-supervisor-head"><div><div class="staff-eyebrow">Supervisor Operasional</div><h2>Validasi Harian</h2><p>Hanya satu Supervisor aktif. Supervisor tidak dapat menyetujui entry miliknya sendiri.</p></div>'+(cur.employee_id?'<i class="hsw-pill approved">Aktif</i>':'<i class="hsw-pill wait">Belum diset</i>')+'</div>'+(cur.employee_id?'<div class="hsw-owner-supervisor-current"><span>Supervisor saat ini</span><b>'+esc(cur.full_name||'')+'</b></div>':'')+'<label class="staff-field"><span>Pilih Supervisor</span><select id="hswOwnerSupervisorSelect">'+opts+'</select></label><div class="hsw-actions"><button class="hsw-btn primary" data-hsw-owner-supervisor="save">Tetapkan Supervisor</button>'+(cur.employee_id?'<button class="hsw-btn danger" data-hsw-owner-supervisor="clear">Nonaktifkan Supervisor</button>':'')+'</div>'+(eligible.length?'<p class="hsw-owner-supervisor-note">Kandidat hanya akun staff aktif yang sudah memiliki PIN.</p>':'<div class="hsw-empty">Belum ada staff aktif ber-PIN yang dapat dijadikan Supervisor.</div>')}
+async function ensureOwnerSupervisorCard(){var ownerNav=document.querySelector('#staffRoot .owner-mobile-nav'),list=document.querySelector('#staffRoot .owner-list');if(!ownerNav||!list){var stale=document.getElementById('hswOwnerSupervisor');if(stale)stale.remove();return}var card=document.getElementById('hswOwnerSupervisor');if(!card){card=document.createElement('div');card.id='hswOwnerSupervisor';card.className='staff-card hsw-owner-supervisor-card';list.parentNode.insertBefore(card,list)}card.innerHTML='<div class="hsw-empty">Memuat Supervisor…</div>';try{await loadOwnerSupervisor(true);card.innerHTML=ownerSupervisorMarkup()}catch(e){card.innerHTML='<div class="hsw-msg error">'+esc(e.message||e)+'</div><button class="hsw-btn" data-hsw-owner-supervisor="reload">Coba Lagi</button>'}}
+async function ownerSupervisorAction(action){if(action==='reload'){ownerSupervisorState=null;await ensureOwnerSupervisorCard();return}var current=ownerSupervisorState||{};if(action==='clear'){if(!current.employee_id)throw new Error('Belum ada Supervisor aktif');await rpc('staff_owner_set_supervisor_v1',{p_employee_id:current.employee_id,p_active:false,p_note:'Dinonaktifkan dari Owner Mobile'})}else{var sel=document.getElementById('hswOwnerSupervisorSelect'),id=sel&&sel.value;if(!id)throw new Error('Pilih staff yang akan dijadikan Supervisor');await rpc('staff_owner_set_supervisor_v1',{p_employee_id:id,p_active:true,p_note:'Ditugaskan dari Owner Mobile'})}ownerSupervisorState=null;await ensureOwnerSupervisorCard()}
 
-function inspect(){
-  if(document.querySelector('#staffRoot .owner-mobile-nav')){
-    var fab=document.getElementById('hswSupervisorFab');if(fab)fab.remove();
-    if(document.querySelector('#staffRoot .owner-list'))ensureOwnerSupervisorCard();
-    return;
-  }
-  if(document.getElementById('hswOwnerSupervisor'))document.getElementById('hswOwnerSupervisor').remove();
-  loadContext(false).then(function(){ensureSupervisorFab()});
-}
-function bind(){
-  document.addEventListener('click',function(e){
-    var mod=e.target&&e.target.closest?e.target.closest('[data-mod="kasir"],[data-mod="gudang"]'):null;
-    if(mod&&token()&&!document.getElementById('hswOverlay')){
-      var m=mod.getAttribute('data-mod');e.preventDefault();e.stopPropagation();
-      loadContext(true).then(function(){if(context)openWorkflow(m)});return;
-    }
-    var a=e.target&&e.target.closest?e.target.closest('[data-hsw]'):null;
-    if(a){var act=a.getAttribute('data-hsw');if(act==='close'){closeOverlay();return}if(act==='refresh'){loadDay(overlayState.module).catch(function(x){msg(x.message||x,true)});return}if(act==='save-sales'){saveSales().catch(function(x){msg(x.message||x,true)});return}if(act==='add-purchase'){addPurchase().catch(function(x){msg(x.message||x,true)});return}if(act==='add-stock'){addStock().catch(function(x){msg(x.message||x,true)});return}if(act==='submit'){submitDay().catch(function(x){msg(x.message||x,true)});return}}
-    var sm=e.target&&e.target.closest?e.target.closest('[data-hsw-mod]'):null;
-    if(sm){var m2=sm.getAttribute('data-hsw-mod');if(hasModule(m2))loadDay(m2).catch(function(x){msg(x.message||x,true)});return}
-    var pr=e.target&&e.target.closest?e.target.closest('[data-hsw-remove-purchase]'):null;
-    if(pr){rpc('staff_daily_remove_purchase_v1',{p_token:token(),p_id:pr.getAttribute('data-hsw-remove-purchase')}).then(function(){return loadDay('kasir')}).catch(function(x){msg(x.message||x,true)});return}
-    var sr=e.target&&e.target.closest?e.target.closest('[data-hsw-remove-stock]'):null;
-    if(sr){rpc('staff_daily_remove_stock_v1',{p_token:token(),p_id:sr.getAttribute('data-hsw-remove-stock')}).then(function(){return loadDay('gudang')}).catch(function(x){msg(x.message||x,true)});return}
-    var su=e.target&&e.target.closest?e.target.closest('[data-hsw-super]'):null;
-    if(su){var sa=su.getAttribute('data-hsw-super');if(sa==='open')openSupervisor();else if(sa==='close')closeSupervisor();return}
-    var dec=e.target&&e.target.closest?e.target.closest('[data-hsw-decision]'):null;
-    if(dec){decide(dec.getAttribute('data-hsw-decision'),dec.getAttribute('data-batch')).catch(function(x){alert(x.message||x)});return}
-    var post=e.target&&e.target.closest?e.target.closest('[data-hsw-post]'):null;
-    if(post){postApproved(post.getAttribute('data-hsw-post')).catch(function(x){alert(x.message||x)});return}
-    var detail=e.target&&e.target.closest?e.target.closest('[data-hsw-detail]'):null;
-    if(detail){openSupervisorDetail(detail.getAttribute('data-hsw-detail'));return}
-    var own=e.target&&e.target.closest?e.target.closest('[data-hsw-owner-supervisor]'):null;
-    if(own){ownerSupervisorAction(own.getAttribute('data-hsw-owner-supervisor')).catch(function(x){alert(x.message||x)});return}
-  },true);
-}
-function boot(){
-  bind();
-  var r=document.getElementById('staffRoot');
-  if(r&&window.MutationObserver){var pending=false;observer=new MutationObserver(function(){if(pending)return;pending=true;setTimeout(function(){pending=false;inspect()},80)});observer.observe(r,{childList:true,subtree:true})}
-  inspect();
-}
+function inspect(){if(document.querySelector('#staffRoot .owner-mobile-nav')){var fab=document.getElementById('hswSupervisorFab');if(fab)fab.remove();if(document.querySelector('#staffRoot .owner-list'))ensureOwnerSupervisorCard();return}if(document.getElementById('hswOwnerSupervisor'))document.getElementById('hswOwnerSupervisor').remove();loadContext(false).then(function(){ensureSupervisorFab()})}
+function bind(){document.addEventListener('click',function(e){var mod=e.target&&e.target.closest?e.target.closest('[data-mod="kasir"],[data-mod="gudang"]'):null;if(mod&&token()&&!document.getElementById('hswOverlay')){var m=mod.getAttribute('data-mod');e.preventDefault();e.stopPropagation();loadContext(true).then(function(){if(context)openWorkflow(m)});return}var a=e.target&&e.target.closest?e.target.closest('[data-hsw]'):null;if(a){var act=a.getAttribute('data-hsw');if(act==='close'){closeOverlay();return}if(act==='refresh'){loadDay(overlayState.module).catch(function(x){msg(x.message||x,true)});return}if(act==='save-sales'){saveSales().catch(function(x){msg(x.message||x,true)});return}if(act==='add-purchase'){addPurchase().catch(function(x){msg(x.message||x,true)});return}if(act==='add-stock'){addStock().catch(function(x){msg(x.message||x,true)});return}if(act==='submit'){submitDay().catch(function(x){msg(x.message||x,true)});return}}var sm=e.target&&e.target.closest?e.target.closest('[data-hsw-mod]'):null;if(sm){var m2=sm.getAttribute('data-hsw-mod');if(hasModule(m2))loadDay(m2).catch(function(x){msg(x.message||x,true)});return}var pr=e.target&&e.target.closest?e.target.closest('[data-hsw-remove-purchase]'):null;if(pr){rpc('staff_daily_remove_purchase_v1',{p_token:token(),p_id:pr.getAttribute('data-hsw-remove-purchase')}).then(function(){return loadDay('kasir')}).catch(function(x){msg(x.message||x,true)});return}var sr=e.target&&e.target.closest?e.target.closest('[data-hsw-remove-stock]'):null;if(sr){rpc('staff_daily_remove_stock_v1',{p_token:token(),p_id:sr.getAttribute('data-hsw-remove-stock')}).then(function(){return loadDay('gudang')}).catch(function(x){msg(x.message||x,true)});return}var su=e.target&&e.target.closest?e.target.closest('[data-hsw-super]'):null;if(su){var sa=su.getAttribute('data-hsw-super');if(sa==='open')openSupervisor();else if(sa==='close')closeSupervisor();return}var dec=e.target&&e.target.closest?e.target.closest('[data-hsw-decision]'):null;if(dec){decide(dec.getAttribute('data-hsw-decision'),dec.getAttribute('data-batch')).catch(function(x){alert(x.message||x)});return}var post=e.target&&e.target.closest?e.target.closest('[data-hsw-post]'):null;if(post){postApproved(post.getAttribute('data-hsw-post')).catch(function(x){alert(x.message||x)});return}var detail=e.target&&e.target.closest?e.target.closest('[data-hsw-detail]'):null;if(detail){openSupervisorDetail(detail.getAttribute('data-hsw-detail'));return}var own=e.target&&e.target.closest?e.target.closest('[data-hsw-owner-supervisor]'):null;if(own){ownerSupervisorAction(own.getAttribute('data-hsw-owner-supervisor')).catch(function(x){alert(x.message||x)});return}},true)}
+function boot(){bind();var r=document.getElementById('staffRoot');if(r&&window.MutationObserver){var pending=false;observer=new MutationObserver(function(){if(pending)return;pending=true;setTimeout(function(){pending=false;inspect()},80)});observer.observe(r,{childList:true,subtree:true})}inspect()}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
