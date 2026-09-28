@@ -1,14 +1,44 @@
-name: Performance Fix Archive
+name: P1 Test Alignment
 
 on:
-  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/p0-performance-fix.yml'
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  archived:
+  align-p1-tests:
     runs-on: ubuntu-latest
     steps:
-      - name: Completed
-        run: echo "P0 and P1 one-shot performance fixes are already applied and regression-tested."
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Align ERP UI contract
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('tests/erp-ui.test.js')
+          s=p.read_text()
+          old='''  const erpScript = indexSource.indexOf('<script src="/erp.js?v=ui1"></script>');'''
+          new='''  const erpScript = indexSource.indexOf('<script src="/erp.js?v=ui2"></script>');'''
+          if old not in s: raise SystemExit('ERP script cache assertion anchor missing')
+          s=s.replace(old,new,1)
+          old="for (const contract of ['get_ui_bootstrap_v5','ui_erp_action_queue_v4','ui_inventory_items','ui_recent_erp_audit'])"
+          new="for (const contract of ['get_ui_bootstrap_v6','get_ui_action_queue_active_v1','ui_inventory_items','ui_recent_erp_audit'])"
+          if old not in s: raise SystemExit('ERP backend contract assertion anchor missing')
+          s=s.replace(old,new,1)
+          p.write_text(s)
+          PY
+      - name: Validate full production build gate
+        run: node scripts/vercel-build-check.js
+      - name: Commit aligned test
+        shell: bash
+        run: |
+          git config user.name "Hasnaria P1 Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add tests/erp-ui.test.js
+          git commit -m "test(p1): align ERP UI contract with bootstrap v6"
+          git push origin HEAD:main
