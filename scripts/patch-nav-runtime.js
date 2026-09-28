@@ -4,7 +4,7 @@ const { spawnSync } = require('child_process');
 
 const navPath = path.join(process.cwd(), 'dist', 'nav-patch.js');
 if (!fs.existsSync(navPath)) {
-  console.error('P4 nav runtime patch failed: dist/nav-patch.js missing');
+  console.error('P4/P5 nav runtime patch failed: dist/nav-patch.js missing');
   process.exit(1);
 }
 
@@ -22,10 +22,18 @@ if ((source.match(/observe\(document\.body,\{childList:true,subtree:true\}\)/g) 
 }
 source = source.replace(oldObserver, newObserver);
 
+const fallbackMarker = "  var runTimer=null;";
+const fallbackCode = "  var settingsFallbackTimer=null,settingsFallbackAttempts=0;\n  function scheduleSettingsFallback(){if(settingsFallbackTimer||window.__HASNARIA_EXECUTIVE_OWNER||settingsFallbackAttempts>=4)return;settingsFallbackTimer=setTimeout(function(){settingsFallbackTimer=null;settingsFallbackAttempts++;if(window.__HASNARIA_EXECUTIVE_OWNER)return;var c=window.__HASNARIA_CONTEXT||null;if(c&&c.role==='owner'){loadSettings();return}if(!c)scheduleSettingsFallback()},1500)}\n\n  var runTimer=null;";
+if (!source.includes(fallbackMarker)) {
+  console.error('P5 nav runtime patch failed: settings fallback marker missing');
+  process.exit(1);
+}
+source = source.replace(fallbackMarker, fallbackCode);
+
 const oldRun = "function run(){injectStyle();injectAccountPageStyle();moveNav();styleButtons();if(!ownerShellActive())syncGroupedContent();ensureAccountMenu();loadSettings();watchPasswordRecovery();showPasswordActivation()}";
-const newRun = "function run(){injectStyle();moveNav();styleButtons();if(!ownerShellActive())syncGroupedContent();ensureAccountMenu();loadSettings();watchPasswordRecovery();showPasswordActivation()}";
+const newRun = "function run(){injectStyle();moveNav();styleButtons();if(!ownerShellActive())syncGroupedContent();ensureAccountMenu();scheduleSettingsFallback();watchPasswordRecovery();showPasswordActivation()}";
 if (!source.includes(oldRun)) {
-  console.error('P4 nav runtime patch failed: eager account-style marker missing');
+  console.error('P4/P5 nav runtime patch failed: startup run marker missing');
   process.exit(1);
 }
 source = source.replace(oldRun, newRun);
@@ -46,13 +54,18 @@ if (source.includes(oldRun) || !source.includes('async function showAccountPage(
   console.error('P4 nav runtime patch failed: lazy account style verification failed');
   process.exit(1);
 }
+if (!source.includes('scheduleSettingsFallback()') || source.includes('ensureAccountMenu();loadSettings();watchPasswordRecovery()')) {
+  console.error('P5 nav runtime patch failed: legacy settings still eager');
+  process.exit(1);
+}
 
 fs.writeFileSync(navPath, source);
 const check = spawnSync(process.execPath, ['--check', navPath], { stdio: 'inherit' });
 if (check.status !== 0) {
-  console.error('P4 nav runtime patch failed: syntax check failed');
+  console.error('P4/P5 nav runtime patch failed: syntax check failed');
   process.exit(check.status || 1);
 }
 
 console.log('P4 nav observer scope: PASS (document.body -> #app>header)');
 console.log('P4 account page style: PASS (startup -> on-demand)');
+console.log('P5 user settings runtime: PASS (executive owner skips legacy settings script)');
