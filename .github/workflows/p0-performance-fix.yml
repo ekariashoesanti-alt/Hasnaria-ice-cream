@@ -1,4 +1,4 @@
-name: P0 Performance Fix
+name: P1 Final Performance Fix
 
 on:
   push:
@@ -9,27 +9,29 @@ permissions:
   contents: write
 
 jobs:
-  apply-p0:
+  apply-p1:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Apply P0 patch
-        run: python .github/scripts/apply_p0.py
+      - name: Apply P1 patch
+        run: python .github/scripts/apply_p1.py
 
-      - name: Run ERP regression test
-        run: node tests/erp-tracker.test.js
-
-      - name: Commit P0 fixes
+      - name: Validate JavaScript and ERP regression
         run: |
-          git config user.name "Hasnaria P0 Bot"
+          node --check erp.js
+          node tests/erp-tracker.test.js
+
+      - name: Commit P1 fixes
+        run: |
+          git config user.name "Hasnaria P1 Bot"
           git config user.email "actions@users.noreply.github.com"
-          git add core-app.js app.js index.html purchase-finance-alignment-v1.js xlsx-preload.js tests/erp-tracker.test.js
+          git add erp.js index.html tests/erp-tracker.test.js
           if git diff --cached --quiet; then
-            echo "No P0 changes needed"
+            echo "No P1 changes needed"
             exit 0
           fi
-          git commit -m "P0: remove blocking startup data loads"
+          git commit -m "P1: move Owner secondary data off critical path"
           git push origin HEAD:main
