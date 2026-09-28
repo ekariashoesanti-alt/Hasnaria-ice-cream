@@ -13,7 +13,7 @@ function assertShellIntegration() {
   for (const id of ['dashboard','sales','pembelian','ops','stok','shift','social','approval','team','sistem']) {
     assert.match(indexSource, new RegExp(`id=["']${id}["']`), `index keeps legacy module host #${id}`);
   }
-  const erpScript = indexSource.indexOf('<script src="/erp.js?v=ui1"></script>');
+  const erpScript = indexSource.indexOf('<script src="/erp.js?v=ui2"></script>');
   const appScript = indexSource.indexOf('<script src="/app.js?v=p053"></script>');
   assert.ok(erpScript >= 0, 'ERP runtime is loaded by index');
   assert.ok(appScript > erpScript, 'ERP runtime loads before app/core rendering begins');
@@ -30,7 +30,7 @@ function assertShellIntegration() {
   assert.ok(context < mount, 'brand/user/role context exists before ERP mount');
   assert.ok(salesRender > mount, 'legacy Sales module still renders after ERP dashboard mount');
   for (const marker of ['$("pembelian").innerHTML =','$("ops").innerHTML =','$("stok").innerHTML =']) assert.ok(coreSource.includes(marker), `core-app still owns existing module: ${marker}`);
-  for (const contract of ['get_ui_bootstrap_v5','ui_erp_action_queue_v4','ui_inventory_items','ui_recent_erp_audit']) assert.ok(source.includes(contract), `ERP UI keeps backend contract ${contract}`);
+  for (const contract of ['get_ui_bootstrap_v6','get_ui_action_queue_active_v1','ui_inventory_items','ui_recent_erp_audit']) assert.ok(source.includes(contract), `ERP UI keeps backend contract ${contract}`);
   assert.ok(!source.includes('ui_hpp_blockers'), 'active owner dashboard must not read the retired HPP blocker surface');
   assert.ok(!source.includes('Produk siap HPP') && !source.includes('Kesiapan HPP'), 'active owner dashboard must not render retired HPP controls');
   assert.ok(source.includes('total_purchase_expense') && source.includes('profit_after_tax'), 'owner dashboard uses Purchase-basis expense and profit fields');
@@ -103,7 +103,13 @@ async function renderFixture(data, error) {
   const nodes = new Map();
   const document = {head:{appendChild(){}},addEventListener(){},createElement(){return {};},getElementById(id) {if (!nodes.has(id)) nodes.set(id, {innerHTML:'', classList:{add(){}}, close(){}, showModal(){}});return nodes.get(id);}};
   let calls = 0;
-  const window = {__HASNARIA_CONTEXT:{brandId:'hasnaria',userId:'owner',role:'owner'},__HASNARIA_DB:{rpc(name) {assert.equal(name, 'get_ui_bootstrap_v5');calls++;return {abortSignal:async()=>({data,error})};}}};
+  const bootstrapData=data?Object.assign({},data,{monthly_trend:[],manual_input_requirements:[]}):data;
+  const window = {__HASNARIA_CONTEXT:{brandId:'hasnaria',userId:'owner',role:'owner'},__HASNARIA_DB:{rpc(name) {
+    calls++;
+    if(name==='get_ui_bootstrap_v6')return {abortSignal:async()=>({data:bootstrapData,error})};
+    if(name==='get_ui_monthly_trend_v1')return {abortSignal:async()=>({data:(data&&data.monthly_trend)||[],error:null})};
+    throw new Error('Unexpected ERP fixture RPC: '+name);
+  }}};
   vm.runInNewContext(source, {window,document,AbortSignal,Date,console,Set});
   window.HasnariaERP.mount();
   await new Promise(resolve=>setImmediate(resolve));
@@ -114,7 +120,7 @@ async function renderFixture(data, error) {
   assertShellIntegration();
   assertActionContracts();
   const empty = await renderFixture({owner:{brand_id:'hasnaria'},monthly_trend:[{month:'2026-09-01',total_purchase_expense:null,profit_after_tax:null}]});
-  assert.equal(empty.calls,1);
+  assert.equal(empty.calls,2);
   assert.match(empty.html,/Belum tersedia/);
   assert.doesNotMatch(empty.html,/Rp0/);
   assert.match(empty.html,/basis Pembelian/i);
