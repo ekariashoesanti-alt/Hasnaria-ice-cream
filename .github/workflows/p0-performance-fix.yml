@@ -15,31 +15,9 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Align ERP UI contract and lazy fixture
-        shell: bash
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-          p=Path('tests/erp-ui.test.js')
-          s=p.read_text()
-          replacements=[
-            ('''  const erpScript = indexSource.indexOf('<script src="/erp.js?v=ui1"></script>');''','''  const erpScript = indexSource.indexOf('<script src="/erp.js?v=ui2"></script>');''','ERP cache assertion'),
-            ("for (const contract of ['get_ui_bootstrap_v5','ui_erp_action_queue_v4','ui_inventory_items','ui_recent_erp_audit'])","for (const contract of ['get_ui_bootstrap_v6','get_ui_action_queue_active_v1','ui_inventory_items','ui_recent_erp_audit'])",'ERP backend contracts'),
-            ("  const window = {__HASNARIA_CONTEXT:{brandId:'hasnaria',userId:'owner',role:'owner'},__HASNARIA_DB:{rpc(name) {assert.equal(name, 'get_ui_bootstrap_v5');calls++;return {abortSignal:async()=>({data,error})};}}};","""  const bootstrapData=data?Object.assign({},data,{monthly_trend:[],manual_input_requirements:[]}):data;
-  const window = {__HASNARIA_CONTEXT:{brandId:'hasnaria',userId:'owner',role:'owner'},__HASNARIA_DB:{rpc(name) {
-    calls++;
-    if(name==='get_ui_bootstrap_v6')return {abortSignal:async()=>({data:bootstrapData,error})};
-    if(name==='get_ui_monthly_trend_v1')return {abortSignal:async()=>({data:(data&&data.monthly_trend)||[],error:null})};
-    throw new Error('Unexpected ERP fixture RPC: '+name);
-  }}};""",'lazy RPC fixture'),
-            ("  assert.equal(empty.calls,1);","  assert.equal(empty.calls,2);",'lazy call count')
-          ]
-          for old,new,label in replacements:
-            if old not in s: raise SystemExit('P1 test anchor missing: '+label)
-            s=s.replace(old,new,1)
-          p.write_text(s)
-          PY
-      - name: Validate full production build gate
+      - name: Align ERP UI test
+        run: node .github/scripts/fix-p1-erp-ui-test.js
+      - name: Validate production build gate
         run: node scripts/vercel-build-check.js
       - name: Commit aligned test
         shell: bash
