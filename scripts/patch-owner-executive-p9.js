@@ -16,6 +16,10 @@ if (!source.includes(alertsMarker)) {
   console.error('P9 executive patch failed: alerts marker missing');
   process.exit(1);
 }
+if (healthHelpers.includes('style=')) {
+  console.error('P9 executive patch failed: health markup contains CSP-unsafe inline style');
+  process.exit(1);
+}
 source = source.replace(alertsMarker, healthHelpers);
 
 const dashboardOld = "function renderDashboard(d){var change=Number(d.previous_revenue||0)?((Number(d.revenue||0)-Number(d.previous_revenue||0))/Number(d.previous_revenue||0)*100):0;var v=d.validation||{};return toolbar('Ringkasan CEO','Satu layar untuk keputusan utama')+'<div class=\"hx-grid\">'+kpi('Penjualan',rp(d.revenue),pct(change)+' vs bulan lalu',change>=0?'positive':'negative')+kpi('Beban Pembelian',rp(d.purchase_expense),'Purchase-basis')+kpi('Beban Karyawan',rp(d.payroll_expense),'Payroll posted')+kpi('Laba / Rugi',rp(d.profit),pct(d.margin)+' margin',Number(d.profit)>=0?'positive':'negative')+kpi('Validasi Hari Ini',num(Number(v.posted||0))+'/'+num(Number(v.active_staff||0))+' selesai',num(v.submitted||0)+' menunggu',Number(v.submitted||0)>0?'warn':'')+'</div><div class=\"hx-main\"><div class=\"hx-card\"><h2>Tren 6 bulan</h2>'+trendBars(d.trend)+'</div><div class=\"hx-card\"><h2>Perlu perhatian</h2>'+alerts(d)+'<div class=\"hx-note\">Supervisor aktif: '+esc((d.supervisor&&d.supervisor.full_name)||'belum ditetapkan')+' · stok rendah: '+num(d.stock_low)+'</div></div></div>'}";
@@ -39,10 +43,6 @@ for (const required of ['function healthPanel(h)', 'function healthModal()', "kp
     console.error('P9 executive patch failed: required marker missing:', required);
     process.exit(1);
   }
-}
-if (/healthPanel\([\s\S]*style=/.test(source) || /healthModal\([\s\S]*style=/.test(source)) {
-  console.error('P9 executive patch failed: new inline styles are not CSP-safe');
-  process.exit(1);
 }
 
 fs.writeFileSync(target, source);
