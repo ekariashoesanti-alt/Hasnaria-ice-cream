@@ -7,10 +7,26 @@
   window.__HASNARIA_OWNER_SHELL_BOOTSTRAPPED=true;
 
   var EXEC_SRC='/owner-executive-v1.js?v=1';
-  var tries=0,loaded=false,guardBound=false;
+  var tries=0,loaded=false,guardBound=false,execAbort=null;
 
   function context(){return window.__HASNARIA_CONTEXT||null;}
   function isOwner(){var c=context();return !!(c&&c.role==='owner');}
+
+  function installExecutiveRpcGuard(){
+    var db=window.__HASNARIA_DB;
+    if(!db||db.__hasnariaOwnerExecAbortGuard||typeof db.rpc!=='function')return;
+    var rawRpc=db.rpc.bind(db);
+    db.rpc=function(name,args,options){
+      if(name!=='owner_executive_tab_v1')return rawRpc(name,args,options);
+      if(execAbort){try{execAbort.abort();}catch(_){}execAbort=null;}
+      var controller=typeof AbortController==='function'?new AbortController():null;
+      if(controller)execAbort=controller;
+      var query=rawRpc(name,args,options);
+      if(controller&&query&&typeof query.abortSignal==='function')query=query.abortSignal(controller.signal);
+      return query;
+    };
+    db.__hasnariaOwnerExecAbortGuard=true;
+  }
 
   function blockLegacyBubble(event){
     if(!window.__HASNARIA_EXECUTIVE_OWNER)return;
@@ -43,6 +59,7 @@
 
   function loadExecutive(){
     if(loaded||!isOwner())return;
+    installExecutiveRpcGuard();
     var existing=document.getElementById('hasnaria-owner-executive-v1-js');
     if(existing){loaded=true;bindGuard();patchContext();return;}
     loaded=true;
@@ -63,7 +80,7 @@
   window.__HASNARIA_OWNER_SHELL={
     navigate:safeNavigate,
     isOwner:isOwner,
-    reconcile:function(){if(isOwner()){patchContext();loadExecutive();}}
+    reconcile:function(){if(isOwner()){installExecutiveRpcGuard();patchContext();loadExecutive();}}
   };
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
