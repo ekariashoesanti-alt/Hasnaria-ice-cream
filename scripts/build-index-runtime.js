@@ -5,6 +5,7 @@ const GOOGLE_BINDING = `\n(function bindHasnariaGoogleButton() {\n  function bin
 const OWNER_SHELL_TAG = '<script src="/owner-shell-guard.js?v=2"></script>';
 const OWNER_PALETTE_TAG = '<link rel="stylesheet" href="/owner-green.css?v=1">';
 const PURCHASE_LOADER_TAG = '<script src="/purchase-lazy-loader.js?v=1"></script>';
+const ERP_LOADER_TAG = '<script src="/erp-lazy-loader.js?v=1"></script>';
 
 function fail(message) {
   throw new Error(`Index runtime build failed: ${message}`);
@@ -45,6 +46,12 @@ function buildStrictIndexRuntime(sourceIndexPath, outputDir) {
   if (!html.includes(OWNER_PALETTE_TAG)) html = html.replace(erpCssTag[0], erpCssTag[0] + '\n' + OWNER_PALETTE_TAG);
   if (!html.includes(OWNER_PALETTE_TAG)) fail('Owner green palette reference missing');
   if (html.indexOf(OWNER_PALETTE_TAG) < html.indexOf(erpCssTag[0])) fail('Owner green palette must load after ERP stylesheet');
+
+  const erpTag = html.match(/<script src="\/erp\.js[^\"]*"><\/script>/i);
+  if (!erpTag) fail('ERP runtime script reference missing');
+  html = html.replace(erpTag[0], ERP_LOADER_TAG);
+  if (!html.includes(ERP_LOADER_TAG)) fail('ERP lazy loader runtime reference missing');
+  if (/<script src="\/erp\.js/i.test(html)) fail('ERP runtime must not load eagerly in production index');
 
   const appTag = html.match(/<script src="\/app\.js[^\"]*"><\/script>/i);
   if (!appTag) fail('application runtime script reference missing');
