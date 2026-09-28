@@ -4,7 +4,7 @@
   const esc = value => String(value == null ? '' : value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const number = value => value == null ? 'Belum tersedia' : Number(value).toLocaleString('id-ID');
   const money = value => value == null ? 'Belum tersedia' : 'Rp' + Number(value).toLocaleString('id-ID', {maximumFractionDigits:0});
-  const state = {key:null,page:'overview',data:null,loading:false,error:'',generation:0,month:'',query:'',priority:'',type:'',details:{},detailError:''};
+  const state = {key:null,page:'overview',data:null,loading:false,error:'',generation:0,month:'',query:'',priority:'',type:'',details:{},detailError:'',lazyLoaded:{trend:false,quality:false},lazyLoading:{trend:false,quality:false},lazyError:{trend:'',quality:''}};
   const pages = {overview:'Ringkasan CEO',actions:'Prioritas owner',inventory:'Persediaan',finance:'Arus kas',quality:'Kelengkapan data',audit:'Aktivitas ERP'};
   const views = {actions:['ui_erp_action_queue_v4','action_rank'],inventory:['ui_inventory_items','item_name'],audit:['ui_recent_erp_audit','created_at']};
   const RETIRED_ACTIONS = new Set(['missing_recipe','missing_component_cost','recipe_verification']);
@@ -60,9 +60,9 @@
 
   async function load() {
     const generation=++state.generation;
-    state.loading=true;state.error='';state.details={};state.detailError='';render();
+    state.loading=true;state.error='';state.details={};state.detailError='';state.lazyLoaded={trend:false,quality:false};state.lazyLoading={trend:false,quality:false};state.lazyError={trend:'',quality:''};render();
     try {
-      const result=await window.__HASNARIA_DB.rpc('get_ui_bootstrap_v5').abortSignal(AbortSignal.timeout(30000));
+      const result=await window.__HASNARIA_DB.rpc('get_ui_bootstrap_v6').abortSignal(AbortSignal.timeout(30000));
       if(result.error)throw result.error;
       if(!result.data||!result.data.owner)throw new Error('Ringkasan belum tersedia untuk akun ini.');
       if(generation!==state.generation)return;
@@ -72,15 +72,20 @@
       if(!months.some(m=>m.month===state.month))state.month=months[0]?.month||'';
       state.updated=new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Jakarta'});
     } catch(error) {if(generation===state.generation){state.error=error.message;state.data=null;}}
-    finally {if(generation===state.generation){state.loading=false;render();if(views[state.page]&&state.data)loadDetails(state.page);}}
+    finally {if(generation===state.generation){state.loading=false;render();ensurePageData(state.page);}}
   }
 
   async function loadDetails(page) {
     const generation=state.generation;
     state.details[page]=null;state.detailError='';render();
     try {
-      const [view,order]=views[page];
-      const result=await window.__HASNARIA_DB.from(view).select('*').eq('brand_id',context().brandId).order(order,{ascending:page!=='audit'}).limit(500).abortSignal(AbortSignal.timeout(30000));
+      let result;
+      if(page==='actions'){
+        result=await window.__HASNARIA_DB.rpc('get_ui_action_queue_active_v1',{p_brand:context().brandId,p_limit:500}).abortSignal(AbortSignal.timeout(15000));
+      }else{
+        const [view,order]=views[page];
+        result=await window.__HASNARIA_DB.from(view).select('*').eq('brand_id',context().brandId).order(order,{ascending:page!=='audit'}).limit(500).abortSignal(AbortSignal.timeout(30000));
+      }
       if(result.error)throw result.error;
       let rows=scoped(result.data);
       if(page==='actions')rows=activeActions(rows);
@@ -91,6 +96,43 @@
 
   function actionsTable(items) {
     return table(['Urutan','Prioritas','Perlu ditindaklanjuti','Nilai terkait',''],activeActions(items).map(a=>[number(a.action_rank),badge(a.priority),'<b>'+esc(a.subject)+'</b><small class="erp-block">'+esc(names[a.action_type]||a.action_type)+'</small>',money(a.financial_impact),btn('Lihat detail','action:'+a.action_rank)]));
+  }
+
+  async function loadMonthlyTrend(force=false) {
+    if(!state.data||!context()||state.lazyLoading.trend||(!force&&state.lazyLoaded.trend))return;
+    const generation=state.generation;
+    state.lazyLoading.trend=true;state.lazyError.trend='';render();
+    try{
+      const result=await window.__HASNARIA_DB.rpc('get_ui_monthly_trend_v1',{p_brand:context().brandId,p_limit:12}).abortSignal(AbortSignal.timeout(20000));
+      if(result.error)throw result.error;
+      if(generation!==state.generation)return;
+      state.data.monthly_trend=scoped(result.data||[]);
+      state.lazyLoaded.trend=true;
+      const months=list(state.data.monthly_trend);
+      if(!months.some(m=>m.month===state.month))state.month=months[0]?.month||'';
+    }catch(error){if(generation===state.generation)state.lazyError.trend=error.message;}
+    finally{if(generation===state.generation){state.lazyLoading.trend=false;render();}}
+  }
+
+  async function loadQualityRequirements(force=false) {
+    if(!state.data||!context()||state.lazyLoading.quality||(!force&&state.lazyLoaded.quality))return;
+    const generation=state.generation;
+    state.lazyLoading.quality=true;state.lazyError.quality='';render();
+    try{
+      const result=await window.__HASNARIA_DB.rpc('get_ui_manual_input_requirements_v1',{p_brand:context().brandId}).abortSignal(AbortSignal.timeout(15000));
+      if(result.error)throw result.error;
+      if(generation!==state.generation)return;
+      state.data.manual_input_requirements=scoped(result.data||[]);
+      state.lazyLoaded.quality=true;
+    }catch(error){if(generation===state.generation)state.lazyError.quality=error.message;}
+    finally{if(generation===state.generation){state.lazyLoading.quality=false;render();}}
+  }
+
+  function ensurePageData(page) {
+    if(!state.data)return;
+    if(page==='overview'||page==='finance')loadMonthlyTrend(false);
+    if(page==='quality')loadQualityRequirements(false);
+    if(views[page]&&!state.details[page])loadDetails(page);
   }
 
   function overview() {
@@ -112,6 +154,8 @@
   function body() {
     const d=state.data;
     if(state.page==='overview')return overview();
+    if(state.page==='finance'&&!state.lazyLoaded.trend)return panel('Arus kas & hasil usaha bulanan',state.lazyError.trend?'<p role="alert">'+esc(state.lazyError.trend)+'</p>'+btn('Coba lagi','lazy:trend'):'<p role="status">Memuat tren bulanan…</p>');
+    if(state.page==='quality'&&!state.lazyLoaded.quality)return panel('Kelengkapan data',state.lazyError.quality?'<p role="alert">'+esc(state.lazyError.quality)+'</p>'+btn('Coba lagi','lazy:quality'):'<p role="status">Memuat kebutuhan data…</p>');
     if(views[state.page]&&!state.details[state.page])return panel(pages[state.page],state.detailError?'<p role="alert">'+esc(state.detailError)+'</p>'+btn('Coba lagi','retry'):'<p role="status">Memuat rincian…</p>');
     const rows=state.details[state.page]||[];
     if(state.page==='actions'){
@@ -128,12 +172,14 @@
     const host=$('dashboard');if(!host||!context())return;
     host.classList.add('erp');
     host.innerHTML='<div class="erp-top"><div><div class="eyebrow">Hasnaria · Command Center</div><h1>Kendali bisnis, satu pandangan.</h1><p>Ringkasan owner dari data operasional yang tercatat.</p></div>'+btn('Perbarui','refresh')+'</div><nav class="erp-tabs" aria-label="Analisis bisnis">'+Object.entries(pages).map(([key,label])=>'<button type="button" data-erp="page:'+key+'" aria-current="'+(state.page===key?'page':'false')+'">'+label+'</button>').join('')+'</nav>'+
-      (state.data?'<div class="erp-controls">'+(state.page==='overview'?'<label>Periode ringkasan<select id="erp-month">'+list(state.data.monthly_trend).map(x=>'<option value="'+esc(x.month)+'" '+(x.month===state.month?'selected':'')+'>'+esc(String(x.month).slice(0,7))+'</option>').join('')+'</select></label>':'')+'<span class="erp-meta">Diperbarui '+esc(state.updated)+' WIB · basis Pembelian</span></div>':'')+
+      (state.data?'<div class="erp-controls">'+(state.page==='overview'?(state.lazyLoaded.trend?'<label>Periode ringkasan<select id="erp-month">'+list(state.data.monthly_trend).map(x=>'<option value="'+esc(x.month)+'" '+(x.month===state.month?'selected':'')+'>'+esc(String(x.month).slice(0,7))+'</option>').join('')+'</select></label>':'<span class="erp-meta">'+(state.lazyError.trend?'Tren bulanan belum tersedia':'Memuat tren bulanan…')+'</span>'):'')+'<span class="erp-meta">Diperbarui '+esc(state.updated)+' WIB · basis Pembelian</span></div>':'')+
       (state.loading?panel('Ringkasan bisnis','<p role="status">Memuat data terbaru…</p>'):state.error?panel('Data belum dapat dimuat','<p role="alert">'+esc(state.error)+'</p>'+btn('Coba lagi','refresh')):state.data?body():'')+'<dialog id="erp-dialog" aria-labelledby="erp-dialog-title"></dialog>';
     host.onclick=e=>{const b=e.target.closest('[data-erp]');if(!b)return;const [action,value]=b.dataset.erp.split(':');
-      if(action==='page'){state.page=value;state.detailError='';render();if(views[value]&&!state.details[value])loadDetails(value);}
+      if(action==='page'){state.page=value;state.detailError='';render();ensurePageData(value);}
       if(action==='refresh'&&!state.loading)load();
       if(action==='retry')loadDetails(state.page);
+      if(action==='lazy'&&value==='trend')loadMonthlyTrend(true);
+      if(action==='lazy'&&value==='quality')loadQualityRequirements(true);
       if(action==='nav'){$('erp-dialog').close();context().navigate(value);window.scrollTo({top:0});}
       if(action==='close')$('erp-dialog').close();
       if(action==='action'){
@@ -148,7 +194,7 @@
   function mount(){
     if(!context())return;
     const key=[context().brandId,context().userId,context().role].join(':');
-    if(state.key!==key){state.key=key;state.data=null;state.details={};state.error='';state.generation++;state.loading=false;}
+    if(state.key!==key){state.key=key;state.data=null;state.details={};state.error='';state.generation++;state.loading=false;state.lazyLoaded={trend:false,quality:false};state.lazyLoading={trend:false,quality:false};state.lazyError={trend:'',quality:''};}
     render();if(!state.data&&!state.loading&&!state.error)load();
   }
 

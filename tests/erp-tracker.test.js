@@ -6,6 +6,7 @@ const trackerPath = path.join(root, 'docs', 'HASNARIA_ERP_TRACKER.json');
 const data = JSON.parse(fs.readFileSync(trackerPath, 'utf8'));
 const appSource = fs.readFileSync(path.join(root, 'app.js'), 'utf8');
 const coreSource = fs.readFileSync(path.join(root, 'core-app.js'), 'utf8');
+const erpSource = fs.readFileSync(path.join(root, 'erp.js'), 'utf8');
 const indexSource = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 const ownerShellSource = fs.readFileSync(path.join(root, 'owner-shell-guard.js'), 'utf8');
 const ownerFinanceStockSource = fs.readFileSync(path.join(root, 'owner-finance-stock-v3.js'), 'utf8');
@@ -25,6 +26,8 @@ const purchaseControlRpcMigration = fs.readFileSync(path.join(root, 'supabase', 
 const financePeriodFastPath = fs.readFileSync(path.join(root, 'supabase', 'migrations', '20260926094000_finance_period_pack_fast_path.sql'), 'utf8');
 const financeReportingFastPath = fs.readFileSync(path.join(root, 'supabase', 'migrations', '20260926094500_finance_reporting_pack_fast_path.sql'), 'utf8');
 const performanceMigration = fs.readFileSync(path.join(root, 'supabase', 'migrations', '20260927005000_performance_runtime_reduce_roundtrips.sql'), 'utf8');
+const p1ActionFastPath = fs.readFileSync(path.join(root, 'supabase', 'migrations', '20260928010000_p1_dashboard_action_queue_fast_path.sql'), 'utf8');
+const p1LazyBootstrap = fs.readFileSync(path.join(root, 'supabase', 'migrations', '20260928011000_p1_bootstrap_lazy_monthly_trend.sql'), 'utf8');
 
 function assert(cond, msg) {
   if (!cond) {
@@ -76,6 +79,19 @@ assert(!/function afterCore\(\)[\s\S]*?load\(STOCK[,)]/.test(appSource), 'Stock 
 assert(coreSource.includes('scheduleLegacyTabData(tab);'), 'core app must show/render before lazy legacy data finishes');
 assert(coreSource.includes('legacyRequirements(id, force)') && coreSource.includes('if (role === "owner") return [];'), 'Owner startup must bypass legacy bulk datasets');
 assert(!coreSource.includes('await loadAll();\n      show("app");'), 'app shell must not wait for legacy loadAll before becoming visible');
+
+assert(indexSource.includes('/erp.js?v=ui2'), 'P1 ERP runtime cache version must be current');
+assert(erpSource.includes("get_ui_bootstrap_v6"), 'Owner dashboard must use the P1 lightweight bootstrap');
+assert(!erpSource.includes("get_ui_bootstrap_v5"), 'Owner dashboard must not call the superseded blocking bootstrap');
+assert(erpSource.includes("get_ui_action_queue_active_v1"), 'Owner action queue must use the secure server-side fast path');
+assert(erpSource.includes("get_ui_manual_input_requirements_v1"), 'Quality requirements must be loaded on demand');
+assert(erpSource.includes("get_ui_monthly_trend_v1"), 'monthly management trend must be loaded on demand');
+assert(erpSource.includes("ensurePageData(state.page)"), 'secondary Owner data must load after the blocking bootstrap has rendered');
+assert(p1ActionFastPath.includes('security definer') && p1ActionFastPath.includes("set search_path=''"), 'P1 action RPC must keep a fixed definer security boundary');
+assert(p1ActionFastPath.includes('private.same_brand(p_brand)'), 'P1 action RPC must authorize the brand once');
+assert(p1ActionFastPath.includes("action_type not in ('missing_recipe','missing_component_cost','recipe_verification')"), 'retired HPP/recipe actions must stay outside the active queue');
+assert(p1LazyBootstrap.includes('get_ui_bootstrap_v6') && p1LazyBootstrap.includes("'monthly_trend','[]'::jsonb"), 'P1 bootstrap must keep monthly trend off the critical path');
+assert(p1LazyBootstrap.includes('get_ui_monthly_trend_v1') && p1LazyBootstrap.includes('private.same_brand(p_brand)'), 'lazy monthly trend RPC must retain authenticated brand isolation');
 
 assert(ownerShellSource.includes('window.__HASNARIA_OWNER_SHELL_BOOTSTRAPPED'), 'Owner executive guard must remain idempotent');
 assert(ownerShellSource.includes("var EXEC_SRC='/owner-executive-v1.js?v=1'"), 'Owner shell must load the executive one-view runtime');
