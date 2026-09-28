@@ -1,6 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "node scripts/vercel-build-check.js",
+  "buildCommand": "node scripts/vercel-build-check.js && node scripts/patch-nav-runtime.js",
   "outputDirectory": "dist",
   "headers": [
     {
