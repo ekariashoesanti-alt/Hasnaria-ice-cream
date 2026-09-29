@@ -4,101 +4,40 @@ const { spawnSync } = require('child_process');
 
 const navPath = path.join(process.cwd(), 'dist', 'nav-patch.js');
 if (!fs.existsSync(navPath)) {
-  console.error('P4/P5 nav runtime patch failed: dist/nav-patch.js missing');
+  console.error('nav runtime patch failed: dist/nav-patch.js missing');
   process.exit(1);
 }
-
 let source = fs.readFileSync(navPath, 'utf8');
 
 const oldObserver = "function start(){run();new MutationObserver(scheduleRun).observe(document.body,{childList:true,subtree:true})}";
 const newObserver = "function start(){run();var navRoot=document.querySelector('#app>header');if(!navRoot)return;new MutationObserver(scheduleRun).observe(navRoot,{childList:true,subtree:true})}";
-if (!source.includes(oldObserver)) {
-  console.error('P4 nav runtime patch failed: expected body observer marker missing');
-  process.exit(1);
-}
-if ((source.match(/observe\(document\.body,\{childList:true,subtree:true\}\)/g) || []).length !== 1) {
-  console.error('P4 nav runtime patch failed: unexpected body observer count');
-  process.exit(1);
-}
+if (!source.includes(oldObserver)) throw new Error('nav observer marker missing');
 source = source.replace(oldObserver, newObserver);
 
-const fallbackMarker = "  var runTimer=null;";
-const fallbackCode = "  var settingsFallbackTimer=null,settingsFallbackAttempts=0;\n  function scheduleSettingsFallback(){if(settingsFallbackTimer||window.__HASNARIA_EXECUTIVE_OWNER||settingsFallbackAttempts>=4)return;settingsFallbackTimer=setTimeout(function(){settingsFallbackTimer=null;settingsFallbackAttempts++;if(window.__HASNARIA_EXECUTIVE_OWNER)return;var c=window.__HASNARIA_CONTEXT||null;if(c&&c.role==='owner'){loadSettings();return}if(!c)scheduleSettingsFallback()},1500)}\n\n  var runTimer=null;";
-if (!source.includes(fallbackMarker)) {
-  console.error('P5 nav runtime patch failed: settings fallback marker missing');
-  process.exit(1);
-}
-source = source.replace(fallbackMarker, fallbackCode);
-
-const oldRun = "function run(){injectStyle();injectAccountPageStyle();moveNav();styleButtons();if(!ownerShellActive())syncGroupedContent();ensureAccountMenu();loadSettings();watchPasswordRecovery();showPasswordActivation()}";
-const newRun = "function run(){injectStyle();moveNav();styleButtons();if(!ownerShellActive())syncGroupedContent();ensureAccountMenu();scheduleSettingsFallback();watchPasswordRecovery();showPasswordActivation()}";
-if (!source.includes(oldRun)) {
-  console.error('P4/P5 nav runtime patch failed: startup run marker missing');
-  process.exit(1);
-}
-source = source.replace(oldRun, newRun);
-
 const oldSuperAdmin = "  function superAdmin(){\n    var email='';\n    var who=document.getElementById('whoMeta');\n    if(who){\n      var parts=(who.textContent||'').split('·').map(function(x){return x.trim()});\n      for(var i=0;i<parts.length;i++){\n        if(parts[i].indexOf('@')>=0){email=parts[i].toLowerCase();break}\n      }\n    }\n    // Super admin: Harisnu + Hasnaria owner email\n    return email==='harisnu@gmail.com'||email==='ekariashoesanti@gmail.com';\n  }";
-const newSuperAdmin = "  function superAdmin(){\n    var email='';\n    var who=document.getElementById('whoMeta');\n    if(who){\n      var parts=(who.textContent||'').split('·').map(function(x){return x.trim()});\n      for(var i=0;i<parts.length;i++){\n        if(parts[i].indexOf('@')>=0){email=parts[i].toLowerCase();break}\n      }\n    }\n    return email==='harisnu@gmail.com';\n  }";
-if (!source.includes(oldSuperAdmin)) {
-  console.error('Account manager patch failed: legacy super admin marker missing');
-  process.exit(1);
-}
-source = source.replace(oldSuperAdmin, newSuperAdmin);
+const newSuperAdmin = "  function superAdmin(){\n    var email='';\n    var who=document.getElementById('whoMeta');\n    if(who){var parts=(who.textContent||'').split('·').map(function(x){return x.trim()});for(var i=0;i<parts.length;i++){if(parts[i].indexOf('@')>=0){email=parts[i].toLowerCase();break}}}\n    return email==='harisnu@gmail.com';\n  }";
+if (source.includes(oldSuperAdmin)) source = source.replace(oldSuperAdmin, newSuperAdmin);
 
-const oldPasswordRole = "role.textContent=(low==='harisnu@gmail.com'||low==='ekariashoesanti@gmail.com')?'SUPER ADMIN':'USER';";
-const newPasswordRole = "role.textContent=low==='harisnu@gmail.com'?'SUPER ADMIN':(low==='ekariashoesanti@gmail.com'?'OWNER':'USER');";
-if (!source.includes(oldPasswordRole)) {
-  console.error('Account manager patch failed: password role marker missing');
-  process.exit(1);
-}
-source = source.replace(oldPasswordRole, newPasswordRole);
+const blockStart = source.indexOf('  // Recovery emails must use a REAL implicit client');
+const blockEnd = source.indexOf('  function ensureAccountMenu(){');
+if (blockStart < 0 || blockEnd <= blockStart) throw new Error('legacy account/password block markers missing');
+const cleanAccountBlock = `  var accountManagerPromise=null;\n  function loadAccountManager(){\n    if(window.__HASNARIA_ACCOUNT_MANAGER_V1&&typeof window.__HASNARIA_ACCOUNT_MANAGER_V1.mount==='function')return Promise.resolve(window.__HASNARIA_ACCOUNT_MANAGER_V1.mount());\n    if(accountManagerPromise)return accountManagerPromise;\n    accountManagerPromise=new Promise(function(resolve,reject){\n      var old=document.getElementById('hasnaria-account-manager-v1-js');\n      if(old){old.addEventListener('load',function(){Promise.resolve(window.__HASNARIA_ACCOUNT_MANAGER_V1.mount()).then(resolve,reject)},{once:true});old.addEventListener('error',reject,{once:true});return}\n      var s=document.createElement('script');s.id='hasnaria-account-manager-v1-js';s.src='/account-manager-v1.js?v=3';s.async=true;\n      s.onload=function(){if(!window.__HASNARIA_ACCOUNT_MANAGER_V1)return reject(new Error('Account Manager tidak tersedia'));Promise.resolve(window.__HASNARIA_ACCOUNT_MANAGER_V1.mount()).then(resolve,reject)};\n      s.onerror=function(){accountManagerPromise=null;reject(new Error('Account Manager gagal dimuat'))};document.head.appendChild(s);\n    });\n    return accountManagerPromise;\n  }\n  function ensureAccountPage(){\n    var page=document.getElementById('hasnariaAccountPage');if(page)return page;\n    page=document.createElement('div');page.id='hasnariaAccountPage';page.className='hasnaria-account-page';\n    page.innerHTML='<div class="hasnaria-account-page-top"><button type="button" class="hasnaria-back-btn" id="hasnariaAccountBack">← Kembali</button><div class="hasnaria-page-brand">HASNARIA</div></div><main class="hasnaria-account-page-main"><section class="hasnaria-account-hero"><div class="hasnaria-account-kicker">AKUN</div><h1>Pengaturan Akun</h1><p>Kelola daftar akun, akses, aktivasi, dan reset password Hasnaria.</p></section><section class="hasnaria-account-panel"><div class="hasnaria-account-profile"><div class="hasnaria-avatar" id="hasnariaAccountAvatar">H</div><div><h2 id="hasnariaAccountPageName">—</h2><p id="hasnariaAccountPageEmail">—</p><span class="hasnaria-access-badge" id="hasnariaAccountPageRole">—</span></div></div><div class="hasnaria-account-divider"></div><div id="hasnariaAccountSettingsBody"><div class="ham-loading">Menyiapkan daftar akun…</div></div></section></main>';\n    document.body.appendChild(page);\n    document.getElementById('hasnariaAccountBack').addEventListener('click',function(){page.classList.remove('open')});\n    return page;\n  }\n  async function showAccountPage(){\n    injectAccountPageStyle();var page=ensureAccountPage(),name=document.getElementById('whoName'),email=getAccountEmail(),role=document.getElementById('hasnariaAccountPageRole');\n    document.getElementById('hasnariaAccountPageName').textContent=(name&&name.textContent)||'—';document.getElementById('hasnariaAccountPageEmail').textContent=email||'—';\n    role.textContent=superAdmin()?'SUPER ADMIN':((email||'').toLowerCase()==='ekariashoesanti@gmail.com'?'OWNER':'USER');document.getElementById('hasnariaAccountAvatar').textContent=((name&&name.textContent)||'H').trim().charAt(0).toUpperCase();\n    await loadAccountManager();page.classList.add('open');\n  }\n  function openAccountSettings(){closeAccountMenu();showAccountPage().catch(function(e){var page=ensureAccountPage(),host=document.getElementById('hasnariaAccountSettingsBody');if(host)host.innerHTML='<div class="ham-empty ham-error">'+String(e&&e.message||'Gagal membuka Pengaturan Akun')+'</div>';page.classList.add('open')})}\n\n`;
+source = source.slice(0, blockStart) + cleanAccountBlock + source.slice(blockEnd);
 
-const oldAccountOpen = "async function showAccountPage(mode){\n    var page=document.getElementById('hasnariaAccountPage');";
-const accountManagerLoader = "function loadAccountManager(){\n    if(window.__HASNARIA_ACCOUNT_MANAGER_V1&&typeof window.__HASNARIA_ACCOUNT_MANAGER_V1.mount==='function'){window.__HASNARIA_ACCOUNT_MANAGER_V1.mount();return}\n    if(document.getElementById('hasnaria-account-manager-v1-js'))return;\n    var s=document.createElement('script');s.id='hasnaria-account-manager-v1-js';s.src='/account-manager-v1.js?v=2';s.async=true;\n    s.onload=function(){if(window.__HASNARIA_ACCOUNT_MANAGER_V1&&typeof window.__HASNARIA_ACCOUNT_MANAGER_V1.mount==='function')window.__HASNARIA_ACCOUNT_MANAGER_V1.mount()};\n    document.head.appendChild(s);\n  }\n\n  async function showAccountPage(mode){\n    injectAccountPageStyle();\n    var page=document.getElementById('hasnariaAccountPage');";
-if (!source.includes(oldAccountOpen)) {
-  console.error('P4 nav runtime patch failed: account page entry marker missing');
-  process.exit(1);
-}
-source = source.replace(oldAccountOpen, accountManagerLoader);
+const fallbackMarker = '  var runTimer=null;';
+if (source.includes(fallbackMarker)) source = source.replace(fallbackMarker, '  var runTimer=null;');
 
-const activationClear = "      document.getElementById('hasnariaActivationMsg').textContent='';";
-const activationWithAccounts = "      document.getElementById('hasnariaActivationMsg').textContent='';\n      loadAccountManager();";
-if (!source.includes(activationClear)) {
-  console.error('Account manager patch failed: settings activation marker missing');
-  process.exit(1);
-}
-source = source.replace(activationClear, activationWithAccounts);
+source = source.replace(/function run\(\)\{injectStyle\(\);injectAccountPageStyle\(\);moveNav\(\);styleButtons\(\);if\(!ownerShellActive\(\)\)syncGroupedContent\(\);ensureAccountMenu\(\);loadSettings\(\);watchPasswordRecovery\(\);showPasswordActivation\(\)\}/,
+  "function run(){injectStyle();moveNav();styleButtons();if(!ownerShellActive())syncGroupedContent();ensureAccountMenu()}");
+source = source.replace(/function run\(\)\{injectStyle\(\);moveNav\(\);styleButtons\(\);if\(!ownerShellActive\(\)\)syncGroupedContent\(\);ensureAccountMenu\(\);scheduleSettingsFallback\(\);watchPasswordRecovery\(\);showPasswordActivation\(\)\}/,
+  "function run(){injectStyle();moveNav();styleButtons();if(!ownerShellActive())syncGroupedContent();ensureAccountMenu()}");
 
-if (source.includes(oldObserver) || !source.includes("observe(navRoot,{childList:true,subtree:true})")) {
-  console.error('P4 nav runtime patch failed: observer replacement verification failed');
-  process.exit(1);
-}
-if (source.includes(oldRun) || !source.includes("function loadAccountManager()")) {
-  console.error('P4/account manager runtime verification failed');
-  process.exit(1);
-}
-if (!source.includes('scheduleSettingsFallback()') || source.includes('ensureAccountMenu();loadSettings();watchPasswordRecovery()')) {
-  console.error('P5 nav runtime patch failed: legacy settings still eager');
-  process.exit(1);
-}
-if (source.includes("email==='harisnu@gmail.com'||email==='ekariashoesanti@gmail.com'")) {
-  console.error('Account manager patch failed: legacy super-admin email rule remains');
-  process.exit(1);
-}
-if (!source.includes("s.src='/account-manager-v1.js?v=2'")) {
-  console.error('Account manager patch failed: runtime loader missing');
-  process.exit(1);
-}
+if (/hasnariaSendActivation|hasnariaPasswordBody|watchPasswordRecovery|showPasswordActivation|Password aplikasi/.test(source)) throw new Error('legacy password/account renderer still present');
+if (!source.includes("s.src='/account-manager-v1.js?v=3'")) throw new Error('Account Manager v3 loader missing');
+if (!source.includes('await loadAccountManager();page.classList.add(\'open\')')) throw new Error('atomic account page open missing');
+if (!source.includes("observe(navRoot,{childList:true,subtree:true})")) throw new Error('scoped observer missing');
 
 fs.writeFileSync(navPath, source);
 const check = spawnSync(process.execPath, ['--check', navPath], { stdio: 'inherit' });
-if (check.status !== 0) {
-  console.error('P4/P5 nav runtime patch failed: syntax check failed');
-  process.exit(check.status || 1);
-}
-
-console.log('P4 nav observer scope: PASS (document.body -> #app>header)');
-console.log('P4 account page style: PASS (startup -> on-demand)');
-console.log('P5 user settings runtime: PASS (executive owner skips legacy settings script)');
-console.log('Account manager: PASS (Harisnu SUPER ADMIN, Ekaria OWNER, lazy account list runtime v2)');
+if (check.status !== 0) process.exit(check.status || 1);
+console.log('Owner nav/account runtime: PASS (atomic Account Manager v3, no legacy password renderer)');
