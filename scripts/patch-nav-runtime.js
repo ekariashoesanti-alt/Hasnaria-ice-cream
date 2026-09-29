@@ -47,7 +47,7 @@ if (!source.includes(oldSuperAdmin)) {
 source = source.replace(oldSuperAdmin, newSuperAdmin);
 
 const oldPasswordRole = "role.textContent=(low==='harisnu@gmail.com'||low==='ekariashoesanti@gmail.com')?'SUPER ADMIN':'USER';";
-const newPasswordRole = "role.textContent=low==='harisnu@gmail.com'?'SUPER ADMIN':(low==='ekariashoesanti@yahoo.com'?'OWNER':'USER');";
+const newPasswordRole = "role.textContent=low==='harisnu@gmail.com'?'SUPER ADMIN':(low==='ekariashoesanti@gmail.com'?'OWNER':'USER');";
 if (!source.includes(oldPasswordRole)) {
   console.error('Account manager patch failed: password role marker missing');
   process.exit(1);
