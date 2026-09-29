@@ -84,7 +84,11 @@ jobs:
           set -euo pipefail
           node -e "JSON.parse(require('fs').readFileSync('vercel.json','utf8'));"
           test -s scripts/vercel-build-check.js
-          grep -q '"buildCommand": "node scripts/vercel-build-check.js"' vercel.json
+          test -s scripts/vercel-build.js
+          test -s scripts/patch-p0-desktop-stability.js
+          grep -q '"buildCommand": "node scripts/vercel-build.js"' vercel.json
+          grep -q "'vercel-build-check.js'" scripts/vercel-build.js
+          grep -q "'patch-p0-desktop-stability.js'" scripts/vercel-build.js
           grep -q '"outputDirectory": "dist"' vercel.json
           grep -q 'Content-Security-Policy' vercel.json
           grep -q 'Permissions-Policy' vercel.json
@@ -95,7 +99,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          node scripts/vercel-build-check.js
+          node scripts/vercel-build.js
           test -s dist/index.html
           test -s dist/app.js
           test -s dist/core-app.js
