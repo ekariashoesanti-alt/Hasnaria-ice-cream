@@ -26,9 +26,32 @@ Deno.serve(async (req) => {
     if (!pr.data || pr.data.status !== "active" || pr.data.is_super_admin !== true) return out({ error: "Super Admin access required" }, 403);
     const body = await req.json();
     const email = String(body.email || "").trim().toLowerCase();
-    const mode = body.mode === "activate" ? "activate" : "recovery";
+    const mode = body.mode === "activate" ? "activate" : body.mode === "direct_password" ? "direct_password" : "recovery";
+    const password = String(body.password || "");
     const tr = await admin.from("account_access_registry").select("email,status,auth_user_id,brand_id").eq("brand_id", pr.data.brand_id).ilike("email", email).maybeSingle();
     if (!tr.data || tr.data.status === "disabled") return out({ error: "Akun tidak tersedia" }, 404);
+    if (mode === "direct_password") {
+      if (password.length < 8) return out({ error: "Password minimal 8 karakter" }, 400);
+      let authUserId = tr.data.auth_user_id as string | null;
+      if (authUserId) {
+        const up = await admin.auth.admin.updateUserById(authUserId, { password, email_confirm: true });
+        if (up.error) throw up.error;
+      } else {
+        const created = await admin.auth.admin.createUser({
+          email: tr.data.email,
+          password,
+          email_confirm: true,
+        });
+        if (created.error) throw created.error;
+        authUserId = created.data.user?.id || null;
+        if (!authUserId) throw new Error("Gagal membuat akun Auth");
+        const reg = await admin.from("account_access_registry")
+          .update({ auth_user_id: authUserId, status: "active", updated_at: new Date().toISOString() })
+          .eq("brand_id", pr.data.brand_id).ilike("email", email);
+        if (reg.error) throw reg.error;
+      }
+      return out({ ok: true, email: tr.data.email, mode: "direct_password" });
+    }
     if (mode === "recovery" && !tr.data.auth_user_id) return out({ error: "Akun belum aktif" }, 409);
     const type = mode === "activate" && !tr.data.auth_user_id ? "invite" : "recovery";
     const gl = await admin.auth.admin.generateLink({
