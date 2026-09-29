@@ -1,0 +1,115 @@
+(function(){
+'use strict';
+if(window.__HASNARIA_ACCOUNT_MANAGER_V1)return;
+
+var state={payload:null,loading:false,mounted:false};
+function $(id){return document.getElementById(id)}
+function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+function db(){return window.__HASNARIA_DB||null}
+function statusLabel(v){return v==='active'?'AKTIF':v==='disabled'?'NONAKTIF':'BELUM AKTIVASI'}
+function statusClass(v){return v==='active'?'active':v==='disabled'?'disabled':'pending'}
+function dateTime(v){if(!v)return'Belum pernah';try{return new Intl.DateTimeFormat('id-ID',{dateStyle:'medium',timeStyle:'short'}).format(new Date(v))}catch(_){return String(v)}}
+function css(){if($('hasnaria-account-manager-css'))return;var l=document.createElement('link');l.id='hasnaria-account-manager-css';l.rel='stylesheet';l.href='/account-manager-v1.css?v=1';document.head.appendChild(l)}
+function setMsg(text,type){var el=$('hasnariaAccountManagerMsg');if(!el)return;el.className='ham-msg '+(type||'');el.textContent=text||''}
+function inviteClient(){var create=window.__HASNARIA_ORIGINAL_CREATE_CLIENT;if(!create&&window.supabase&&supabase.createClient)create=supabase.createClient.bind(supabase);if(!create)throw new Error('Auth client belum siap');return create(window.HASNARIA_SB,window.HASNARIA_KEY,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false,flowType:'implicit',storageKey:'hasnaria-account-invite'}})}
+
+function shell(){
+  var host=$('hasnariaAccountSettingsBody');
+  if(!host)return null;
+  var box=$('hasnariaAccountManager');
+  if(box)return box;
+  box=document.createElement('section');
+  box.id='hasnariaAccountManager';
+  box.className='ham-wrap';
+  box.innerHTML='<div class="ham-head"><div><div class="ham-kicker">AKSES APLIKASI</div><h3>Daftar Akun</h3><p>Kelola akun seperti di HC Connect: identitas, akses, status aktivasi, dan terakhir masuk.</p></div><button type="button" class="ham-primary ham-add" id="hasnariaAddAccount">+ Tambah akun</button></div><div id="hasnariaAccountManagerMsg" class="ham-msg"></div><div id="hasnariaNewAccountForm" class="ham-form hidden"><label>Nama lengkap<input id="hamNewName" type="text" autocomplete="name" placeholder="Nama pemilik akun"></label><label>Email / User ID<input id="hamNewEmail" type="email" autocomplete="email" placeholder="nama@email.com"></label><label>Akses<select id="hamNewAccess"><option value="owner">Owner</option><option value="user">User</option></select></label><div class="ham-form-actions"><button type="button" class="ham-secondary" id="hamCancelNew">Batal</button><button type="button" class="ham-primary" id="hamSaveNew">Simpan & Kirim Aktivasi</button></div></div><div id="hasnariaAccountList" class="ham-list"><div class="ham-loading">Memuat daftar akun…</div></div><div class="ham-footnote">Super Admin utama dikunci agar tidak dapat diturunkan atau dinonaktifkan dari UI.</div><div class="hasnaria-account-divider ham-divider"></div>';
+  host.insertBefore(box,host.firstChild);
+  bind(box);
+  return box;
+}
+
+function accessControl(a,i,canManage){
+  if(a.locked)return'<div class="ham-access"><span class="ham-role super">SUPER ADMIN</span><span class="ham-lock">Terkunci</span></div>';
+  if(!canManage)return'<span class="ham-role '+esc(a.access_role)+'">'+esc(a.access_label||String(a.access_role||'USER').toUpperCase())+'</span>';
+  return '<select class="ham-select" data-ham-role="'+i+'"><option value="owner"'+(a.access_role==='owner'?' selected':'')+'>Owner</option><option value="user"'+(a.access_role==='user'?' selected':'')+'>User</option></select>';
+}
+function statusControl(a,i,canManage){
+  if(a.locked||!canManage)return'<span class="ham-status '+statusClass(a.status)+'">'+statusLabel(a.status)+'</span>';
+  return '<select class="ham-select" data-ham-status="'+i+'"><option value="active"'+(a.status==='active'?' selected':'')+'>Aktif</option><option value="pending_activation"'+(a.status==='pending_activation'?' selected':'')+'>Belum Aktivasi</option><option value="disabled"'+(a.status==='disabled'?' selected':'')+'>Nonaktif</option></select>';
+}
+function row(a,i,canManage){
+  var initial=String(a.full_name||a.email||'?').trim().charAt(0).toUpperCase();
+  var actions='';
+  if(canManage&&!a.locked){
+    if(a.status==='pending_activation')actions+='<button type="button" class="ham-secondary" data-ham-invite="'+i+'">Kirim Aktivasi</button>';
+    actions+='<button type="button" class="ham-primary" data-ham-save="'+i+'">Simpan</button>';
+  }
+  return '<div class="ham-row"><div class="ham-person"><div class="ham-avatar">'+esc(initial)+'</div><div class="ham-identity"><b>'+esc(a.full_name||'—')+'</b><span>'+esc(a.email||'—')+'</span></div></div><div class="ham-field"><small>Akses</small>'+accessControl(a,i,canManage)+'</div><div class="ham-field"><small>Status</small>'+statusControl(a,i,canManage)+'</div><div class="ham-field ham-last"><small>Terakhir masuk</small><span>'+esc(dateTime(a.last_sign_in_at))+'</span></div><div class="ham-actions">'+actions+'</div></div>';
+}
+function render(payload){
+  state.payload=payload||{};
+  var list=$('hasnariaAccountList'),add=$('hasnariaAddAccount');
+  if(!list)return;
+  var arr=Array.isArray(state.payload.accounts)?state.payload.accounts:[];
+  var can=!!state.payload.can_manage;
+  if(add)add.classList.toggle('hidden',!can);
+  list.innerHTML=arr.length?arr.map(function(a,i){return row(a,i,can)}).join(''):'<div class="ham-empty">Belum ada akun.</div>';
+  var badge=$('hasnariaAccountPageRole');if(badge&&state.payload.self_access)badge.textContent=state.payload.self_access;
+}
+async function load(){
+  if(state.loading||!db())return;
+  state.loading=true;
+  var list=$('hasnariaAccountList');if(list&&!state.payload)list.innerHTML='<div class="ham-loading">Memuat daftar akun…</div>';
+  try{
+    var r=await db().rpc('account_manager_list_v1');
+    if(r.error)throw r.error;
+    render(r.data||{});
+  }catch(e){if(list)list.innerHTML='<div class="ham-empty ham-error">'+esc(e&&e.message||'Gagal memuat daftar akun')+'</div>'}
+  state.loading=false;
+}
+async function saveAccount(i){
+  var a=state.payload&&state.payload.accounts&&state.payload.accounts[i];if(!a||a.locked)return;
+  var role=document.querySelector('[data-ham-role="'+i+'"]'),status=document.querySelector('[data-ham-status="'+i+'"]');
+  setMsg('Menyimpan perubahan…','');
+  try{
+    var r=await db().rpc('account_manager_upsert_v1',{p_email:a.email,p_full_name:a.full_name,p_access_role:role?role.value:a.access_role,p_status:status?status.value:a.status});
+    if(r.error)throw r.error;
+    render(r.data||{});setMsg('Perubahan akun tersimpan.','success');
+  }catch(e){setMsg(e&&e.message||'Gagal menyimpan akun','error')}
+}
+async function sendInvite(email){
+  if(!email)return;
+  setMsg('Mengirim link aktivasi ke '+email+'…','');
+  try{
+    var c=inviteClient();
+    var r=await c.auth.signInWithOtp({email:email,options:{shouldCreateUser:true,emailRedirectTo:location.origin+location.pathname}});
+    if(r.error)throw r.error;
+    setMsg('Link aktivasi sudah dikirim ke '+email+'. Status akan menjadi Aktif setelah login pertama.','success');
+  }catch(e){setMsg(e&&e.message||'Gagal mengirim aktivasi','error')}
+}
+async function saveNew(){
+  var name=($('hamNewName')&&$('hamNewName').value||'').trim(),email=($('hamNewEmail')&&$('hamNewEmail').value||'').trim().toLowerCase(),access=$('hamNewAccess')&&$('hamNewAccess').value||'user';
+  if(!name||!email){setMsg('Nama dan email wajib diisi.','error');return}
+  setMsg('Menyimpan akun baru…','');
+  try{
+    var r=await db().rpc('account_manager_upsert_v1',{p_email:email,p_full_name:name,p_access_role:access,p_status:'pending_activation'});
+    if(r.error)throw r.error;
+    render(r.data||{});
+    var form=$('hasnariaNewAccountForm');if(form)form.classList.add('hidden');
+    if($('hamNewName'))$('hamNewName').value='';if($('hamNewEmail'))$('hamNewEmail').value='';
+    await sendInvite(email);
+  }catch(e){setMsg(e&&e.message||'Gagal membuat akun','error')}
+}
+function bind(box){
+  box.addEventListener('click',function(e){
+    var add=e.target.closest('#hasnariaAddAccount');if(add){$('hasnariaNewAccountForm').classList.toggle('hidden');return}
+    if(e.target.closest('#hamCancelNew')){$('hasnariaNewAccountForm').classList.add('hidden');return}
+    if(e.target.closest('#hamSaveNew')){saveNew();return}
+    var save=e.target.closest('[data-ham-save]');if(save){saveAccount(Number(save.getAttribute('data-ham-save')));return}
+    var invite=e.target.closest('[data-ham-invite]');if(invite){var i=Number(invite.getAttribute('data-ham-invite')),a=state.payload&&state.payload.accounts&&state.payload.accounts[i];if(a)sendInvite(a.email)}
+  });
+}
+function mount(){css();var box=shell();if(!box)return false;state.mounted=true;load();return true}
+
+window.__HASNARIA_ACCOUNT_MANAGER_V1={mount:mount,refresh:load};
+mount();
+})();
