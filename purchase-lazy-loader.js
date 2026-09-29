@@ -1,6 +1,7 @@
 /* Hasnaria Purchase analytics — lazy runtime loader.
- * Owner uses owner-executive-v1 and must never boot the legacy Purchase analytics runtime.
- * Other roles load Purchase assets only when the Purchase tab is actually opened.
+ * Purchase stays lazy for performance, but Owner is allowed to load it when
+ * Pembelian is opened. The Owner shell no longer replaces Pembelian with the
+ * executive summary renderer.
  */
 (function () {
   'use strict';
@@ -10,8 +11,6 @@
   var loading = null;
   var loaded = false;
 
-  function context() { return window.__HASNARIA_CONTEXT || null; }
-  function isOwner() { var c = context(); return !!(c && c.role === 'owner'); }
   function purchaseVisible() {
     var host = document.getElementById('pembelian');
     return !!(host && !host.classList.contains('hidden'));
@@ -27,13 +26,14 @@
   }
 
   function ensureRuntime() {
-    if (loaded || isOwner()) return Promise.resolve(false);
+    if (loaded) return Promise.resolve(true);
     if (window.__HASNARIA_PURCHASE_ANALYTICS) { loaded = true; return Promise.resolve(true); }
     if (loading) return loading;
     ensureCss();
     loading = new Promise(function (resolve, reject) {
       var old = document.getElementById('hasnaria-purchase-analytics-js');
       if (old) {
+        if (window.__HASNARIA_PURCHASE_ANALYTICS) { loaded = true; resolve(true); return; }
         old.addEventListener('load', function () { loaded = true; resolve(true); }, { once: true });
         old.addEventListener('error', function () { loading = null; reject(new Error('Purchase analytics gagal dimuat.')); }, { once: true });
         return;
@@ -50,7 +50,7 @@
   }
 
   function maybeLoad() {
-    if (isOwner() || !purchaseVisible()) return;
+    if (!purchaseVisible()) return;
     ensureRuntime().catch(function (error) {
       if (window.console && console.warn) console.warn('Purchase lazy loader:', error && error.message ? error.message : error);
     });
