@@ -1,0 +1,17 @@
+const fs=require('fs');
+const path=require('path');
+const {spawnSync}=require('child_process');
+const dist=path.join(process.cwd(),'dist');
+const authPath=path.join(dist,'auth-bootstrap.js');
+const resetPath=path.join(dist,'password-reset-bootstrap.js');
+if(!fs.existsSync(authPath)||!fs.existsSync(resetPath))throw new Error('auth runtime artifact missing');
+let auth=fs.readFileSync(authPath,'utf8');
+const trampoline=`(function(){try{var u=new URL(location.href);if(u.searchParams.get('password-activation')==='1'){u.pathname='/set-password.html';u.searchParams.delete('password-activation');location.replace(u.toString());return}}catch(_){}})();\n`;
+if(!auth.startsWith('(function(){try{var u=new URL(location.href);'))auth=trampoline+auth;
+fs.writeFileSync(authPath,auth);
+const reset=`(function(){\n'use strict';\nfunction bind(){var btn=document.getElementById('resetBtn');if(!btn||btn.__hasnariaRecoveryBound)return;btn.__hasnariaRecoveryBound=true;btn.addEventListener('click',function(){location.href='/forgot-password.html'});}\nif(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind,{once:true});else bind();\n})();\n`;
+fs.writeFileSync(resetPath,reset);
+for(const file of [authPath,resetPath]){const r=spawnSync(process.execPath,['--check',file],{stdio:'inherit'});if(r.status!==0)process.exit(r.status||1)}
+if(!auth.includes("u.pathname='/set-password.html'"))throw new Error('set-password trampoline missing');
+if(!reset.includes("location.href='/forgot-password.html'"))throw new Error('forgot-password navigation missing');
+console.log('Auth recovery runtime: PASS (dedicated forgot/set-password flow)');
