@@ -9,15 +9,28 @@ function requireCredentials() {
   if (!EMAIL || !PASSWORD) throw new Error('HASNARIA_E2E_EMAIL and HASNARIA_E2E_PASSWORD are required.');
 }
 
+async function submitLogin(page) {
+  const password = page.locator('#password');
+  await password.fill(PASSWORD);
+  await page.locator('#loginBtn').click();
+  try {
+    await expect(page.locator('#app')).not.toHaveClass(/hidden/, { timeout: 45000 });
+  } catch (error) {
+    let authMessage = '';
+    try { authMessage = (await page.locator('#authMsg').textContent()) || ''; } catch (_) {}
+    try { await password.fill(''); } catch (_) {}
+    throw new Error(`Owner login failed${authMessage ? `: ${authMessage}` : ''}`);
+  }
+  try { await password.fill(''); } catch (_) {}
+}
+
 async function login(page) {
   requireCredentials();
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(BASE_URL, { waitUntil: 'domcontentloaded', timeout: 45000 });
   await expect(page.locator('#email')).toBeVisible({ timeout: 20000 });
   await page.locator('#email').fill(EMAIL);
-  await page.locator('#password').fill(PASSWORD);
-  await page.locator('#loginBtn').click();
-  await expect(page.locator('#app')).not.toHaveClass(/hidden/, { timeout: 45000 });
+  await submitLogin(page);
   await expect(page.locator('#auth')).toHaveClass(/hidden/);
   await expect(page.locator('[data-tab="dashboard"]')).toBeVisible();
 }
@@ -49,6 +62,7 @@ async function waitCanonicalSurface(page, id) {
 }
 
 test('P0 desktop: repeated Owner tab cycle stays single-surface and duplicate-free', async ({ page }) => {
+  test.setTimeout(120000);
   const pageErrors = [];
   const consoleErrors = [];
 
