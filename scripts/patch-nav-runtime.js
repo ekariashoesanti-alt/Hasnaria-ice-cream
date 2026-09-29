@@ -38,24 +38,56 @@ if (!source.includes(oldRun)) {
 }
 source = source.replace(oldRun, newRun);
 
+const oldSuperAdmin = "  function superAdmin(){\n    var email='';\n    var who=document.getElementById('whoMeta');\n    if(who){\n      var parts=(who.textContent||'').split('·').map(function(x){return x.trim()});\n      for(var i=0;i<parts.length;i++){\n        if(parts[i].indexOf('@')>=0){email=parts[i].toLowerCase();break}\n      }\n    }\n    // Super admin: Harisnu + Hasnaria owner email\n    return email==='harisnu@gmail.com'||email==='ekariashoesanti@gmail.com';\n  }";
+const newSuperAdmin = "  function superAdmin(){\n    var email='';\n    var who=document.getElementById('whoMeta');\n    if(who){\n      var parts=(who.textContent||'').split('·').map(function(x){return x.trim()});\n      for(var i=0;i<parts.length;i++){\n        if(parts[i].indexOf('@')>=0){email=parts[i].toLowerCase();break}\n      }\n    }\n    return email==='harisnu@gmail.com';\n  }";
+if (!source.includes(oldSuperAdmin)) {
+  console.error('Account manager patch failed: legacy super admin marker missing');
+  process.exit(1);
+}
+source = source.replace(oldSuperAdmin, newSuperAdmin);
+
+const oldPasswordRole = "role.textContent=(low==='harisnu@gmail.com'||low==='ekariashoesanti@gmail.com')?'SUPER ADMIN':'USER';";
+const newPasswordRole = "role.textContent=low==='harisnu@gmail.com'?'SUPER ADMIN':(low==='ekariashoesanti@yahoo.com'?'OWNER':'USER');";
+if (!source.includes(oldPasswordRole)) {
+  console.error('Account manager patch failed: password role marker missing');
+  process.exit(1);
+}
+source = source.replace(oldPasswordRole, newPasswordRole);
+
 const oldAccountOpen = "async function showAccountPage(mode){\n    var page=document.getElementById('hasnariaAccountPage');";
-const newAccountOpen = "async function showAccountPage(mode){\n    injectAccountPageStyle();\n    var page=document.getElementById('hasnariaAccountPage');";
+const accountManagerLoader = "function loadAccountManager(){\n    if(window.__HASNARIA_ACCOUNT_MANAGER_V1&&typeof window.__HASNARIA_ACCOUNT_MANAGER_V1.mount==='function'){window.__HASNARIA_ACCOUNT_MANAGER_V1.mount();return}\n    if(document.getElementById('hasnaria-account-manager-v1-js'))return;\n    var s=document.createElement('script');s.id='hasnaria-account-manager-v1-js';s.src='/account-manager-v1.js?v=1';s.async=true;\n    s.onload=function(){if(window.__HASNARIA_ACCOUNT_MANAGER_V1&&typeof window.__HASNARIA_ACCOUNT_MANAGER_V1.mount==='function')window.__HASNARIA_ACCOUNT_MANAGER_V1.mount()};\n    document.head.appendChild(s);\n  }\n\n  async function showAccountPage(mode){\n    injectAccountPageStyle();\n    var page=document.getElementById('hasnariaAccountPage');";
 if (!source.includes(oldAccountOpen)) {
   console.error('P4 nav runtime patch failed: account page entry marker missing');
   process.exit(1);
 }
-source = source.replace(oldAccountOpen, newAccountOpen);
+source = source.replace(oldAccountOpen, accountManagerLoader);
+
+const activationClear = "      document.getElementById('hasnariaActivationMsg').textContent='';";
+const activationWithAccounts = "      document.getElementById('hasnariaActivationMsg').textContent='';\n      loadAccountManager();";
+if (!source.includes(activationClear)) {
+  console.error('Account manager patch failed: settings activation marker missing');
+  process.exit(1);
+}
+source = source.replace(activationClear, activationWithAccounts);
 
 if (source.includes(oldObserver) || !source.includes("observe(navRoot,{childList:true,subtree:true})")) {
   console.error('P4 nav runtime patch failed: observer replacement verification failed');
   process.exit(1);
 }
-if (source.includes(oldRun) || !source.includes('async function showAccountPage(mode){\n    injectAccountPageStyle();')) {
-  console.error('P4 nav runtime patch failed: lazy account style verification failed');
+if (source.includes(oldRun) || !source.includes("function loadAccountManager()")) {
+  console.error('P4/account manager runtime verification failed');
   process.exit(1);
 }
 if (!source.includes('scheduleSettingsFallback()') || source.includes('ensureAccountMenu();loadSettings();watchPasswordRecovery()')) {
   console.error('P5 nav runtime patch failed: legacy settings still eager');
+  process.exit(1);
+}
+if (source.includes("email==='harisnu@gmail.com'||email==='ekariashoesanti@gmail.com'")) {
+  console.error('Account manager patch failed: legacy super-admin email rule remains');
+  process.exit(1);
+}
+if (!source.includes("s.src='/account-manager-v1.js?v=1'")) {
+  console.error('Account manager patch failed: runtime loader missing');
   process.exit(1);
 }
 
@@ -69,3 +101,4 @@ if (check.status !== 0) {
 console.log('P4 nav observer scope: PASS (document.body -> #app>header)');
 console.log('P4 account page style: PASS (startup -> on-demand)');
 console.log('P5 user settings runtime: PASS (executive owner skips legacy settings script)');
+console.log('Account manager: PASS (Harisnu SUPER ADMIN, Ekaria OWNER, lazy account list runtime)');
