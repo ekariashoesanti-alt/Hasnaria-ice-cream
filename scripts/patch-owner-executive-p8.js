@@ -62,3 +62,4 @@ if (check.status !== 0) {
 }
 
 console.log('P8 purchase payment reconciliation: PASS (owner queue + audited posting workflow)');
+require('./patch-purchase-payment-required-p10.js');
