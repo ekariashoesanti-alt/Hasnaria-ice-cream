@@ -2,14 +2,14 @@
 'use strict';
 if(window.__HASNARIA_ACCOUNT_MANAGER_V1)return;
 
-var state={payload:null,loading:false,mounted:false};
+var state={payload:null,loading:false,mounted:false,page:1,pageSize:5};
 function $(id){return document.getElementById(id)}
 function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function db(){return window.__HASNARIA_DB||null}
 function statusLabel(v){return v==='active'?'AKTIF':v==='disabled'?'NONAKTIF':'BELUM AKTIVASI'}
 function statusClass(v){return v==='active'?'active':v==='disabled'?'disabled':'pending'}
 function dateTime(v){if(!v)return'Belum pernah';try{return new Intl.DateTimeFormat('id-ID',{dateStyle:'medium',timeStyle:'short'}).format(new Date(v))}catch(_){return String(v)}}
-function css(){if($('hasnaria-account-manager-css'))return;var l=document.createElement('link');l.id='hasnaria-account-manager-css';l.rel='stylesheet';l.href='/account-manager-v1.css?v=1';document.head.appendChild(l)}
+function css(){if($('hasnaria-account-manager-css'))return;var l=document.createElement('link');l.id='hasnaria-account-manager-css';l.rel='stylesheet';l.href='/account-manager-v1.css?v=2';document.head.appendChild(l)}
 function setMsg(text,type){var el=$('hasnariaAccountManagerMsg');if(!el)return;el.className='ham-msg '+(type||'');el.textContent=text||''}
 function inviteClient(){var create=window.__HASNARIA_ORIGINAL_CREATE_CLIENT;if(!create&&window.supabase&&supabase.createClient)create=supabase.createClient.bind(supabase);if(!create)throw new Error('Auth client belum siap');return create(window.HASNARIA_SB,window.HASNARIA_KEY,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false,flowType:'implicit',storageKey:'hasnaria-account-invite'}})}
 
@@ -21,7 +21,7 @@ function shell(){
   box=document.createElement('section');
   box.id='hasnariaAccountManager';
   box.className='ham-wrap';
-  box.innerHTML='<div class="ham-head"><div><div class="ham-kicker">AKSES APLIKASI</div><h3>Daftar Akun</h3><p>Kelola akun seperti di HC Connect: identitas, akses, status aktivasi, dan terakhir masuk.</p></div><button type="button" class="ham-primary ham-add" id="hasnariaAddAccount">+ Tambah akun</button></div><div id="hasnariaAccountManagerMsg" class="ham-msg"></div><div id="hasnariaNewAccountForm" class="ham-form hidden"><label>Nama lengkap<input id="hamNewName" type="text" autocomplete="name" placeholder="Nama pemilik akun"></label><label>Email / User ID<input id="hamNewEmail" type="email" autocomplete="email" placeholder="nama@email.com"></label><label>Akses<select id="hamNewAccess"><option value="owner">Owner</option><option value="user">User</option></select></label><div class="ham-form-actions"><button type="button" class="ham-secondary" id="hamCancelNew">Batal</button><button type="button" class="ham-primary" id="hamSaveNew">Simpan & Kirim Aktivasi</button></div></div><div id="hasnariaAccountList" class="ham-list"><div class="ham-loading">Memuat daftar akun…</div></div><div class="ham-footnote">Super Admin utama dikunci agar tidak dapat diturunkan atau dinonaktifkan dari UI.</div><div class="hasnaria-account-divider ham-divider"></div>';
+  box.innerHTML='<div class="ham-head"><div><div class="ham-kicker">AKSES APLIKASI</div><h3>Daftar Akun</h3><p>Kelola identitas, akses, status aktivasi, dan terakhir masuk.</p></div><button type="button" class="ham-primary ham-add" id="hasnariaAddAccount">+ Tambah akun</button></div><div id="hasnariaAccountManagerMsg" class="ham-msg"></div><div id="hasnariaNewAccountForm" class="ham-form hidden"><label>Nama lengkap<input id="hamNewName" type="text" autocomplete="name" placeholder="Nama pemilik akun"></label><label>Email / User ID<input id="hamNewEmail" type="email" autocomplete="email" placeholder="nama@email.com"></label><label>Akses<select id="hamNewAccess"><option value="owner">Owner</option><option value="user">User</option></select></label><div class="ham-form-actions"><button type="button" class="ham-secondary" id="hamCancelNew">Batal</button><button type="button" class="ham-primary" id="hamSaveNew">Simpan & Kirim Aktivasi</button></div></div><div id="hasnariaAccountList" class="ham-list"><div class="ham-loading">Memuat daftar akun…</div></div><div id="hasnariaAccountPager" class="ham-pager hidden"></div><div class="ham-footnote">Super Admin utama dikunci agar tidak dapat diturunkan atau dinonaktifkan dari UI.</div><div class="hasnaria-account-divider ham-divider"></div>';
   host.insertBefore(box,host.firstChild);
   bind(box);
   return box;
@@ -40,10 +40,21 @@ function row(a,i,canManage){
   var initial=String(a.full_name||a.email||'?').trim().charAt(0).toUpperCase();
   var actions='';
   if(canManage&&!a.locked){
-    if(a.status==='pending_activation')actions+='<button type="button" class="ham-secondary" data-ham-invite="'+i+'">Kirim Aktivasi</button>';
+    if(a.status==='pending_activation')actions+='<button type="button" class="ham-secondary" data-ham-invite="'+i+'">Aktivasi</button>';
     actions+='<button type="button" class="ham-primary" data-ham-save="'+i+'">Simpan</button>';
   }
   return '<div class="ham-row"><div class="ham-person"><div class="ham-avatar">'+esc(initial)+'</div><div class="ham-identity"><b>'+esc(a.full_name||'—')+'</b><span>'+esc(a.email||'—')+'</span></div></div><div class="ham-field"><small>Akses</small>'+accessControl(a,i,canManage)+'</div><div class="ham-field"><small>Status</small>'+statusControl(a,i,canManage)+'</div><div class="ham-field ham-last"><small>Terakhir masuk</small><span>'+esc(dateTime(a.last_sign_in_at))+'</span></div><div class="ham-actions">'+actions+'</div></div>';
+}
+function pager(total){
+  var host=$('hasnariaAccountPager');if(!host)return;
+  var pages=Math.max(1,Math.ceil(total/state.pageSize));
+  if(total<=state.pageSize){host.classList.add('hidden');host.innerHTML='';return}
+  if(state.page>pages)state.page=pages;
+  var buttons='<button type="button" class="ham-page-btn" data-ham-page="prev"'+(state.page<=1?' disabled':'')+'>‹</button>';
+  for(var p=1;p<=pages;p++)buttons+='<button type="button" class="ham-page-btn'+(p===state.page?' on':'')+'" data-ham-page="'+p+'">'+p+'</button>';
+  buttons+='<button type="button" class="ham-page-btn" data-ham-page="next"'+(state.page>=pages?' disabled':'')+'>›</button>';
+  host.innerHTML='<span>'+((state.page-1)*state.pageSize+1)+'–'+Math.min(state.page*state.pageSize,total)+' dari '+total+' akun</span><div class="ham-page-buttons">'+buttons+'</div>';
+  host.classList.remove('hidden');
 }
 function render(payload){
   state.payload=payload||{};
@@ -51,8 +62,11 @@ function render(payload){
   if(!list)return;
   var arr=Array.isArray(state.payload.accounts)?state.payload.accounts:[];
   var can=!!state.payload.can_manage;
+  var pages=Math.max(1,Math.ceil(arr.length/state.pageSize));if(state.page>pages)state.page=pages;
+  var start=(state.page-1)*state.pageSize,end=Math.min(start+state.pageSize,arr.length);
   if(add)add.classList.toggle('hidden',!can);
-  list.innerHTML=arr.length?arr.map(function(a,i){return row(a,i,can)}).join(''):'<div class="ham-empty">Belum ada akun.</div>';
+  list.innerHTML=arr.length?arr.slice(start,end).map(function(a,local){return row(a,start+local,can)}).join(''):'<div class="ham-empty">Belum ada akun.</div>';
+  pager(arr.length);
   var badge=$('hasnariaAccountPageRole');if(badge&&state.payload.self_access)badge.textContent=state.payload.self_access;
 }
 async function load(){
@@ -93,17 +107,24 @@ async function saveNew(){
   try{
     var r=await db().rpc('account_manager_upsert_v1',{p_email:email,p_full_name:name,p_access_role:access,p_status:'pending_activation'});
     if(r.error)throw r.error;
+    state.page=Math.max(1,Math.ceil(((r.data&&r.data.accounts)||[]).length/state.pageSize));
     render(r.data||{});
     var form=$('hasnariaNewAccountForm');if(form)form.classList.add('hidden');
     if($('hamNewName'))$('hamNewName').value='';if($('hamNewEmail'))$('hamNewEmail').value='';
     await sendInvite(email);
   }catch(e){setMsg(e&&e.message||'Gagal membuat akun','error')}
 }
+function changePage(raw){
+  var arr=state.payload&&Array.isArray(state.payload.accounts)?state.payload.accounts:[],pages=Math.max(1,Math.ceil(arr.length/state.pageSize));
+  var next=state.page;if(raw==='prev')next--;else if(raw==='next')next++;else next=Number(raw)||state.page;
+  state.page=Math.max(1,Math.min(pages,next));render(state.payload||{});
+}
 function bind(box){
   box.addEventListener('click',function(e){
     var add=e.target.closest('#hasnariaAddAccount');if(add){$('hasnariaNewAccountForm').classList.toggle('hidden');return}
     if(e.target.closest('#hamCancelNew')){$('hasnariaNewAccountForm').classList.add('hidden');return}
     if(e.target.closest('#hamSaveNew')){saveNew();return}
+    var page=e.target.closest('[data-ham-page]');if(page){changePage(page.getAttribute('data-ham-page'));return}
     var save=e.target.closest('[data-ham-save]');if(save){saveAccount(Number(save.getAttribute('data-ham-save')));return}
     var invite=e.target.closest('[data-ham-invite]');if(invite){var i=Number(invite.getAttribute('data-ham-invite')),a=state.payload&&state.payload.accounts&&state.payload.accounts[i];if(a)sendInvite(a.email)}
   });
