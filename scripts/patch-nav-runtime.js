@@ -55,7 +55,7 @@ if (!source.includes(oldPasswordRole)) {
 source = source.replace(oldPasswordRole, newPasswordRole);
 
 const oldAccountOpen = "async function showAccountPage(mode){\n    var page=document.getElementById('hasnariaAccountPage');";
-const accountManagerLoader = "function loadAccountManager(){\n    if(window.__HASNARIA_ACCOUNT_MANAGER_V1&&typeof window.__HASNARIA_ACCOUNT_MANAGER_V1.mount==='function'){window.__HASNARIA_ACCOUNT_MANAGER_V1.mount();return}\n    if(document.getElementById('hasnaria-account-manager-v1-js'))return;\n    var s=document.createElement('script');s.id='hasnaria-account-manager-v1-js';s.src='/account-manager-v1.js?v=1';s.async=true;\n    s.onload=function(){if(window.__HASNARIA_ACCOUNT_MANAGER_V1&&typeof window.__HASNARIA_ACCOUNT_MANAGER_V1.mount==='function')window.__HASNARIA_ACCOUNT_MANAGER_V1.mount()};\n    document.head.appendChild(s);\n  }\n\n  async function showAccountPage(mode){\n    injectAccountPageStyle();\n    var page=document.getElementById('hasnariaAccountPage');";
+const accountManagerLoader = "function loadAccountManager(){\n    if(window.__HASNARIA_ACCOUNT_MANAGER_V1&&typeof window.__HASNARIA_ACCOUNT_MANAGER_V1.mount==='function'){window.__HASNARIA_ACCOUNT_MANAGER_V1.mount();return}\n    if(document.getElementById('hasnaria-account-manager-v1-js'))return;\n    var s=document.createElement('script');s.id='hasnaria-account-manager-v1-js';s.src='/account-manager-v1.js?v=2';s.async=true;\n    s.onload=function(){if(window.__HASNARIA_ACCOUNT_MANAGER_V1&&typeof window.__HASNARIA_ACCOUNT_MANAGER_V1.mount==='function')window.__HASNARIA_ACCOUNT_MANAGER_V1.mount()};\n    document.head.appendChild(s);\n  }\n\n  async function showAccountPage(mode){\n    injectAccountPageStyle();\n    var page=document.getElementById('hasnariaAccountPage');";
 if (!source.includes(oldAccountOpen)) {
   console.error('P4 nav runtime patch failed: account page entry marker missing');
   process.exit(1);
@@ -86,7 +86,7 @@ if (source.includes("email==='harisnu@gmail.com'||email==='ekariashoesanti@gmail
   console.error('Account manager patch failed: legacy super-admin email rule remains');
   process.exit(1);
 }
-if (!source.includes("s.src='/account-manager-v1.js?v=1'")) {
+if (!source.includes("s.src='/account-manager-v1.js?v=2'")) {
   console.error('Account manager patch failed: runtime loader missing');
   process.exit(1);
 }
@@ -101,4 +101,4 @@ if (check.status !== 0) {
 console.log('P4 nav observer scope: PASS (document.body -> #app>header)');
 console.log('P4 account page style: PASS (startup -> on-demand)');
 console.log('P5 user settings runtime: PASS (executive owner skips legacy settings script)');
-console.log('Account manager: PASS (Harisnu SUPER ADMIN, Ekaria OWNER, lazy account list runtime)');
+console.log('Account manager: PASS (Harisnu SUPER ADMIN, Ekaria OWNER, lazy account list runtime v2)');
