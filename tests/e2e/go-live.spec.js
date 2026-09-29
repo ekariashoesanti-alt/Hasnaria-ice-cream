@@ -43,14 +43,27 @@ function makeMajooFixture(tag) {
   return file;
 }
 
+async function submitLogin(page) {
+  const password = page.locator('#password');
+  await password.fill(PASSWORD);
+  await page.locator('#loginBtn').click();
+  try {
+    await expect(page.locator('#app')).not.toHaveClass(/hidden/, { timeout: 45000 });
+  } catch (error) {
+    let authMessage = '';
+    try { authMessage = (await page.locator('#authMsg').textContent()) || ''; } catch (_) {}
+    try { await password.fill(''); } catch (_) {}
+    throw new Error(`Owner login failed${authMessage ? `: ${authMessage}` : ''}`);
+  }
+  try { await password.fill(''); } catch (_) {}
+}
+
 async function login(page) {
   requireCredentials();
   await page.goto(BASE_URL, { waitUntil: 'domcontentloaded', timeout: 45000 });
   await expect(page.locator('#email')).toBeVisible({ timeout: 20000 });
   await page.locator('#email').fill(EMAIL);
-  await page.locator('#password').fill(PASSWORD);
-  await page.locator('#loginBtn').click();
-  await expect(page.locator('#app')).not.toHaveClass(/hidden/, { timeout: 45000 });
+  await submitLogin(page);
   await expect(page.locator('#auth')).toHaveClass(/hidden/);
   await expect(page.locator('[data-tab="dashboard"]')).toBeVisible();
 }
@@ -147,6 +160,7 @@ async function cleanupFixture(page, sourceFile) {
 
 test.describe.serial('Hasnaria production go-live E2E', () => {
   test('Owner login, navigation, safe Purchase previews, refresh, responsive, logout/login', async ({ page }) => {
+    test.setTimeout(120000);
     const tag = uniqueTag();
     const excel = makeExcelFixture(tag);
     const majoo = makeMajooFixture(tag);
@@ -183,15 +197,14 @@ test.describe.serial('Hasnaria production go-live E2E', () => {
     await page.locator('#logoutBtn').click();
     await expect(page.locator('#auth')).not.toHaveClass(/hidden/, { timeout: 20000 });
     await page.locator('#email').fill(EMAIL);
-    await page.locator('#password').fill(PASSWORD);
-    await page.locator('#loginBtn').click();
-    await expect(page.locator('#app')).not.toHaveClass(/hidden/, { timeout: 45000 });
+    await submitLogin(page);
 
     fs.rmSync(excel, { force: true });
     fs.rmSync(majoo, { force: true });
   });
 
   test('Optional controlled write verifies import_job_id then cleans business rows', async ({ page }) => {
+    test.setTimeout(120000);
     test.skip(!ALLOW_WRITE, 'Set HASNARIA_E2E_ALLOW_WRITE=1 for the final controlled write gate.');
     const tag = uniqueTag();
     const excel = makeExcelFixture(tag);
