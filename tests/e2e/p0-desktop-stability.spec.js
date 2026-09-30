@@ -9,7 +9,17 @@ function requireCredentials() {
   if (!EMAIL || !PASSWORD) throw new Error('HASNARIA_E2E_EMAIL and HASNARIA_E2E_PASSWORD are required.');
 }
 
+async function waitLoginRuntime(page) {
+  await page.waitForFunction(() => (
+    typeof supabase !== 'undefined' &&
+    !!window.HASNARIA_SB &&
+    !!window.HASNARIA_KEY
+  ), null, { timeout: 20000 });
+  await page.waitForTimeout(300);
+}
+
 async function submitLogin(page) {
+  await waitLoginRuntime(page);
   const password = page.locator('#password');
   await password.fill(PASSWORD);
   await page.locator('#loginBtn').click();
