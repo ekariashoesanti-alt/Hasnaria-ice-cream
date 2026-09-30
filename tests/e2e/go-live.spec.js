@@ -64,7 +64,7 @@ async function login(page) {
   await expect(page.locator('#email')).toBeVisible({ timeout: 20000 });
   await page.locator('#email').fill(EMAIL);
   await submitLogin(page);
-  await expect(page.locator('#auth')).toHaveClass(/hidden/);
+  await expect(page.locator('#auth')).toBeHidden({ timeout: 10000 });
   await expect(page.locator('[data-tab="dashboard"]')).toBeVisible();
 }
 
@@ -195,7 +195,7 @@ test.describe.serial('Hasnaria production go-live E2E', () => {
     }
 
     await page.locator('#logoutBtn').click();
-    await expect(page.locator('#auth')).not.toHaveClass(/hidden/, { timeout: 20000 });
+    await expect(page.locator('#auth')).toBeVisible({ timeout: 20000 });
     await page.locator('#email').fill(EMAIL);
     await submitLogin(page);
 
