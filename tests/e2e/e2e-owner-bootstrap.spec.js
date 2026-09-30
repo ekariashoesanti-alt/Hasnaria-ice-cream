@@ -8,16 +8,30 @@ function requireCredentials() {
   if (!EMAIL || !PASSWORD) throw new Error('Dedicated E2E Owner credentials are required.');
 }
 
-async function appIsVisible(page) {
-  try {
-    return await page.locator('#app').isVisible();
-  } catch (_) {
-    return false;
-  }
-}
-
 async function clearPassword(page) {
   try { await page.locator('#password').fill(''); } catch (_) {}
+}
+
+async function directSignup(page) {
+  return await page.evaluate(async ({ email, password }) => {
+    if (typeof supabase === 'undefined' || !window.HASNARIA_SB || !window.HASNARIA_KEY) {
+      return { ok: false, error: 'Supabase client bootstrap is unavailable.' };
+    }
+    const client = supabase.createClient(window.HASNARIA_SB, window.HASNARIA_KEY, {
+      auth: { persistSession: true, detectSessionInUrl: false, flowType: 'pkce' },
+    });
+    const r = await client.auth.signUp({
+      email,
+      password,
+      options: { emailRedirectTo: location.origin },
+    });
+    if (r.error) return { ok: false, error: r.error.message || String(r.error) };
+    return {
+      ok: true,
+      hasUser: !!(r.data && r.data.user),
+      hasSession: !!(r.data && r.data.session),
+    };
+  }, { email: EMAIL, password: PASSWORD });
 }
 
 test('Dedicated E2E Owner account is provisioned and can authenticate', async ({ page }) => {
@@ -30,8 +44,10 @@ test('Dedicated E2E Owner account is provisioned and can authenticate', async ({
   await page.locator('#password').fill(PASSWORD);
   await page.locator('#loginBtn').click();
 
+  let authenticated = false;
   try {
-    await expect(page.locator('#app')).toBeVisible({ timeout: 12000 });
+    await expect(page.locator('#app')).not.toHaveClass(/hidden/, { timeout: 12000 });
+    authenticated = true;
   } catch (_) {
     const loginMessage = ((await page.locator('#authMsg').textContent().catch(() => '')) || '').trim();
     if (!/invalid login credentials/i.test(loginMessage)) {
@@ -39,20 +55,20 @@ test('Dedicated E2E Owner account is provisioned and can authenticate', async ({
       throw new Error(`Dedicated E2E Owner login failed${loginMessage ? `: ${loginMessage}` : ''}`);
     }
 
-    await page.locator('#password').fill(PASSWORD);
-    await page.locator('#signupBtn').click();
-    await page.waitForTimeout(2500);
-
-    if (!(await appIsVisible(page))) {
-      const signupMessage = ((await page.locator('#authMsg').textContent().catch(() => '')) || '').trim();
-      await clearPassword(page);
-      if (/akun dibuat|cek email/i.test(signupMessage)) {
-        throw new Error('Dedicated E2E Owner was created but email confirmation is required once before P0 acceptance can continue.');
-      }
-      throw new Error(`Dedicated E2E Owner provisioning failed${signupMessage ? `: ${signupMessage}` : ''}`);
+    const signup = await directSignup(page);
+    await clearPassword(page);
+    if (!signup.ok) throw new Error(`Dedicated E2E Owner signup failed: ${signup.error}`);
+    if (!signup.hasUser) throw new Error('Dedicated E2E Owner signup returned no user.');
+    if (!signup.hasSession) {
+      throw new Error('Dedicated E2E Owner was created successfully; email confirmation is required once before P0 acceptance can continue.');
     }
+
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await expect(page.locator('#app')).not.toHaveClass(/hidden/, { timeout: 45000 });
+    authenticated = true;
   }
 
+  if (!authenticated) throw new Error('Dedicated E2E Owner session was not established.');
   await clearPassword(page);
 
   const finalized = await page.evaluate(async () => {
