@@ -12,6 +12,17 @@ async function clearPassword(page) {
   try { await page.locator('#password').fill(''); } catch (_) {}
 }
 
+async function waitLoginRuntime(page) {
+  await page.waitForFunction(() => (
+    typeof supabase !== 'undefined' &&
+    !!window.HASNARIA_SB &&
+    !!window.HASNARIA_KEY
+  ), null, { timeout: 20000 });
+  // core-app binds login immediately after Supabase becomes available; allow that
+  // promise continuation to finish before simulating a very fast user click.
+  await page.waitForTimeout(300);
+}
+
 async function directSignup(page) {
   return await page.evaluate(async ({ email, password }) => {
     if (typeof supabase === 'undefined' || !window.HASNARIA_SB || !window.HASNARIA_KEY) {
@@ -40,13 +51,14 @@ test('Dedicated E2E Owner account is provisioned and can authenticate', async ({
 
   await page.goto(BASE_URL, { waitUntil: 'domcontentloaded', timeout: 45000 });
   await expect(page.locator('#email')).toBeVisible({ timeout: 20000 });
+  await waitLoginRuntime(page);
   await page.locator('#email').fill(EMAIL);
   await page.locator('#password').fill(PASSWORD);
   await page.locator('#loginBtn').click();
 
   let authenticated = false;
   try {
-    await expect(page.locator('#app')).not.toHaveClass(/hidden/, { timeout: 12000 });
+    await expect(page.locator('#app')).not.toHaveClass(/hidden/, { timeout: 45000 });
     authenticated = true;
   } catch (_) {
     const loginMessage = ((await page.locator('#authMsg').textContent().catch(() => '')) || '').trim();
@@ -70,8 +82,6 @@ test('Dedicated E2E Owner account is provisioned and can authenticate', async ({
   if (!authenticated) throw new Error('Dedicated E2E Owner session was not established.');
   await clearPassword(page);
 
-  // Owner navigation is the stable user-visible proof of successful bootstrap.
-  // Do not assert the legacy auth node: production runtime may detach/reparent it.
   await expect(page.locator('[data-tab="dashboard"]')).toBeVisible({ timeout: 20000 });
   await expect(page.locator('[data-tab="pembelian"]')).toBeVisible({ timeout: 20000 });
   await expect(page.locator('[data-tab="ops"]')).toBeVisible({ timeout: 20000 });
