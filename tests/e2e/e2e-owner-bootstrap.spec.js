@@ -70,9 +70,8 @@ test('Dedicated E2E Owner account is provisioned and can authenticate', async ({
   if (!authenticated) throw new Error('Dedicated E2E Owner session was not established.');
   await clearPassword(page);
 
-  // The auth node may be removed/reparented by the production Owner shell.
-  // Assert the user-visible state, not a specific implementation class.
-  await expect(page.locator('#auth')).toBeHidden({ timeout: 10000 });
+  // Owner navigation is the stable user-visible proof of successful bootstrap.
+  // Do not assert the legacy auth node: production runtime may detach/reparent it.
   await expect(page.locator('[data-tab="dashboard"]')).toBeVisible({ timeout: 20000 });
   await expect(page.locator('[data-tab="pembelian"]')).toBeVisible({ timeout: 20000 });
   await expect(page.locator('[data-tab="ops"]')).toBeVisible({ timeout: 20000 });
