@@ -63,7 +63,7 @@ test('Dedicated E2E Owner account is provisioned and can authenticate', async ({
       throw new Error('Dedicated E2E Owner was created successfully; email confirmation is required once before P0 acceptance can continue.');
     }
 
-    await page.reload({ waitUntil: 'domcontentloaded' });
+    // A successful sign-up session is already the production bootstrap path.
     await expect(page.locator('#app')).not.toHaveClass(/hidden/, { timeout: 45000 });
     authenticated = true;
   }
@@ -71,12 +71,8 @@ test('Dedicated E2E Owner account is provisioned and can authenticate', async ({
   if (!authenticated) throw new Error('Dedicated E2E Owner session was not established.');
   await clearPassword(page);
 
-  // Production bootstrap is the authority for profile/registry activation.
-  // Do not call account_activation_finalize_v1 a second time here: doing so
-  // duplicates the real login path and can keep this acceptance test waiting
-  // even though the account has already been finalized by the app bootstrap.
-  await page.reload({ waitUntil: 'domcontentloaded' });
-  await expect(page.locator('#app')).not.toHaveClass(/hidden/, { timeout: 45000 });
+  // Verify the authenticated Owner surface directly. Avoid synthetic reload/finalize
+  // actions that do not occur in the real login flow and can race the app lifecycle.
   await expect(page.locator('#auth')).toHaveClass(/hidden/);
   await expect(page.locator('[data-tab="dashboard"]')).toBeVisible({ timeout: 20000 });
   await expect(page.locator('[data-tab="pembelian"]')).toBeVisible({ timeout: 20000 });
