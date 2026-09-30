@@ -63,7 +63,6 @@ test('Dedicated E2E Owner account is provisioned and can authenticate', async ({
       throw new Error('Dedicated E2E Owner was created successfully; email confirmation is required once before P0 acceptance can continue.');
     }
 
-    // A successful sign-up session is already the production bootstrap path.
     await expect(page.locator('#app')).not.toHaveClass(/hidden/, { timeout: 45000 });
     authenticated = true;
   }
@@ -71,9 +70,9 @@ test('Dedicated E2E Owner account is provisioned and can authenticate', async ({
   if (!authenticated) throw new Error('Dedicated E2E Owner session was not established.');
   await clearPassword(page);
 
-  // Verify the authenticated Owner surface directly. Avoid synthetic reload/finalize
-  // actions that do not occur in the real login flow and can race the app lifecycle.
-  await expect(page.locator('#auth')).toHaveClass(/hidden/);
+  // The auth node may be removed/reparented by the production Owner shell.
+  // Assert the user-visible state, not a specific implementation class.
+  await expect(page.locator('#auth')).toBeHidden({ timeout: 10000 });
   await expect(page.locator('[data-tab="dashboard"]')).toBeVisible({ timeout: 20000 });
   await expect(page.locator('[data-tab="pembelian"]')).toBeVisible({ timeout: 20000 });
   await expect(page.locator('[data-tab="ops"]')).toBeVisible({ timeout: 20000 });
