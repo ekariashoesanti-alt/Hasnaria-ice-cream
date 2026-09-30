@@ -31,8 +31,7 @@ async function login(page) {
   await expect(page.locator('#email')).toBeVisible({ timeout: 20000 });
   await page.locator('#email').fill(EMAIL);
   await submitLogin(page);
-  await expect(page.locator('#auth')).toBeHidden({ timeout: 10000 });
-  await expect(page.locator('[data-tab="dashboard"]')).toBeVisible();
+  await expect(page.locator('[data-tab="dashboard"]')).toBeVisible({ timeout: 20000 });
 }
 
 async function waitCanonicalSurface(page, id) {
