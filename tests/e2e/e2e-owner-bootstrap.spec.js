@@ -71,15 +71,10 @@ test('Dedicated E2E Owner account is provisioned and can authenticate', async ({
   if (!authenticated) throw new Error('Dedicated E2E Owner session was not established.');
   await clearPassword(page);
 
-  const finalized = await page.evaluate(async () => {
-    const db = window.__HASNARIA_DB;
-    if (!db) return { ok: false, error: 'Shared Supabase client is unavailable.' };
-    const r = await db.rpc('account_activation_finalize_v1');
-    if (r.error) return { ok: false, error: r.error.message || String(r.error) };
-    return { ok: true, data: r.data || null };
-  });
-  if (!finalized.ok) throw new Error(`Dedicated E2E Owner finalize failed: ${finalized.error}`);
-
+  // Production bootstrap is the authority for profile/registry activation.
+  // Do not call account_activation_finalize_v1 a second time here: doing so
+  // duplicates the real login path and can keep this acceptance test waiting
+  // even though the account has already been finalized by the app bootstrap.
   await page.reload({ waitUntil: 'domcontentloaded' });
   await expect(page.locator('#app')).not.toHaveClass(/hidden/, { timeout: 45000 });
   await expect(page.locator('#auth')).toHaveClass(/hidden/);
