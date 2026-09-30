@@ -37,7 +37,7 @@ jobs:
         run: |
           if [[ -n "${HASNARIA_E2E_EMAIL}" && -n "${HASNARIA_E2E_PASSWORD}" ]]; then
             echo 'available=true' >> "$GITHUB_OUTPUT"
-            echo 'E2E credentials are available; authenticated acceptance will run.'
+            echo 'E2E credential seed is available; authenticated acceptance will run.'
           else
             echo 'available=false' >> "$GITHUB_OUTPUT"
             echo 'Authenticated E2E credentials are not configured. Public production smoke will still run.'
@@ -65,6 +65,12 @@ jobs:
           if [[ "${base_email}" == *"@"* && "${local_part}" != *"+hasnaria-e2e" ]]; then
             export HASNARIA_E2E_EMAIL="${local_part}+hasnaria-e2e@${domain}"
           fi
+
+          seed_hash="$(printf '%s' "${HASNARIA_E2E_PASSWORD}" | sha256sum | awk '{print $1}')"
+          derived_password="HsN!${seed_hash}Aa1@"
+          echo "::add-mask::${derived_password}"
+          export HASNARIA_E2E_PASSWORD="${derived_password}"
+
           npx playwright test tests/e2e/e2e-owner-bootstrap.spec.js --reporter=line
           npx playwright test tests/e2e/go-live.spec.js tests/e2e/p0-desktop-stability.spec.js --reporter=line
 
