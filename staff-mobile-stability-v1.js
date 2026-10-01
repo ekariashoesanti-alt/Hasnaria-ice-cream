@@ -17,6 +17,9 @@
   function isAppShell(s){
     return !!(s && (isOwnerShell(s) || s.querySelector('.staff-nav')));
   }
+  function provisionalItem(center){
+    return '<button type="button" tabindex="-1" aria-hidden="true" class="mobile-nav-item'+(center?' mobile-nav-center':'')+'"><span></span><small></small></button>';
+  }
   function ensureProvisionalNav(s,owner){
     if(!s || s.querySelector('#hasnariaMobileNav')) return;
     var nav=document.createElement('nav');
@@ -24,23 +27,21 @@
     nav.className='mobile-app-nav '+(owner?'owner-nav':'staff-nav-v2');
     nav.setAttribute('aria-hidden','true');
     nav.setAttribute('data-mobile-provisional','1');
-    nav.innerHTML='<span></span><span></span><span></span><span></span><span></span>';
+    nav.style.pointerEvents='none';
+    nav.innerHTML=provisionalItem(false)+provisionalItem(false)+provisionalItem(true)+provisionalItem(false)+provisionalItem(false);
     s.appendChild(nav);
   }
   function sync(){
     var s=shell();
     if(!isAppShell(s)) return;
 
-    // Apply the final mobile layout classes in the mutation microtask, before
-    // the browser can paint the raw Owner/Staff renderer. Do not hide the
-    // root: hiding it was the source of the visible white blink on phones.
     var owner=isOwnerShell(s);
     s.classList.add('mobile-app-mode');
     if(owner) s.classList.add('mobile-owner-mode');
 
-    // Reserve the canonical bottom-nav frame immediately. The full mobile
-    // shell replaces this provisional nav in its requestAnimationFrame pass,
-    // so the user sees one stable frame instead of legacy -> blank -> mobile.
+    // Reserve the exact final bottom-nav geometry before the mobile enhancer
+    // runs. Matching the five real button boxes prevents the bar from jumping
+    // when the provisional node is replaced by the canonical navigation.
     ensureProvisionalNav(s,owner);
   }
 
