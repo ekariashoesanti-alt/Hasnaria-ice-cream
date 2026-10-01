@@ -18,8 +18,15 @@
   var fallback=0;
 
   function shell(){return root.querySelector('.staff-shell');}
+  function isOwnerShell(s){
+    if(!s) return false;
+    if(s.classList.contains('owner-shell')) return true;
+    if(s.querySelector('.owner-nav') || s.querySelector('.owner-mobile-nav')) return true;
+    var brand=s.querySelector('.staff-brand-copy b');
+    return !!(brand && /Owner Mobile/i.test(brand.textContent||''));
+  }
   function isAppShell(s){
-    return !!(s && (s.querySelector('.owner-mobile-nav') || s.querySelector('.staff-nav')));
+    return !!(s && (isOwnerShell(s) || s.querySelector('.staff-nav')));
   }
   function isReady(s){
     return !!(s && s.classList.contains('mobile-app-mode') && s.querySelector('#hasnariaMobileNav'));
@@ -37,10 +44,11 @@
     var s=shell();
     if(!isAppShell(s)){reveal();return;}
 
-    // Apply the stable mobile classes immediately in the mutation microtask.
-    // The full mobile enhancer will populate navigation before the next paint.
+    // Hold the first mobile paint until the canonical mobile shell and nav
+    // are both present. This prevents the desktop/legacy Owner Staff setup
+    // from flashing before the mobile enhancer takes ownership.
     s.classList.add('mobile-app-mode');
-    if(s.querySelector('.owner-mobile-nav')) s.classList.add('mobile-owner-mode');
+    if(isOwnerShell(s)) s.classList.add('mobile-owner-mode');
 
     if(isReady(s)) reveal();
     else conceal();
