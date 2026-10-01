@@ -38,7 +38,8 @@
         db.from('offline_purchase_history').select('id,source_period,purchase_date,item_name,quantity_text,unit_text,total_amount,payment_method,raw_data').eq('brand_id',BRAND).order('purchase_date',{ascending:true}).limit(10000),
         db.from('expenses').select('id,expense_date,category,amount,status,notes,source_history_id').eq('brand_id',BRAND).order('expense_date',{ascending:true}).limit(10000),
         db.from('finance_accounts').select('code,name,account_type').eq('brand_id',BRAND).eq('active',true).order('code',{ascending:true}),
-        db.from('ui_inventory_items').select('brand_id,inventory_item_id,item_name,category,unit,min_qty,order_qty,baseline_date,baseline_qty,net_movement,ledger_qty,tracking_active,status,ui_status').order('category',{ascending:true}).order('item_name',{ascending:true}).limit(1000),\n        db.from('inventory_monthly_stock_p6_v1').select('brand_id,inventory_item_id,sku_code,sku_name,base_unit,month_start,opening_qty,purchase_qty,sale_usage_qty,adjustment_qty,closing_qty').eq('brand_id',BRAND).order('month_start',{ascending:true}).limit(10000),
+        db.from('ui_inventory_items').select('brand_id,inventory_item_id,item_name,category,unit,min_qty,order_qty,baseline_date,baseline_qty,net_movement,ledger_qty,tracking_active,status,ui_status').order('category',{ascending:true}).order('item_name',{ascending:true}).limit(1000),
+        db.from('inventory_monthly_stock_p6_v1').select('brand_id,inventory_item_id,sku_code,sku_name,base_unit,month_start,opening_qty,purchase_qty,sale_usage_qty,adjustment_qty,closing_qty').eq('brand_id',BRAND).order('month_start',{ascending:true}).limit(10000),
         db.from('inventory_unit_conversions').select('id,brand_id,product_id,inventory_item_id,purchase_unit,sale_unit,units_per_purchase_unit,status,notes,updated_at').eq('brand_id',BRAND).order('updated_at',{ascending:false}).limit(1000),
         db.from('inventory_recipe_components').select('id,brand_id,product_id,inventory_item_id,qty_per_sale,active,updated_at').eq('brand_id',BRAND).order('updated_at',{ascending:false}).limit(3000),
         db.from('products').select('id,name,sku,active').eq('brand_id',BRAND).order('name',{ascending:true}).limit(1000),
@@ -165,7 +166,9 @@
   }
 
   function stockGroup(cat){var c=String(cat||'').toUpperCase();if(/KEMASAN|ATK|PERLENGKAP|SUPPL|CLEAN|KEBERSIHAN/.test(c))return'supplies';return'raw';}
-  function stockStatus(r){if(!r.tracking_active)return'untracked';var q=r.p6?num(r.p6.closing_qty):num(r.ledger_qty);if(q<=0)return'critical';if(num(r.min_qty)>0&&q<num(r.min_qty))return'reorder';return'ok';}\n  function stockPeriods(data){var s={};(data.monthlyStock||[]).forEach(function(r){var p=monthKey(r.month_start);if(p)s[p]=1;});return Object.keys(s).sort();}\n  function stockWithPeriod(data){var ps=stockPeriods(data);if(!stockState.period||ps.indexOf(stockState.period)<0)stockState.period=ps.length?ps[ps.length-1]:'';var by={};(data.monthlyStock||[]).forEach(function(r){if(monthKey(r.month_start)===stockState.period)by[r.inventory_item_id]=r;});return(data.inventory||[]).map(function(r){return Object.assign({},r,{p6:by[r.inventory_item_id]||null});});}
+  function stockStatus(r){if(!r.tracking_active)return'untracked';var q=r.p6?num(r.p6.closing_qty):num(r.ledger_qty);if(q<=0)return'critical';if(num(r.min_qty)>0&&q<num(r.min_qty))return'reorder';return'ok';}
+  function stockPeriods(data){var s={};(data.monthlyStock||[]).forEach(function(r){var p=monthKey(r.month_start);if(p)s[p]=1;});return Object.keys(s).sort();}
+  function stockWithPeriod(data){var ps=stockPeriods(data);if(!stockState.period||ps.indexOf(stockState.period)<0)stockState.period=ps.length?ps[ps.length-1]:'';var by={};(data.monthlyStock||[]).forEach(function(r){if(monthKey(r.month_start)===stockState.period)by[r.inventory_item_id]=r;});return(data.inventory||[]).map(function(r){return Object.assign({},r,{p6:by[r.inventory_item_id]||null});});}
   function stockStatusLabel(s){return s==='critical'?'Kritis':s==='reorder'?'Minim':s==='ok'?'Aman':'Belum dipantau';}
   function stockRows(data,group){return stockWithPeriod(data).filter(function(r){return stockGroup(r.category)===group;}).sort(function(a,b){var rank={critical:0,reorder:1,untracked:2,ok:3},ra=rank[stockStatus(a)],rb=rank[stockStatus(b)];return ra-rb||String(a.item_name).localeCompare(String(b.item_name));});}
 
@@ -221,7 +224,8 @@
   function wireEvents(){
     document.addEventListener('change',function(e){
       if(e.target&&e.target.id==='fsFinancePeriod'){financeState.period=e.target.value;financeState.view='pl';loadData().then(rerenderFinance);}
-      if(e.target&&e.target.id==='fsLedgerAccount'){financeState.ledgerAccount=e.target.value;loadData().then(rerenderFinance);}\n      if(e.target&&e.target.id==='fsStockPeriod'){stockState.period=e.target.value;stockState.page=1;loadData().then(rerenderStock);}
+      if(e.target&&e.target.id==='fsLedgerAccount'){financeState.ledgerAccount=e.target.value;loadData().then(rerenderFinance);}
+      if(e.target&&e.target.id==='fsStockPeriod'){stockState.period=e.target.value;stockState.page=1;loadData().then(rerenderStock);}
     },true);
     document.addEventListener('click',function(e){
       var b=e.target&&e.target.closest?e.target.closest('[data-fs-view],[data-fs-close],[data-fs-stock-group],[data-fs-page],[data-fs-prev],[data-fs-next],[data-tab="ops"],[data-tab="stok"]'):null;if(!b)return;
