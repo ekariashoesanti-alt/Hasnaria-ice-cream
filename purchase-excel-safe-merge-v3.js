@@ -2,7 +2,7 @@
    - Legacy RENCANA BELANJA workbooks: BELANJA is the transaction source.
    - B OPERASIONAL is planning/reconciliation metadata, never posted as a purchase transaction.
    - Exact existing Excel rows are refreshed, new rows appended; unrelated evidence is preserved.
-   - Unknown payment accounts remain in evidence and are surfaced to Staff Kasir reconciliation.
+   - Unknown payment accounts enter canonical Purchase as BELUM_DIPETAKAN/provisional and are surfaced to Staff Kasir reconciliation.
 */
 (function(){
   'use strict';
@@ -131,12 +131,18 @@
   }
 
   async function materialize(db,period){
-    var evidence=await fetchEvidence(db,period),sel=canonicalize(evidence),unresolved=sel.filter(function(r){return!payNorm(r.payment_method)}),resolved=sel.filter(function(r){return!!payNorm(r.payment_method)});
-    var rows=resolved.map(function(r,i){var z=raw(r),category=z.analytics_category||cat(r.item_name);return{
-      source_file:'HASNARIA_PURCHASE_UNIFIED_'+period.slice(0,7)+'.xlsx',row_no:i+1,purchase_date:r.purchase_date,item_name:r.item_name,
-      quantity_text:r.quantity==null?'':String(r.quantity),unit_text:r.unit_text||'',unit_price:r.unit_price,total_amount:r.total_amount,payment_method:payNorm(r.payment_method),notes:'UNIFIED V3 · '+(z.analytics_group||grp(r.item_name,category))+' · '+category,
-      raw_data:Object.assign({},z,{unified_source_v1:true,dedup_version:'v3_exact_multiplicity',canonical_source_type:r.source_type,canonical_source_file:r.source_file,canonical_source_record_key:r.source_record_key,analytics_category:category,analytics_kind:'purchase_item'})
-    }});
+    var evidence=await fetchEvidence(db,period),sel=canonicalize(evidence),unresolved=sel.filter(function(r){return!payNorm(r.payment_method)});
+    var rows=sel.map(function(r,i){
+      var z=raw(r),category=z.analytics_category||cat(r.item_name),method=payNorm(r.payment_method)||'BELUM_DIPETAKAN',needsReview=method==='BELUM_DIPETAKAN';
+      return{
+        source_file:'HASNARIA_PURCHASE_UNIFIED_'+period.slice(0,7)+'.xlsx',row_no:i+1,purchase_date:r.purchase_date,item_name:r.item_name,
+        quantity_text:r.quantity==null?'':String(r.quantity),unit_text:r.unit_text||'',unit_price:r.unit_price,total_amount:r.total_amount,payment_method:method,
+        notes:'UNIFIED V3 · '+(z.analytics_group||grp(r.item_name,category))+' · '+category+(needsReview?' · ACCOUNT REVIEW':''),
+        raw_data:Object.assign({},z,{unified_source_v1:true,dedup_version:'v3_exact_multiplicity',canonical_source_type:r.source_type,canonical_source_file:r.source_file,
+          canonical_source_record_key:r.source_record_key,analytics_category:category,analytics_kind:'purchase_item',account_mapping_status:needsReview?'unmapped':'mapped',
+          source_payment_label:z.source_payment_label||r.payment_method||''})
+      };
+    });
     var rpc=await db.rpc('replace_purchase_canonical_period_v1',{p_source_period:period,p_rows:rows});if(rpc.error)throw rpc.error;
     return{canonical:rows.length,unresolved:unresolved.length,unresolvedAmount:unresolved.reduce(function(s,r){return s+(+r.total_amount||0)},0)};
   }
@@ -149,7 +155,7 @@
     var ps=Object.keys(periods);if(!ps.length)throw Error('Periode transaksi tidak ditemukan.');
     var total=p.rows.reduce(function(s,r){return s+(+r.total_amount||0)},0),known=p.rows.filter(function(r){return!!payNorm(r.payment_method)}).reduce(function(s,r){return s+(+r.total_amount||0)},0);
     var preview='Excel Pembelian aman\n'+p.rows.length+' transaksi · '+money(total)+'\n'+money(known)+' sudah punya akun pembayaran.';
-    if(p.unmapped)preview+='\n'+p.unmapped+' transaksi belum punya akun pembayaran dan akan masuk antrean Kasir Staff.';
+    if(p.unmapped)preview+='\n'+p.unmapped+' transaksi belum punya akun pembayaran; tetap masuk sebagai BELUM_DIPETAKAN dan muncul di antrean Kasir Staff.';
     if(p.hasOps)preview+='\nRingkasan B OPERASIONAL tidak diposting sebagai transaksi agar tidak double count.';
     if(!confirm(preview+'\n\nLanjutkan safe merge?'))return;
     busy(true);toast('Safe merge Pembelian: mengganti transaksi yang persis dan menambah transaksi baru…','info',0);
@@ -158,7 +164,7 @@
       var m=await mergeEvidence(db,ps[i],periods[ps[i]]);ins+=m.inserted;rep+=m.replaced;
       var mat=await materialize(db,ps[i]);canon+=mat.canonical;unres+=mat.unresolved;unresAmt+=mat.unresolvedAmount;
     }
-    toast('Selesai: '+rep+' transaksi lama persis diperbarui · '+ins+' transaksi baru ditambah · '+canon+' canonical.'+(unres?' '+unres+' transaksi ('+money(unresAmt)+') menunggu koreksi akun di Kasir Staff.':''),'success',0);
+    toast('Selesai: '+rep+' transaksi lama persis diperbarui · '+ins+' transaksi baru ditambah · '+canon+' canonical.'+(unres?' '+unres+' transaksi ('+money(unresAmt)+') ditandai BELUM_DIPETAKAN untuk Kasir Staff.':''),'success',0);
     setTimeout(function(){location.reload()},1800);
   }
 
