@@ -4,6 +4,7 @@ const path = require('path');
 const ROOT = process.cwd();
 const steps = [
   'vercel-build-check.js',
+  'verify-staff-owner-stable.js',
   'patch-nav-runtime.js',
   'patch-owner-executive-p5.js',
   'patch-owner-executive-p6.js',
