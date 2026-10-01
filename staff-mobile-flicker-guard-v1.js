@@ -24,30 +24,29 @@ function moduleButton(mod){var r=root();return r&&r.querySelector('.staff-nav [d
 function storedStaffToken(){try{return localStorage.getItem(STAFF_TOKEN_KEY)||''}catch(_){return''}}
 
 // Returning Staff sessions used to paint the login view while staff-v5 checked
-// the stored token. Keep the existing loading surface above the app until the
-// mobile home has finished its first enhancement, so Login -> Home is never
-// visible as a flash. Invalid/expired tokens are released quickly and always
-// have a timeout recovery path.
+// the stored token. Keep a stable cover above the app until the enhanced mobile
+// home is ready. Expired tokens release quickly and a hard timeout guarantees
+// recovery if session probing or enhancement fails.
 function installBootCover(){
   var token=storedStaffToken(),r=root();
   if(!token||!r||ownerActive())return;
   var cover=document.createElement('div');
   cover.id='hasnariaStaffBootCover';
+  cover.className='hfg-boot-cover';
   cover.setAttribute('role','status');
   cover.setAttribute('aria-live','polite');
-  cover.style.cssText='position:fixed;inset:0;z-index:2147483000;display:flex;align-items:center;justify-content:center;background:#f7faf7;color:#123f33;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;';
   var box=document.createElement('div');
-  box.style.cssText='display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;padding:24px;';
+  box.className='hfg-boot-box';
   var img=document.createElement('img');
+  img.className='hfg-boot-logo';
   img.src='/hasnaria-logo.svg';
   img.alt='Hasnaria';
-  img.style.cssText='width:78px;height:78px;object-fit:contain;';
   var title=document.createElement('strong');
+  title.className='hfg-boot-title';
   title.textContent='Hasnaria Staff';
-  title.style.cssText='font-size:20px;line-height:1.2;';
   var note=document.createElement('span');
+  note.className='hfg-boot-note';
   note.textContent='Memuat sesi…';
-  note.style.cssText='font-size:13px;opacity:.72;';
   box.appendChild(img);box.appendChild(title);box.appendChild(note);cover.appendChild(box);document.body.appendChild(cover);
 
   var released=false,observer=null;
@@ -83,11 +82,8 @@ function installBootCover(){
 }
 
 // The legacy Staff router enters Absensi first and only selects the requested
-// sub-page on a later timer. On phones that makes the intermediate menu paint
-// briefly. Dispatch the module and sub-route in the same event turn instead.
-// staff-v5 updates state.module synchronously before its first await, so the
-// second click can set state.sub immediately; both async completions then paint
-// the same final page instead of Menu -> Target.
+// sub-page on a later timer. Dispatch module and sub-route in one event turn so
+// the intermediate menu never becomes the visible target.
 function routeStaff(mod,sub){
   if(!staffReady())return false;
   var r=root(),btn=moduleButton(mod);
