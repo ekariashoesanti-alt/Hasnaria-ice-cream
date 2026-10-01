@@ -1,0 +1,52 @@
+(function(){
+  'use strict';
+
+  if(!window.matchMedia || !window.matchMedia('(max-width: 760px)').matches) return;
+
+  var STYLE_ID='hasnariaStaffAtomicStyle';
+  var PENDING='staff-mobile-atomic-pending';
+  var root=document.getElementById('staffRoot');
+  if(!root) return;
+
+  if(!document.getElementById(STYLE_ID)){
+    var style=document.createElement('style');
+    style.id=STYLE_ID;
+    style.textContent='@media(max-width:760px){html.'+PENDING+'{background:#fff!important}html.'+PENDING+' body{background:#fff!important}html.'+PENDING+' #staffRoot{visibility:hidden!important}}';
+    document.head.appendChild(style);
+  }
+
+  var fallback=0;
+
+  function shell(){return root.querySelector('.staff-shell');}
+  function isAppShell(s){
+    return !!(s && (s.querySelector('.owner-mobile-nav') || s.querySelector('.staff-nav')));
+  }
+  function isReady(s){
+    return !!(s && s.classList.contains('mobile-app-mode') && s.querySelector('#hasnariaMobileNav'));
+  }
+  function reveal(){
+    document.documentElement.classList.remove(PENDING);
+    if(fallback){clearTimeout(fallback);fallback=0;}
+  }
+  function conceal(){
+    document.documentElement.classList.add(PENDING);
+    if(fallback) clearTimeout(fallback);
+    fallback=setTimeout(reveal,1200);
+  }
+  function sync(){
+    var s=shell();
+    if(!isAppShell(s)){reveal();return;}
+
+    // Apply the stable mobile classes immediately in the mutation microtask.
+    // The full mobile enhancer will populate navigation before the next paint.
+    s.classList.add('mobile-app-mode');
+    if(s.querySelector('.owner-mobile-nav')) s.classList.add('mobile-owner-mode');
+
+    if(isReady(s)) reveal();
+    else conceal();
+  }
+
+  var observer=new MutationObserver(sync);
+  observer.observe(root,{childList:true,subtree:true});
+  sync();
+})();
