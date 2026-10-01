@@ -31,7 +31,7 @@
   if(!document.getElementById('hasnaria-purchase-excel-safe-merge-v3-js')){
     var sm=document.createElement('script');
     sm.id='hasnaria-purchase-excel-safe-merge-v3-js';
-    sm.src='/purchase-excel-safe-merge-v3.js?v=1';
+    sm.src='/purchase-excel-safe-merge-v3.js?v=2';
     sm.async=true;
     document.head.appendChild(sm);
   }
