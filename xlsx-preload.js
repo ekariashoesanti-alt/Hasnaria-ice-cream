@@ -12,7 +12,7 @@
     document.head.appendChild(rf);
   }
 
-  /* Pembelian dual-source import v2: Excel manual + Faktur Majoo + fuzzy cross-source dedup. */
+  /* Pembelian dual-source styling. */
   if(!document.getElementById('hasnaria-purchase-dual-source-css')){
     var l=document.createElement('link');
     l.id='hasnaria-purchase-dual-source-css';
@@ -20,20 +20,30 @@
     l.href='/purchase-dual-source.css?v=1';
     document.head.appendChild(l);
   }
-  if(!document.getElementById('hasnaria-purchase-dual-source-v2-js')){
+
+  /* IMPORTANT: legacy RENCANA BELANJA safe merge must register its capture
+     handler before dual-source v2 attaches the normal input onchange handler.
+     Otherwise a race can send the same workbook through the old destructive
+     rebuild path first. */
+  function loadDualSourceV2(){
+    if(document.getElementById('hasnaria-purchase-dual-source-v2-js'))return;
     var d=document.createElement('script');
     d.id='hasnaria-purchase-dual-source-v2-js';
-    d.src='/purchase-dual-source-v2.js?v=2';
+    d.src='/purchase-dual-source-v2.js?v=3';
     d.async=true;
     document.head.appendChild(d);
   }
-  /* Legacy RENCANA BELANJA safe merge: exact replace + append, no B OPERASIONAL double count. */
+
   if(!document.getElementById('hasnaria-purchase-excel-safe-merge-v3-js')){
     var sm=document.createElement('script');
     sm.id='hasnaria-purchase-excel-safe-merge-v3-js';
-    sm.src='/purchase-excel-safe-merge-v3.js?v=2';
+    sm.src='/purchase-excel-safe-merge-v3.js?v=3';
     sm.async=true;
+    sm.onload=loadDualSourceV2;
+    sm.onerror=function(){console.error('Safe merge Pembelian gagal dimuat; memuat fallback dual-source.');loadDualSourceV2();};
     document.head.appendChild(sm);
+  }else{
+    loadDualSourceV2();
   }
 
   /* Canonical Purchase source: value → expense journal, quantity → Stock. */
