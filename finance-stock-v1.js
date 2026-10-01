@@ -232,8 +232,9 @@
       if(b.hasAttribute('data-fs-view')){financeState.view=b.getAttribute('data-fs-view');loadData().then(rerenderFinance);return;}
       if(b.hasAttribute('data-fs-close')){financeState.view='pl';loadData().then(rerenderFinance);return;}
       if(b.hasAttribute('data-fs-recipe-approve')){
-        var rid=b.getAttribute('data-fs-recipe-approve');
-        waitDb().then(function(){return db.from('inventory_recipe_components').update({active:true,bom_status:'verified',updated_at:new Date().toISOString()}).eq('id',rid).eq('brand_id',BRAND);}).then(function(r){if(r.error)throw r.error;cache=null;return loadData(true);}).then(rerenderStock).catch(function(e){alert('Gagal approve BOM: '+(e&&e.message?e.message:e));});return;
+        var rid=b.getAttribute('data-fs-recipe-approve'),recipe=(cache&&cache.recipes||[]).find(function(x){return String(x.id)===String(rid);});
+        if(!recipe||!recipe.product_id){alert('Produk BOM tidak ditemukan. Silakan refresh halaman.');return;}
+        waitDb().then(function(){return db.from('inventory_recipe_components').update({active:true,bom_status:'verified',updated_at:new Date().toISOString()}).eq('id',rid).eq('brand_id',BRAND);}).then(function(r){if(r.error)throw r.error;return db.rpc('resolve_product_recipe_verification_v2',{p_product_id:recipe.product_id,p_verified:true,p_effective_from:new Date().toISOString().slice(0,10),p_reason:'Approve BOM dari Stock > Recipe / BOM'});}).then(function(r){if(r.error)throw r.error;cache=null;return loadData(true);}).then(rerenderStock).catch(function(err){alert('Gagal approve BOM: '+(err&&err.message?err.message:err));});return;
       }
       if(b.id==='fsRecipeSave'){
         var productId=document.getElementById('fsRecipeProduct').value,itemId=document.getElementById('fsRecipeItem').value,qty=Number(document.getElementById('fsRecipeQty').value);
