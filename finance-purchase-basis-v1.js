@@ -42,8 +42,9 @@ function renderIncome(report){
     '<div class="fsv2-pl"><div class="finv7-compare-head"><span>Akun</span><span>'+esc(monthLabel(pack.period))+'</span><span>'+esc(monthLabel(pack.previous_period))+'</span></div>'+
       row('Pendapatan Penjualan',c.revenue_sales,p.revenue_sales)+row('Pendapatan Lain-lain',c.other_income,p.other_income)+row('Jumlah Pendapatan',curRev,prevRev,'sub')+
       row('Beban Administrasi',c.admin_expense,p.admin_expense,'',true)+row('Beban Pemeliharaan',c.maintenance_expense,p.maintenance_expense,'',true)+row('Beban Bahan Baku',c.raw_material_expense,p.raw_material_expense,'',true)+row('Beban Kepegawaian',c.personnel_expense,p.personnel_expense,'',true)+
+      (n(c.other_purchase_expense)||n(p.other_purchase_expense)?row('Beban Pembelian Lain',c.other_purchase_expense,p.other_purchase_expense,'',true):'')+
       row('Total Beban Pembelian',c.total_purchase_expense,p.total_purchase_expense,'sub',true)+
-      (n(c.other_operating_expense)||n(p.other_operating_expense)?row('Beban Operasional Lain',c.other_operating_expense,p.other_operating_expense,'',true):'')+
+      (n(c.other_operating_expense)||n(p.other_operating_expense)?row('Beban Operasional Non-Pembelian',c.other_operating_expense,p.other_operating_expense,'',true):'')+
       row('Beban Keuangan',c.finance_expense,p.finance_expense,'',true)+row('Laba (Rugi) Sebelum Pajak',c.profit_before_tax,p.profit_before_tax,'sub')+row('Beban Pajak Penghasilan',c.tax_expense,p.tax_expense,'',true)+row('Laba (Rugi) Setelah Pajak',c.profit_after_tax,p.profit_after_tax,'total')+
     '</div>'+
     '<div class="finmg-note">Konsep aktif: nilai Pembelian dibebankan sekali melalui jurnal double-entry; kuantitas barang tetap dikelola di Stok. HPP tidak digunakan.</div>'+
