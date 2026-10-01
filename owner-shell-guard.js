@@ -11,9 +11,9 @@
      deliberately NOT loaded because it used to take ownership of every tab. */
   var EXEC_SRC='/owner-executive-v1.js?v=1';
   var DASH_SRC='/owner-dashboard-one-view.js?v=1';
-  var OWNER_TABS=['dashboard','sales','pembelian','operasional','ops','stok'];
-  var SECTION_IDS=['dashboard','sales','pembelian','operasional','ops','stok','shift','social','approval','team','sistem','karyawan'];
-  var state={active:'dashboard',initialized:false,scheduled:false,salesRetries:0,finStockLoad:null,operationalLoad:null,dashboardLoad:null};
+  var OWNER_TABS=['dashboard','sales','pembelian','operasional','administrasi','ops','stok'];
+  var SECTION_IDS=['dashboard','sales','pembelian','operasional','administrasi','ops','stok','shift','social','approval','team','sistem','karyawan'];
+  var state={active:'dashboard',initialized:false,scheduled:false,salesRetries:0,finStockLoad:null,operationalLoad:null,adminLoad:null,dashboardLoad:null};
   var tries=0;
 
   function context(){return window.__HASNARIA_CONTEXT||null}
@@ -33,6 +33,7 @@
       h=document.createElement('section');h.id='operasional';h.className='hidden';
       var finance=section('ops');main.insertBefore(h,finance||null);
     }
+    var admin=section('administrasi');if(main&&!admin){admin=document.createElement('section');admin.id='administrasi';admin.className='hidden';var finance2=section('ops');main.insertBefore(admin,finance2||null)}
     var tabs=document.getElementById('tabs');
     var employeeTab=tabs&&tabs.querySelector('.tab[data-tab="karyawan"]');if(employeeTab)employeeTab.remove();
     var employeeSection=section('karyawan');if(employeeSection)employeeSection.remove();
@@ -43,7 +44,9 @@
       var financeTab=tabs.querySelector('.tab[data-tab="ops"]');tabs.insertBefore(b,financeTab||null);
     }
     if(b){b.textContent='Operasional';b.setAttribute('aria-label','Operasional');b.style.display=''}
-    var labels={dashboard:'Ringkasan CEO',sales:'Penjualan',pembelian:'Pembelian',operasional:'Operasional',ops:'Keuangan',stok:'Stok'};
+    var ab=tabs&&tabs.querySelector('.tab[data-tab="administrasi"]');if(tabs&&!ab){ab=document.createElement('button');ab.type='button';ab.className='tab';ab.setAttribute('data-tab','administrasi');ab.textContent='Administrasi';ab.setAttribute('aria-label','Administrasi');var finance3=tabs.querySelector('.tab[data-tab="ops"]');tabs.insertBefore(ab,finance3||null)}
+    if(ab){ab.textContent='Administrasi';ab.setAttribute('aria-label','Administrasi');ab.style.display=''}
+    var labels={dashboard:'Ringkasan CEO',sales:'Penjualan',pembelian:'Pembelian',operasional:'Operasional',administrasi:'Administrasi',ops:'Keuangan',stok:'Stok'};
     Object.keys(labels).forEach(function(id){var x=tabs&&tabs.querySelector('.tab[data-tab="'+id+'"]');if(x){x.textContent=labels[id];x.style.display=''}});
     return h;
   }
@@ -172,6 +175,14 @@
     state.operationalLoad.then(function(){if(isOwner()&&state.active==='operasional'&&typeof window.__HASNARIA_OPERATIONS_V1_MOUNT==='function')window.__HASNARIA_OPERATIONS_V1_MOUNT({force:!!requestRender})});
   }
 
+  function ensureAdministration(requestRender){
+    if(!isOwner())return;var h=section('administrasi');if(!h||h.classList.contains('hidden'))return;
+    if(window.__HASNARIA_ADMIN_V1&&typeof window.__HASNARIA_ADMIN_V1.mount==='function'){window.__HASNARIA_ADMIN_V1.mount({force:!!requestRender});return}
+    if(state.adminLoad){state.adminLoad.then(function(){if(isOwner()&&state.active==='administrasi'&&window.__HASNARIA_ADMIN_V1)window.__HASNARIA_ADMIN_V1.mount({force:!!requestRender})});return}
+    state.adminLoad=new Promise(function(resolve){var s=document.createElement('script');s.id='hasnaria-admin-v1-js';s.src='/administration-v1.js?v=1';s.async=true;s.onload=resolve;s.onerror=function(){state.adminLoad=null;resolve()};document.head.appendChild(s)});
+    state.adminLoad.then(function(){if(isOwner()&&state.active==='administrasi'&&window.__HASNARIA_ADMIN_V1)window.__HASNARIA_ADMIN_V1.mount({force:!!requestRender})});
+  }
+
   function nudgeLegacyStockFallback(){
     var h=section('stok');if(!h||h.classList.contains('hidden')||stockMounted())return;
     var marker=document.createElement('span');marker.hidden=true;marker.setAttribute('data-owner-shell-stock-nudge','1');h.appendChild(marker);h.removeChild(marker);
@@ -188,6 +199,7 @@
     if(id==='sales')ensureSales();
     if(id==='pembelian')ensurePurchase();
     if(id==='operasional')ensureOperational(true);
+    if(id==='administrasi')ensureAdministration(true);
     if(id==='ops')ensureFinance(true);
     if(id==='stok')ensureStock(true);
     return true;
@@ -202,6 +214,7 @@
     if(state.active==='sales')ensureSales();
     if(state.active==='pembelian')ensurePurchase();
     if(state.active==='operasional')ensureOperational(false);
+    if(state.active==='administrasi')ensureAdministration(false);
     if(state.active==='ops')ensureFinance(false);
     if(state.active==='stok')ensureStock(false);
   }
