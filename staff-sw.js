@@ -1,4 +1,4 @@
-const CACHE_NAME='hasnaria-staff-pwa-v2';
+const CACHE_NAME='hasnaria-staff-pwa-v3';
 const CORE=[
   '/staff/',
   '/staff.webmanifest',
