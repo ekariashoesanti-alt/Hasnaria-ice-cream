@@ -35,18 +35,19 @@
     loading=waitDb().then(function(){
       return Promise.all([
         db.from('sales').select('id,sold_at,total_amount,cash_amount,qris_amount,tf_amount,channel').eq('brand_id',BRAND).order('sold_at',{ascending:true}).limit(10000),
-        db.from('offline_purchase_history').select('id,source_period,purchase_date,item_name,total_amount,payment_method,raw_data').eq('brand_id',BRAND).order('purchase_date',{ascending:true}).limit(10000),
+        db.from('offline_purchase_history').select('id,source_period,purchase_date,item_name,quantity_text,unit_text,total_amount,payment_method,raw_data').eq('brand_id',BRAND).order('purchase_date',{ascending:true}).limit(10000),
         db.from('expenses').select('id,expense_date,category,amount,status,notes,source_history_id').eq('brand_id',BRAND).order('expense_date',{ascending:true}).limit(10000),
         db.from('finance_accounts').select('code,name,account_type').eq('brand_id',BRAND).eq('active',true).order('code',{ascending:true}),
         db.from('ui_inventory_items').select('brand_id,inventory_item_id,item_name,category,unit,min_qty,order_qty,baseline_date,baseline_qty,net_movement,ledger_qty,tracking_active,status,ui_status').order('category',{ascending:true}).order('item_name',{ascending:true}).limit(1000),\n        db.from('inventory_monthly_stock_p6_v1').select('brand_id,inventory_item_id,sku_code,sku_name,base_unit,month_start,opening_qty,purchase_qty,sale_usage_qty,adjustment_qty,closing_qty').eq('brand_id',BRAND).order('month_start',{ascending:true}).limit(10000),
         db.from('inventory_unit_conversions').select('id,brand_id,product_id,inventory_item_id,purchase_unit,sale_unit,units_per_purchase_unit,status,notes,updated_at').eq('brand_id',BRAND).order('updated_at',{ascending:false}).limit(1000),
         db.from('inventory_recipe_components').select('id,brand_id,product_id,inventory_item_id,qty_per_sale,active,updated_at').eq('brand_id',BRAND).order('updated_at',{ascending:false}).limit(3000),
         db.from('products').select('id,name,sku,active').eq('brand_id',BRAND).order('name',{ascending:true}).limit(1000),
-        db.from('inventory_stock_ledger_p4_v1').select('id,inventory_item_id,sku_code,sku_name,base_unit,movement_date,ledger_type,source_movement_type,qty_delta,unit_cost,reference_type,source_key,system_generated,notes').eq('brand_id',BRAND).order('movement_date',{ascending:false}).limit(5000)
+        db.from('inventory_stock_ledger_p4_v1').select('id,inventory_item_id,sku_code,sku_name,base_unit,movement_date,ledger_type,source_movement_type,qty_delta,unit_cost,reference_type,source_key,system_generated,notes').eq('brand_id',BRAND).order('movement_date',{ascending:false}).limit(5000),
+        db.from('sales_product_performance').select('brand_id,month,product_id,product_name,units_sold').eq('brand_id',BRAND).order('month',{ascending:true}).limit(10000)
       ]);
     }).then(function(res){
       res.forEach(function(r){if(r.error)throw r.error;});
-      cache={sales:res[0].data||[],purchases:res[1].data||[],expenses:res[2].data||[],accounts:res[3].data||[],inventory:res[4].data||[],monthlyStock:res[5].data||[],conversions:res[6].data||[],recipes:res[7].data||[],products:res[8].data||[],ledger:res[9].data||[]};
+      cache={sales:res[0].data||[],purchases:res[1].data||[],expenses:res[2].data||[],accounts:res[3].data||[],inventory:res[4].data||[],monthlyStock:res[5].data||[],conversions:res[6].data||[],recipes:res[7].data||[],products:res[8].data||[],ledger:res[9].data||[],salesPerformance:res[10].data||[]};
       return cache;
     }).finally(function(){loading=null;});
     return loading;
@@ -170,6 +171,20 @@
 
   function stockTabButton(key,label){return '<button type="button" data-fs-stock-tab="'+key+'" class="'+(stockState.tab===key?'on':'')+'">'+label+'</button>';}
   function inventoryById(data){var m={};(data.inventory||[]).forEach(function(r){m[r.inventory_item_id||r.id]=r;});return m;}
+  function purchaseQtyNumber(v){var s=String(v==null?'':v).trim().replace(/,/g,'.');var m=s.match(/-?\\d+(?:\\.\\d+)?/);return m?num(m[0]):0;}
+  function normName(v){return clean(v).toUpperCase().replace(/[^A-Z0-9]+/g,' ').trim();}
+  function conversionEstimate(data,r){
+    var inv=inventoryById(data),item=normName((inv[r.inventory_item_id]||{}).item_name||'');
+    var productId=String(r.product_id||''),pb={},sb={};
+    (data.purchases||[]).forEach(function(p){if(normName(p.item_name)!==item)return;var q=p.quantity_numeric!=null?num(p.quantity_numeric):purchaseQtyNumber(p.quantity_text);var m=monthKey(p.purchase_date||p.source_period);if(q>0&&m){pb[m]=(pb[m]||0)+q;}});
+    (data.salesPerformance||[]).forEach(function(s){if(productId&&String(s.product_id)!==productId)return;var m=monthKey(s.month),q=num(s.units_sold);if(m&&q>0)sb[m]=(sb[m]||0)+q;});
+    var ratios=[];Object.keys(sb).forEach(function(m){if(pb[m]>0)ratios.push(sb[m]/pb[m]);});
+    if(!ratios.length)return{value:null,confidence:'Low',basis:'Belum ada bulan dengan data pembelian dan penjualan yang dapat dicocokkan.'};
+    ratios.sort(function(a,b){return a-b;});var med=ratios[Math.floor(ratios.length/2)],common=[1,2,3,4,5,6,8,10,12,15,20,24,25,30,40,50,60,100],best=common[0],dist=Infinity;
+    common.forEach(function(x){var d=Math.abs(x-med);if(d<dist){dist=d;best=x;}});
+    var rel=med?dist/med:1,confidence=ratios.length>=4&&rel<=0.15?'High':ratios.length>=2&&rel<=0.30?'Medium':'Low';
+    return{value:best,raw:med,confidence:confidence,basis:'Rasio penjualan / pembelian pada '+ratios.length+' bulan yang memiliki data keduanya.'};
+  }
   function conversionRows(data){var inv=inventoryById(data);var productNames={};(data.products||[]).forEach(function(p){productNames[p.id]=p.name;});return(data.conversions||[]).map(function(r){var i=inv[r.inventory_item_id]||{};return Object.assign({},r,{item_name:i.item_name||productNames[r.product_id]||'—',base_unit:i.unit||r.sale_unit||'—'});});}
   function recipeRows(data){var inv=inventoryById(data);var productNames={};(data.products||[]).forEach(function(p){productNames[p.id]=p.name;});return(data.recipes||[]).map(function(r){var i=inv[r.inventory_item_id]||{};return Object.assign({},r,{product_name:productNames[r.product_id]||'Produk '+String(r.product_id||'').slice(0,8),item_name:i.item_name||'—',base_unit:i.unit||'—'});});}
   function stockSubTabs(data){var cv=conversionRows(data),needs=cv.filter(function(r){return r.units_per_purchase_unit==null||r.status==='needs_verification';}).length;return'<div class="fs-stock-subtabs">'+stockTabButton('current','Stok Saat Ini')+stockTabButton('conversion','Master Conversion'+(needs?' <b>'+needs+'</b>':''))+stockTabButton('recipe','Recipe / BOM')+stockTabButton('ledger','Stock Ledger')+stockTabButton('alert','Stock Alert')+'</div>';}
@@ -177,10 +192,14 @@
   function stockConversionHtml(data){
     var rows=conversionRows(data),pending=rows.filter(function(r){return r.units_per_purchase_unit==null||r.status==='needs_verification';}).length;
     var body=rows.map(function(r){
-      var ok=r.units_per_purchase_unit!=null&&(r.status==='verified'||r.status==='active');
-      return '<tr><td><b>'+esc(r.item_name)+'</b></td><td>'+esc(r.purchase_unit||'—')+'</td><td class="num"><input class="fs-conv-input" inputmode="decimal" type="number" min="0.0001" step="0.0001" value="'+(r.units_per_purchase_unit==null?'':esc(r.units_per_purchase_unit))+'" data-conv-id="'+esc(r.id)+'" placeholder="isi"></td><td>'+esc(r.base_unit)+'</td><td><span class="fs-status '+(ok?'ok':'reorder')+'">'+(ok?'Verified':'Perlu verifikasi')+'</span></td><td>'+esc(r.notes||'')+'</td><td><button type="button" class="fs-conv-save" data-conv-save="'+esc(r.id)+'">Simpan & Verifikasi</button></td></tr>';
+      var est=conversionEstimate(data,r),verified=r.units_per_purchase_unit!=null&&(r.status==='verified'||r.status==='active');
+      var display=verified?r.units_per_purchase_unit:(est.value==null?'':est.value);
+      var status=verified?'ok':(est.value!=null?'reorder':'untracked');
+      var label=verified?'Verified':(est.value!=null?'Estimated':'Perlu verifikasi');
+      var basis=verified?(r.notes||'Diverifikasi Owner'):(est.basis||'Belum cukup data');
+      return '<tr><td><b>'+esc(r.item_name)+'</b></td><td>'+esc(r.purchase_unit||'—')+'</td><td class="num"><input class="fs-conv-input" inputmode="decimal" type="number" min="0.0001" step="0.0001" value="'+esc(display)+'" data-conv-id="'+esc(r.id)+'" placeholder="isi"></td><td>'+esc(r.base_unit)+'</td><td><span class="fs-status '+status+'">'+label+'</span>'+(est.value!=null&&!verified?' <small>Confidence '+esc(est.confidence)+'</small>':'')+'</td><td>'+esc(basis)+'</td><td><button type="button" class="fs-conv-save" data-conv-save="'+esc(r.id)+'">'+(verified?'Update':'Simpan & Verifikasi')+'</button></td></tr>';
     }).join('');
-    return '<article class="fs-stock-card"><div class="fs-stock-card-head"><div><h2>Master Conversion</h2><p>Owner mengisi isi per unit setelah data supplier atau fisik terverifikasi.</p></div><span>'+pending+' perlu verifikasi</span></div><div class="fs-stock-info">Pembelian tetap di tab <b>Pembelian</b>. Conversion hanya menentukan pengali dari unit beli ke unit stok. <b>Jangan isi berdasarkan harga.</b></div><div class="fs-table-wrap"><table class="fs-table"><thead><tr><th>Bahan / SKU</th><th>Unit Beli</th><th>Isi / Unit</th><th>Unit Stok</th><th>Status</th><th>Catatan</th><th>Aksi</th></tr></thead><tbody>'+(body||'<tr><td colspan="7" class="fs-empty">Belum ada master conversion.</td></tr>')+'</tbody></table></div></article>';
+    return '<article class="fs-stock-card"><div class="fs-stock-card-head"><div><h2>Master Conversion</h2><p>Estimasi awal dihitung dari pola pembelian dan penjualan. Angka estimasi belum memengaruhi stok.</p></div><span>'+pending+' perlu verifikasi</span></div><div class="fs-stock-info">Pembelian tetap di tab <b>Pembelian</b>. Sistem mencocokkan item yang dibeli dengan produk yang terjual, membandingkan rasio per bulan, lalu memilih angka pack size yang paling mendekati pola historis. <b>Estimasi bukan angka final.</b></div><div class="fs-table-wrap"><table class="fs-table"><thead><tr><th>Bahan / SKU</th><th>Unit Beli</th><th>Estimasi / Isi</th><th>Unit Stok</th><th>Status</th><th>Basis Estimasi</th><th>Aksi</th></tr></thead><tbody>'+(body||'<tr><td colspan="7" class="fs-empty">Belum ada master conversion.</td></tr>')+'</tbody></table></div></article>';
   }
   function stockRecipeHtml(data){
     var rows=recipeRows(data),products=data.products||[],inv=data.inventory||[];
