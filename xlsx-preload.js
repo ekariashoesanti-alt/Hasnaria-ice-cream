@@ -27,6 +27,14 @@
     d.async=true;
     document.head.appendChild(d);
   }
+  /* Legacy RENCANA BELANJA safe merge: exact replace + append, no B OPERASIONAL double count. */
+  if(!document.getElementById('hasnaria-purchase-excel-safe-merge-v3-js')){
+    var sm=document.createElement('script');
+    sm.id='hasnaria-purchase-excel-safe-merge-v3-js';
+    sm.src='/purchase-excel-safe-merge-v3.js?v=1';
+    sm.async=true;
+    document.head.appendChild(sm);
+  }
 
   /* Canonical Purchase source: value → expense journal, quantity → Stock. */
   if(!document.getElementById('hasnaria-purchase-finance-alignment-css')){
