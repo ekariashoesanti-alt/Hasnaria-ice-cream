@@ -6,7 +6,7 @@
   var BRAND='a36d4b4f-3ccc-4a78-8aeb-b868f0407ea4';
   var db=null,cache=null,loading=null,timer=0;
   var MONTHS=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
-  var stockState={group:'raw',page:1,perPage:12};
+  var stockState={group:'raw',page:1,perPage:12,period:''};
   var financeState={period:'',view:'pl',ledgerAccount:'1000'};
 
   function esc(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
@@ -38,11 +38,11 @@
         db.from('offline_purchase_history').select('id,source_period,purchase_date,item_name,total_amount,payment_method,raw_data').eq('brand_id',BRAND).order('purchase_date',{ascending:true}).limit(10000),
         db.from('expenses').select('id,expense_date,category,amount,status,notes,source_history_id').eq('brand_id',BRAND).order('expense_date',{ascending:true}).limit(10000),
         db.from('finance_accounts').select('code,name,account_type').eq('brand_id',BRAND).eq('active',true).order('code',{ascending:true}),
-        db.from('ui_inventory_items').select('brand_id,inventory_item_id,item_name,category,unit,min_qty,order_qty,baseline_date,baseline_qty,net_movement,ledger_qty,tracking_active,status,ui_status').order('category',{ascending:true}).order('item_name',{ascending:true}).limit(1000)
+        db.from('ui_inventory_items').select('brand_id,inventory_item_id,item_name,category,unit,min_qty,order_qty,baseline_date,baseline_qty,net_movement,ledger_qty,tracking_active,status,ui_status').order('category',{ascending:true}).order('item_name',{ascending:true}).limit(1000),\n        db.from('inventory_monthly_stock_p6_v1').select('brand_id,inventory_item_id,sku_code,sku_name,base_unit,month_start,opening_qty,purchase_qty,sale_usage_qty,adjustment_qty,closing_qty').eq('brand_id',BRAND).order('month_start',{ascending:true}).limit(10000)
       ]);
     }).then(function(res){
       res.forEach(function(r){if(r.error)throw r.error;});
-      cache={sales:res[0].data||[],purchases:res[1].data||[],expenses:res[2].data||[],accounts:res[3].data||[],inventory:res[4].data||[]};
+      cache={sales:res[0].data||[],purchases:res[1].data||[],expenses:res[2].data||[],accounts:res[3].data||[],inventory:res[4].data||[],monthlyStock:res[5].data||[]};
       return cache;
     }).finally(function(){loading=null;});
     return loading;
@@ -160,20 +160,20 @@
   }
 
   function stockGroup(cat){var c=String(cat||'').toUpperCase();if(/KEMASAN|ATK|PERLENGKAP|SUPPL|CLEAN|KEBERSIHAN/.test(c))return'supplies';return'raw';}
-  function stockStatus(r){if(!r.tracking_active)return'untracked';if(String(r.ui_status)==='critical'||String(r.status)==='critical'||num(r.ledger_qty)<=0)return'critical';if(String(r.ui_status)==='reorder'||String(r.status)==='order'||(num(r.min_qty)>0&&num(r.ledger_qty)<num(r.min_qty)))return'reorder';return'ok';}
+  function stockStatus(r){if(!r.tracking_active)return'untracked';var q=r.p6?num(r.p6.closing_qty):num(r.ledger_qty);if(q<=0)return'critical';if(num(r.min_qty)>0&&q<num(r.min_qty))return'reorder';return'ok';}\n  function stockPeriods(data){var s={};(data.monthlyStock||[]).forEach(function(r){var p=monthKey(r.month_start);if(p)s[p]=1;});return Object.keys(s).sort();}\n  function stockWithPeriod(data){var ps=stockPeriods(data);if(!stockState.period||ps.indexOf(stockState.period)<0)stockState.period=ps.length?ps[ps.length-1]:'';var by={};(data.monthlyStock||[]).forEach(function(r){if(monthKey(r.month_start)===stockState.period)by[r.inventory_item_id]=r;});return(data.inventory||[]).map(function(r){return Object.assign({},r,{p6:by[r.inventory_item_id]||null});});}
   function stockStatusLabel(s){return s==='critical'?'Kritis':s==='reorder'?'Minim':s==='ok'?'Aman':'Belum dipantau';}
-  function stockRows(data,group){return(data.inventory||[]).filter(function(r){return stockGroup(r.category)===group;}).sort(function(a,b){var rank={critical:0,reorder:1,untracked:2,ok:3},ra=rank[stockStatus(a)],rb=rank[stockStatus(b)];return ra-rb||String(a.item_name).localeCompare(String(b.item_name));});}
+  function stockRows(data,group){return stockWithPeriod(data).filter(function(r){return stockGroup(r.category)===group;}).sort(function(a,b){var rank={critical:0,reorder:1,untracked:2,ok:3},ra=rank[stockStatus(a)],rb=rank[stockStatus(b)];return ra-rb||String(a.item_name).localeCompare(String(b.item_name));});}
 
   function stockHtml(data){
     var rows=stockRows(data,stockState.group),totalPages=Math.max(1,Math.ceil(rows.length/stockState.perPage));if(stockState.page>totalPages)stockState.page=totalPages;if(stockState.page<1)stockState.page=1;
     var pageRows=rows.slice((stockState.page-1)*stockState.perPage,stockState.page*stockState.perPage);
     var low=rows.filter(function(r){var s=stockStatus(r);return s==='critical'||s==='reorder';}).length,tracked=rows.filter(function(r){return r.tracking_active;}).length;
-    var body=pageRows.map(function(r){var s=stockStatus(r),qty=r.tracking_active?fmtQty(r.ledger_qty):'—';return'<tr class="fs-stock-'+s+'"><td><b>'+esc(r.item_name)+'</b><small>'+esc(r.category||'—')+'</small></td><td>'+esc(r.unit||'pcs')+'</td><td class="num"><b>'+qty+'</b></td><td class="num">'+(num(r.min_qty)>0?fmtQty(r.min_qty):'—')+'</td><td class="num">'+(num(r.order_qty)>0?fmtQty(r.order_qty):'—')+'</td><td><span class="fs-status '+s+'">'+stockStatusLabel(s)+'</span></td><td>'+esc(r.baseline_date?dateLabel(r.baseline_date):'—')+'</td></tr>';}).join('');
+    var body=pageRows.map(function(r){var s=stockStatus(r),p=r.p6,qty=p?fmtQty(p.closing_qty):(r.tracking_active?fmtQty(r.ledger_qty):'—');return'<tr class="fs-stock-'+s+'"><td><b>'+esc(r.item_name)+'</b><small>'+esc(r.category||'—')+'</small></td><td>'+esc((p&&p.base_unit)||r.unit||'pcs')+'</td><td class="num">'+(p?fmtQty(p.opening_qty):'—')+'</td><td class="num">'+(p?fmtQty(p.purchase_qty):'—')+'</td><td class="num">'+(p?fmtQty(p.sale_usage_qty):'—')+'</td><td class="num">'+(p?fmtQty(p.adjustment_qty):'—')+'</td><td class="num"><b>'+qty+'</b></td><td><span class="fs-status '+s+'">'+stockStatusLabel(s)+'</span></td></tr>';}).join('');
     var pages=[];for(var i=1;i<=totalPages;i++){if(i===1||i===totalPages||Math.abs(i-stockState.page)<=1)pages.push('<button type="button" data-fs-page="'+i+'" class="'+(i===stockState.page?'on':'')+'">'+i+'</button>');else if(pages[pages.length-1]!=='<span>…</span>')pages.push('<span>…</span>');}
     return'<div class="fs-stock-shell">'+
-      '<div class="fs-page-head"><div><span class="fs-eyebrow">INVENTORY CONTROL</span><h1>Stok</h1><p>Ketersediaan stok dihitung dari baseline/opname + pembelian − pemakaian penjualan.</p></div><div class="fs-stock-summary"><div><span>Dipantau</span><strong>'+tracked+'/'+rows.length+'</strong></div><div><span>Stok Minim</span><strong class="'+(low?'fs-red':'')+'">'+low+'</strong></div></div></div>'+ 
+      '<div class="fs-page-head"><div><span class="fs-eyebrow">INVENTORY CONTROL</span><h1>Stok</h1><p>Saldo bulanan: stok awal + pembelian − pemakaian + adjustment = stok sistem.</p></div><div class="fs-stock-head-actions"><label class="fs-period"><span>Periode Stok</span><select id="fsStockPeriod">'+stockPeriods(data).map(function(p){return'<option value="'+p+'" '+(p===stockState.period?'selected':'')+'>'+esc(monthLabel(p))+'</option>';}).join('')+'</select></label><div class="fs-stock-summary"><div><span>Dipantau</span><strong>'+tracked+'/'+rows.length+'</strong></div><div><span>Stok Minim</span><strong class="'+(low?'fs-red':'')+'">'+low+'</strong></div></div></div>'+ 
       '<div class="fs-stock-tabs"><button type="button" data-fs-stock-group="raw" class="'+(stockState.group==='raw'?'on':'')+'">Bahan Baku</button><button type="button" data-fs-stock-group="supplies" class="'+(stockState.group==='supplies'?'on':'')+'">Perlengkapan / ATK</button></div>'+ 
-      '<article class="fs-stock-card"><div class="fs-stock-card-head"><div><h2>'+(stockState.group==='raw'?'Stok Bahan Baku':'Stok Perlengkapan / ATK')+'</h2><p>'+(stockState.group==='raw'?'Makanan, minuman, ice cream, bumbu dan bahan produksi.':'Kemasan, perlengkapan, supplies dan ATK yang tercatat sebagai persediaan.')+'</p></div><span>'+rows.length+' item</span></div><div class="fs-table-wrap"><table class="fs-table fs-stock-table"><thead><tr><th>Item</th><th>Satuan</th><th>Stok Saat Ini</th><th>Min.</th><th>Order</th><th>Status</th><th>Baseline/Opname</th></tr></thead><tbody>'+(body||'<tr><td colspan="7" class="fs-empty">Belum ada item pada kategori ini.</td></tr>')+'</tbody></table></div><div class="fs-pager"><button type="button" data-fs-prev '+(stockState.page<=1?'disabled':'')+'>‹</button><div>'+pages.join('')+'</div><button type="button" data-fs-next '+(stockState.page>=totalPages?'disabled':'')+'>›</button><span>Halaman '+stockState.page+' / '+totalPages+'</span></div></article>'+ 
+      '<article class="fs-stock-card"><div class="fs-stock-card-head"><div><h2>'+(stockState.group==='raw'?'Stok Bahan Baku':'Stok Perlengkapan / ATK')+'</h2><p>'+(stockState.group==='raw'?'Makanan, minuman, ice cream, bumbu dan bahan produksi.':'Kemasan, perlengkapan, supplies dan ATK yang tercatat sebagai persediaan.')+'</p></div><span>'+rows.length+' item</span></div><div class="fs-table-wrap"><table class="fs-table fs-stock-table"><thead><tr><th>Item</th><th>Satuan</th><th>Stok Awal</th><th>Pembelian</th><th>Pemakaian</th><th>Adjustment</th><th>Stok Sistem</th><th>Status</th></tr></thead><tbody>'+(body||'<tr><td colspan="8" class="fs-empty">Belum ada item pada kategori ini.</td></tr>')+'</tbody></table></div><div class="fs-pager"><button type="button" data-fs-prev '+(stockState.page<=1?'disabled':'')+'>‹</button><div>'+pages.join('')+'</div><button type="button" data-fs-next '+(stockState.page>=totalPages?'disabled':'')+'>›</button><span>Halaman '+stockState.page+' / '+totalPages+'</span></div></article>'+ 
       '<div class="fs-stock-note"><b>Highlight stok:</b> <span class="fs-dot critical"></span>Kritis ≤ 0 · <span class="fs-dot reorder"></span>Minim &lt; minimum · <span class="fs-dot ok"></span>Aman. Item “Belum dipantau” belum memiliki baseline/opname fisik sehingga sistem tidak mengarang saldo.</div>'+ 
     '</div>';
   }
@@ -186,7 +186,7 @@
   function wireEvents(){
     document.addEventListener('change',function(e){
       if(e.target&&e.target.id==='fsFinancePeriod'){financeState.period=e.target.value;financeState.view='pl';loadData().then(rerenderFinance);}
-      if(e.target&&e.target.id==='fsLedgerAccount'){financeState.ledgerAccount=e.target.value;loadData().then(rerenderFinance);}
+      if(e.target&&e.target.id==='fsLedgerAccount'){financeState.ledgerAccount=e.target.value;loadData().then(rerenderFinance);}\n      if(e.target&&e.target.id==='fsStockPeriod'){stockState.period=e.target.value;stockState.page=1;loadData().then(rerenderStock);}
     },true);
     document.addEventListener('click',function(e){
       var b=e.target&&e.target.closest?e.target.closest('[data-fs-view],[data-fs-close],[data-fs-stock-group],[data-fs-page],[data-fs-prev],[data-fs-next],[data-tab="ops"],[data-tab="stok"]'):null;if(!b)return;
