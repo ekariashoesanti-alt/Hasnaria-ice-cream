@@ -4,7 +4,8 @@
   window.__HASNARIA_FINANCE_STOCK_V1=true;
 
   var BRAND='a36d4b4f-3ccc-4a78-8aeb-b868f0407ea4';
-  var db=null,cache=null,loading=null,timer=0;\n  var BOM_POSTING_ENABLED=false; // P7/P8 safety gate: draft/verification UI may exist, but sales stock posting stays disabled until BOM phase is explicitly activated.
+  var db=null,cache=null,loading=null,timer=0;
+  var BOM_POSTING_ENABLED=false; // P7/P8 safety gate: draft/verification UI may exist, but sales stock posting stays disabled until BOM phase is explicitly activated.
   var MONTHS=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
   var stockState={group:'raw',page:1,perPage:12,period:'',tab:'current'};
   var financeState={period:'',view:'pl',ledgerAccount:'1000'};
