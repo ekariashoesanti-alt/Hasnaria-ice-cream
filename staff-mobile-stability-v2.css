@@ -1,0 +1,38 @@
+/* Mobile visual stability overrides. Loaded after the main mobile shell CSS. */
+@media (max-width:760px){
+  html,body,#staffRoot{
+    min-height:100%;
+    overscroll-behavior-y:none;
+  }
+
+  #staffRoot,.staff-shell{
+    overflow-anchor:none;
+  }
+
+  .staff-shell.mobile-app-mode{
+    min-height:100svh!important;
+  }
+
+  .mobile-app-nav{
+    left:0!important;
+    right:0!important;
+    margin-inline:auto!important;
+    transform:none!important;
+    max-width:520px!important;
+    width:100%!important;
+    transition:none!important;
+    animation:none!important;
+  }
+
+  .mobile-app-nav *,
+  .mobile-app-nav *::before,
+  .mobile-app-nav *::after{
+    transition:none!important;
+    animation:none!important;
+  }
+
+  .mobile-app-overlay{
+    overscroll-behavior:contain;
+    overflow-anchor:none;
+  }
+}
