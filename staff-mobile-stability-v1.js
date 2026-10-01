@@ -54,6 +54,15 @@
     else conceal();
   }
 
+  // Owner setup actions in staff-v5 render synchronously from the click
+  // handler. Conceal in capture phase so the raw replacement can never own
+  // a paint frame before the mobile shell enhancer rebuilds navigation.
+  document.addEventListener('click',function(e){
+    var target=e.target&&e.target.closest?e.target.closest('[data-edit],[data-otab],[data-act="new-user"],[data-act="cancel-edit"]'):null;
+    var s=shell();
+    if(target&&isOwnerShell(s)) conceal();
+  },true);
+
   var observer=new MutationObserver(sync);
   observer.observe(root,{childList:true,subtree:true});
   sync();
