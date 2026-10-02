@@ -28,6 +28,10 @@ patch('purchase-lazy-loader.js',s=>one(s,
 'purchase owner click'));
 
 patch('purchase-finance-alignment-v1.js',s=>{
+ if(s.includes('__HASNARIA_PURCHASE_FINANCE_ALIGNMENT_V12')){
+  for(const marker of ['requestSeq=0','ui_period_catalog_v1','ui_purchase_overview_v1','data-pfa-detail-open','if(loading){if(force)requestSeq++;return}','seq!==requestSeq'])if(!s.includes(marker))throw new Error('purchase UI-3 stability marker missing: '+marker);
+  return s;
+ }
  s=one(s,"var db=null,rows=[],control={},loading=false,error='',observer=null,timer=0,loadedAt=0,loadedPeriod='',syncingStock=false,lastStockSync='',category='all';","var db=null,rows=[],control={},loading=false,error='',observer=null,timer=0,loadedAt=0,loadedPeriod='',syncingStock=false,lastStockSync='',category='all',requestSeq=0;",'purchase seq');
  s=one(s,
 `  var root=document.getElementById('paRoot');if(!root)return;patchCore(root);\n  var old=document.getElementById('purchaseFinanceAlignment');if(old)old.remove();\n  var target=root.querySelector('.pa-controls');if(!target)return;\n  var wrap=document.createElement('section');wrap.id='purchaseFinanceAlignment';wrap.className='pfa-wrap';`,
