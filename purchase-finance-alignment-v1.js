@@ -7,7 +7,7 @@ var BRAND='a36d4b4f-3ccc-4a78-8aeb-b868f0407ea4';
 var CATS=['Beban Administrasi','Beban Pemeliharaan','Beban Bahan Baku','Beban Kepegawaian'];
 var CAT_LABEL={'Beban Administrasi':'6100 · Administrasi','Beban Pemeliharaan':'6110 · Pemeliharaan','Beban Bahan Baku':'6120 · Bahan Baku','Beban Kepegawaian':'6200 · Kepegawaian'};
 var MONTHS=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
-var db=null,rows=[],control={},overview=null,chartRows=[],periods=[],loading=false,error='',observer=null,timer=0,loadedAt=0,loadedPeriod='',syncingStock=false,lastStockSync='',category='all',modalOpen=false;
+var db=null,rows=[],control={},overview=null,chartRows=[],periods=[],loading=false,error='',observer=null,timer=0,loadedAt=0,loadedPeriod='',syncingStock=false,lastStockSync='',category='all',modalOpen=false,requestSeq=0;
 
 function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function n(v){v=Number(v);return isFinite(v)?v:0}
@@ -74,11 +74,11 @@ function modalMarkup(){
 }
 function render(){
   var root=document.getElementById('paRoot');if(!root)return;patchCore(root);syncPeriodOptions();
-  var old=document.getElementById('purchaseFinanceAlignment');if(old)old.remove();
   var target=root.querySelector('.pa-controls');if(!target)return;
-  var wrap=document.createElement('section');wrap.id='purchaseFinanceAlignment';wrap.className='pfa-wrap';
-  if(loading){wrap.innerHTML='<div class="pfa-head"><div><div class="pfa-eyebrow">PEMBELIAN</div><h2>Ringkasan Pembelian</h2><p>Memuat periode terpilih…</p></div></div>';target.insertAdjacentElement('afterend',wrap);return}
-  if(error){wrap.innerHTML='<div class="pfa-head"><div><h2>Ringkasan Pembelian</h2><p class="pfa-error">'+esc(error)+'</p></div><button id="pfaRetry" type="button">Muat ulang</button></div>';target.insertAdjacentElement('afterend',wrap);var rb=document.getElementById('pfaRetry');if(rb)rb.onclick=function(){load(true)};return}
+  var wrap=document.getElementById('purchaseFinanceAlignment');
+  if(!wrap){wrap=document.createElement('section');wrap.id='purchaseFinanceAlignment';wrap.className='pfa-wrap';target.insertAdjacentElement('afterend',wrap)}
+  if(loading){wrap.innerHTML='<div class="pfa-head"><div><div class="pfa-eyebrow">PEMBELIAN</div><h2>Ringkasan Pembelian</h2><p>Memuat periode terpilih…</p></div></div>';return}
+  if(error){wrap.innerHTML='<div class="pfa-head"><div><h2>Ringkasan Pembelian</h2><p class="pfa-error">'+esc(error)+'</p></div><button id="pfaRetry" type="button">Muat ulang</button></div>';var rb=document.getElementById('pfaRetry');if(rb)rb.onclick=function(){load(true)};return}
   var v=summaryValues(),finance=control.finance_link_status==='MATCH';
   wrap.innerHTML='<div class="pfa-head"><div><div class="pfa-eyebrow">PEMBELIAN · '+esc(cutLabel())+'</div><h2>Ringkasan Pembelian</h2><p>Visual utama menampilkan nilai dan kategori. Rincian transaksi disimpan di popup agar halaman tetap ringkas.</p></div><span class="pfa-sync '+(finance?'ok':'warn')+'">'+(finance?'TERSINKRON':'PERLU PERIKSA')+'</span></div>'+
     '<div class="pfa-cards">'+
@@ -90,7 +90,6 @@ function render(){
     '<div class="pfa-main-grid"><article class="pfa-panel"><div class="pfa-panel-head"><div><h3>Komposisi Pembelian</h3><p>Nilai per kategori untuk cut '+esc(cutLabel())+'.</p></div></div>'+chartMarkup()+'</article><article class="pfa-panel"><div class="pfa-panel-head"><div><h3>Status Sinkronisasi</h3><p>Pembelian terhubung otomatis ke Keuangan dan Stok.</p></div></div>'+syncMarkup()+'<div class="pfa-note">Nilai rupiah masuk Keuangan satu kali. SKU stockable menambah kuantitas Stok tanpa membuat jurnal nilai kedua.</div></article></div>'+
     '<div class="pfa-detail-cta"><div><b>'+n(v.purchase_rows).toLocaleString('id-ID')+' transaksi pada '+esc(monthLabel(periodValue()))+'</b><span>Tabel lengkap tidak ditampilkan di halaman utama.</span></div><button type="button" class="primary" data-pfa-detail-open="1">Lihat Detail Pembelian</button></div>'+
     modalMarkup();
-  target.insertAdjacentElement('afterend',wrap);
 }
 async function loadPeriods(){
   db=db||window.__HASNARIA_DB;if(!db)return;
@@ -102,22 +101,24 @@ async function syncStockForPeriod(){
   try{var q=await db.rpc('sync_purchase_quantity_stock_v1',{p_from:r.from,p_to:r.to});if(q.error)throw q.error;lastStockSync=r.key;return true}catch(e){if(console&&console.warn)console.warn('Purchase quantity → Stock sync:',e);return false}finally{syncingStock=false}
 }
 async function load(force){
-  var p=periodValue();if(!p||loading)return;
+  var p=periodValue();if(!p)return;
+  if(loading){if(force)requestSeq++;return}
   if(!force&&rows.length&&loadedPeriod===p&&Date.now()-loadedAt<60000){render();return}
-  db=db||window.__HASNARIA_DB;if(!db)return;loading=true;error='';render();
+  var seq=++requestSeq;db=db||window.__HASNARIA_DB;if(!db)return;loading=true;error='';render();
   try{
     var all=await Promise.all([
       db.rpc('get_purchase_control_period_v1',{p_brand:BRAND,p_period:p+'-01'}),
       db.from('ui_purchase_overview_v1').select('*').eq('brand_id',BRAND).eq('period_month',p+'-01').limit(1),
       db.from('ui_purchase_category_chart_v1').select('category,purchase_rows,amount').eq('brand_id',BRAND).eq('period_month',p+'-01').order('amount',{ascending:false})
     ]);
+    if(seq!==requestSeq)return;
     if(all[0].error)throw all[0].error;
     var pack=all[0].data||{};rows=Array.isArray(pack.rows)?pack.rows:[];control=pack.control||{};
     overview=!all[1].error&&all[1].data&&all[1].data.length?all[1].data[0]:null;
     chartRows=!all[2].error&&Array.isArray(all[2].data)?all[2].data:[];
     loadedAt=Date.now();loadedPeriod=p;
-  }catch(e){rows=[];control={};overview=null;chartRows=[];loadedPeriod='';loadedAt=0;error='Gagal memuat ringkasan Pembelian: '+(e&&e.message?e.message:String(e))}
-  loading=false;render();
+  }catch(e){if(seq!==requestSeq)return;rows=[];control={};overview=null;chartRows=[];loadedPeriod='';loadedAt=0;error='Gagal memuat ringkasan Pembelian: '+(e&&e.message?e.message:String(e))}
+  finally{if(seq===requestSeq){loading=false;render()}else{loading=false;setTimeout(function(){if(periodValue())load(true)},0)}}
 }
 function resetData(){rows=[];control={};overview=null;chartRows=[];loadedAt=0;loadedPeriod='';category='all';modalOpen=false}
 function schedule(){clearTimeout(timer);timer=setTimeout(function(){if(!document.getElementById('paRoot'))return;render();if(!loading&&(!rows.length||loadedPeriod!==periodValue()))load(false)},80)}
