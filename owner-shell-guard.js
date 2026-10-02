@@ -10,7 +10,7 @@
   /* Compatibility marker kept for release tests; this full executive runtime is
      deliberately NOT loaded because it used to take ownership of every tab. */
   var EXEC_SRC='/owner-executive-v1.js?v=1';
-  var DASH_SRC='/owner-dashboard-one-view.js?v=2';
+  var DASH_SRC='/owner-dashboard-one-view.js?v=3';
   var OWNER_TABS=['dashboard','sales','pembelian','operasional','administrasi','ops','stok'];
   var SECTION_IDS=['dashboard','sales','pembelian','operasional','administrasi','ops','stok','shift','social','approval','team','sistem','karyawan'];
   var state={active:'dashboard',initialized:false,scheduled:false,salesRetries:0,finStockLoad:null,operationalLoad:null,adminLoad:null,dashboardLoad:null};
