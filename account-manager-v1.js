@@ -9,7 +9,7 @@ function statusLabel(v){return v==='active'?'AKTIF':v==='disabled'?'NONAKTIF':'B
 function statusClass(v){return v==='active'?'active':v==='disabled'?'disabled':'pending'}
 function dateTime(v){if(!v)return'Belum pernah';try{return new Intl.DateTimeFormat('id-ID',{dateStyle:'medium',timeStyle:'short'}).format(new Date(v))}catch(_){return String(v)}}
 function snapshotDate(){try{return new Intl.DateTimeFormat('id-ID',{day:'numeric',month:'long',year:'numeric'}).format(new Date())}catch(_){return new Date().toISOString().slice(0,10)}}
-function css(){if($('hasnaria-account-manager-css'))return;var l=document.createElement('link');l.id='hasnaria-account-manager-css';l.rel='stylesheet';l.href='/account-manager-v1.css?v=3';document.head.appendChild(l)}
+function css(){if($('hasnaria-account-manager-css'))return;var l=document.createElement('link');l.id='hasnaria-account-manager-css';l.rel='stylesheet';l.href='/account-manager-v1.css?v=4';document.head.appendChild(l)}
 function setMsg(text,type){var el=$('hasnariaAccountManagerMsg');if(!el)return;el.className='ham-msg '+(type||'');el.textContent=text||''}
 function clearSecureLink(){var box=$('hamSecureLinkBox'),input=$('hamSecureLink');if(input)input.value='';if(box)box.classList.add('hidden')}
 function showSecureLink(link,email,mode){var box=$('hamSecureLinkBox'),input=$('hamSecureLink'),label=$('hamSecureLinkLabel');if(!box||!input)return;input.value=link||'';if(label)label.textContent=(mode==='activate'?'Link aktivasi':'Link reset password')+' untuk '+email;box.classList.remove('hidden')}
