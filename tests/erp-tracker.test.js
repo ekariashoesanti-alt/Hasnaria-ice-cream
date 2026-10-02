@@ -9,6 +9,8 @@ const coreSource = fs.readFileSync(path.join(root, 'core-app.js'), 'utf8');
 const erpSource = fs.readFileSync(path.join(root, 'erp.js'), 'utf8');
 const indexSource = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 const ownerShellSource = fs.readFileSync(path.join(root, 'owner-shell-guard.js'), 'utf8');
+const administrationSource = fs.readFileSync(path.join(root, 'administration-v1.js'), 'utf8');
+const administrationCss = fs.readFileSync(path.join(root, 'administration-v1.css'), 'utf8');
 const ownerFinanceStockSource = fs.readFileSync(path.join(root, 'owner-finance-stock-v3.js'), 'utf8');
 const purchaseBasisSource = fs.readFileSync(path.join(root, 'finance-purchase-basis-v1.js'), 'utf8');
 const salesBoardSource = fs.readFileSync(path.join(root, 'sales-board.js'), 'utf8');
@@ -102,6 +104,11 @@ assert(!ownerShellSource.includes('event.stopImmediatePropagation();'), 'Owner g
 assert(ownerShellSource.includes('c.navigate=safeNavigate'), 'Owner context navigation must be redirected to executive safe navigation');
 assert(ownerShellSource.includes('if(++tries<80)setTimeout(boot,100)'), 'Owner executive bootstrap retry must stay bounded');
 assert(!ownerShellSource.includes('owner-finance-stock-v3.js'), 'Owner shell must not load the legacy Finance/Stock shell in executive mode');
+assert(ownerShellSource.includes("/administration-v1.js?v=2"), 'Owner shell must load the UI-5 Administrasi runtime cache');
+assert(administrationSource.includes('__HASNARIA_ADMIN_V2'), 'Administrasi UI-5 runtime marker must be present');
+assert(administrationSource.includes('ui_period_catalog_v1') && administrationSource.includes('ui_administration_overview_v1') && administrationSource.includes('ui_administration_category_chart_v1') && administrationSource.includes('ui_administration_detail_v1'), 'Administrasi UI-5 must use canonical period, overview, category, and detail views');
+assert(administrationSource.includes('data-ad5-detail') && administrationSource.includes('ad5-modal'), 'Administrasi UI-5 must keep transaction detail behind a modal action');
+assert(administrationCss.includes('.ad5-chart') && administrationCss.includes('.ad5-modal'), 'Administrasi UI-5 styles must include chart and modal layouts');
 assert(!ownerShellSource.includes('finance-hpp-p3.js'), 'HPP workbench must not be loaded by Owner shell');
 assert(!/\.(?:from|insert|update|delete|rpc)\s*\(/.test(ownerShellSource), 'Owner navigation guard contains no database mutation/query path');
 
