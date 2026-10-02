@@ -47,6 +47,8 @@ async function login(page) {
 async function waitCanonicalSurface(page, id) {
   if (id === 'dashboard') {
     await expect(page.locator('#dashboard .hx6-shell')).toBeVisible({ timeout: 20000 });
+    await expect(page.locator('#dashboard .hx-error')).toHaveCount(0);
+    await expect(page.locator('#hx6Period option')).not.toHaveCount(0);
     return;
   }
   if (id === 'sales') {
