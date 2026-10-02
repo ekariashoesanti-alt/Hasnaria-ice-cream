@@ -111,7 +111,7 @@ assert(!ownerFinanceStockSource.includes('finance-provisional-sync-v1.js'), 'leg
 assert(purchaseBasisSource.includes("get_finance_management_period_v1"), 'Finance management UI must read the journal-based management period RPC');
 assert(purchaseBasisSource.includes('__HASNARIA_FINANCE_PURCHASE_BASIS_V3'), 'Finance management runtime must use the v3 idempotency guard');
 assert(purchaseBasisSource.includes('purchase_control_current'), 'Finance Laba Rugi must surface Purchase-to-journal reconciliation control');
-assert(purchaseBasisSource.includes('purchase_journal_delta'), 'Finance Laba Rugi must expose Purchase/journal delta');
+assert(!purchaseBasisSource.includes('Kontrol Purchase → Finance') && !purchaseBasisSource.includes('Sumber pembayaran</b>') && !purchaseBasisSource.includes('Relasi Stok</b>'), 'Finance Laba Rugi must keep the redundant reconciliation strip hidden');
 assert(purchaseBasisSource.includes('patchHealth(r)'), 'Finance management UI must replace the legacy HPP health chip');
 assert(purchaseBasisSource.includes('Beban Administrasi') && purchaseBasisSource.includes('Beban Pemeliharaan') && purchaseBasisSource.includes('Beban Bahan Baku') && purchaseBasisSource.includes('Beban Kepegawaian'), 'Finance report must expose the four approved expense categories');
 assert(purchaseBasisSource.includes("observer.observe(h,{childList:true,subtree:true})"), 'Finance observer must be scoped to the Finance host');
