@@ -111,9 +111,9 @@ assert(p1LazyBootstrap.includes('get_ui_monthly_trend_v1') && p1LazyBootstrap.in
 
 assert(ownerShellSource.includes('window.__HASNARIA_OWNER_SHELL_BOOTSTRAPPED'), 'Owner executive guard must remain idempotent');
 assert(ownerShellSource.includes("var EXEC_SRC='/owner-executive-v1.js?v=1'"), 'Owner shell must load the executive one-view runtime');
-assert(ownerShellSource.includes("var DASH_SRC='/owner-dashboard-one-view.js?v=2'"), 'Owner shell must load the UI-6 dashboard cache');
+assert(ownerShellSource.includes("var DASH_SRC='/owner-dashboard-one-view.js?v=3'"), 'Owner shell must load the UI-6 dashboard cache');
 assert(dashboardSource.includes('__HASNARIA_DASHBOARD_UI6'), 'Dashboard UI-6 runtime marker must be present');
-assert(dashboardSource.includes('ui_period_catalog_v1') && dashboardSource.includes('ui_dashboard_period_v1'), 'Dashboard UI-6 must use canonical period and dashboard views');
+assert(dashboardSource.includes('get_ui_dashboard_pack_v1') && dashboardSource.includes('p_months:18'), 'Dashboard UI-6 must use the bounded canonical dashboard RPC');
 assert(dashboardSource.includes('data-hx6-detail') && dashboardSource.includes('hx6-modal'), 'Dashboard UI-6 must keep breakdown detail behind a modal');
 assert(!dashboardSource.includes("owner_executive_tab_v1"), 'Dashboard UI-6 must not return to the legacy executive aggregation RPC');
 assert(ownerShellSource.includes("return !!(c&&c.role==='owner')"), 'Owner shell must remain scoped to Owner role');
