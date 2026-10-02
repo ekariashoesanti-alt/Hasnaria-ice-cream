@@ -174,3 +174,81 @@
 #stok .sc3-table td{padding-top:2px;padding-bottom:2px}
 #stok .sc3-pager:after{content:'18 / halaman'}
 }
+
+
+/* UI-4 Stock summary: dashboard-first, details on demand. */
+#stok .sc4-head-tools{display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+#stok .sc4-head-tools label{display:flex;flex-direction:column;gap:3px;min-width:170px;margin:0}
+#stok .sc4-head-tools label span{font-size:7.5px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;color:#6b7d75}
+#stok .sc4-head-tools select{height:34px;min-height:34px;border:1px solid #d8e5df;border-radius:9px;background:#fff;color:#173f34;padding:0 9px;font-size:9px;font-weight:800}
+#stok .sc4-kpis{margin-bottom:10px}
+#stok .sc4-history{background:#f7f8f8;border-color:#e1e6e4}
+#stok .sc4-history strong{color:#68756f}
+#stok .sc4-main-grid{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(300px,.65fr);gap:12px;margin-bottom:12px}
+#stok .sc4-panel{min-width:0;border:1px solid #dfe9e5;border-radius:13px;background:#fff;padding:13px}
+#stok .sc4-panel-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+#stok .sc4-panel-head h3{margin:0 0 3px;font-size:12px;color:#173f34}
+#stok .sc4-panel-head p{margin:0;font-size:8px;color:#7e8d87}
+#stok .sc4-chart{display:grid;gap:10px;margin-top:12px}
+#stok .sc4-chart-row{display:grid;gap:5px}
+#stok .sc4-chart-row>div{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:9px}
+#stok .sc4-chart-row>div span{color:#5e736a;font-weight:800}
+#stok .sc4-chart-row>div b{color:#173f34}
+#stok .sc4-chart-row progress{width:100%;height:9px;border:0;border-radius:999px;overflow:hidden;background:#e7efeb}
+#stok .sc4-chart-row progress::-webkit-progress-bar{background:#e7efeb;border-radius:999px}
+#stok .sc4-chart-row progress::-webkit-progress-value{background:#176b55;border-radius:999px}
+#stok .sc4-chart-row progress::-moz-progress-bar{background:#176b55;border-radius:999px}
+#stok .sc4-chart-row small{font-size:7.5px;color:#82918a}
+#stok .sc4-control-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:12px}
+#stok .sc4-control-grid>div{display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid #e3ebe7;border-radius:9px;background:#fbfdfc;padding:8px 9px}
+#stok .sc4-control-grid span{font-size:8px;color:#687b73}
+#stok .sc4-control-grid strong{font-size:11px;color:#173f34}
+#stok .sc4-info{margin-top:9px;border-radius:9px;background:#f2f6f4;color:#5e7069;padding:8px 9px;font-size:8px;line-height:1.4}
+#stok .sc4-actions-row{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;border:1px solid #dfe8e4;border-radius:12px;background:#f8fbf9;padding:11px 12px}
+#stok .sc4-actions-row>div:first-child b,#stok .sc4-actions-row>div:first-child span{display:block}
+#stok .sc4-actions-row>div:first-child b{font-size:10px;color:#173f34}
+#stok .sc4-actions-row>div:first-child span{font-size:8px;color:#7f8d87;margin-top:2px}
+#stok .sc4-actions-row>div:last-child{display:flex;gap:7px;flex-wrap:wrap}
+#stok .sc4-actions-row button{min-height:34px;border:1px solid #d7e5df;border-radius:9px;background:#fff;color:#225343;padding:0 11px;font-size:8.5px;font-weight:850}
+#stok .sc4-actions-row button.primary{background:#176b55;border-color:#176b55;color:#fff}
+#stok .sc4-empty{padding:22px 10px;text-align:center;color:#83918b;font-size:8.5px}
+#stok .sc4-modal-backdrop{position:fixed;inset:0;z-index:9999;display:grid;place-items:center;background:rgba(10,29,23,.48);padding:18px}
+#stok .sc4-modal{width:min(1180px,96vw);max-height:90vh;overflow:hidden;display:flex;flex-direction:column;background:#fff;border:1px solid #dbe7e2;border-radius:16px;box-shadow:0 24px 70px rgba(0,0,0,.22)}
+#stok .sc4-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:14px 15px;border-bottom:1px solid #e8eeeb}
+#stok .sc4-modal-head h3{margin:2px 0 4px;font-size:15px;color:#173f34}
+#stok .sc4-modal-head p{margin:0;font-size:8.5px;color:#74847d}
+#stok .sc4-close{min-width:36px;height:36px;min-height:36px;border-radius:999px;background:#eef3f1;color:#315e4f;font-size:19px;line-height:1}
+#stok .sc4-modal-body{padding:12px;overflow:auto;min-height:0}
+#stok .sc4-modal-body .sc3-formula{margin-top:0}
+#stok .sc4-modal-body .sc3-table-wrap{max-height:56vh;overflow:auto}
+#stok .sc4-ledger-meta{margin:0 0 8px;color:#6d7f77;font-size:8px;font-weight:800}
+#stok .sc4-ledger-table{min-width:860px;table-layout:auto}
+#stok .sc4-ledger-table th:nth-child(n),#stok .sc4-ledger-table td:nth-child(n){width:auto}
+#stok .sc4-ledger-table td b,#stok .sc4-ledger-table td small{display:block}
+#stok .sc4-ledger-table td small{margin-top:2px;color:#87958f;font-size:7px}
+
+@media(min-width:901px){
+#stok .sc4-main-grid{gap:8px;margin-bottom:8px}
+#stok .sc4-panel{padding:9px 10px;border-radius:9px}
+#stok .sc4-panel-head h3{font-size:9px}
+#stok .sc4-panel-head p{font-size:6.5px}
+#stok .sc4-chart{gap:6px;margin-top:7px}
+#stok .sc4-chart-row{gap:3px}
+#stok .sc4-chart-row>div{font-size:7px}
+#stok .sc4-chart-row progress{height:6px}
+#stok .sc4-chart-row small{font-size:6px}
+#stok .sc4-control-grid{gap:4px;margin-top:7px}
+#stok .sc4-control-grid>div{padding:5px 6px;border-radius:7px}
+#stok .sc4-control-grid span{font-size:6.5px}
+#stok .sc4-control-grid strong{font-size:8px}
+#stok .sc4-info{margin-top:6px;padding:6px 7px;font-size:6.5px}
+#stok .sc4-actions-row{padding:7px 8px;border-radius:9px}
+#stok .sc4-actions-row>div:first-child b{font-size:8px}
+#stok .sc4-actions-row>div:first-child span{font-size:6.5px}
+#stok .sc4-actions-row button{min-height:27px;height:27px;padding:0 8px;font-size:6.8px;border-radius:7px}
+#stok .sc4-head-tools label{min-width:145px}
+#stok .sc4-head-tools label span{font-size:6px}
+#stok .sc4-head-tools select{height:27px;min-height:27px;font-size:7px;border-radius:7px}
+}
+@media(max-width:900px){#stok .sc4-main-grid{grid-template-columns:1fr}#stok .sc4-control-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:600px){#stok .sc4-head-tools{width:100%;justify-content:stretch}#stok .sc4-head-tools label{width:100%}#stok .sc4-head-tools select{width:100%}#stok .sc4-control-grid{grid-template-columns:1fr}#stok .sc4-actions-row>div:last-child{width:100%}#stok .sc4-actions-row button{flex:1}#stok .sc4-modal-backdrop{padding:7px}#stok .sc4-modal{width:100%;max-height:95vh;border-radius:12px}}
