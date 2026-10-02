@@ -79,6 +79,6 @@ function bind(box){
   document.addEventListener('keydown',function(e){if(e.key==='Escape'&&state.detailsOpen)closeDetails()})
 }
 
-function mount(){css();var box=shell();if(!box)return Promise.reject(new Error('Halaman Pengaturan Akun belum siap'));state.mounted=true;return load().then(function(){return true})}
+function mount(){css();var box=shell();if(!box)return Promise.reject(new Error('Halaman Pengaturan Akun belum siap'));state.mounted=true;state.detailsOpen=false;var modal=$('hamDetailModal');if(modal)modal.classList.add('hidden');clearSecureLink();return load().then(function(){return true})}
 window.__HASNARIA_ACCOUNT_MANAGER_V1={mount:mount,refresh:load};
 })();
