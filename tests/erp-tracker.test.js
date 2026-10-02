@@ -105,7 +105,7 @@ assert(!ownerShellSource.includes('owner-finance-stock-v3.js'), 'Owner shell mus
 assert(!ownerShellSource.includes('finance-hpp-p3.js'), 'HPP workbench must not be loaded by Owner shell');
 assert(!/\.(?:from|insert|update|delete|rpc)\s*\(/.test(ownerShellSource), 'Owner navigation guard contains no database mutation/query path');
 
-assert(ownerFinanceStockSource.includes("finance-purchase-basis-v1.js?v=3"), 'Owner Finance shim must load Purchase-journal reporting v3');
+assert(ownerFinanceStockSource.includes("finance-purchase-basis-v1.js?v=4"), 'Owner Finance shim must load Purchase-journal reporting v3');
 assert(!ownerFinanceStockSource.includes('finance-no-hpp-mode-v1.js'), 'legacy no-HPP override must stay retired');
 assert(!ownerFinanceStockSource.includes('finance-provisional-sync-v1.js'), 'legacy provisional HPP panel must stay retired');
 assert(purchaseBasisSource.includes("get_finance_management_period_v1"), 'Finance management UI must read the journal-based management period RPC');
