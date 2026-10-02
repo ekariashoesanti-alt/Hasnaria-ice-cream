@@ -102,7 +102,7 @@ function bind(h){
 async function mount(o){
  var h=document.getElementById('administrasi');if(!h||h.classList.contains('hidden'))return;ensureCss();
  if(S.loading)return;
- if(S.overview&&!o?.force){render();return}
+ if(S.overview&&!(o&&o.force)){render();return}
  await loadSummary(!!(o&&o.force));
 }
 window.__HASNARIA_ADMIN_V1={mount:mount};
