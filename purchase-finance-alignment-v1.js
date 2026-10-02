@@ -5,6 +5,7 @@ window.__HASNARIA_PURCHASE_FINANCE_ALIGNMENT_V12=true;
 
 var BRAND='a36d4b4f-3ccc-4a78-8aeb-b868f0407ea4';
 var CATS=['Beban Administrasi','Beban Pemeliharaan','Beban Bahan Baku','Beban Kepegawaian'];
+var CAT_LABEL={'Beban Administrasi':'6100 · Administrasi','Beban Pemeliharaan':'6110 · Pemeliharaan','Beban Bahan Baku':'6120 · Bahan Baku','Beban Kepegawaian':'6200 · Kepegawaian'};
 var MONTHS=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
 var db=null,rows=[],control={},overview=null,chartRows=[],periods=[],loading=false,error='',observer=null,timer=0,loadedAt=0,loadedPeriod='',syncingStock=false,lastStockSync='',category='all',modalOpen=false;
 
@@ -50,12 +51,12 @@ function table(a){
   if(!show.length)return'<div class="pfa-empty">Tidak ada transaksi Pembelian untuk kategori/periode ini.</div>';
   return'<div class="pfa-table-scroll"><table class="pfa-table"><thead><tr><th>Tanggal</th><th>Item</th><th>Akun Beban</th><th class="num">Nilai</th><th>Stok Qty</th><th>Finance</th></tr></thead><tbody>'+show.map(function(r){return'<tr><td>'+esc(dateLabel(r.effective_date))+'</td><td><b>'+esc(r.item_name||'Tanpa nama')+'</b><small>'+esc(r.analytics_category||r.analytics_group||'')+'</small></td><td><b>'+esc(r.expense_account_code)+' · '+esc(r.expense_category)+'</b></td><td class="num">'+esc(money(r.total_amount))+'</td><td>'+stockCell(r)+'</td><td>'+financeStatus(r)+'</td></tr>'}).join('')+'</tbody></table></div>'+(a.length>show.length?'<div class="pfa-more">Menampilkan 220 transaksi terbaru dari '+a.length.toLocaleString('id-ID')+' transaksi.</div>':'')
 }
-function filterMarkup(){return'<label class="pfa-modal-filter">Kategori<select id="pfaCategory"><option value="all"'+(category==='all'?' selected':'')+'>Semua kategori</option>'+CATS.map(function(x){return'<option value="'+esc(x)+'"'+(category===x?' selected':'')+'>'+esc(x)+'</option>'}).join('')+'</select></label>'}
+function filterMarkup(){return'<label class="pfa-modal-filter">Kategori<select id="pfaCategory"><option value="all"'+(category==='all'?' selected':'')+'>Semua kategori</option>'+CATS.map(function(x){return'<option value="'+esc(x)+'"'+(category===x?' selected':'')+'>'+esc(CAT_LABEL[x]||x)+'</option>'}).join('')+'</select></label>'}
 function chartMarkup(){
   var source=chartRows&&chartRows.length?chartRows:CATS.map(function(cat){var a=byCat(rows,cat);return{category:cat,purchase_rows:a.length,amount:total(a)}}).filter(function(x){return x.purchase_rows});
   if(!source.length)return'<div class="pfa-empty">Belum ada kategori untuk periode ini.</div>';
   var max=Math.max.apply(null,source.map(function(x){return n(x.amount)}).concat([1]));
-  return'<div class="pfa-chart">'+source.slice().sort(function(a,b){return n(b.amount)-n(a.amount)}).map(function(x){var value=n(x.amount),pct=Math.max(0,Math.min(100,value/max*100));return'<div class="pfa-chart-row"><div class="pfa-chart-label"><span>'+esc(x.category||'Lainnya')+'</span><b>'+esc(money(value))+'</b></div><progress max="100" value="'+pct.toFixed(2)+'">'+pct.toFixed(0)+'%</progress><small>'+n(x.purchase_rows).toLocaleString('id-ID')+' transaksi</small></div>'}).join('')+'</div>'
+  return'<div class="pfa-chart">'+source.slice().sort(function(a,b){return n(b.amount)-n(a.amount)}).map(function(x){var value=n(x.amount),pct=Math.max(0,Math.min(100,value/max*100)),label=CAT_LABEL[x.category]||x.category||'Lainnya';return'<div class="pfa-chart-row"><div class="pfa-chart-label"><span>'+esc(label)+'</span><b>'+esc(money(value))+'</b></div><progress max="100" value="'+pct.toFixed(2)+'">'+pct.toFixed(0)+'%</progress><small>'+n(x.purchase_rows).toLocaleString('id-ID')+' transaksi</small></div>'}).join('')+'</div>'
 }
 function summaryValues(){
   if(overview)return overview;
@@ -64,7 +65,7 @@ function summaryValues(){
 }
 function syncMarkup(){
   var finance=control.finance_link_status==='MATCH',stock=control.stock_link_status==='OK',review=n(control.provisional_journal_rows)+n(control.stock_review_rows);
-  return'<div class="pfa-sync-grid"><div><span>Keuangan</span><strong>'+statusPill(finance?'Sinkron':'Periksa',finance?'ok':'bad')+'</strong></div><div><span>Stok</span><strong>'+statusPill(stock?'Sinkron':'Perlu review',stock?'ok':'warn')+'</strong></div><div><span>Perlu perhatian</span><strong>'+review.toLocaleString('id-ID')+'</strong></div></div>'
+  return'<div class="pfa-sync-grid"><div><span>Keuangan</span><strong>'+statusPill(finance?'Sinkron':'Periksa',finance?'ok':'bad')+(finance?'':' · delta '+esc(money(control.purchase_journal_delta)))+'</strong></div><div><span>Stok</span><strong>'+statusPill(stock?'Sinkron':'Perlu review',stock?'ok':'warn')+'</strong></div><div><span>Perlu perhatian</span><strong>'+review.toLocaleString('id-ID')+'</strong></div></div>'
 }
 function modalMarkup(){
   if(!modalOpen)return'';
