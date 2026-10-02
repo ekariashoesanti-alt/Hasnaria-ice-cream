@@ -46,7 +46,8 @@
         db.from('products').select('id,name,sku,active').eq('brand_id',BRAND).order('name',{ascending:true}).limit(1000),
         db.from('inventory_stock_ledger_p4_v1').select('id,inventory_item_id,sku_code,sku_name,base_unit,movement_date,ledger_type,source_movement_type,qty_delta,unit_cost,reference_type,source_key,system_generated,notes').eq('brand_id',BRAND).order('movement_date',{ascending:false}).limit(5000),
         db.from('sales_product_performance').select('brand_id,month,product_id,product_name,units_sold').eq('brand_id',BRAND).order('month',{ascending:true}).limit(10000),
-        db.from('inventory_stock_opname').select('id,brand_id,inventory_item_id,opname_date,system_qty,physical_qty,variance,notes,created_at').eq('brand_id',BRAND).order('opname_date',{ascending:false}).limit(3000),\n        db.from('inventory_stock_balance_p4_v1').select('brand_id,inventory_item_id,sku_name,base_unit,system_stock_qty,last_movement_date').eq('brand_id',BRAND).limit(1000)
+        db.from('inventory_stock_opname').select('id,brand_id,inventory_item_id,opname_date,system_qty,physical_qty,variance,notes,created_at').eq('brand_id',BRAND).order('opname_date',{ascending:false}).limit(3000),
+        db.from('inventory_stock_balance_p4_v1').select('brand_id,inventory_item_id,sku_name,base_unit,system_stock_qty,last_movement_date').eq('brand_id',BRAND).limit(1000)
       ]);
     }).then(function(res){
       res.forEach(function(r){if(r.error)throw r.error;});
@@ -172,7 +173,8 @@
   function stockPeriods(data){var s={};(data.monthlyStock||[]).forEach(function(r){var p=monthKey(r.month_start);if(p)s[p]=1;});return Object.keys(s).sort();}
   function stockWithPeriod(data){var ps=stockPeriods(data);if(!stockState.period||ps.indexOf(stockState.period)<0)stockState.period=ps.length?ps[ps.length-1]:'';var by={};(data.monthlyStock||[]).forEach(function(r){if(monthKey(r.month_start)===stockState.period)by[r.inventory_item_id]=r;});return(data.inventory||[]).map(function(r){return Object.assign({},r,{p6:by[r.inventory_item_id]||null});});}
   function stockStatusLabel(s){return s==='critical'?'Kritis':s==='reorder'?'Minim':s==='ok'?'Aman':'Belum dipantau';}
-  function currentBalanceMap(data){var m={};(data.stockBalances||[]).forEach(function(r){m[r.inventory_item_id]=r;});return m;}\n  function latestOpnameMap(data){var m={};(data.opnames||[]).forEach(function(o){if(!m[o.inventory_item_id])m[o.inventory_item_id]=o;});return m;}
+  function currentBalanceMap(data){var m={};(data.stockBalances||[]).forEach(function(r){m[r.inventory_item_id]=r;});return m;}
+  function latestOpnameMap(data){var m={};(data.opnames||[]).forEach(function(o){if(!m[o.inventory_item_id])m[o.inventory_item_id]=o;});return m;}
   function stockRows(data,group){return stockWithPeriod(data).filter(function(r){return stockGroup(r.category)===group;}).sort(function(a,b){var rank={critical:0,reorder:1,untracked:2,ok:3},ra=rank[stockStatus(a)],rb=rank[stockStatus(b)];return ra-rb||String(a.item_name).localeCompare(String(b.item_name));});}
 
   function stockTabButton(key,label){return '<button type="button" data-fs-stock-tab="'+key+'" class="'+(stockState.tab===key?'on':'')+'">'+label+'</button>';}
