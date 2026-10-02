@@ -96,3 +96,9 @@
 #stok .sc3-table td{padding-top:2.5px;padding-bottom:2.5px}
 #stok .sc3-pager:after{content:'18 / halaman'}
 }
+
+/* UI-4 modal exceptions: ledger uses six audit columns, not the 11-column current-position density. */
+#stok .sc4-modal-body .sc3-table-wrap{overflow:auto!important;max-height:56vh}
+#stok .sc4-modal-body .sc4-ledger-table{width:100%!important;min-width:860px!important;table-layout:auto!important;font-size:8.3px}
+#stok .sc4-modal-body .sc4-ledger-table th,#stok .sc4-modal-body .sc4-ledger-table td{width:auto!important;overflow:visible;text-overflow:clip}
+#stok .sc4-modal-body .sc3-pager:after{content:'50 movement / halaman'}
