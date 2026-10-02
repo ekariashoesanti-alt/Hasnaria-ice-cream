@@ -38,6 +38,6 @@ test('Public Staff portal renders without browser errors on mobile', async ({ pa
   expect(response).not.toBeNull();
   expect(response.status()).toBeLessThan(400);
   await expect(page.locator('#staffRoot .staff-shell')).toBeVisible({ timeout: 20000 });
-  await expect(page.locator('[data-act="owner-open"]')).toBeVisible();
+  await expect(page.locator('[data-act="owner-open"]').first()).toBeVisible();
   expect(pageErrors, `Unexpected Staff portal page errors: ${pageErrors.join(' | ')}`).toEqual([]);
 });
