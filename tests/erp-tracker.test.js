@@ -141,7 +141,7 @@ assert(purchaseFinanceCss.includes('>.pa-kpis') && purchaseFinanceCss.includes('
 assert(purchaseFinanceSource.includes("get_purchase_control_period_v1"), 'Purchase screen must use one selected-period detail/control RPC');
 assert(purchaseFinanceSource.includes("ui_period_catalog_v1") && purchaseFinanceSource.includes("ui_purchase_overview_v1") && purchaseFinanceSource.includes("ui_purchase_category_chart_v1"), 'Purchase UI-3 must use canonical period, overview, and category views');
 assert(purchaseFinanceSource.includes('data-pfa-detail-open') && purchaseFinanceSource.includes('pfa-modal'), 'Purchase UI-3 must keep transaction detail behind an explicit modal action');
-assert(purchaseFinanceSource.includes('__HASNARIA_PURCHASE_FINANCE_ALIGNMENT_V11'), 'Purchase runtime must use the v11 idempotency guard');
+assert(purchaseFinanceSource.includes('__HASNARIA_PURCHASE_FINANCE_ALIGNMENT_V12'), 'Purchase runtime must use the v11 idempotency guard');
 assert(purchaseFinanceSource.includes('finance_link_status') && purchaseFinanceSource.includes('purchase_journal_delta'), 'Purchase screen must show the Finance reconciliation result');
 assert(purchaseFinanceSource.includes('id="pfaCategory"'), 'Purchase canonical expense filter must be owned by the canonical panel');
 assert(purchaseFinanceSource.includes("legacyScope.closest('label').style.display='none'"), 'legacy analytics scope must be hidden instead of repurposed');
