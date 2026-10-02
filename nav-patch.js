@@ -67,6 +67,37 @@
     });
   }
 
+  function ensureAccountManager(){
+    function mount(){
+      if(window.__HASNARIA_ACCOUNT_MANAGER_V1&&typeof window.__HASNARIA_ACCOUNT_MANAGER_V1.mount==='function'){
+        return Promise.resolve(window.__HASNARIA_ACCOUNT_MANAGER_V1.mount()).catch(function(e){
+          var msg=document.getElementById('hasnariaActivationMsg');
+          if(msg){msg.style.color='#b43b3b';msg.textContent=e&&e.message?e.message:'Gagal memuat Pengaturan Akun.'}
+          return false;
+        });
+      }
+      return Promise.resolve(false);
+    }
+    if(window.__HASNARIA_ACCOUNT_MANAGER_V1)return mount();
+    var old=document.getElementById('hasnaria-account-manager-v1-js');
+    if(old){
+      return new Promise(function(resolve){
+        if(window.__HASNARIA_ACCOUNT_MANAGER_V1){mount().then(resolve);return}
+        old.addEventListener('load',function(){mount().then(resolve)},{once:true});
+        old.addEventListener('error',function(){resolve(false)},{once:true});
+      });
+    }
+    return new Promise(function(resolve){
+      var s=document.createElement('script');
+      s.id='hasnaria-account-manager-v1-js';
+      s.src='/account-manager-v1.js?v=2';
+      s.async=true;
+      s.onload=function(){mount().then(resolve)};
+      s.onerror=function(){resolve(false)};
+      document.head.appendChild(s);
+    });
+  }
+
   async function showAccountPage(mode){
     var page=document.getElementById('hasnariaAccountPage');
     if(!page){
@@ -140,6 +171,7 @@
       document.getElementById('hasnariaActivationMsg').textContent='';
     }
     page.classList.add('open');
+    if(mode!=='password')ensureAccountManager();
   }
 
   function openAccountSettings(){ closeAccountMenu(); showAccountPage('settings'); }
