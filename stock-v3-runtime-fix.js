@@ -17,7 +17,7 @@
       link=document.createElement('link');
       link.id=id;
       link.rel='stylesheet';
-      link.href='/stock-readable-density.css?v=1';
+      link.href='/stock-readable-density.css?v=2';
     }
     document.head.appendChild(link);
 
@@ -27,7 +27,7 @@
       trim=document.createElement('link');
       trim.id=trimId;
       trim.rel='stylesheet';
-      trim.href='/stock-column-trim.css?v=1';
+      trim.href='/stock-column-trim.css?v=2';
     }
     document.head.appendChild(trim);
   }
