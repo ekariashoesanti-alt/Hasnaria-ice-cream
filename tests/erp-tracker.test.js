@@ -132,13 +132,15 @@ assert(!salesBoardSource.includes('sales-hourly-chart.js'), 'Sales board must no
 
 assert(!purchasePreloadSource.includes('purchase-rankings-five.js'), 'legacy Purchase ranking patch must not load beside canonical Finance reconciliation');
 assert(!purchasePreloadSource.includes('purchase-chart-redesign.js'), 'legacy Purchase chart patch must not race the canonical Purchase DOM');
-assert(purchasePreloadSource.includes("purchase-finance-alignment-v1.css?v=4"), 'canonical Purchase layout cache version must be current');
-assert(purchasePreloadSource.includes("purchase-finance-alignment-v1.js?v=6"), 'canonical Purchase runtime cache version must be current');
+assert(purchasePreloadSource.includes("purchase-finance-alignment-v1.css?v=5"), 'canonical Purchase layout cache version must be current');
+assert(purchasePreloadSource.includes("purchase-finance-alignment-v1.js?v=7"), 'canonical Purchase runtime cache version must be current');
 assert(!purchaseInventorySource.includes('pa-stock-grid'), 'Purchase inventory helper must not inject detailed Stock cards back into Pembelian');
 assert(!purchaseInventorySource.includes("querySelectorAll('.pa-lower-grid article')"), 'Purchase inventory helper must remain KPI-only');
 assert(purchaseFinanceCss.includes(':has(>#purchaseFinanceAlignment)'), 'Purchase canonical layout must activate only when reconciliation is present');
 assert(purchaseFinanceCss.includes('>.pa-kpis') && purchaseFinanceCss.includes('>.pa-main-grid') && purchaseFinanceCss.includes('>.pa-lower-grid'), 'legacy Purchase KPI and analytics grids must be removed from canonical layout');
 assert(purchaseFinanceSource.includes("get_purchase_control_period_v1"), 'Purchase screen must use one selected-period detail/control RPC');
+assert(purchaseFinanceSource.includes("ui_period_catalog_v1") && purchaseFinanceSource.includes("ui_purchase_overview_v1") && purchaseFinanceSource.includes("ui_purchase_category_chart_v1"), 'Purchase UI-3 must use canonical period, overview, and category views');
+assert(purchaseFinanceSource.includes('data-pfa-detail-open') && purchaseFinanceSource.includes('pfa-modal'), 'Purchase UI-3 must keep transaction detail behind an explicit modal action');
 assert(purchaseFinanceSource.includes('__HASNARIA_PURCHASE_FINANCE_ALIGNMENT_V11'), 'Purchase runtime must use the v11 idempotency guard');
 assert(purchaseFinanceSource.includes('finance_link_status') && purchaseFinanceSource.includes('purchase_journal_delta'), 'Purchase screen must show the Finance reconciliation result');
 assert(purchaseFinanceSource.includes('id="pfaCategory"'), 'Purchase canonical expense filter must be owned by the canonical panel');
