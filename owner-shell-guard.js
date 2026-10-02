@@ -179,7 +179,7 @@
     if(!isOwner())return;var h=section('administrasi');if(!h||h.classList.contains('hidden'))return;
     if(window.__HASNARIA_ADMIN_V1&&typeof window.__HASNARIA_ADMIN_V1.mount==='function'){window.__HASNARIA_ADMIN_V1.mount({force:!!requestRender});return}
     if(state.adminLoad){state.adminLoad.then(function(){if(isOwner()&&state.active==='administrasi'&&window.__HASNARIA_ADMIN_V1)window.__HASNARIA_ADMIN_V1.mount({force:!!requestRender})});return}
-    state.adminLoad=new Promise(function(resolve){var s=document.createElement('script');s.id='hasnaria-admin-v1-js';s.src='/administration-v1.js?v=1';s.async=true;s.onload=resolve;s.onerror=function(){state.adminLoad=null;resolve()};document.head.appendChild(s)});
+    state.adminLoad=new Promise(function(resolve){var s=document.createElement('script');s.id='hasnaria-admin-v1-js';s.src='/administration-v1.js?v=2';s.async=true;s.onload=resolve;s.onerror=function(){state.adminLoad=null;resolve()};document.head.appendChild(s)});
     state.adminLoad.then(function(){if(isOwner()&&state.active==='administrasi'&&window.__HASNARIA_ADMIN_V1)window.__HASNARIA_ADMIN_V1.mount({force:!!requestRender})});
   }
 
