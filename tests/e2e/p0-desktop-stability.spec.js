@@ -3,7 +3,7 @@ const { test, expect } = require('@playwright/test');
 const BASE_URL = process.env.HASNARIA_BASE_URL || 'https://hasnaria-business-analyzer.vercel.app';
 const EMAIL = process.env.HASNARIA_E2E_EMAIL || '';
 const PASSWORD = process.env.HASNARIA_E2E_PASSWORD || '';
-const TABS = ['dashboard', 'sales', 'pembelian', 'operasional', 'ops', 'stok'];
+const TABS = ['dashboard', 'sales', 'pembelian', 'operasional', 'administrasi', 'ops', 'stok'];
 
 function requireCredentials() {
   if (!EMAIL || !PASSWORD) throw new Error('HASNARIA_E2E_EMAIL and HASNARIA_E2E_PASSWORD are required.');
@@ -46,7 +46,7 @@ async function login(page) {
 
 async function waitCanonicalSurface(page, id) {
   if (id === 'dashboard') {
-    await expect(page.locator('#dashboard')).not.toHaveClass(/hidden/);
+    await expect(page.locator('#dashboard .hx6-shell')).toBeVisible({ timeout: 20000 });
     return;
   }
   if (id === 'sales') {
@@ -54,11 +54,15 @@ async function waitCanonicalSurface(page, id) {
     return;
   }
   if (id === 'pembelian') {
-    await expect(page.locator('#pembelian #paRoot')).toBeVisible({ timeout: 20000 });
+    await expect(page.locator('#pembelian #purchaseFinanceAlignment')).toBeVisible({ timeout: 20000 });
     return;
   }
   if (id === 'operasional') {
     await expect(page.locator('#operasional [data-operational-v1="1"]')).toBeVisible({ timeout: 20000 });
+    return;
+  }
+  if (id === 'administrasi') {
+    await expect(page.locator('#administrasi .ad5-shell')).toBeVisible({ timeout: 20000 });
     return;
   }
   if (id === 'ops') {
@@ -66,7 +70,7 @@ async function waitCanonicalSurface(page, id) {
     return;
   }
   if (id === 'stok') {
-    await expect(page.locator('#stok .sc3-shell')).toBeVisible({ timeout: 20000 });
+    await expect(page.locator('#stok .sc4-main-grid')).toBeVisible({ timeout: 20000 });
   }
 }
 
@@ -122,6 +126,8 @@ test('P0 desktop: repeated Owner tab cycle stays single-surface and duplicate-fr
           operationalRoots: document.querySelectorAll('#operasional [data-operational-v1="1"]').length,
           financeRoots: document.querySelectorAll('#ops [data-finance-v6="1"]').length,
           stockRoots: document.querySelectorAll('#stok .sc3-shell').length,
+          adminRoots: document.querySelectorAll('#administrasi .ad5-shell').length,
+          dashboardRoots: document.querySelectorAll('#dashboard .hx6-shell').length,
         };
       }, TABS);
 
@@ -131,6 +137,8 @@ test('P0 desktop: repeated Owner tab cycle stays single-surface and duplicate-fr
       expect(state.operationalRoots).toBeLessThanOrEqual(1);
       expect(state.financeRoots).toBeLessThanOrEqual(1);
       expect(state.stockRoots).toBeLessThanOrEqual(1);
+      expect(state.adminRoots).toBeLessThanOrEqual(1);
+      expect(state.dashboardRoots).toBeLessThanOrEqual(1);
     }
   }
 
@@ -143,4 +151,58 @@ test('P0 desktop: repeated Owner tab cycle stays single-surface and duplicate-fr
   expect(invalidFrames, `Frames with zero/multiple Owner surfaces: ${JSON.stringify(invalidFrames.slice(0, 10))}`).toEqual([]);
   expect(pageErrors, `Uncaught page errors: ${pageErrors.join(' | ')}`).toEqual([]);
   expect(consoleErrors, `Console errors: ${consoleErrors.join(' | ')}`).toEqual([]);
+});
+
+
+test('UI-7 desktop: Account Settings opens snapshot then detail without mutation', async ({ page }) => {
+  test.setTimeout(90000);
+  const pageErrors = [];
+  page.on('pageerror', error => pageErrors.push(String(error && error.message ? error.message : error)));
+
+  await login(page);
+  await expect(page.locator('#hasnariaAccountMenuBtn')).toBeVisible({ timeout: 20000 });
+  await page.locator('#hasnariaAccountMenuBtn').click();
+  await expect(page.locator('#hasnariaAccountSettings')).toBeVisible();
+  await page.locator('#hasnariaAccountSettings').click();
+
+  await expect(page.locator('#hasnariaAccountPage')).toHaveClass(/open/, { timeout: 15000 });
+  await expect(page.locator('#hamAccountSummary')).toBeVisible({ timeout: 20000 });
+  await expect(page.locator('#hamOpenDetails')).toBeVisible();
+  await page.locator('#hamOpenDetails').click();
+  await expect(page.locator('#hamDetailModal')).not.toHaveClass(/hidden/);
+  await expect(page.locator('#hasnariaAccountList')).toBeVisible();
+  await page.locator('#hamCloseDetails').click();
+  await expect(page.locator('#hamDetailModal')).toHaveClass(/hidden/);
+
+  expect(pageErrors, `Unexpected Account Settings page errors: ${pageErrors.join(' | ')}`).toEqual([]);
+});
+
+test('UI-7 mobile Owner: Pegawai snapshot opens stable detail overlay', async ({ page }) => {
+  test.setTimeout(90000);
+  const pageErrors = [];
+  page.on('pageerror', error => pageErrors.push(String(error && error.message ? error.message : error)));
+
+  requireCredentials();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(new URL('/staff/', BASE_URL).toString(), { waitUntil: 'domcontentloaded', timeout: 45000 });
+  await expect(page.locator('[data-act="owner-open"]')).toBeVisible({ timeout: 20000 });
+  await page.locator('[data-act="owner-open"]').click();
+
+  const ownerLogin = page.locator('[data-act="owner-login"]');
+  if (await ownerLogin.count()) {
+    await expect(page.locator('#oemail')).toBeVisible();
+    await page.locator('#oemail').fill(EMAIL);
+    await page.locator('#opass').fill(PASSWORD);
+    await ownerLogin.click();
+  }
+
+  await expect(page.locator('#hsoShell')).toBeVisible({ timeout: 30000 });
+  await page.locator('[data-hso-nav="users"]').click();
+  await expect(page.locator('.hso-ui7-summary')).toBeVisible();
+  await page.locator('[data-hso-action="staff-detail"]').click();
+  await expect(page.locator('#hsoEditor')).toBeVisible();
+  await expect(page.locator('#hsoEditor .hso-person-list')).toBeVisible();
+  await page.locator('#hsoEditor [data-hso-action="cancel-edit"]').click();
+
+  expect(pageErrors, `Unexpected Owner Mobile page errors: ${pageErrors.join(' | ')}`).toEqual([]);
 });
