@@ -185,8 +185,8 @@ test('UI-7 mobile Owner: Pegawai snapshot opens stable detail overlay', async ({
   requireCredentials();
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(new URL('/staff/', BASE_URL).toString(), { waitUntil: 'domcontentloaded', timeout: 45000 });
-  await expect(page.locator('[data-act="owner-open"]')).toBeVisible({ timeout: 20000 });
-  await page.locator('[data-act="owner-open"]').click();
+  await expect(page.locator('[data-act="owner-open"]').first()).toBeVisible({ timeout: 20000 });
+  await page.locator('[data-act="owner-open"]').first().click();
 
   const ownerLogin = page.locator('[data-act="owner-login"]');
   if (await ownerLogin.count()) {
