@@ -168,7 +168,7 @@
       settings.classList.add('hidden');pass.classList.remove('hidden');title.textContent='Aktivasi Password Aplikasi';desc.textContent='Buat password sendiri agar akun ini dapat login dengan email + password.';
     }else{
       settings.classList.remove('hidden');pass.classList.add('hidden');title.textContent='Pengaturan Akun';desc.textContent='Kelola akses akun dan password aplikasi Hasnaria.';
-      document.getElementById('hasnariaActivationMsg').textContent='';
+      var activationMsg=document.getElementById('hasnariaActivationMsg');if(activationMsg)activationMsg.textContent='';
     }
     page.classList.add('open');
     if(mode!=='password')ensureAccountManager();
