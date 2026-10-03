@@ -62,10 +62,10 @@ async function submitLogin(page) {
   } catch (error) {
     let authMessage = '';
     try { authMessage = (await page.locator('#authMsg').textContent()) || ''; } catch (_) {}
-    try { await password.fill(''); } catch (_) {}
+    try { await page.evaluate(() => { const el=document.getElementById('password'); if(el)el.value=''; }); } catch (_) {}
     throw new Error(`Owner login failed${authMessage ? `: ${authMessage}` : ''}`);
   }
-  try { await password.fill(''); } catch (_) {}
+  try { await page.evaluate(() => { const el=document.getElementById('password'); if(el)el.value=''; }); } catch (_) {}
 }
 
 async function login(page) {
