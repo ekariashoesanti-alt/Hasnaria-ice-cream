@@ -14,7 +14,7 @@ function assertShellIntegration() {
     assert.match(indexSource, new RegExp(`id=["']${id}["']`), `index keeps legacy module host #${id}`);
   }
   const erpScript = indexSource.indexOf('<script src="/erp.js?v=ui2"></script>');
-  const appScript = indexSource.indexOf('<script src="/app.js?v=p054"></script>');
+  const appScript = indexSource.indexOf('<script src="/app.js?v=p055"></script>');
   assert.ok(erpScript >= 0, 'ERP runtime is loaded by index');
   assert.ok(appScript > erpScript, 'ERP runtime loads before app/core rendering begins');
   const sharedDb = appSource.indexOf('window.__HASNARIA_DB=sharedAuthClient');
