@@ -8,7 +8,7 @@
 
   var PAGE_SIZE=25;
   var state={
-    runs:[],loading:false,error:'',loaded:false,
+    runs:[],periods:[],period:'',loading:false,error:'',loaded:false,
     activeRun:null,items:[],itemPage:1,itemTotal:0,itemLoading:false,itemError:'',
     createOpen:false,members:[],membersLoading:false,membersLoaded:false,membersError:'',
     busy:false,notice:'',actionError:''
@@ -21,7 +21,11 @@
   function context(){return window.__HASNARIA_CONTEXT||{}}
   function isOwner(){return context().role==='owner'}
   function today(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+  var MONTHS=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
   function fmtDate(v){if(!v)return'—';var p=String(v).slice(0,10).split('-');return p.length===3?Number(p[2])+'/'+Number(p[1])+'/'+p[0]:v}
+  function monthLabel(v){var s=String(v||'').slice(0,7),m=Number(s.slice(5,7));return /^\d{4}-\d{2}$/.test(s)&&m>=1&&m<=12?MONTHS[m-1]+' '+s.slice(0,4):'Bulan belum tersedia'}
+  function nextMonth(v){var s=String(v||'').slice(0,7),y=Number(s.slice(0,4)),m=Number(s.slice(5,7));if(!y||!m)return'';m++;if(m>12){m=1;y++}return y+'-'+String(m).padStart(2,'0')+'-01'}
+  function periodOptions(){var ps=state.periods.length?state.periods:[state.period||today().slice(0,7)];return ps.map(function(p){return '<option value="'+esc(p)+'"'+(p===state.period?' selected':'')+'>'+esc(monthLabel(p))+'</option>'}).join('')}
   function statusLabel(s){return{draft:'Draft',in_progress:'Dikerjakan',submitted:'Menunggu Review',approved:'Disetujui',rejected:'Perlu Koreksi',closed:'Ditutup'}[s]||s||'—'}
   function typeLabel(t){return{stock_opname:'Stock Opname',opening:'Opening',closing:'Closing',hygiene:'Hygiene',equipment:'Peralatan',custom:'Operasional'}[t]||t||'Operasional'}
   function editable(r){return!!(r&&['draft','in_progress','rejected'].indexOf(r.status)>=0)}
@@ -82,7 +86,7 @@
 
   function render(){
     var h=host();if(!h)return;css();var c=counts();
-    h.innerHTML='<div class="op1-shell" data-operational-v1="1"><div class="op1-head"><div><div class="op1-eyebrow">OPERASIONAL</div><h2>Pelaksanaan & Kontrol Harian</h2><p>Daftar pekerjaan ringan; anggota tim dan detail opname hanya dimuat saat dibutuhkan.</p></div><div class="op1-head-actions">'+(isOwner()?'<button type="button" class="op1-new" data-op-action="new-opname">+ Stock Opname</button>':'')+'<button type="button" class="op1-refresh" data-op-action="refresh">↻ Refresh</button></div></div>'+
+    h.innerHTML='<div class="op1-shell" data-operational-v1="1"><div class="op1-head"><div><div class="op1-eyebrow">OPERASIONAL · '+esc(monthLabel(state.period))+'</div><h2>Pelaksanaan & Kontrol Harian</h2><p>Daftar pekerjaan ringan; anggota tim dan detail opname hanya dimuat saat dibutuhkan.</p></div><div class="op1-head-actions"><label class="op1-month"><span>Bulan</span><select id="op1Month" data-month-filter="operasional">'+periodOptions()+'</select></label>'+(isOwner()?'<button type="button" class="op1-new" data-op-action="new-opname">+ Stock Opname</button>':'')+'<button type="button" class="op1-refresh" data-op-action="refresh">↻ Refresh</button></div></div>'+
       '<div class="op1-kpis"><div><span>Aktif</span><strong>'+c.open+'</strong></div><div><span>Menunggu Review</span><strong>'+c.review+'</strong></div><div><span>Selesai</span><strong>'+c.done+'</strong></div></div>'+
       (state.notice?'<div class="op1-notice">'+esc(state.notice)+'</div>':'')+(state.actionError?'<div class="op1-alert">'+esc(state.actionError)+'</div>':'')+(state.error?'<div class="op1-alert">'+esc(state.error)+'</div>':'')+(state.loading&&!state.loaded?'<div class="op1-loading">Memuat daftar pekerjaan…</div>':'')+
       renderCreate()+'<div class="op1-grid"><section><div class="op1-section-title"><strong>Pekerjaan terbaru</strong><span>Maks. 30 run</span></div>'+renderRunList()+'</section>'+renderDetails()+'</div>'+
@@ -90,12 +94,24 @@
     bind(h);
   }
 
-  async function loadRuns(keepId){
+  async function loadPeriods(){
+    var d=db();if(!d)return;
+    var q=await d.from('operational_runs').select('scheduled_date').order('scheduled_date',{ascending:false}).limit(500);
+    if(q.error)throw q.error;
+    var seen={};(q.data||[]).forEach(function(x){var p=String(x.scheduled_date||'').slice(0,7);if(/^\d{4}-\d{2}$/.test(p))seen[p]=1});
+    state.periods=Object.keys(seen).sort().reverse();
+    if(!state.period||state.periods.indexOf(state.period)<0)state.period=state.periods[0]||today().slice(0,7);
+  }
+
+  async function loadRuns(keepId,refreshPeriods){
     if(state.loading)return;var d=db();if(!d){state.error='Sesi database belum siap.';render();return}
     state.loading=true;state.error='';if(!state.loaded)render();
     try{
-      var q=await d.from('operational_runs').select('id,run_type,title,scheduled_date,status,priority,assigned_to,review_notes,submitted_at,reviewed_at,updated_at').order('scheduled_date',{ascending:false}).order('updated_at',{ascending:false}).limit(30);
-      if(q.error)throw q.error;state.runs=q.data||[];state.loaded=true;
+      if(!state.periods.length||refreshPeriods)await loadPeriods();
+      var from=state.period+'-01',to=nextMonth(state.period);
+      var q=d.from('operational_runs').select('id,run_type,title,scheduled_date,status,priority,assigned_to,review_notes,submitted_at,reviewed_at,updated_at').gte('scheduled_date',from).lt('scheduled_date',to).order('scheduled_date',{ascending:false}).order('updated_at',{ascending:false}).limit(30);
+      var res=await q;
+      if(res.error)throw res.error;state.runs=res.data||[];state.loaded=true;
       var id=keepId||(state.activeRun&&state.activeRun.id),same=id&&state.runs.find(function(x){return x.id===id});
       if(same)state.activeRun=same;else if(id){state.activeRun=null;state.items=[];state.itemTotal=0}
     }catch(e){state.error=e&&e.message?e.message:String(e)}finally{state.loading=false;render()}
@@ -128,7 +144,7 @@
     state.busy=true;clearAction();render();
     try{
       var q=await db().rpc('create_stock_opname_run',{p_assigned_to:assignee.value,p_scheduled_date:date.value,p_title:title.value.trim()||'Stock Opname'});
-      if(q.error)throw q.error;var id=q.data;state.createOpen=false;state.notice='Stock Opname berhasil dibuat. Isi hitungan fisik per item, lalu kirim untuk review.';await loadRuns(id);if(id)await openRun(id);
+      if(q.error)throw q.error;var id=q.data;state.period=String(date.value||today()).slice(0,7);state.createOpen=false;state.notice='Stock Opname berhasil dibuat. Isi hitungan fisik per item, lalu kirim untuk review.';await loadRuns(id,true);if(id)await openRun(id);
     }catch(e){state.actionError=e&&e.message?e.message:String(e)}finally{state.busy=false;render()}
   }
 
@@ -175,8 +191,9 @@
   }
 
   function bind(h){
+    h.onchange=function(e){if(e.target&&e.target.id==='op1Month'){state.period=String(e.target.value||'').slice(0,7);state.activeRun=null;state.items=[];state.itemTotal=0;state.itemPage=1;clearAction();loadRuns();}};
     h.onclick=function(e){var b=e.target&&e.target.closest?e.target.closest('button'):null;if(!b)return;var action=b.getAttribute('data-op-action');
-      if(action==='refresh'){clearAction();loadRuns();return}
+      if(action==='refresh'){clearAction();loadRuns(null,true);return}
       if(action==='new-opname'){state.createOpen=true;clearAction();render();loadMembers();return}
       if(action==='close-create'){state.createOpen=false;clearAction();render();return}
       if(action==='confirm-create'){createRun();return}
