@@ -1,7 +1,7 @@
 (function () {
   'use strict';
   var CORE = '/core-app.js?v=8';
-  var OWNER_SHELL = '/owner-shell-guard.js?v=6';
+  var OWNER_SHELL = '/owner-shell-guard.js?v=7';
   var AUTH_ONBOARDING = '/auth-onboarding-v1.js?v=1';
   var STOCK = '/stock-monitor.js?v=29';
   var PURCHASE = '/xlsx-preload.js?v=6';
