@@ -50,9 +50,9 @@ body.hasnaria-owner-erp{overflow-x:hidden;background:#f6f8f7}
 .hx6-panel-head p{margin:0;font-size:8px;color:#7e8d87}
 .hx6-trend{height:220px;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:9px;align-items:end;padding:14px 6px 0;margin-top:10px;border-bottom:1px solid #e7eeea}
 .hx6-trend-col{min-width:0;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:4px}
-.hx6-bars{height:160px;width:100%;display:flex;align-items:flex-end;justify-content:center;gap:4px}
-.hx6-bars i{display:block;width:min(18px,34%);min-height:3px;border-radius:5px 5px 2px 2px}
-.hx6-bars i.sales{background:#176b55}.hx6-bars i.purchase{background:#d6a348}
+.hx6-bars{height:160px;width:100%;display:flex;align-items:flex-end;justify-content:center}
+.hx6-bars svg{display:block;width:min(58px,86%);height:100%;overflow:visible}
+.hx6-bars rect{rx:3px;ry:3px}.hx6-bars rect.sales{fill:#176b55}.hx6-bars rect.purchase{fill:#d6a348}
 .hx6-trend-col b{font-size:8px;color:#51685e}.hx6-trend-col small{font-size:6.5px;color:#87948e;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .hx6-legend{display:flex;align-items:center;gap:14px;margin-top:9px;font-size:8px;color:#667970}
 .hx6-legend span{display:flex;align-items:center;gap:5px}.hx6-legend i{display:inline-block;width:14px;height:4px;border-radius:999px}.hx6-legend i.sales{background:#176b55}.hx6-legend i.purchase{background:#d6a348}
