@@ -57,7 +57,7 @@ function render(){
  bind(h);
 }
 async function loadPeriods(){
- var q=await db().from('ui_period_catalog_v1').select('period_start,period_key').eq('brand_id',BRAND).eq('module','administrasi').order('period_start',{ascending:false});
+ var q=await db().rpc('get_ui_period_catalog_fast_v1',{p_brand:BRAND,p_module:'administrasi'});
  if(q.error)throw q.error;S.periods=q.data||[];
  if(!S.period||!S.periods.some(function(x){return key(x.period_start||x.period_key)===S.period}))S.period=S.periods.length?key(S.periods[0].period_start||S.periods[0].period_key):'';
 }
