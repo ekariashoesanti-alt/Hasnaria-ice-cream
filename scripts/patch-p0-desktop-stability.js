@@ -69,7 +69,7 @@ patch('stock-v3-runtime-fix.js',s=>one(s,
 
 patch('stock-control-v3.js',s=>{
  if(s.includes('__HASNARIA_STOCK_UI4')){
-  for(const marker of ['ui_period_catalog_v1','ui_stock_overview_v1','ui_stock_activity_chart_v1','ui_stock_detail_v1','data-sc4-modal="ledger"','data-sc4-action="opname"','shell.setAttribute(\'data-stock-v4\',\'1\')'])if(!s.includes(marker))throw new Error('Stock UI-4 stability marker missing: '+marker);
+  for(const marker of ['get_ui_period_catalog_fast_v1','ui_stock_overview_v1','ui_stock_activity_chart_v1','ui_stock_detail_v1','data-sc4-modal="ledger"','data-sc4-action="opname"','shell.setAttribute(\'data-stock-v4\',\'1\')'])if(!s.includes(marker))throw new Error('Stock UI-4 stability marker missing: '+marker);
   return s;
  }
  const a=`    host.__sc3Rendering = true;\n    var alert = S.error ? '<div class="sc3-alert">' + esc(S.error) + '</div>' : '';\n    var loading = S.baseLoading && !S.baseLoaded ? '<div class="sc3-loading">Memuat data utama persediaan…</div>' : '';\n    var refresh = S.baseLoading && S.baseLoaded ? '<div class="sc3-auxbar"><span class="sc3-pulse"></span>Memperbarui data utama tanpa mengosongkan tabel…</div>' : '';\n    host.innerHTML = '<div class="sc3-shell">' + renderHeader() + alert + loading + (S.baseLoaded ? refresh + renderFormula() + renderAuxState() + renderFilters() + renderTable() + renderNotes() : '') + '</div>';\n    bind(host);\n    host.__sc3Rendering = false;`;
