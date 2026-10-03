@@ -203,7 +203,9 @@ test.describe.serial('Hasnaria production go-live E2E', () => {
       await expect(page.locator('#tabs')).toBeVisible();
     }
 
-    await page.locator('#logoutBtn').click();
+    await page.locator('#hasnariaAccountMenuBtn').click();
+    await expect(page.locator('#hasnariaAccountLogout')).toBeVisible();
+    await page.locator('#hasnariaAccountLogout').click();
     await expect(page.locator('#email')).toBeVisible({ timeout: 20000 });
     await page.locator('#email').fill(EMAIL);
     await submitLogin(page);

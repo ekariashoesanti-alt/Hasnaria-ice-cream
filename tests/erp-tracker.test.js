@@ -84,6 +84,7 @@ assert(accountManagerSource.includes('hamAccountSummary') && accountManagerSourc
 assert(accountManagerSource.includes("account_manager_list_v1") && accountManagerSource.includes("account_manager_upsert_v1") && accountManagerSource.includes("generate-account-link"), 'UI-7 account settings must preserve canonical account actions');
 assert(accountManagerCss.includes('.ham-summary') && accountManagerCss.includes('.ham-modal-backdrop'), 'UI-7 account summary/modal styles must be present');
 assert(staffV5Source.includes('PEGAWAI · DATA PER') && staffV5Source.includes("staff-detail-open"), 'UI-7 Staff portal must show employee snapshot and explicit detail overlay');
+assert(staffV5Source.includes("if(state.view==='login')await resumeStaff()") && staffV5Source.includes("if(state.view==='login'||state.view==='staff')render()"), 'Staff bootstrap must not rerender and wipe an active Owner login form');
 assert(staffV5Source.includes("staff_pin_login") && staffV5Source.includes("staff_owner_save"), 'UI-7 Staff portal must preserve PIN login and owner save flows');
 assert(staffOwnerStableSource.includes('hso-ui7-summary') && staffOwnerStableSource.includes("data-hso-action=\"staff-detail\""), 'UI-7 Owner Mobile must use employee snapshot and isolated detail overlay');
 assert(!appSource.includes("load('/finance-purchase-basis-v1.js"), 'Finance management runtime must be lazy-owned by the Owner Finance shell');
@@ -111,9 +112,10 @@ assert(p1LazyBootstrap.includes('get_ui_monthly_trend_v1') && p1LazyBootstrap.in
 
 assert(ownerShellSource.includes('window.__HASNARIA_OWNER_SHELL_BOOTSTRAPPED'), 'Owner executive guard must remain idempotent');
 assert(ownerShellSource.includes("var EXEC_SRC='/owner-executive-v1.js?v=1'"), 'Owner shell must load the executive one-view runtime');
-assert(ownerShellSource.includes("var DASH_SRC='/owner-dashboard-one-view.js?v=4'"), 'Owner shell must load the UI-6 dashboard cache');
+assert(ownerShellSource.includes("var DASH_SRC='/owner-dashboard-one-view.js?v=5'"), 'Owner shell must load the UI-6 dashboard cache');
 assert(dashboardSource.includes('__HASNARIA_DASHBOARD_UI6'), 'Dashboard UI-6 runtime marker must be present');
 assert(dashboardSource.includes('get_ui_dashboard_pack_v1') && dashboardSource.includes('p_months:18'), 'Dashboard UI-6 must use the bounded canonical dashboard RPC');
+assert(dashboardSource.includes('async function dashboardPack()') && dashboardSource.includes('statement timeout'), 'Dashboard UI-6 must retry one transient statement timeout without changing data semantics');
 assert(dashboardSource.includes("purchase_sync_state==='POSTED_CANONICAL'") && dashboardSource.includes("'POSTED'"), 'Dashboard must label journal-backed Purchase as POSTED instead of source MATCH');
 assert(dashboardSource.includes('data-hx6-detail') && dashboardSource.includes('hx6-modal'), 'Dashboard UI-6 must keep breakdown detail behind a modal');
 assert(!dashboardSource.includes("owner_executive_tab_v1"), 'Dashboard UI-6 must not return to the legacy executive aggregation RPC');

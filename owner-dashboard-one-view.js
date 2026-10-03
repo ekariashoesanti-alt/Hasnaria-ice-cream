@@ -17,6 +17,15 @@ function monthLabel(v){var k=key(v);return k?MONTHS[Number(k.slice(5,7))-1]+' '+
 function cutLabel(){var k=key(S.period);if(!k)return'Periode belum tersedia';var y=Number(k.slice(0,4)),m=Number(k.slice(5,7)),last=new Date(Date.UTC(y,m,0)).getUTCDate();return'1–'+last+' '+monthLabel(k)}
 function pct(v){return n(v).toLocaleString('id-ID',{maximumFractionDigits:2})+'%'}
 function hppText(){return S.hpp==null?'—':pct(S.hpp)}
+function wait(ms){return new Promise(function(resolve){setTimeout(resolve,ms)})}
+async function dashboardPack(){
+  var r=await client().rpc('get_ui_dashboard_pack_v1',{p_brand:BRAND,p_months:18});
+  if(r.error&&/statement timeout|canceling statement due to statement timeout/i.test(String(r.error.message||r.error))){
+    await wait(450);
+    r=await client().rpc('get_ui_dashboard_pack_v1',{p_brand:BRAND,p_months:18});
+  }
+  return r
+}
 function css(){if($('hx-exec-css')){var x=$('hx-exec-css');if(x.getAttribute('href')!=='/owner-executive-v1.css?v=4')x.href='/owner-executive-v1.css?v=4';return}var l=document.createElement('link');l.id='hx-exec-css';l.rel='stylesheet';l.href='/owner-executive-v1.css?v=4';document.head.appendChild(l)}
 function current(){return S.rows.find(function(x){return key(x.period_month)===S.period})||null}
 function periodOptions(){return S.periods.map(function(x){var k=key(x.period_start||x.period_key);return'<option value="'+esc(k)+'"'+(k===S.period?' selected':'')+'>'+esc(monthLabel(k))+'</option>'}).join('')}
@@ -100,7 +109,7 @@ async function loadHpp(seq){
 async function load(force){
   if(S.loading&&!force)return;var seq=++S.seq;S.loading=true;S.error='';render();
   try{
-    var r=await client().rpc('get_ui_dashboard_pack_v1',{p_brand:BRAND,p_months:18});
+    var r=await dashboardPack();
     if(seq!==S.seq)return;
     if(r.error)throw r.error;
     var pack=r.data||{};
