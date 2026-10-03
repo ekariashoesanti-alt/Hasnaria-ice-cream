@@ -326,6 +326,6 @@
   function ownerShellActive(){try{return !!(window.__HASNARIA_CONTEXT&&window.__HASNARIA_CONTEXT.role==='owner');}catch(_){return false}}
   function run(){injectStyle();injectAccountPageStyle();moveNav();styleButtons();if(!ownerShellActive())syncGroupedContent();ensureAccountMenu();loadSettings();watchPasswordRecovery();showPasswordActivation()}
   function scheduleRun(){if(runTimer)return;runTimer=setTimeout(function(){runTimer=null;run()},120)}
-  function start(){run();new MutationObserver(scheduleRun).observe(document.body,{childList:true,subtree:true})}
+  function start(){run();var tabs=document.getElementById('tabs'),box=document.querySelector('#app .user-box');if(tabs)new MutationObserver(scheduleRun).observe(tabs,{childList:true,subtree:true});if(box)new MutationObserver(scheduleRun).observe(box,{childList:true,subtree:true})}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
 })();
