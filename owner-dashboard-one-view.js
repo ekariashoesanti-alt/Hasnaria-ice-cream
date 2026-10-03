@@ -45,7 +45,7 @@ function trendMarkup(){
  var max=Math.max.apply(null,rows.reduce(function(a,x){a.push(n(x.sales_revenue),n(x.purchase_amount));return a},[1]));
  return'<div class="hx6-trend">'+rows.map(function(x){
    var s=Math.max(3,n(x.sales_revenue)/max*100),p=Math.max(2,n(x.purchase_amount)/max*100);
-   return'<div class="hx6-trend-col"><div class="hx6-bars"><i class="sales" style="height:'+s.toFixed(2)+'%" title="'+esc(money(x.sales_revenue))+'"></i><i class="purchase" style="height:'+p.toFixed(2)+'%" title="'+esc(money(x.purchase_amount))+'"></i></div><b>'+esc(String(monthLabel(x.period_month)).split(' ')[0].slice(0,3))+'</b><small>'+esc(money(x.sales_revenue))+'</small></div>';
+   return'<div class="hx6-trend-col"><div class="hx6-bars"><svg viewBox="0 0 44 100" role="img" aria-label="'+esc(monthLabel(x.period_month)+' · Penjualan '+money(x.sales_revenue)+' · Pembelian '+money(x.purchase_amount))+'"><rect class="sales" x="4" y="'+(100-s).toFixed(2)+'" width="14" height="'+s.toFixed(2)+'"><title>'+esc('Penjualan '+money(x.sales_revenue))+'</title></rect><rect class="purchase" x="26" y="'+(100-p).toFixed(2)+'" width="14" height="'+p.toFixed(2)+'"><title>'+esc('Pembelian '+money(x.purchase_amount))+'</title></rect></svg></div><b>'+esc(String(monthLabel(x.period_month)).split(' ')[0].slice(0,3))+'</b><small>'+esc(money(x.sales_revenue))+'</small></div>';
  }).join('')+'</div><div class="hx6-legend"><span><i class="sales"></i>Penjualan</span><span><i class="purchase"></i>Pembelian</span></div>';
 }
 function flowMarkup(v){
