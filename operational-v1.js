@@ -8,7 +8,7 @@
 
   var PAGE_SIZE=25;
   var state={
-    runs:[],loading:false,error:'',loaded:false,
+    runs:[],period:'',loading:false,error:'',loaded:false,
     activeRun:null,items:[],itemPage:1,itemTotal:0,itemLoading:false,itemError:'',
     createOpen:false,members:[],membersLoading:false,membersLoaded:false,membersError:'',
     busy:false,notice:'',actionError:''
@@ -22,6 +22,11 @@
   function isOwner(){return context().role==='owner'}
   function today(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
   function fmtDate(v){if(!v)return'—';var p=String(v).slice(0,10).split('-');return p.length===3?Number(p[2])+'/'+Number(p[1])+'/'+p[0]:v}
+  var MONTHS=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+  function monthKey(v){var s=String(v||'');return /^\d{4}-\d{2}/.test(s)?s.slice(0,7):''}
+  function monthLabel(v){var k=monthKey(v);return k?MONTHS[Number(k.slice(5,7))-1]+' '+k.slice(0,4):'Bulan belum tersedia'}
+  function runPeriods(){var seen={};state.runs.forEach(function(r){var k=monthKey(r.scheduled_date);if(k)seen[k]=1});return Object.keys(seen).sort().reverse()}
+  function visibleRuns(){return state.period?state.runs.filter(function(r){return monthKey(r.scheduled_date)===state.period}):state.runs}
   function statusLabel(s){return{draft:'Draft',in_progress:'Dikerjakan',submitted:'Menunggu Review',approved:'Disetujui',rejected:'Perlu Koreksi',closed:'Ditutup'}[s]||s||'—'}
   function typeLabel(t){return{stock_opname:'Stock Opname',opening:'Opening',closing:'Closing',hygiene:'Hygiene',equipment:'Peralatan',custom:'Operasional'}[t]||t||'Operasional'}
   function editable(r){return!!(r&&['draft','in_progress','rejected'].indexOf(r.status)>=0)}
@@ -30,11 +35,12 @@
   function memberName(m){return m.full_name||m.display_name||m.email||m.id}
   function clearAction(){state.notice='';state.actionError=''}
 
-  function counts(){var x={open:0,review:0,done:0};state.runs.forEach(function(r){if(r.status==='submitted')x.review++;else if(r.status==='approved'||r.status==='closed')x.done++;else x.open++});return x}
+  function counts(){var x={open:0,review:0,done:0};visibleRuns().forEach(function(r){if(r.status==='submitted')x.review++;else if(r.status==='approved'||r.status==='closed')x.done++;else x.open++});return x}
 
   function renderRunList(){
-    if(!state.runs.length)return '<div class="op1-empty"><b>Belum ada pekerjaan operasional.</b><span>Buat Stock Opname hanya saat diperlukan. Daftar detail tidak dimuat sebelum pekerjaan dibuka.</span></div>';
-    return '<div class="op1-list">'+state.runs.map(function(r){return '<button type="button" class="op1-run '+(state.activeRun&&state.activeRun.id===r.id?'on':'')+'" data-op-run="'+esc(r.id)+'"><div><span>'+esc(typeLabel(r.run_type))+'</span><strong>'+esc(r.title)+'</strong><small>'+fmtDate(r.scheduled_date)+' · '+esc(statusLabel(r.status))+'</small></div><i>›</i></button>'}).join('')+'</div>';
+    var rows=visibleRuns();
+    if(!rows.length)return '<div class="op1-empty"><b>Belum ada pekerjaan operasional pada '+esc(monthLabel(state.period))+'.</b><span>Buat Stock Opname hanya saat diperlukan. Daftar detail tidak dimuat sebelum pekerjaan dibuka.</span></div>';
+    return '<div class="op1-list">'+rows.map(function(r){return '<button type="button" class="op1-run '+(state.activeRun&&state.activeRun.id===r.id?'on':'')+'" data-op-run="'+esc(r.id)+'"><div><span>'+esc(typeLabel(r.run_type))+'</span><strong>'+esc(r.title)+'</strong><small>'+fmtDate(r.scheduled_date)+' · '+esc(statusLabel(r.status))+'</small></div><i>›</i></button>'}).join('')+'</div>';
   }
 
   function renderCreate(){
@@ -81,12 +87,12 @@
   }
 
   function render(){
-    var h=host();if(!h)return;css();var c=counts();
-    h.innerHTML='<div class="op1-shell" data-operational-v1="1"><div class="op1-head"><div><div class="op1-eyebrow">OPERASIONAL</div><h2>Pelaksanaan & Kontrol Harian</h2><p>Daftar pekerjaan ringan; anggota tim dan detail opname hanya dimuat saat dibutuhkan.</p></div><div class="op1-head-actions">'+(isOwner()?'<button type="button" class="op1-new" data-op-action="new-opname">+ Stock Opname</button>':'')+'<button type="button" class="op1-refresh" data-op-action="refresh">↻ Refresh</button></div></div>'+
+    var h=host();if(!h)return;css();var c=counts(),ps=runPeriods(),monthOptions=ps.map(function(k){return'<option value="'+esc(k)+'"'+(k===state.period?' selected':'')+'>'+esc(monthLabel(k))+'</option>'}).join('');
+    h.innerHTML='<div class="op1-shell" data-operational-v1="1"><div class="op1-head"><div><div class="op1-eyebrow">OPERASIONAL · '+esc(monthLabel(state.period))+'</div><h2>Pelaksanaan & Kontrol Harian</h2><p>Daftar pekerjaan ringan; anggota tim dan detail opname hanya dimuat saat dibutuhkan.</p></div><div class="op1-head-actions"><label class="op1-month"><span>Bulan</span><select id="opPeriod">'+monthOptions+'</select></label>'+(isOwner()?'<button type="button" class="op1-new" data-op-action="new-opname">+ Stock Opname</button>':'')+'<button type="button" class="op1-refresh" data-op-action="refresh">↻ Refresh</button></div></div>'+
       '<div class="op1-kpis"><div><span>Aktif</span><strong>'+c.open+'</strong></div><div><span>Menunggu Review</span><strong>'+c.review+'</strong></div><div><span>Selesai</span><strong>'+c.done+'</strong></div></div>'+
       (state.notice?'<div class="op1-notice">'+esc(state.notice)+'</div>':'')+(state.actionError?'<div class="op1-alert">'+esc(state.actionError)+'</div>':'')+(state.error?'<div class="op1-alert">'+esc(state.error)+'</div>':'')+(state.loading&&!state.loaded?'<div class="op1-loading">Memuat daftar pekerjaan…</div>':'')+
-      renderCreate()+'<div class="op1-grid"><section><div class="op1-section-title"><strong>Pekerjaan terbaru</strong><span>Maks. 30 run</span></div>'+renderRunList()+'</section>'+renderDetails()+'</div>'+
-      '<div class="op1-foot"><span>Loading policy</span><b>30 run header → 25 item/page → pegawai hanya saat create.</b></div></div>';
+      renderCreate()+'<div class="op1-grid"><section><div class="op1-section-title"><strong>Pekerjaan bulan terpilih</strong><span>'+esc(monthLabel(state.period))+'</span></div>'+renderRunList()+'</section>'+renderDetails()+'</div>'+
+      '<div class="op1-foot"><span>Loading policy</span><b>Riwayat bulanan → 25 item/page → pegawai hanya saat create.</b></div></div>';
     bind(h);
   }
 
@@ -94,10 +100,11 @@
     if(state.loading)return;var d=db();if(!d){state.error='Sesi database belum siap.';render();return}
     state.loading=true;state.error='';if(!state.loaded)render();
     try{
-      var q=await d.from('operational_runs').select('id,run_type,title,scheduled_date,status,priority,assigned_to,review_notes,submitted_at,reviewed_at,updated_at').order('scheduled_date',{ascending:false}).order('updated_at',{ascending:false}).limit(30);
+      var q=await d.from('operational_runs').select('id,run_type,title,scheduled_date,status,priority,assigned_to,review_notes,submitted_at,reviewed_at,updated_at').order('scheduled_date',{ascending:false}).order('updated_at',{ascending:false}).limit(240);
       if(q.error)throw q.error;state.runs=q.data||[];state.loaded=true;
+      var ps=runPeriods();if(!state.period||ps.indexOf(state.period)<0)state.period=ps[0]||monthKey(today());
       var id=keepId||(state.activeRun&&state.activeRun.id),same=id&&state.runs.find(function(x){return x.id===id});
-      if(same)state.activeRun=same;else if(id){state.activeRun=null;state.items=[];state.itemTotal=0}
+      if(same){state.period=monthKey(same.scheduled_date)||state.period;state.activeRun=same}else if(id){state.activeRun=null;state.items=[];state.itemTotal=0}
     }catch(e){state.error=e&&e.message?e.message:String(e)}finally{state.loading=false;render()}
   }
 
@@ -175,6 +182,7 @@
   }
 
   function bind(h){
+    h.onchange=function(e){if(e.target&&e.target.id==='opPeriod'){state.period=monthKey(e.target.value);if(state.activeRun&&monthKey(state.activeRun.scheduled_date)!==state.period){state.activeRun=null;state.items=[];state.itemTotal=0;state.itemPage=1}clearAction();render()}};
     h.onclick=function(e){var b=e.target&&e.target.closest?e.target.closest('button'):null;if(!b)return;var action=b.getAttribute('data-op-action');
       if(action==='refresh'){clearAction();loadRuns();return}
       if(action==='new-opname'){state.createOpen=true;clearAction();render();loadMembers();return}
