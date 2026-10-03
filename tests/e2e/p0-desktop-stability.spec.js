@@ -58,10 +58,16 @@ async function assertDesktopOneView(page, id) {
       docHeight: Math.max(doc.scrollHeight, body ? body.scrollHeight : 0),
       activeRight: rect ? rect.right : null,
       activeBottom: rect ? rect.bottom : null,
+      activeClientWidth: active ? active.clientWidth : null,
+      activeScrollWidth: active ? active.scrollWidth : null,
+      activeClientHeight: active ? active.clientHeight : null,
+      activeScrollHeight: active ? active.scrollHeight : null,
       horizontalOverflow: Math.max(doc.scrollWidth, body ? body.scrollWidth : 0) > window.innerWidth + tolerance,
       verticalOverflow: Math.max(doc.scrollHeight, body ? body.scrollHeight : 0) > window.innerHeight + tolerance,
       activeEscapesRight: !!rect && rect.right > window.innerWidth + tolerance,
       activeEscapesBottom: !!rect && rect.bottom > window.innerHeight + tolerance,
+      activeWidthOverflow: !!active && active.scrollWidth > active.clientWidth + tolerance,
+      activeHeightOverflow: !!active && active.scrollHeight > active.clientHeight + tolerance,
     };
   }, id);
 
@@ -69,6 +75,8 @@ async function assertDesktopOneView(page, id) {
   expect(metrics.verticalOverflow, `${id} vertical overflow: ${JSON.stringify(metrics)}`).toBe(false);
   expect(metrics.activeEscapesRight, `${id} active surface escapes right: ${JSON.stringify(metrics)}`).toBe(false);
   expect(metrics.activeEscapesBottom, `${id} active surface escapes bottom: ${JSON.stringify(metrics)}`).toBe(false);
+  expect(metrics.activeWidthOverflow, `${id} active section width overflow: ${JSON.stringify(metrics)}`).toBe(false);
+  expect(metrics.activeHeightOverflow, `${id} active section height overflow: ${JSON.stringify(metrics)}`).toBe(false);
 }
 
 async function waitCanonicalSurface(page, id) {
@@ -150,7 +158,7 @@ test('P0 desktop: repeated Owner tab cycle stays single-surface and duplicate-fr
       await tab.click();
       await expect(page.locator(`#${id}`)).not.toHaveClass(/hidden/);
       await waitCanonicalSurface(page, id);
-      if (round === 0 && (id === 'sales' || id === 'pembelian')) {
+      if (round === 0) {
         await assertDesktopOneView(page, id);
       }
 
