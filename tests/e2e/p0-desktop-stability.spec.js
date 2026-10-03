@@ -44,6 +44,33 @@ async function login(page) {
   await expect(page.locator('[data-tab="dashboard"]')).toBeVisible({ timeout: 20000 });
 }
 
+async function assertDesktopOneView(page, id) {
+  const metrics = await page.evaluate((activeId) => {
+    const doc = document.documentElement;
+    const body = document.body;
+    const active = document.getElementById(activeId);
+    const rect = active && active.getBoundingClientRect();
+    const tolerance = 2;
+    return {
+      viewportWidth: window.innerWidth,
+      viewportHeight: window.innerHeight,
+      docWidth: Math.max(doc.scrollWidth, body ? body.scrollWidth : 0),
+      docHeight: Math.max(doc.scrollHeight, body ? body.scrollHeight : 0),
+      activeRight: rect ? rect.right : null,
+      activeBottom: rect ? rect.bottom : null,
+      horizontalOverflow: Math.max(doc.scrollWidth, body ? body.scrollWidth : 0) > window.innerWidth + tolerance,
+      verticalOverflow: Math.max(doc.scrollHeight, body ? body.scrollHeight : 0) > window.innerHeight + tolerance,
+      activeEscapesRight: !!rect && rect.right > window.innerWidth + tolerance,
+      activeEscapesBottom: !!rect && rect.bottom > window.innerHeight + tolerance,
+    };
+  }, id);
+
+  expect(metrics.horizontalOverflow, `${id} horizontal overflow: ${JSON.stringify(metrics)}`).toBe(false);
+  expect(metrics.verticalOverflow, `${id} vertical overflow: ${JSON.stringify(metrics)}`).toBe(false);
+  expect(metrics.activeEscapesRight, `${id} active surface escapes right: ${JSON.stringify(metrics)}`).toBe(false);
+  expect(metrics.activeEscapesBottom, `${id} active surface escapes bottom: ${JSON.stringify(metrics)}`).toBe(false);
+}
+
 async function waitCanonicalSurface(page, id) {
   if (id === 'dashboard') {
     await expect(page.locator('#dashboard .hx6-shell')).toBeVisible({ timeout: 20000 });
@@ -123,6 +150,9 @@ test('P0 desktop: repeated Owner tab cycle stays single-surface and duplicate-fr
       await tab.click();
       await expect(page.locator(`#${id}`)).not.toHaveClass(/hidden/);
       await waitCanonicalSurface(page, id);
+      if (round === 0 && (id === 'sales' || id === 'pembelian')) {
+        await assertDesktopOneView(page, id);
+      }
 
       const state = await page.evaluate((tabs) => {
         const visible = tabs.filter(name => {
