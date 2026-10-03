@@ -22,6 +22,8 @@ function current(){return S.rows.find(function(x){return key(x.period_month)===S
 function periodOptions(){return S.periods.map(function(x){var k=key(x.period_start||x.period_key);return'<option value="'+esc(k)+'"'+(k===S.period?' selected':'')+'>'+esc(monthLabel(k))+'</option>'}).join('')}
 function syncText(v){return v===true?'MATCH':v===false?'MISMATCH':'N/A'}
 function syncClass(v){return v===true?'ok':v===false?'bad':'na'}
+function purchaseText(v){return v&&v.purchase_sync_state==='POSTED_CANONICAL'?'POSTED':syncText(v&&v.purchase_sync_ok)}
+function purchaseClass(v){return v&&v.purchase_sync_state==='POSTED_CANONICAL'?'ok':syncClass(v&&v.purchase_sync_ok)}
 function kpi(label,value,meta,cls){return'<article class="hx6-kpi '+(cls||'')+'"><span>'+esc(label)+'</span><strong>'+esc(value)+'</strong><small>'+esc(meta||'')+'</small></article>'}
 
 function trendRows(){
@@ -42,29 +44,29 @@ function flowMarkup(v){
    '<div class="hx6-flow-node sales"><span>SUMBER</span><b>Penjualan</b><strong>'+esc(money(v.sales_revenue))+'</strong><small>'+n(v.sales_rows).toLocaleString('id-ID')+' transaksi</small></div>'+
    '<i>→</i><div class="hx6-flow-node finance"><span>OUTPUT</span><b>Keuangan</b><strong class="'+syncClass(v.sales_sync_ok)+'">'+esc(syncText(v.sales_sync_ok))+'</strong><small>pendapatan otomatis</small></div>'+
    '<div class="hx6-flow-node purchase"><span>SUMBER</span><b>Pembelian</b><strong>'+esc(money(v.purchase_amount))+'</strong><small>'+n(v.purchase_rows).toLocaleString('id-ID')+' transaksi</small></div>'+
-   '<i>→</i><div class="hx6-flow-split"><div><b>Keuangan</b><span class="'+syncClass(v.purchase_sync_ok)+'">'+esc(syncText(v.purchase_sync_ok))+'</span></div><div><b>Stok</b><span>Qty otomatis</span></div></div>'+
+   '<i>→</i><div class="hx6-flow-split"><div><b>Keuangan</b><span class="'+purchaseClass(v)+'">'+esc(purchaseText(v))+'</span></div><div><b>Stok</b><span>Qty otomatis</span></div></div>'+
    '<div class="hx6-flow-node admin"><span>SUBSET PEMBELIAN</span><b>Administrasi</b><strong>'+esc(money(v.admin_amount))+'</strong><small>'+n(v.admin_rows).toLocaleString('id-ID')+' transaksi non-stock</small></div>'+
    '<i>→</i><div class="hx6-flow-node finance"><span>OUTPUT</span><b>Keuangan</b><strong class="'+syncClass(v.admin_sync_ok)+'">'+esc(syncText(v.admin_sync_ok))+'</strong><small>tanpa posting stok</small></div>'+
  '</div>';
 }
 function statusPanel(v){
  var rows=[
-  ['Penjualan → Keuangan',v.sales_sync_ok],
-  ['Pembelian → Keuangan',v.purchase_sync_ok],
-  ['Administrasi → Keuangan',v.admin_sync_ok]
+  ['Penjualan → Keuangan',syncText(v.sales_sync_ok),syncClass(v.sales_sync_ok)],
+  ['Pembelian → Keuangan',purchaseText(v),purchaseClass(v)],
+  ['Administrasi → Keuangan',syncText(v.admin_sync_ok),syncClass(v.admin_sync_ok)]
  ];
- return'<div class="hx6-status-list">'+rows.map(function(x){return'<div><span>'+esc(x[0])+'</span><b class="'+syncClass(x[1])+'">'+esc(syncText(x[1]))+'</b></div>'}).join('')+'</div>'+
- '<div class="hx6-info">Administrasi adalah subset transaksi Pembelian non-stock, sehingga nominal Administrasi tidak dijumlahkan lagi ke Pembelian. Coverage HPP ditampilkan sebagai coverage model saat ini, bukan laba periode.</div>';
+ return'<div class="hx6-status-list">'+rows.map(function(x){return'<div><span>'+esc(x[0])+'</span><b class="'+x[2]+'">'+esc(x[1])+'</b></div>'}).join('')+'</div>'+
+ '<div class="hx6-info">Pembelian pada Ringkasan CEO dibaca dari jurnal canonical yang sudah ter-posting agar dashboard tetap cepat. Rekonsiliasi source-to-journal tetap dilakukan di tab Pembelian/Keuangan. Administrasi adalah subset Pembelian non-stock dan tidak dijumlahkan ulang.</div>';
 }
 function detailMarkup(v){
  if(!S.detailOpen)return'';
  var fields=[
   ['Penjualan',money(v.sales_revenue),n(v.sales_rows).toLocaleString('id-ID')+' transaksi'],
-  ['Pembelian',money(v.purchase_amount),n(v.purchase_rows).toLocaleString('id-ID')+' transaksi'],
+  ['Pembelian',money(v.purchase_amount),n(v.purchase_rows).toLocaleString('id-ID')+' jurnal canonical'],
   ['Administrasi',money(v.admin_amount),n(v.admin_rows).toLocaleString('id-ID')+' transaksi · subset Pembelian'],
   ['Coverage HPP model',hppText(),'coverage model penjualan saat ini']
  ];
- return'<div class="hx6-modal-backdrop" data-hx6-close="1"><section class="hx6-modal" role="dialog" aria-modal="true" aria-labelledby="hx6ModalTitle"><div class="hx6-modal-head"><div><div class="hx6-eyebrow">DETAIL RINGKASAN CEO</div><h3 id="hx6ModalTitle">'+esc(monthLabel(S.period))+'</h3><p>'+esc(cutLabel())+' · angka berasal dari view canonical per modul.</p></div><button type="button" class="hx6-close" data-hx6-close="1" aria-label="Tutup">×</button></div><div class="hx6-detail-grid">'+fields.map(function(x){return'<article><span>'+esc(x[0])+'</span><strong>'+esc(x[1])+'</strong><small>'+esc(x[2])+'</small></article>'}).join('')+'</div><div class="hx6-detail-sync"><h4>Status Sinkronisasi</h4>'+statusPanel(v)+'</div></section></div>';
+ return'<div class="hx6-modal-backdrop" data-hx6-close="1"><section class="hx6-modal" role="dialog" aria-modal="true" aria-labelledby="hx6ModalTitle"><div class="hx6-modal-head"><div><div class="hx6-eyebrow">DETAIL RINGKASAN CEO</div><h3 id="hx6ModalTitle">'+esc(monthLabel(S.period))+'</h3><p>'+esc(cutLabel())+' · angka berasal dari sumber canonical per modul; Pembelian memakai jurnal posted.</p></div><button type="button" class="hx6-close" data-hx6-close="1" aria-label="Tutup">×</button></div><div class="hx6-detail-grid">'+fields.map(function(x){return'<article><span>'+esc(x[0])+'</span><strong>'+esc(x[1])+'</strong><small>'+esc(x[2])+'</small></article>'}).join('')+'</div><div class="hx6-detail-sync"><h4>Status Sinkronisasi</h4>'+statusPanel(v)+'</div></section></div>';
 }
 function render(){
  var h=$('dashboard');if(!h)return;css();
@@ -75,7 +77,7 @@ function render(){
   (S.error?'<div class="hx-error">'+esc(S.error)+'</div>':'')+
   '<div class="hx6-kpis">'+
    kpi('Penjualan',S.loading&&!S.loaded?'…':money(v.sales_revenue),n(v.sales_rows).toLocaleString('id-ID')+' transaksi','sales')+
-   kpi('Pembelian',S.loading&&!S.loaded?'…':money(v.purchase_amount),n(v.purchase_rows).toLocaleString('id-ID')+' transaksi','purchase')+
+   kpi('Pembelian',S.loading&&!S.loaded?'…':money(v.purchase_amount),n(v.purchase_rows).toLocaleString('id-ID')+' jurnal canonical','purchase')+
    kpi('Administrasi',S.loading&&!S.loaded?'…':money(v.admin_amount),n(v.admin_rows).toLocaleString('id-ID')+' transaksi · subset Pembelian','admin')+
    kpi('Coverage HPP Model',S.loading&&!S.loaded?'…':hppText(),S.hppLoading?'memuat coverage…':'coverage model saat ini','hpp')+
   '</div>'+
