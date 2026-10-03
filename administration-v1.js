@@ -1,7 +1,6 @@
 (function(){
 'use strict';
-if(window.__HASNARIA_ADMIN_V2)return;
-window.__HASNARIA_ADMIN_V2=true;
+if(window.__HASNARIA_ADMIN_V2&&typeof window.__HASNARIA_ADMIN_V2.mount==='function')return;
 
 var BRAND='a36d4b4f-3ccc-4a78-8aeb-b868f0407ea4';
 var MONTHS=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
@@ -105,5 +104,6 @@ async function mount(o){
  if(S.overview&&!(o&&o.force)){render();return}
  await loadSummary(!!(o&&o.force));
 }
-window.__HASNARIA_ADMIN_V1={mount:mount};
+window.__HASNARIA_ADMIN_V2={mount:mount};
+window.__HASNARIA_ADMIN_V1=window.__HASNARIA_ADMIN_V2;
 })();
