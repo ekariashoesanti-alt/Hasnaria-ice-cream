@@ -8,7 +8,7 @@
 
   var PAGE_SIZE=25;
   var state={
-    runs:[],period:'',loading:false,error:'',loaded:false,
+    runs:[],periods:[],period:'',loading:false,error:'',loaded:false,
     activeRun:null,items:[],itemPage:1,itemTotal:0,itemLoading:false,itemError:'',
     createOpen:false,members:[],membersLoading:false,membersLoaded:false,membersError:'',
     busy:false,notice:'',actionError:''
@@ -25,7 +25,8 @@
   var MONTHS=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
   function monthKey(v){var s=String(v||'');return /^\d{4}-\d{2}/.test(s)?s.slice(0,7):''}
   function monthLabel(v){var k=monthKey(v);return k?MONTHS[Number(k.slice(5,7))-1]+' '+k.slice(0,4):'Bulan belum tersedia'}
-  function runPeriods(){var seen={};state.runs.forEach(function(r){var k=monthKey(r.scheduled_date);if(k)seen[k]=1});return Object.keys(seen).sort().reverse()}
+  function nextMonth(v){var k=monthKey(v);if(!k)return'';var y=Number(k.slice(0,4)),m=Number(k.slice(5,7));m+=1;if(m===13){m=1;y+=1}return y+'-'+String(m).padStart(2,'0')+'-01'}
+  function runPeriods(){if(state.periods.length)return state.periods;var seen={};state.runs.forEach(function(r){var k=monthKey(r.scheduled_date);if(k)seen[k]=1});return Object.keys(seen).sort().reverse()}
   function visibleRuns(){return state.period?state.runs.filter(function(r){return monthKey(r.scheduled_date)===state.period}):state.runs}
   function statusLabel(s){return{draft:'Draft',in_progress:'Dikerjakan',submitted:'Menunggu Review',approved:'Disetujui',rejected:'Perlu Koreksi',closed:'Ditutup'}[s]||s||'—'}
   function typeLabel(t){return{stock_opname:'Stock Opname',opening:'Opening',closing:'Closing',hygiene:'Hygiene',equipment:'Peralatan',custom:'Operasional'}[t]||t||'Operasional'}
@@ -96,15 +97,27 @@
     bind(h);
   }
 
+  async function loadPeriods(){
+    var d=db();if(!d)return;
+    var q=await d.from('operational_runs').select('scheduled_date').order('scheduled_date',{ascending:false}).limit(500);
+    if(q.error)throw q.error;
+    var seen={};(q.data||[]).forEach(function(r){var k=monthKey(r.scheduled_date);if(k)seen[k]=1});
+    state.periods=Object.keys(seen).sort().reverse();
+    if(!state.period||state.periods.indexOf(state.period)<0)state.period=state.periods[0]||monthKey(today());
+  }
+
   async function loadRuns(keepId){
     if(state.loading)return;var d=db();if(!d){state.error='Sesi database belum siap.';render();return}
     state.loading=true;state.error='';if(!state.loaded)render();
     try{
-      var q=await d.from('operational_runs').select('id,run_type,title,scheduled_date,status,priority,assigned_to,review_notes,submitted_at,reviewed_at,updated_at').order('scheduled_date',{ascending:false}).order('updated_at',{ascending:false}).limit(240);
+      if(!state.periods.length)await loadPeriods();
+      var from=state.period+'-01',to=nextMonth(state.period);
+      var q=d.from('operational_runs').select('id,run_type,title,scheduled_date,status,priority,assigned_to,review_notes,submitted_at,reviewed_at,updated_at').order('scheduled_date',{ascending:false}).order('updated_at',{ascending:false}).limit(30);
+      if(from&&to)q=q.gte('scheduled_date',from).lt('scheduled_date',to);
+      q=await q;
       if(q.error)throw q.error;state.runs=q.data||[];state.loaded=true;
-      var ps=runPeriods();if(!state.period||ps.indexOf(state.period)<0)state.period=ps[0]||monthKey(today());
       var id=keepId||(state.activeRun&&state.activeRun.id),same=id&&state.runs.find(function(x){return x.id===id});
-      if(same){state.period=monthKey(same.scheduled_date)||state.period;state.activeRun=same}else if(id){state.activeRun=null;state.items=[];state.itemTotal=0}
+      if(same)state.activeRun=same;else if(id){state.activeRun=null;state.items=[];state.itemTotal=0}
     }catch(e){state.error=e&&e.message?e.message:String(e)}finally{state.loading=false;render()}
   }
 
@@ -135,7 +148,7 @@
     state.busy=true;clearAction();render();
     try{
       var q=await db().rpc('create_stock_opname_run',{p_assigned_to:assignee.value,p_scheduled_date:date.value,p_title:title.value.trim()||'Stock Opname'});
-      if(q.error)throw q.error;var id=q.data;state.createOpen=false;state.notice='Stock Opname berhasil dibuat. Isi hitungan fisik per item, lalu kirim untuk review.';await loadRuns(id);if(id)await openRun(id);
+      if(q.error)throw q.error;var id=q.data;state.period=monthKey(date.value)||state.period;if(state.periods.indexOf(state.period)<0)state.periods.unshift(state.period);state.createOpen=false;state.notice='Stock Opname berhasil dibuat. Isi hitungan fisik per item, lalu kirim untuk review.';await loadRuns(id);if(id)await openRun(id);
     }catch(e){state.actionError=e&&e.message?e.message:String(e)}finally{state.busy=false;render()}
   }
 
@@ -182,7 +195,7 @@
   }
 
   function bind(h){
-    h.onchange=function(e){if(e.target&&e.target.id==='opPeriod'){state.period=monthKey(e.target.value);if(state.activeRun&&monthKey(state.activeRun.scheduled_date)!==state.period){state.activeRun=null;state.items=[];state.itemTotal=0;state.itemPage=1}clearAction();render()}};
+    h.onchange=function(e){if(e.target&&e.target.id==='opPeriod'){state.period=monthKey(e.target.value);state.activeRun=null;state.items=[];state.itemTotal=0;state.itemPage=1;clearAction();loadRuns()}};
     h.onclick=function(e){var b=e.target&&e.target.closest?e.target.closest('button'):null;if(!b)return;var action=b.getAttribute('data-op-action');
       if(action==='refresh'){clearAction();loadRuns();return}
       if(action==='new-opname'){state.createOpen=true;clearAction();render();loadMembers();return}
