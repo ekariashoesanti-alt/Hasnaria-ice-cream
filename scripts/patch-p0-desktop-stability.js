@@ -51,9 +51,15 @@ patch('operational-v1.js',s=>{
 });
 
 patch('finance-accuracy-v6.js',s=>{
- const a="function ensureRoot(){var h=getHost();if(!h||h.classList.contains('hidden'))return null;var r=h.querySelector('[data-finance-v6=\"1\"]');if(r)return r;h.innerHTML='<div class=\"fsv2-shell finv7-root\" data-finance-v6=\"1\"><div class=\"fsv2-report\" style=\"min-height:220px;display:grid;place-items:center\"><span class=\"finv7-spinner\"></span></div></div>';return h.querySelector('[data-finance-v6=\"1\"]')}";
- const b="function ensureRoot(){var h=getHost();if(!h||h.classList.contains('hidden'))return null;var r=h.querySelector('[data-finance-v6=\"1\"]');if(r)return r;var boot=h.querySelector('[data-finance-boot=\"1\"]');if(boot){boot.className='fsv2-shell finv7-root';boot.removeAttribute('data-finance-boot');boot.setAttribute('data-finance-v6','1');boot.innerHTML='<div class=\"fsv2-report\" style=\"min-height:220px;display:grid;place-items:center\"><span class=\"finv7-spinner\"></span></div>';return boot}h.innerHTML='<div class=\"fsv2-shell finv7-root\" data-finance-v6=\"1\"><div class=\"fsv2-report\" style=\"min-height:220px;display:grid;place-items:center\"><span class=\"finv7-spinner\"></span></div></div>';return h.querySelector('[data-finance-v6=\"1\"]')}";
- return one(s,a,b,'finance boot reuse');
+ const markers=[
+   "var boot=h.querySelector('[data-finance-boot=\"1\"]')",
+   "boot.removeAttribute('data-finance-boot')",
+   "boot.setAttribute('data-finance-v6','1')",
+   'finv7-loading-panel'
+ ];
+ for(const marker of markers)if(!s.includes(marker))throw new Error('finance stable CSP boot marker missing: '+marker);
+ if(s.includes('style="min-height:220px;display:grid;place-items:center"'))throw new Error('finance CSP-unsafe loading style survived');
+ return s;
 });
 
 patch('stock-v3-runtime-fix.js',s=>one(s,
