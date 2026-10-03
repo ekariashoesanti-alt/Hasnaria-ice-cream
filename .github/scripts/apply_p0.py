@@ -153,7 +153,7 @@ s = replace_once(s, "var CORE = '/core-app.js?v=7';", "var CORE = '/core-app.js?
 s = replace_once(
     s,
     "  var STOCK = '/stock-monitor.js?v=28';\n",
-    "  var STOCK = '/stock-monitor.js?v=28';\n  var PURCHASE = '/xlsx-preload.js?v=6';\n",
+    "  var STOCK = '/stock-monitor.js?v=28';\n  var PURCHASE = '/xlsx-preload.js?v=7';\n",
     "app Purchase runtime constant",
 )
 
