@@ -204,7 +204,9 @@ test('UI-7 mobile Owner: Pegawai snapshot opens stable detail overlay', async ({
   await expect(page.locator('#hsoShell')).toBeVisible({ timeout: 30000 });
   await expect(page.locator('#hasnariaMobileOverlay')).toHaveCount(0);
   await expect(page.locator('#hasnariaMobileNav')).toHaveCount(0);
-  await page.locator('[data-hso-nav="users"]').click();
+  const employeeNav = page.locator('#hsoNav [data-hso-nav="users"]');
+  await expect(employeeNav).toHaveCount(1);
+  await employeeNav.click();
   await expect(page.locator('.hso-ui7-summary')).toBeVisible();
   await page.locator('[data-hso-action="staff-detail"]').click();
   await expect(page.locator('#hsoEditor')).toBeVisible();
