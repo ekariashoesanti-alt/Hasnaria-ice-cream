@@ -72,6 +72,7 @@ async function waitCanonicalSurface(page, id) {
   }
   if (id === 'ops') {
     await expect(page.locator('#ops [data-finance-v6="1"]')).toBeVisible({ timeout: 20000 });
+    await expect(page.locator('#hasnaria-finance-emkm-css,#finance-management-v3-css')).toHaveCount(0);
     return;
   }
   if (id === 'stok') {
