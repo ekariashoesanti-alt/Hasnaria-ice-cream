@@ -50,6 +50,7 @@ async function waitCanonicalSurface(page, id) {
     await expect(page.locator('#dashboard .hx-error')).toHaveCount(0);
     await expect(page.locator('#hx6Period option')).not.toHaveCount(0);
     await expect(page.locator('#dashboard .hx6-status-list')).toContainText('POSTED');
+    await expect(page.locator('#dashboard .hx6-bars [style]')).toHaveCount(0);
     return;
   }
   if (id === 'sales') {
