@@ -84,10 +84,17 @@ test('P0 desktop: repeated Owner tab cycle stays single-surface and duplicate-fr
   test.setTimeout(120000);
   const pageErrors = [];
   const consoleErrors = [];
+  const httpErrors = [];
 
   page.on('pageerror', error => pageErrors.push(String(error && error.message ? error.message : error)));
   page.on('console', msg => {
-    if (msg.type() === 'error') consoleErrors.push(msg.text());
+    if (msg.type() === 'error') {
+      const loc = msg.location && msg.location();
+      consoleErrors.push(msg.text() + (loc && loc.url ? ' @ ' + loc.url : ''));
+    }
+  });
+  page.on('response', response => {
+    if (response.status() >= 400) httpErrors.push(response.status() + ' ' + response.url());
   });
 
   await login(page);
@@ -156,6 +163,7 @@ test('P0 desktop: repeated Owner tab cycle stays single-surface and duplicate-fr
 
   expect(invalidFrames, `Frames with zero/multiple Owner surfaces: ${JSON.stringify(invalidFrames.slice(0, 10))}`).toEqual([]);
   expect(pageErrors, `Uncaught page errors: ${pageErrors.join(' | ')}`).toEqual([]);
+  expect(httpErrors, `HTTP errors: ${httpErrors.join(' | ')}`).toEqual([]);
   expect(consoleErrors, `Console errors: ${consoleErrors.join(' | ')}`).toEqual([]);
 });
 
