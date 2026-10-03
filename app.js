@@ -3,9 +3,9 @@
   var CORE = '/core-app.js?v=8';
   var OWNER_SHELL = '/owner-shell-guard.js?v=6';
   var AUTH_ONBOARDING = '/auth-onboarding-v1.js?v=1';
-  var STOCK = '/stock-monitor.js?v=28';
+  var STOCK = '/stock-monitor.js?v=29';
   var PURCHASE = '/xlsx-preload.js?v=6';
-  var SALES = '/sales-board.js?v=47';
+  var SALES = '/sales-board.js?v=48';
   var SALES_HOURLY = '/sales-hourly-chart.js?v=6';
   var SALES_FALLBACK = false;
   var SALES_UI = '/sales-ui-patch.js?v=13';
