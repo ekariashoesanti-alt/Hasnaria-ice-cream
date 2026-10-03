@@ -234,6 +234,7 @@ run(process.execPath, ['tests/style-runtime-build.test.js']);
 run(process.execPath, ['tests/erp-tracker.test.js']);
 run(process.execPath, ['tests/erp-ui.test.js']);
 run(process.execPath, ['tests/p2-owner-performance.test.js']);
+run(process.execPath, ['tests/purchase-fast-load.test.js']);
 run(process.execPath, ['tests/month-filter-owner-tabs.test.js']);
 
 const dist = path.join(ROOT, 'dist');

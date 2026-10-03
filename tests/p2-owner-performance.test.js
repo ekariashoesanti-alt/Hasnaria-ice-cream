@@ -52,7 +52,7 @@ assert.match(sales, /MutationObserver\(schedule\)\.observe\(host, \{ childList: 
 
 assert.match(app, /SALES_UI = '\/sales-ui-patch\.js\?v=13'/,
   'Sales performance patch must be cache-busted');
-assert.match(index, /\/app\.js\?v=p055/,
+assert.match(index, /\/app\.js\?v=p056/,
   'application runtime must be cache-busted');
 assert.match(index, /\/nav-patch\.js\?v=15/,
   'navigation runtime must be cache-busted');

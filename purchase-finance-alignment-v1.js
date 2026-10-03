@@ -93,7 +93,7 @@ function render(){
 }
 async function loadPeriods(){
   db=db||window.__HASNARIA_DB;if(!db)return;
-  try{var q=await db.from('ui_period_catalog_v1').select('period_start,period_key').eq('brand_id',BRAND).eq('module','pembelian').order('period_start',{ascending:false});if(q.error)throw q.error;periods=q.data||[];syncPeriodOptions()}catch(e){if(console&&console.warn)console.warn('Purchase period catalog:',e)}
+  try{var q=await db.rpc('get_ui_period_catalog_fast_v1',{p_brand:BRAND,p_module:'pembelian'});if(q.error)throw q.error;periods=q.data||[];syncPeriodOptions()}catch(e){if(console&&console.warn)console.warn('Purchase period catalog:',e)}
 }
 async function syncStockForPeriod(){
   var r=monthRange();if(!db||!r||syncingStock||lastStockSync===r.key)return false;
@@ -106,16 +106,13 @@ async function load(force){
   if(!force&&rows.length&&loadedPeriod===p&&Date.now()-loadedAt<60000){render();return}
   var seq=++requestSeq;db=db||window.__HASNARIA_DB;if(!db)return;loading=true;error='';render();
   try{
-    var all=await Promise.all([
-      db.rpc('get_purchase_control_period_v1',{p_brand:BRAND,p_period:p+'-01'}),
-      db.from('ui_purchase_overview_v1').select('*').eq('brand_id',BRAND).eq('period_month',p+'-01').limit(1),
-      db.from('ui_purchase_category_chart_v1').select('category,purchase_rows,amount').eq('brand_id',BRAND).eq('period_month',p+'-01').order('amount',{ascending:false})
-    ]);
+    var q=await db.rpc('get_purchase_control_period_v1',{p_brand:BRAND,p_period:p+'-01'});
     if(seq!==requestSeq)return;
-    if(all[0].error)throw all[0].error;
-    var pack=all[0].data||{};rows=Array.isArray(pack.rows)?pack.rows:[];control=pack.control||{};
-    overview=!all[1].error&&all[1].data&&all[1].data.length?all[1].data[0]:null;
-    chartRows=!all[2].error&&Array.isArray(all[2].data)?all[2].data:[];
+    if(q.error)throw q.error;
+    var pack=q.data||{};rows=Array.isArray(pack.rows)?pack.rows:[];control=pack.control||{};
+    // Overview and category chart are derived locally from the same selected-month
+    // pack. This avoids two expensive aggregate views and keeps one canonical read.
+    overview=null;chartRows=[];
     loadedAt=Date.now();loadedPeriod=p;
   }catch(e){if(seq!==requestSeq)return;rows=[];control={};overview=null;chartRows=[];loadedPeriod='';loadedAt=0;error='Gagal memuat ringkasan Pembelian: '+(e&&e.message?e.message:String(e))}
   finally{if(seq===requestSeq){loading=false;render()}else{loading=false;setTimeout(function(){if(periodValue())load(true)},0)}}
