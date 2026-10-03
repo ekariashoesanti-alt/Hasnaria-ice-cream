@@ -31,7 +31,7 @@
   function typeLabel(t){return{stock_opname:'Stock Opname',opening:'Opening',closing:'Closing',hygiene:'Hygiene',equipment:'Peralatan',custom:'Operasional'}[t]||t||'Operasional'}
   function editable(r){return!!(r&&['draft','in_progress','rejected'].indexOf(r.status)>=0)}
   function reviewable(r){return!!(r&&r.status==='submitted'&&isOwner())}
-  function css(){if(document.getElementById('operational-v1-css'))return;var l=document.createElement('link');l.id='operational-v1-css';l.rel='stylesheet';l.href='/operational-v1.css?v=2';document.head.appendChild(l)}
+  function css(){if(document.getElementById('operational-v1-css'))return;var l=document.createElement('link');l.id='operational-v1-css';l.rel='stylesheet';l.href='/operational-v1.css?v=3';document.head.appendChild(l)}
   function memberName(m){return m.full_name||m.display_name||m.email||m.id}
   function clearAction(){state.notice='';state.actionError=''}
 
