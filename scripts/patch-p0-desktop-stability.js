@@ -29,7 +29,8 @@ patch('purchase-lazy-loader.js',s=>one(s,
 
 patch('purchase-finance-alignment-v1.js',s=>{
  if(s.includes('__HASNARIA_PURCHASE_FINANCE_ALIGNMENT_V12')){
-  for(const marker of ['requestSeq=0','ui_period_catalog_v1','ui_purchase_overview_v1','data-pfa-detail-open','if(loading){if(force)requestSeq++;return}','seq!==requestSeq'])if(!s.includes(marker))throw new Error('purchase UI-3 stability marker missing: '+marker);
+  for(const marker of ['requestSeq=0','get_ui_period_catalog_fast_v1',"p_module:'pembelian'",'get_purchase_control_period_v1','data-pfa-detail-open','if(loading){if(force)requestSeq++;return}','seq!==requestSeq'])if(!s.includes(marker))throw new Error('purchase UI-3 stability marker missing: '+marker);
+  for(const slow of ['ui_period_catalog_v1','ui_purchase_overview_v1','ui_purchase_category_chart_v1'])if(s.includes(slow))throw new Error('purchase UI-3 slow path survived: '+slow);
   return s;
  }
  s=one(s,"var db=null,rows=[],control={},loading=false,error='',observer=null,timer=0,loadedAt=0,loadedPeriod='',syncingStock=false,lastStockSync='',category='all';","var db=null,rows=[],control={},loading=false,error='',observer=null,timer=0,loadedAt=0,loadedPeriod='',syncingStock=false,lastStockSync='',category='all',requestSeq=0;",'purchase seq');
