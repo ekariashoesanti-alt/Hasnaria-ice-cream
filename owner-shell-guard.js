@@ -189,7 +189,7 @@
         old.addEventListener('load',finish,{once:true});old.addEventListener('error',finish,{once:true});
         setTimeout(finish,1200);return
       }
-      var s=document.createElement('script');s.id='hasnaria-admin-v1-js';s.src='/administration-v1.js?v=3';s.async=true;
+      var s=document.createElement('script');s.id='hasnaria-admin-v1-js';s.src='/administration-v1.js?v=4';s.async=true;
       s.onload=resolve;s.onerror=function(){state.adminLoad=null;resolve()};document.head.appendChild(s)
     });
     state.adminLoad.then(function(){mountAdministration(requestRender)});

@@ -187,7 +187,8 @@
   }
   function start() {
     run();
-    new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true });
+    var host = document.getElementById('sales');
+    if (host) new MutationObserver(schedule).observe(host, { childList: true, subtree: true });
     window.addEventListener('resize', schedule);
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
