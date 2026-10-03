@@ -72,13 +72,13 @@ for (const task of data.tasks) {
   }
 }
 
-assert(appSource.includes("var OWNER_SHELL = '/owner-shell-guard.js?v=5';"), 'owner navigation guard cache version is current');
+assert(appSource.includes("var OWNER_SHELL = '/owner-shell-guard.js?v=6';"), 'owner navigation guard cache version is current');
 assert(!appSource.includes("load('/xlsx-preload.js?v=6');"), 'Purchase/XLSX must not load unconditionally at startup');
 assert(appSource.includes('window.__HASNARIA_LOAD_PURCHASE=ensurePurchaseRuntime'), 'Purchase runtime must be exposed as a lazy loader');
 assert(appSource.includes('window.__HASNARIA_LOAD_STOCK=ensureStockRuntime'), 'Stock runtime must be exposed as a lazy loader');
 assert(appSource.includes("target==='pembelian'") && appSource.includes("target==='stok'"), 'Purchase and Stock runtimes must load from tab navigation');
 assert(!indexSource.includes('xlsx.full.min.js'), 'SheetJS must not block initial page/login loading');
-assert(indexSource.includes('/nav-patch.js?v=14'), 'UI-7 account navigation cache must be current');
+assert(indexSource.includes('/nav-patch.js?v=15'), 'UI-7 account navigation cache must be current');
 assert(navSource.includes("/account-manager-v1.js?v=2") && navSource.includes("if(mode!=='password')ensureAccountManager()"), 'UI-7 account manager must lazy-load only from settings mode');
 assert(accountManagerSource.includes('hamAccountSummary') && accountManagerSource.includes('hamDetailModal'), 'UI-7 account settings must render snapshot plus detail modal');
 assert(accountManagerSource.includes("account_manager_list_v1") && accountManagerSource.includes("account_manager_upsert_v1") && accountManagerSource.includes("generate-account-link"), 'UI-7 account settings must preserve canonical account actions');
