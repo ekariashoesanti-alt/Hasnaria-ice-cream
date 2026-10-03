@@ -75,6 +75,11 @@
   #sales .sb-hourly-average .sb-hourly-chart{width:100%!important;max-width:100%!important;height:100%!important;min-height:0!important;max-height:none!important;flex:1 1 auto}
   #sales .sb-hourly-peak-label{font-size:8.5px!important;line-height:1.1;margin-top:0!important}
 }
+@media(min-width:981px){
+  body.hasnaria-owner-erp #app:has(#sales:not(.hidden)){height:100dvh!important;max-height:100dvh!important;overflow:hidden!important}
+  body.hasnaria-owner-erp #app:has(#sales:not(.hidden)) > header{height:100dvh!important;max-height:100dvh!important}
+  body.hasnaria-owner-erp #app:has(#sales:not(.hidden)) > main.wrap{height:100dvh!important;max-height:100dvh!important;min-height:0!important;overflow:hidden!important}
+}
 @media(max-width:980px){
   #sales .sb-grid-main{grid-template-columns:1fr!important}
   #sales .sb-kpis{grid-template-columns:1fr 1fr!important}
