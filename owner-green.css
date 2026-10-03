@@ -1,5 +1,6 @@
 @import url('/owner-green-base.css?v=2');
 @import url('/owner-ui-modern.css?v=2');
+@import url('/owner-one-view.css?v=1');
 
 /* Stable brand tokens retained here because the production gate verifies them. */
 :root{
