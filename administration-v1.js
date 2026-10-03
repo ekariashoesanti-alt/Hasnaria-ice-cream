@@ -42,7 +42,7 @@ function render(){
  var h=document.getElementById('administrasi');if(!h)return;ensureCss();
  var v=S.overview||{},sync=v.sync_ok===true;
  h.innerHTML='<section class="ad5-shell">'+
-   '<div class="ad5-head"><div><div class="ad5-eyebrow">ADMINISTRASI · '+esc(cutLabel())+'</div><h2>Administrasi</h2><p>Pengeluaran operasional non-inventory. Nilai berasal dari Pembelian, tidak mengubah stok, dan otomatis masuk Keuangan.</p></div><div class="ad5-period"><label><span>Cut periode</span><select id="ad5Period">'+periodOptions()+'</select></label></div></div>'+
+   '<div class="ad5-head"><div><div class="ad5-eyebrow">ADMINISTRASI · '+esc(cutLabel())+'</div><h2>Administrasi</h2><p>Pengeluaran operasional non-inventory. Nilai berasal dari Pembelian, tidak mengubah stok, dan otomatis masuk Keuangan.</p></div><div class="ad5-period"><label><span>Bulan</span><select id="ad5Period" data-month-filter="administrasi">'+periodOptions()+'</select></label></div></div>'+
    (S.error?'<div class="ad5-error">'+esc(S.error)+'</div>':'')+
    '<div class="ad5-cards">'+
      card('Total Administrasi',S.loading&&!S.overview?'…':money(v.admin_amount),n(v.admin_rows).toLocaleString('id-ID')+' transaksi','total')+

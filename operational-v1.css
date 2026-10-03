@@ -4,6 +4,9 @@
 #operasional .op1-head h2{margin:2px 0 4px;font-size:22px;line-height:1.15;color:#143f32}
 #operasional .op1-head p{margin:0;max-width:700px;font-size:10px;line-height:1.45;color:#728079}
 #operasional .op1-head-actions{display:flex;gap:7px;flex:0 0 auto}
+#operasional .op1-month{display:flex;flex-direction:column;gap:3px;min-width:150px;margin:0}
+#operasional .op1-month span{font-size:7px;font-weight:850;letter-spacing:.06em;text-transform:uppercase;color:#6f8078}
+#operasional .op1-month select{width:100%;height:34px;min-height:34px;padding:0 9px;border:1px solid #d8e5df;border-radius:9px;background:#fff;color:#225343;font:inherit;font-size:9px;font-weight:800}
 #operasional .op1-refresh,#operasional .op1-new{height:34px;padding:0 11px;border:1px solid #d8e5df;border-radius:9px;background:#fff;color:#225343;font:inherit;font-size:9px;font-weight:800;cursor:pointer}
 #operasional .op1-new{background:#176b55;border-color:#176b55;color:#fff}
 #operasional button:disabled{opacity:.45;cursor:not-allowed}

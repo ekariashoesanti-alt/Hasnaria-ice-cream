@@ -538,7 +538,7 @@
       return '<option value="' + esc(k) + '"' + (k === S.period ? ' selected' : '') + '>' + esc(monthLabel(k)) + '</option>';
     }).join('');
     return '<div class="sc3-head"><div><div class="sc3-eyebrow">STOK · ' + esc(cutLabel()) + '</div><h2>Stok &amp; Pergerakan Material</h2><p>Ringkasan periode menampilkan jumlah SKU dan aktivitas. Quantity antar satuan tidak dijumlahkan menjadi satu angka.</p></div>' +
-      '<div class="sc4-head-tools"><label><span>Cut periode</span><select id="sc4Period">' + options + '</select></label><div class="sc3-actions"><button type="button" class="sc3-btn" data-sc3-action="refresh">↻ Refresh</button><button type="button" class="sc3-btn" data-sc3-action="export"' + (!S.baseLoaded ? ' disabled' : '') + '>Export CSV</button></div></div></div>';
+      '<div class="sc4-head-tools"><label><span>Bulan</span><select id="sc4Period" data-month-filter="stok">' + options + '</select></label><div class="sc3-actions"><button type="button" class="sc3-btn" data-sc3-action="refresh">↻ Refresh</button><button type="button" class="sc3-btn" data-sc3-action="export"' + (!S.baseLoaded ? ' disabled' : '') + '>Export CSV</button></div></div></div>';
   }
 
   function renderFormula() {

@@ -82,7 +82,7 @@ function render(){
  var v=current()||{};
  if(S.loading&&!S.loaded){h.innerHTML='<div class="hx-shell"><div class="hx-loading">Memuat Ringkasan CEO…</div></div>';return}
  h.innerHTML='<div class="hx-shell hx6-shell" data-ceo-one-view="1">'+
-  '<div class="hx6-toolbar"><div><div class="hx6-eyebrow">RINGKASAN CEO · '+esc(cutLabel())+'</div><h1>Ringkasan CEO</h1><p>Visual singkat lintas Penjualan, Pembelian, Administrasi, Keuangan, dan Stok.</p></div><div class="hx6-tools"><label><span>Cut periode</span><select id="hx6Period">'+periodOptions()+'</select></label><button type="button" data-hx6-detail="1">Lihat Detail</button></div></div>'+
+  '<div class="hx6-toolbar"><div><div class="hx6-eyebrow">RINGKASAN CEO · '+esc(cutLabel())+'</div><h1>Ringkasan CEO</h1><p>Visual singkat lintas Penjualan, Pembelian, Administrasi, Keuangan, dan Stok.</p></div><div class="hx6-tools"><label><span>Bulan</span><select id="hx6Period" data-month-filter="dashboard">'+periodOptions()+'</select></label><button type="button" data-hx6-detail="1">Lihat Detail</button></div></div>'+
   (S.error?'<div class="hx-error">'+esc(S.error)+'</div>':'')+
   '<div class="hx6-kpis">'+
    kpi('Penjualan',S.loading&&!S.loaded?'…':money(v.sales_revenue),n(v.sales_rows).toLocaleString('id-ID')+' transaksi','sales')+

@@ -40,7 +40,7 @@
       }
       var script = document.createElement('script');
       script.id = 'hasnaria-purchase-analytics-js';
-      script.src = '/purchase-analytics.js?v=1';
+      script.src = '/purchase-analytics.js?v=2';
       script.async = true;
       script.onload = function () { loaded = true; resolve(true); };
       script.onerror = function () { loading = null; reject(new Error('Purchase analytics gagal dimuat.')); };
