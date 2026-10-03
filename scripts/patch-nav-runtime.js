@@ -13,9 +13,9 @@ if (!fs.existsSync(navPath)) {
 let source = fs.readFileSync(navPath, 'utf8');
 
 const oldObserver = "function start(){run();new MutationObserver(scheduleRun).observe(document.body,{childList:true,subtree:true})}";
-const newObserver = "function start(){run();var navRoot=document.querySelector('#app>header');if(!navRoot)return;new MutationObserver(scheduleRun).observe(navRoot,{childList:true,subtree:true})}";
-if (!source.includes(oldObserver)) throw new Error('nav observer marker missing');
-source = source.replace(oldObserver, newObserver);
+const newObserver = "function start(){run();var tabs=document.getElementById('tabs'),box=document.querySelector('#app .user-box');if(tabs)new MutationObserver(scheduleRun).observe(tabs,{childList:true,subtree:true});if(box)new MutationObserver(scheduleRun).observe(box,{childList:true,subtree:true})}";
+if (source.includes(oldObserver)) source = source.replace(oldObserver, newObserver);
+else if (!source.includes(newObserver)) throw new Error('nav observer marker missing');
 
 const oldSuperAdmin = "  function superAdmin(){\n    var email='';\n    var who=document.getElementById('whoMeta');\n    if(who){\n      var parts=(who.textContent||'').split('·').map(function(x){return x.trim()});\n      for(var i=0;i<parts.length;i++){\n        if(parts[i].indexOf('@')>=0){email=parts[i].toLowerCase();break}\n      }\n    }\n    // Super admin: Harisnu + Hasnaria owner email\n    return email==='harisnu@gmail.com'||email==='ekariashoesanti@gmail.com';\n  }";
 const newSuperAdmin = "  function superAdmin(){\n    var email='';\n    var who=document.getElementById('whoMeta');\n    if(who){var parts=(who.textContent||'').split('·').map(function(x){return x.trim()});for(var i=0;i<parts.length;i++){if(parts[i].indexOf('@')>=0){email=parts[i].toLowerCase();break}}}\n    return email==='harisnu@gmail.com';\n  }";
@@ -35,7 +35,7 @@ source = source.replace(/function run\(\)\{injectStyle\(\);moveNav\(\);styleButt
 if (/hasnariaSendActivation|hasnariaPasswordBody|watchPasswordRecovery|showPasswordActivation|Password aplikasi/.test(source)) throw new Error('legacy password/account renderer still present');
 if (!source.includes("s.src='/account-manager-v1.js?v=4'")) throw new Error('Account Manager v4 loader missing');
 if (!source.includes("await loadAccountManager();page.classList.add('open')")) throw new Error('atomic account page open missing');
-if (!source.includes("observe(navRoot,{childList:true,subtree:true})")) throw new Error('scoped observer missing');
+if (!source.includes("observe(tabs,{childList:true,subtree:true})") || !source.includes("observe(box,{childList:true,subtree:true})")) throw new Error('scoped observer missing');
 
 fs.writeFileSync(navPath, source);
 const check = spawnSync(process.execPath, ['--check', navPath], { stdio: 'inherit' });
