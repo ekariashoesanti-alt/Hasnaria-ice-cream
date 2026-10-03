@@ -9,7 +9,7 @@ function requireCredentials() {
 }
 
 async function clearPassword(page) {
-  try { await page.locator('#password').fill(''); } catch (_) {}
+  try { await page.evaluate(() => { const el=document.getElementById('password'); if(el)el.value=''; }); } catch (_) {}
 }
 
 async function waitLoginRuntime(page) {
