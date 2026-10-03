@@ -53,13 +53,13 @@
 
   function ensureShellCss(){
     var l=document.getElementById('ofs3-css');
-    if(!l){l=document.createElement('link');l.id='ofs3-css';l.rel='stylesheet';l.href='/owner-finance-stock-v3.css?v=3';document.head.appendChild(l)}
-    else if(l.getAttribute('href')!=='/owner-finance-stock-v3.css?v=3')l.href='/owner-finance-stock-v3.css?v=3';
+    if(!l){l=document.createElement('link');l.id='ofs3-css';l.rel='stylesheet';l.href='/owner-finance-stock-v3.css?v=4';document.head.appendChild(l)}
+    else if(l.getAttribute('href')!=='/owner-finance-stock-v3.css?v=4')l.href='/owner-finance-stock-v3.css?v=4';
   }
 
   function ensureFinanceWorkbenches(){
     if(!document.getElementById('hasnaria-finance-purchase-basis-v1-js')){
-      var pb=document.createElement('script');pb.id='hasnaria-finance-purchase-basis-v1-js';pb.src='/finance-purchase-basis-v1.js?v=3';pb.async=true;document.head.appendChild(pb);
+      var pb=document.createElement('script');pb.id='hasnaria-finance-purchase-basis-v1-js';pb.src='/finance-purchase-basis-v1.js?v=5';pb.async=true;document.head.appendChild(pb);
     }
     var stale=document.querySelector('[data-fin-hpp-p3-open]');if(stale)stale.remove();
     var staleModal=document.getElementById('finHppP3Modal');if(staleModal)staleModal.remove();
@@ -157,7 +157,7 @@
     if(existing){afterRuntime(id,requestRender);return}
     if(state.finStockLoad){state.finStockLoad.then(function(){afterRuntime(id,requestRender)});return}
     state.finStockLoad=new Promise(function(resolve){
-      var s=document.createElement('script');s.id='hasnaria-owner-finance-stock-v3-js';s.src='/owner-finance-stock-v3'+'.js?v=10';s.async=true;
+      var s=document.createElement('script');s.id='hasnaria-owner-finance-stock-v3-js';s.src='/owner-finance-stock-v3'+'.js?v=11';s.async=true;
       s.onload=resolve;s.onerror=function(){state.finStockLoad=null;resolve()};document.head.appendChild(s);
     });
     state.finStockLoad.then(function(){afterRuntime(id,requestRender)});
