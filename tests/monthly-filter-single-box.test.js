@@ -1,3 +1,4 @@
+// Contract: one period control = one month selector per Owner business tab.
 const fs=require('fs');
 const assert=require('assert/strict');
 
