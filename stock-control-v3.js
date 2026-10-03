@@ -154,6 +154,22 @@
     return res.json();
   }
 
+  async function rpc(name, payload) {
+    var t = await token();
+    if (!t) throw new Error('Session belum tersedia. Silakan login kembali.');
+    var res = await fetch(SB + '/rest/v1/rpc/' + name, {
+      method: 'POST',
+      headers: { apikey: KEY, Authorization: 'Bearer ' + t, 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload || {})
+    });
+    if (!res.ok) {
+      var text = '';
+      try { text = await res.text(); } catch (_) {}
+      throw new Error('Gagal memuat kontrol stok (' + res.status + ')' + (text ? ': ' + text.slice(0, 140) : ''));
+    }
+    return res.json();
+  }
+
   function qs(obj) {
     var q = new URLSearchParams();
     Object.keys(obj || {}).forEach(function (k) {
@@ -386,13 +402,7 @@
     render();
     try {
       if (!S.periods.length || force) {
-        var pq = qs({
-          brand_id: 'eq.' + BRAND,
-          module: 'eq.stok',
-          select: 'period_start,period_key',
-          order: 'period_start.desc'
-        });
-        var ps = await request('ui_period_catalog_v1?' + pq);
+        var ps = await rpc('get_ui_period_catalog_fast_v1', { p_brand: BRAND, p_module: 'stok' });
         if (seq !== S.periodSeq) return;
         S.periods = ps || [];
         if (!S.period || !S.periods.some(function (x) { return monthKey(x.period_start || x.period_key) === S.period; })) {
