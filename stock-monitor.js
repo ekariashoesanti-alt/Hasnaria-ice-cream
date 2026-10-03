@@ -59,7 +59,7 @@
     showOpeningState();
     var s = document.createElement('script');
     s.id = 'hasnaria-stock-control-v3-loader';
-    s.src = '/stock-control-v3.js?v=6';
+    s.src = '/stock-control-v3.js?v=7';
     s.async = true;
     s.onload = function () {
       window.__HASNARIA_STOCK_RECONCILE_READY = true;
@@ -83,7 +83,7 @@
       if (window.__HASNARIA_OPERATIONAL_ROLE_BRIDGE || document.getElementById('hasnaria-operational-role-bridge-loader')) return;
       var s = document.createElement('script');
       s.id = 'hasnaria-operational-role-bridge-loader';
-      s.src = '/operational-role-bridge.js?v=1';
+      s.src = '/operational-role-bridge.js?v=2';
       s.async = true;
       document.head.appendChild(s);
     };
