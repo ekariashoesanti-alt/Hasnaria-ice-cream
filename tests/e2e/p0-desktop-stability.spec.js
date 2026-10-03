@@ -65,6 +65,7 @@ async function waitCanonicalSurface(page, id) {
     return;
   }
   if (id === 'administrasi') {
+    await expect(page.locator('[data-tab="administrasi"]')).toHaveClass(/on/);
     await expect(page.locator('#administrasi .ad5-shell')).toBeVisible({ timeout: 20000 });
     return;
   }
