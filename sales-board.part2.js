@@ -1,10 +1,6 @@
 v class="sb-period">' +
       '<div class="sb-cal">' +
-      '<b>Periode</b>' +
       '<label>Bulan <select id="sbMonth">' + monthOpts + '</select></label>' +
-      '<label>Dari <input id="sbFrom" type="date" value="' + esc(STATE.viewFrom) + '" min="' + esc(mm.min) + '" max="' + esc(mm.max) + '"></label>' +
-      '<label>Sampai <input id="sbTo" type="date" value="' + esc(STATE.viewTo) + '" min="' + esc(mm.min) + '" max="' + esc(mm.max) + '"></label>' +
-      '<span>' + esc(active.start) + ' s/d ' + esc(active.end) + ' · ' + ar.length + ' hari aktif</span>' +
       '</div>' +
       '<div class="sb-toggle">' +
       ['daily', 'weekly', 'monthly'].map(function (m) {
@@ -206,7 +202,7 @@ v class="sb-period">' +
       };
     }
 
-    // Date filters
+    // Monthly filter
     var monthEl = host.querySelector('#sbMonth'), fromEl = host.querySelector('#sbFrom'), toEl = host.querySelector('#sbTo');
     if (monthEl) {
       monthEl.onchange = function () {
