@@ -10,7 +10,7 @@
   /* Compatibility marker kept for release tests; this full executive runtime is
      deliberately NOT loaded because it used to take ownership of every tab. */
   var EXEC_SRC='/owner-executive-v1.js?v=1';
-  var DASH_SRC='/owner-dashboard-one-view.js?v=6';
+  var DASH_SRC='/owner-dashboard-one-view.js?v=7';
   var OWNER_TABS=['dashboard','sales','pembelian','operasional','administrasi','ops','stok'];
   var SECTION_IDS=['dashboard','sales','pembelian','operasional','administrasi','ops','stok','shift','social','approval','team','sistem','karyawan'];
   var state={active:'dashboard',initialized:false,scheduled:false,salesRetries:0,finStockLoad:null,operationalLoad:null,adminLoad:null,dashboardLoad:null};
@@ -169,7 +169,7 @@
     if(typeof window.__HASNARIA_OPERATIONS_V1_MOUNT==='function'){window.__HASNARIA_OPERATIONS_V1_MOUNT({force:!!requestRender});return}
     if(state.operationalLoad){state.operationalLoad.then(function(){if(isOwner()&&state.active==='operasional'&&typeof window.__HASNARIA_OPERATIONS_V1_MOUNT==='function')window.__HASNARIA_OPERATIONS_V1_MOUNT({force:!!requestRender})});return}
     state.operationalLoad=new Promise(function(resolve){
-      var s=document.createElement('script');s.id='hasnaria-operational-v1-js';s.src='/operational-v1.js?v=1';s.async=true;
+      var s=document.createElement('script');s.id='hasnaria-operational-v1-js';s.src='/operational-v1.js?v=2';s.async=true;
       s.onload=resolve;s.onerror=function(){state.operationalLoad=null;resolve()};document.head.appendChild(s);
     });
     state.operationalLoad.then(function(){if(isOwner()&&state.active==='operasional'&&typeof window.__HASNARIA_OPERATIONS_V1_MOUNT==='function')window.__HASNARIA_OPERATIONS_V1_MOUNT({force:!!requestRender})});
@@ -189,7 +189,7 @@
         old.addEventListener('load',finish,{once:true});old.addEventListener('error',finish,{once:true});
         setTimeout(finish,1200);return
       }
-      var s=document.createElement('script');s.id='hasnaria-admin-v1-js';s.src='/administration-v1.js?v=4';s.async=true;
+      var s=document.createElement('script');s.id='hasnaria-admin-v1-js';s.src='/administration-v1.js?v=5';s.async=true;
       s.onload=resolve;s.onerror=function(){state.adminLoad=null;resolve()};document.head.appendChild(s)
     });
     state.adminLoad.then(function(){mountAdministration(requestRender)});
