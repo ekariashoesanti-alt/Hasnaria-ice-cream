@@ -235,7 +235,8 @@ run(process.execPath, ['tests/erp-tracker.test.js']);
 run(process.execPath, ['tests/erp-ui.test.js']);
 run(process.execPath, ['tests/p2-owner-performance.test.js']);
 run(process.execPath, ['tests/purchase-fast-load.test.js']);
-run(process.execPath, ['tests/month-filter-owner-tabs.test.js']);\nrun(process.execPath, ['tests/data-sync-runtime.test.js']);
+run(process.execPath, ['tests/month-filter-owner-tabs.test.js']);
+run(process.execPath, ['tests/data-sync-runtime.test.js']);
 
 const dist = path.join(ROOT, 'dist');
 fs.rmSync(dist, { recursive: true, force: true });
