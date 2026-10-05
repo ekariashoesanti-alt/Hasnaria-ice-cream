@@ -9,6 +9,8 @@ const staff=read('staff.html');
 const staffIndex=read('staff/index.html');
 const purchase=read('purchase-analytics.js');
 const purchaseLoader=read('purchase-lazy-loader.js');
+const purchaseFinance=read('purchase-finance-alignment-v1.js');
+const preload=read('xlsx-preload.js');
 const ownerMobile=read('staff-owner-stable-v1.js');
 
 assert(index.includes('/data-sync.js?v=1'),'Owner web must load the guarded sync coordinator');
@@ -17,11 +19,14 @@ assert(staff.includes('/staff-owner-stable-v1.js?v=4')&&staffIndex.includes('/st
 assert(sync.includes('function protectedNow()'),'sync coordinator must protect active editing');
 assert(sync.includes('function hasUnsavedInput(root)'),'sync coordinator must detect unsaved control values');
 assert(sync.includes("tab==='pembelian'"),'sync coordinator must refresh Purchase');
+assert(sync.includes('__HASNARIA_PURCHASE_FINANCE_REFRESH'),'sync coordinator must refresh canonical Purchase-Finance layer');
 assert(sync.includes("tab==='ops'"),'sync coordinator must refresh Finance');
 assert(sync.includes("tab==='stok'"),'sync coordinator must refresh Stock');
 assert(sync.includes("tab==='operasional'"),'sync coordinator must refresh Operations');
 assert(sync.includes('__HASNARIA_OWNER_STABLE_REFRESH'),'sync coordinator must refresh Owner mobile through its safe hook');
 assert(purchase.includes('__HASNARIA_PURCHASE_ANALYTICS_REFRESH'),'Purchase analytics must expose a refresh hook');
+assert(purchaseFinance.includes('__HASNARIA_PURCHASE_FINANCE_REFRESH'),'canonical Purchase-Finance must expose a refresh hook');
+assert(preload.includes('/purchase-finance-alignment-v1.js?v=9'),'canonical Purchase-Finance refresh hook must be cache-busted');
 assert(purchaseLoader.includes('/purchase-analytics.js?v=4'),'Purchase refresh hook must be cache-busted');
 assert(ownerMobile.includes('__HASNARIA_OWNER_STABLE_REFRESH'),'Owner mobile must expose a refresh hook');
 assert(ownerMobile.includes('visibleEditor(e)'),'Owner mobile refresh must refuse to overwrite an open editor');
