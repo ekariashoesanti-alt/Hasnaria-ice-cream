@@ -24,7 +24,8 @@ const REQUIRED_RUNTIME_FILES = [
   'stock-monitor.js',
   'sales-board.js',
   'sales-ui-patch.js',
-  'xlsx-preload.js'
+  'xlsx-preload.js',
+  'data-sync.js'
 ];
 const TEXT_RUNTIME_RE = /\.(?:html?|js|css)$/i;
 const STATIC_ASSET_RE = /\.(?:html?|js|css|json|svg|png|jpe?g|webp|gif|ico|woff2?|ttf|map)$/i;
