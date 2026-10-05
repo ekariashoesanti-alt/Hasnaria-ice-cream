@@ -108,7 +108,7 @@ window.__HASNARIA_OWNER_STABLE_REFRESH=async function(){
   catch(x){setMessage(x&&x.message?x.message:String(x),true);return false}
   finally{loading=false}
 };
-function visibleEditor(e){return !!(e&&!e.hidden&&e.offsetParent!==null)}
+function visibleEditor(e){return !!(e&&!e.hidden)}
 function boot(){bind();var r=root();if(!r)return;var obs=new MutationObserver(function(){if(!active&&legacyOwnerVisible())activate()});obs.observe(r,{childList:true,subtree:true});if(legacyOwnerVisible())activate()}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
