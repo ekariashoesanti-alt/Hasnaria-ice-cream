@@ -24,6 +24,8 @@ assert(sync.includes("tab==='ops'"),'sync coordinator must refresh Finance');
 assert(sync.includes("tab==='stok'"),'sync coordinator must refresh Stock');
 assert(sync.includes("tab==='operasional'"),'sync coordinator must refresh Operations');
 assert(sync.includes('__HASNARIA_OWNER_STABLE_REFRESH'),'sync coordinator must refresh Owner mobile through its safe hook');
+assert(sync.includes("document.getElementById('hsoShell')"),'Owner mobile refresh must be gated by the active Owner shell');
+assert(sync.indexOf("var overlay=document.getElementById('hswOverlay')",sync.indexOf('function refreshStaff'))<sync.indexOf("__HASNARIA_OWNER_STABLE_REFRESH",sync.indexOf('function refreshStaff')),'Staff workflow overlay must be checked before Owner mobile refresh');
 assert(purchase.includes('__HASNARIA_PURCHASE_ANALYTICS_REFRESH'),'Purchase analytics must expose a refresh hook');
 assert(purchaseFinance.includes('__HASNARIA_PURCHASE_FINANCE_REFRESH'),'canonical Purchase-Finance must expose a refresh hook');
 assert(preload.includes('/purchase-finance-alignment-v1.js?v=9'),'canonical Purchase-Finance refresh hook must be cache-busted');
