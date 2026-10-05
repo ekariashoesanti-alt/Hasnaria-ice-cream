@@ -168,7 +168,7 @@ assert(!salesBoardSource.includes('sales-hourly-chart.js'), 'Sales board must no
 assert(!purchasePreloadSource.includes('purchase-rankings-five.js'), 'legacy Purchase ranking patch must not load beside canonical Finance reconciliation');
 assert(!purchasePreloadSource.includes('purchase-chart-redesign.js'), 'legacy Purchase chart patch must not race the canonical Purchase DOM');
 assert(purchasePreloadSource.includes("purchase-finance-alignment-v1.css?v=5"), 'canonical Purchase layout cache version must be current');
-assert(purchasePreloadSource.includes("purchase-finance-alignment-v1.js?v=8"), 'canonical Purchase runtime cache version must be current');
+assert(purchasePreloadSource.includes("purchase-finance-alignment-v1.js?v=9"), 'canonical Purchase runtime cache version must be current');
 assert(!purchaseInventorySource.includes('pa-stock-grid'), 'Purchase inventory helper must not inject detailed Stock cards back into Pembelian');
 assert(!purchaseInventorySource.includes("querySelectorAll('.pa-lower-grid article')"), 'Purchase inventory helper must remain KPI-only');
 assert(purchaseFinanceCss.includes(':has(>#purchaseFinanceAlignment)'), 'Purchase canonical layout must activate only when reconciliation is present');
