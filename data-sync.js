@@ -157,13 +157,14 @@
 
   function refreshStaff(reason){
     dispatchSync('staff',reason);
-    if(typeof window.__HASNARIA_OWNER_STABLE_REFRESH==='function'){
-      return Promise.resolve(window.__HASNARIA_OWNER_STABLE_REFRESH());
-    }
     var overlay=document.getElementById('hswOverlay');
     if(overlay&&visible(overlay)){
       clickVisible('#hswOverlay [data-hsw="refresh"]');
       return Promise.resolve();
+    }
+    var ownerShell=document.getElementById('hsoShell');
+    if(ownerShell&&visible(ownerShell)&&typeof window.__HASNARIA_OWNER_STABLE_REFRESH==='function'){
+      return Promise.resolve(window.__HASNARIA_OWNER_STABLE_REFRESH());
     }
     clickVisible('#staffRoot [data-action="attendance-refresh"],#staffRoot [data-action="approval-refresh"]');
     return Promise.resolve();
