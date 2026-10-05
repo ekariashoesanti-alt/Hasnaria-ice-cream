@@ -124,8 +124,14 @@
       return Promise.resolve();
     }
     if(tab==='pembelian'){
-      if(typeof window.__HASNARIA_PURCHASE_ANALYTICS_REFRESH==='function')return Promise.resolve(window.__HASNARIA_PURCHASE_ANALYTICS_REFRESH());
-      if(typeof window.__HASNARIA_LOAD_PURCHASE==='function')return Promise.resolve(window.__HASNARIA_LOAD_PURCHASE()).then(function(){if(typeof window.__HASNARIA_PURCHASE_ANALYTICS_REFRESH==='function')return window.__HASNARIA_PURCHASE_ANALYTICS_REFRESH();});
+      function refreshPurchaseLayers(){
+        var jobs=[];
+        if(typeof window.__HASNARIA_PURCHASE_ANALYTICS_REFRESH==='function')jobs.push(Promise.resolve(window.__HASNARIA_PURCHASE_ANALYTICS_REFRESH()));
+        if(typeof window.__HASNARIA_PURCHASE_FINANCE_REFRESH==='function')jobs.push(Promise.resolve(window.__HASNARIA_PURCHASE_FINANCE_REFRESH()));
+        return Promise.all(jobs);
+      }
+      if(typeof window.__HASNARIA_PURCHASE_ANALYTICS_REFRESH==='function'||typeof window.__HASNARIA_PURCHASE_FINANCE_REFRESH==='function')return refreshPurchaseLayers();
+      if(typeof window.__HASNARIA_LOAD_PURCHASE==='function')return Promise.resolve(window.__HASNARIA_LOAD_PURCHASE()).then(refreshPurchaseLayers);
       return Promise.resolve();
     }
     if(tab==='operasional'){
