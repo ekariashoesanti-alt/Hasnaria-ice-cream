@@ -7,7 +7,7 @@ var BRAND='a36d4b4f-3ccc-4a78-8aeb-b868f0407ea4';
 var CATS=['Beban Administrasi','Beban Pemeliharaan','Beban Bahan Baku','Beban Kepegawaian'];
 var CAT_LABEL={'Beban Administrasi':'6100 · Administrasi','Beban Pemeliharaan':'6110 · Pemeliharaan','Beban Bahan Baku':'6120 · Bahan Baku','Beban Kepegawaian':'6200 · Kepegawaian'};
 var MONTHS=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
-var db=null,rows=[],control={},overview=null,chartRows=[],periods=[],loading=false,error='',observer=null,timer=0,loadedAt=0,loadedPeriod='',syncingStock=false,lastStockSync='',category='all',modalOpen=false,requestSeq=0;
+var db=null,rows=[],control={},overview=null,chartRows=[],periods=[],loading=false,error='',observer=null,timer=0,loadedAt=0,loadedPeriod='',syncingStock=false,lastStockSync='',category='all',modalOpen=false,requestSeq=0,syncing=false;
 
 function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function n(v){v=Number(v);return isFinite(v)?v:0}
@@ -98,7 +98,7 @@ async function loadPeriods(){
 async function syncStockForPeriod(){
   var r=monthRange();if(!db||!r||syncingStock||lastStockSync===r.key)return false;
   syncingStock=true;
-  try{var q=await db.rpc('sync_purchase_quantity_stock_v1',{p_from:r.from,p_to:r.to});if(q.error)throw q.error;lastStockSync=r.key;return true}catch(e){if(console&&console.warn)console.warn('Purchase quantity → Stock sync:',e);return false}finally{syncingStock=false}
+  try{var q=await db.rpc('sync_purchase_quantity_stock_v1',{p_from:r.from,p_to:r.to});if(q.error)throw q.error;lastStockSync=r.key;if(window.__HASNARIA_DATA_SYNC)window.__HASNARIA_DATA_SYNC.notify('purchase-stock-synced');return true}catch(e){if(console&&console.warn)console.warn('Purchase quantity → Stock sync:',e);return false}finally{syncingStock=false}
 }
 async function load(force){
   var p=periodValue();if(!p)return;
@@ -120,6 +120,28 @@ async function load(force){
   }catch(e){if(seq!==requestSeq)return;rows=[];control={};overview=null;chartRows=[];loadedPeriod='';loadedAt=0;error='Gagal memuat ringkasan Pembelian: '+(e&&e.message?e.message:String(e))}
   finally{if(seq===requestSeq){loading=false;render()}else{loading=false;setTimeout(function(){if(periodValue())load(true)},0)}}
 }
+function canSyncReport(){var h=document.getElementById('pembelian'),c=window.__HASNARIA_CONTEXT,s=window.__HASNARIA_DATA_SYNC;return!!(h&&!h.classList.contains('hidden')&&c&&c.role==='owner'&&document.getElementById('paRoot')&&!modalOpen&&s&&s.canRefresh(h,'#paPeriod,#pfaCategory'))}
+async function syncReport(){
+  if(loading||syncing||syncingStock||!canSyncReport())return;var p=periodValue();db=db||window.__HASNARIA_DB;if(!p||!db)return;
+  var seq=requestSeq,c=window.__HASNARIA_CONTEXT,root=document.getElementById('paRoot');syncing=true;
+  try{
+    // Polling reads persisted Stock/Finance status; only import events post stock.
+    var all=await Promise.all([
+      db.rpc('get_purchase_control_period_v1',{p_brand:BRAND,p_period:p+'-01'}),
+      db.from('ui_purchase_overview_v1').select('*').eq('brand_id',BRAND).eq('period_month',p+'-01').limit(1),
+      db.from('ui_purchase_category_chart_v1').select('category,purchase_rows,amount').eq('brand_id',BRAND).eq('period_month',p+'-01').order('amount',{ascending:false}),
+      db.from('ui_period_catalog_v1').select('period_start,period_key').eq('brand_id',BRAND).eq('module','pembelian').order('period_start',{ascending:false})
+    ]);
+    if(seq!==requestSeq||loading||p!==periodValue()||c!==window.__HASNARIA_CONTEXT||root!==document.getElementById('paRoot')||!canSyncReport())return;
+    all.forEach(function(r){if(r.error)throw r.error});
+    var next=all[0].data||{},nr=Array.isArray(next.rows)?next.rows:[],nc=next.control||{},no=all[1].data&&all[1].data[0]||null,chart=all[2].data||[],ps=all[3].data||[];
+    var changed=!!error||JSON.stringify([rows,control,overview,chartRows,periods])!==JSON.stringify([nr,nc,no,chart,ps]);
+    rows=nr;control=nc;overview=no;chartRows=chart;periods=ps;loadedAt=Date.now();loadedPeriod=p;error='';
+    if(changed)render();
+  }finally{syncing=false}
+}
+function registerSync(){var s=window.__HASNARIA_DATA_SYNC;if(s)s.register('owner-purchase-report',syncReport)}
+registerSync();window.addEventListener('hasnaria:data-sync-ready',registerSync);
 function resetData(){rows=[];control={};overview=null;chartRows=[];loadedAt=0;loadedPeriod='';category='all';modalOpen=false}
 function schedule(){clearTimeout(timer);timer=setTimeout(function(){if(!document.getElementById('paRoot'))return;render();if(!loading&&(!rows.length||loadedPeriod!==periodValue()))load(false)},80)}
 function boot(){

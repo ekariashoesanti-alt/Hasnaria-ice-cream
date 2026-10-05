@@ -1,7 +1,7 @@
 (function(){
 'use strict';
 if(window.__HASNARIA_DASHBOARD_ONE_VIEW)return;
-var db=null,state={period:new Date(new Date().getFullYear(),new Date().getMonth(),1),seq:0,cache:{},prewarmed:false};
+var db=null,state={period:new Date(new Date().getFullYear(),new Date().getMonth(),1),seq:0,cache:{},cacheAt:{},prewarmed:false};
 function $(id){return document.getElementById(id)}
 function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function client(){return db||(db=window.__HASNARIA_DB)}
@@ -13,7 +13,7 @@ function num(v){return new Intl.NumberFormat('id-ID',{maximumFractionDigits:0}).
 function pct(v){return Number(v||0).toLocaleString('id-ID',{maximumFractionDigits:1})+'%'}
 function css(){if($('hx-exec-css'))return;var l=document.createElement('link');l.id='hx-exec-css';l.rel='stylesheet';l.href='/owner-executive-v1.css?v=3';document.head.appendChild(l)}
 function loadScript(id,src){return new Promise(function(resolve){var old=$(id);if(old){if(old.getAttribute('data-loaded')==='1')return resolve();old.addEventListener('load',resolve,{once:true});old.addEventListener('error',resolve,{once:true});return}var s=document.createElement('script');s.id=id;s.src=src;s.async=true;s.onload=function(){s.setAttribute('data-loaded','1');resolve()};s.onerror=resolve;document.head.appendChild(s)})}
-function prewarm(){if(state.prewarmed)return;state.prewarmed=true;var run=function(){try{if(typeof window.__HASNARIA_LOAD_SALES==='function')window.__HASNARIA_LOAD_SALES();if(typeof window.__HASNARIA_LOAD_PURCHASE==='function')window.__HASNARIA_LOAD_PURCHASE();if(window.HasnariaPurchaseLazy&&typeof window.HasnariaPurchaseLazy.load==='function')window.HasnariaPurchaseLazy.load();if(typeof window.__HASNARIA_LOAD_STOCK==='function')window.__HASNARIA_LOAD_STOCK();loadScript('hasnaria-owner-finance-stock-v3-js','/owner-finance-stock-v3.js?v=10');loadScript('hasnaria-operational-v1-js','/operational-v1.js?v=1')}catch(_){}};if(typeof window.requestIdleCallback==='function')window.requestIdleCallback(run,{timeout:1600});else setTimeout(run,650)}
+function prewarm(){if(state.prewarmed)return;state.prewarmed=true;var run=function(){try{if(typeof window.__HASNARIA_LOAD_SALES==='function')window.__HASNARIA_LOAD_SALES();if(typeof window.__HASNARIA_LOAD_PURCHASE==='function')window.__HASNARIA_LOAD_PURCHASE();if(window.HasnariaPurchaseLazy&&typeof window.HasnariaPurchaseLazy.load==='function')window.HasnariaPurchaseLazy.load();if(typeof window.__HASNARIA_LOAD_STOCK==='function')window.__HASNARIA_LOAD_STOCK();loadScript('hasnaria-owner-finance-stock-v3-js','/owner-finance-stock-v3.js?v=11');loadScript('hasnaria-operational-v1-js','/operational-v1.js?v=4')}catch(_){}};if(typeof window.requestIdleCallback==='function')window.requestIdleCallback(run,{timeout:1600});else setTimeout(run,650)}
 function kpi(label,value,meta,cls){return '<div class="hx-kpi '+(cls||'')+'"><span>'+esc(label)+'</span><strong>'+value+'</strong>'+(meta?'<small>'+esc(meta)+'</small>':'')+'</div>'}
 function toolbar(){return '<div class="hx-toolbar"><div class="hx-title"><h1>Ringkasan CEO</h1><p>Satu layar untuk keputusan utama</p></div><div class="hx-actions"><button class="hx-btn icon" data-ceo-period="-1" aria-label="Periode sebelumnya">‹</button><span class="hx-period">'+esc(monthLabel())+'</span><button class="hx-btn icon" data-ceo-period="1" aria-label="Periode berikutnya">›</button></div></div>'}
 function trend(rows){
@@ -31,7 +31,28 @@ function trend(rows){
 function alerts(d){var a=Array.isArray(d.alerts)?d.alerts:[];if(!a.length)return'<div class="hx-empty">Tidak ada alert.</div>';return '<div class="hx-alerts">'+a.map(function(x){var c=Number(x.count||0);return '<div class="hx-alert '+(c?'attn':'')+'"><b>'+esc(x.label)+'</b><span>'+num(c)+'</span></div>'}).join('')+'</div>'}
 function render(d){var change=Number(d.previous_revenue||0)?((Number(d.revenue||0)-Number(d.previous_revenue||0))/Number(d.previous_revenue||0)*100):0;return '<div class="hx-shell" data-ceo-one-view="1">'+toolbar()+'<div class="hx-grid">'+kpi('Penjualan',rp(d.revenue),pct(change)+' vs bulan lalu',change>=0?'positive':'negative')+kpi('Beban Pembelian',rp(d.purchase_expense),'Purchase-basis')+kpi('Beban Karyawan',rp(d.payroll_expense),'Payroll posted')+kpi('Laba / Rugi',rp(d.profit),pct(d.margin)+' margin',Number(d.profit)>=0?'positive':'negative')+'</div><div class="hx-main"><div class="hx-card"><h2>Tren 6 bulan</h2>'+trend(d.trend)+'</div><div class="hx-card"><h2>Perlu perhatian</h2>'+alerts(d)+'<div class="hx-note">Supervisor aktif: '+esc((d.supervisor&&d.supervisor.full_name)||'belum ditetapkan')+' · stok rendah: '+num(d.stock_low)+'</div></div></div></div>'}
 function setBusy(h,busy){var r=h&&h.querySelector('[data-ceo-one-view="1"]');if(!r)return;if(busy){r.classList.add('hx-refreshing');r.setAttribute('aria-busy','true')}else{r.classList.remove('hx-refreshing');r.removeAttribute('aria-busy')}}
-async function mount(){var ctx=window.__HASNARIA_CONTEXT,h=$('dashboard');if(!ctx||ctx.role!=='owner'||!client()||!h||h.classList.contains('hidden'))return false;css();prewarm();var seq=++state.seq,key=monthISO(),cached=state.cache[key];if(cached){h.innerHTML=render(cached);return true}var hadContent=!!h.querySelector('[data-ceo-one-view="1"]');if(hadContent)setBusy(h,true);else h.innerHTML='<div class="hx-shell"><div class="hx-loading">Memuat Ringkasan CEO…</div></div>';try{var r=await client().rpc('owner_executive_tab_v1',{p_tab:'dashboard',p_period:key});if(r.error)throw r.error;if(seq!==state.seq||h.classList.contains('hidden'))return true;state.cache[key]=r.data||{};h.innerHTML=render(state.cache[key]);}catch(e){if(seq===state.seq){if(hadContent){setBusy(h,false);var old=h.querySelector('.hx-error-inline');if(old)old.remove();var n=document.createElement('div');n.className='hx-error hx-error-inline';n.textContent='Gagal memperbarui Ringkasan CEO: '+(e&&e.message||e);h.prepend(n)}else h.innerHTML='<div class="hx-shell"><div class="hx-error">Gagal memuat Ringkasan CEO: '+esc(e&&e.message||e)+'</div></div>'}}return true}
+async function mount(opts){
+ opts=opts||{};var ctx=window.__HASNARIA_CONTEXT,h=$('dashboard');
+ if(!ctx||ctx.role!=='owner'||!client()||!h||h.classList.contains('hidden'))return false;
+ var sync=window.__HASNARIA_DATA_SYNC;
+ if(opts.silent&&sync&&!sync.canRefresh(h))return false;
+ css();prewarm();var seq=++state.seq,key=monthISO(),cached=state.cache[key],hadContent=!!h.querySelector('[data-ceo-one-view="1"]');
+ if(!opts.force&&cached&&Date.now()-(state.cacheAt[key]||0)<30000){h.innerHTML=render(cached);return true}
+ if(!opts.silent){if(hadContent)setBusy(h,true);else h.innerHTML='<div class="hx-shell"><div class="hx-loading">Memuat Ringkasan CEO…</div></div>'}
+ try{
+   var r=await client().rpc('owner_executive_tab_v1',{p_tab:'dashboard',p_period:key});if(r.error)throw r.error;
+   if(seq!==state.seq||key!==monthISO()||h.classList.contains('hidden')||window.__HASNARIA_CONTEXT!==ctx)return true;
+   if(opts.silent&&sync&&!sync.canRefresh(h))return false;
+   var next=r.data||{},changed=JSON.stringify(cached)!==JSON.stringify(next);
+   state.cache[key]=next;state.cacheAt[key]=Date.now();
+   if(!opts.silent||changed||!hadContent)h.innerHTML=render(next);
+ }catch(e){if(!opts.silent&&seq===state.seq){if(hadContent){setBusy(h,false);var old=h.querySelector('.hx-error-inline');if(old)old.remove();var n=document.createElement('div');n.className='hx-error hx-error-inline';n.textContent='Gagal memperbarui Ringkasan CEO: '+(e&&e.message||e);h.prepend(n)}else h.innerHTML='<div class="hx-shell"><div class="hx-error">Gagal memuat Ringkasan CEO: '+esc(e&&e.message||e)+'</div></div>'}}
+ return true;
+}
 document.addEventListener('click',function(e){var b=e.target&&e.target.closest?e.target.closest('[data-ceo-period]'):null;if(!b)return;state.period=new Date(state.period.getFullYear(),state.period.getMonth()+Number(b.getAttribute('data-ceo-period')||0),1);mount()},true);
-window.__HASNARIA_DASHBOARD_ONE_VIEW={mount:mount,invalidate:function(){state.cache={}}};
+window.__HASNARIA_DASHBOARD_ONE_VIEW={mount:mount,invalidate:function(){state.seq++;state.cache={};state.cacheAt={}}};
+if(window.__HASNARIA_DATA_SYNC)window.__HASNARIA_DATA_SYNC.register('owner-dashboard',function(reason){
+ if(reason==='changed')window.__HASNARIA_DASHBOARD_ONE_VIEW.invalidate();
+ return mount({force:true,silent:true});
+});
 })();

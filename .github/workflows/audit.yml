@@ -41,6 +41,9 @@ jobs:
       - name: Native user profile authority test
         run: node tests/native-user-profiles.test.js
 
+      - name: Mobile and web data synchronization regressions
+        run: node --test tests/*sync.test.js
+
       - name: Runtime source integrity
         shell: bash
         run: |

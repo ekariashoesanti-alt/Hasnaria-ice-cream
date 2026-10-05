@@ -30,6 +30,7 @@
   var db, me = null, role = "pending", metrics = [], expenses = [], social = [], roster = [], stock = [], tab = "dashboard";
   var legacyLoaded = { metrics:false, expenses:false, purchases:false, social:false, stock:false };
   var legacyLoading = {};
+  var legacyLoadedAt = {};
 
   function wrap(st, n) { return (TAG[st] || TAG.recorded) + (n || ""); }
   function parseNotes(raw) {
@@ -170,10 +171,11 @@
   }
   function onceLegacy(key, loader, force) {
     if (force) legacyLoaded[key] = false;
-    if (legacyLoaded[key]) return Promise.resolve();
+    if (legacyLoaded[key] && Date.now() - (legacyLoadedAt[key] || 0) < 30000) return Promise.resolve();
     if (legacyLoading[key]) return legacyLoading[key];
     legacyLoading[key] = Promise.resolve().then(loader).then(function () {
       legacyLoaded[key] = true;
+      legacyLoadedAt[key] = Date.now();
     }).finally(function () { legacyLoading[key] = null; });
     return legacyLoading[key];
   }

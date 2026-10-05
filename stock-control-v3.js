@@ -30,6 +30,9 @@
     auxError: '',
     loadSeq: 0,
     periodSeq: 0,
+    ledgerSeq: 0,
+    viewSeq: 0,
+    syncSeq: 0,
     periods: [],
     period: '',
     overview: null,
@@ -193,7 +196,7 @@
     });
   }
 
-  function applySupplemental(recipeRows, poRows, receiptRows) {
+  function supplementalItems(raw, recipeRows, poRows, receiptRows) {
     var recipeMap = {};
     (recipeRows || []).forEach(function (r) {
       if (r.inventory_item_id) recipeMap[r.inventory_item_id] = true;
@@ -213,7 +216,7 @@
       incomingByItem[r.inventory_item_id] = (incomingByItem[r.inventory_item_id] || 0) + remaining;
     });
 
-    S.items = S.raw.map(function (x) {
+    return raw.map(function (x) {
       var tracked = !!x.tracking_active;
       var balance = tracked ? num(x.system_qty) : null;
       var incoming = num(incomingByItem[x.inventory_item_id]);
@@ -323,7 +326,7 @@
       var receiptRows = poRows.length ? await loadReceipts(poRows.map(function (r) { return r.id; })) : [];
       if (seq !== S.loadSeq) return;
 
-      applySupplemental(recipeRows, poRows, receiptRows);
+      S.items = supplementalItems(S.raw, recipeRows, poRows, receiptRows);
       S.auxLoaded = true;
     } catch (e) {
       if (seq !== S.loadSeq) return;
@@ -429,34 +432,109 @@
 
   async function loadLedger() {
     if (!S.period || S.ledgerLoading) return;
+    var seq = ++S.ledgerSeq, period = S.period;
     S.ledgerLoading = true;
     S.ledgerError = '';
     S.ledger = [];
     S.ledgerPage = 1;
     render();
     try {
-      var out = [], offset = 0, limit = 500, month = S.period + '-01';
-      while (offset < 5000) {
-        var q = qs({
-          brand_id: 'eq.' + BRAND,
-          period_month: 'eq.' + month,
-          select: 'movement_id,inventory_item_id,sku_code,sku_name,base_unit,movement_date,ledger_type,source_movement_type,qty_delta,unit_cost,reference_type,reference_id,system_generated,notes',
-          order: 'movement_date.desc',
-          limit: String(limit),
-          offset: String(offset)
-        });
-        var part = await request('ui_stock_detail_v1?' + q);
-        out = out.concat(part || []);
-        if (!part || part.length < limit) break;
-        offset += limit;
-      }
+      var out = await readLedger(period);
+      if (seq !== S.ledgerSeq || period !== S.period) return;
       S.ledger = out;
     } catch (e) {
+      if (seq !== S.ledgerSeq || period !== S.period) return;
       S.ledgerError = e && e.message ? e.message : String(e);
     } finally {
-      S.ledgerLoading = false;
-      render();
+      if (seq === S.ledgerSeq) {
+        S.ledgerLoading = false;
+        if (period === S.period) render();
+      }
     }
+  }
+
+  async function readLedger(period) {
+    var out = [], offset = 0, limit = 500;
+    while (offset < 5000) {
+      var q = qs({
+        brand_id: 'eq.' + BRAND, period_month: 'eq.' + period + '-01',
+        select: 'movement_id,inventory_item_id,sku_code,sku_name,base_unit,movement_date,ledger_type,source_movement_type,qty_delta,unit_cost,reference_type,reference_id,system_generated,notes',
+        order: 'movement_date.desc', limit: String(limit), offset: String(offset)
+      });
+      var part = await request('ui_stock_detail_v1?' + q);
+      out = out.concat(part || []);
+      if (!part || part.length < limit) break;
+      offset += limit;
+    }
+    return out;
+  }
+
+  function syncContext() {
+    return JSON.stringify([S.loadSeq, S.periodSeq, S.ledgerSeq, S.viewSeq, S.period, S.modal,
+      S.search, S.category, S.status, S.page, S.ledgerPage, window.__HASNARIA_CONTEXT || null]);
+  }
+
+  function canSync() {
+    var host = document.getElementById('stok'), sync = window.__HASNARIA_DATA_SYNC;
+    if (!sync || !active() || !S.baseLoaded || S.baseLoading || S.auxLoading || S.periodLoading || S.ledgerLoading) return false;
+    var focused = document.activeElement;
+    if (focused && host.contains(focused) && focused.matches('input,textarea,select')) return false;
+    return sync.canRefresh(host, '#sc4Period,#sc3Search,#sc3Category,#sc3Status');
+  }
+
+  // Freshness reads never post/rebuild inventory or replace an in-progress view.
+  async function syncRefresh() {
+    if (!canSync()) return;
+    var seq = ++S.syncSeq, context = syncContext(), period = S.period, modal = S.modal;
+    try {
+      var baseQuery = qs({brand_id: 'eq.' + BRAND,
+        select: 'inventory_item_id,item_name,category,unit,min_qty,order_qty,purchase_qty,sales_usage_qty,system_qty,last_opname_date,last_physical_qty,last_variance,tracking_active,status',
+        order: 'category.asc,item_name.asc'});
+      var reads = [
+        request('inventory_stock_reconciliation?' + baseQuery),
+        request('ui_period_catalog_v1?' + qs({brand_id: 'eq.' + BRAND, module: 'eq.stok', select: 'period_start,period_key', order: 'period_start.desc'}))
+      ];
+      if (period) {
+        reads.push(request('ui_stock_overview_v1?' + qs({brand_id: 'eq.' + BRAND, period_month: 'eq.' + period + '-01', select: '*', limit: '1'})));
+        reads.push(request('ui_stock_activity_chart_v1?' + qs({brand_id: 'eq.' + BRAND, period_month: 'eq.' + period + '-01', select: 'movement_type,movement_rows,sku_count', order: 'movement_rows.desc'})));
+      }
+      if (modal === 'ledger' && period) reads.push(readLedger(period));
+      var result = await Promise.all(reads);
+      if (seq !== S.syncSeq || context !== syncContext() || !canSync()) return;
+      var raw = result[0] || [], trackedIds = raw.filter(function (x) { return !!x.tracking_active; }).map(function (x) { return x.inventory_item_id; });
+      var recipes = [], poRows = [], receipts = [];
+      if (trackedIds.length) {
+        var trackedSet = {};
+        trackedIds.forEach(function (id) { trackedSet[id] = true; });
+        var aux = await Promise.all([
+          loadRecipes(trackedIds),
+          request('purchase_order_items?' + qs({select: 'id,inventory_item_id,ordered_qty,purchase_orders!inner(brand_id,status)',
+            'purchase_orders.brand_id': 'eq.' + BRAND, 'purchase_orders.status': 'in.(issued,partially_received)', limit: '1000'}))
+        ]);
+        recipes = aux[0] || [];
+        poRows = (aux[1] || []).filter(function (row) { return !!trackedSet[row.inventory_item_id]; });
+        if (poRows.length) receipts = await loadReceipts(poRows.map(function (row) { return row.id; }));
+      }
+      if (seq !== S.syncSeq || context !== syncContext() || !canSync()) return;
+      var items = supplementalItems(raw, recipes, poRows, receipts);
+      var overview = period && result[2] && result[2][0] ? result[2][0] : null;
+      var activity = period ? result[3] || [] : [];
+      var ledger = modal === 'ledger' && period ? result[4] || [] : S.ledger;
+      var next = [raw, items, result[1] || [], overview, activity, ledger, true, '', '', '', modal === 'ledger' ? '' : S.ledgerError];
+      var current = [S.raw, S.items, S.periods, S.overview, S.activity, S.ledger, S.auxLoaded, S.error, S.auxError, S.periodError, S.ledgerError];
+      if (JSON.stringify(next) === JSON.stringify(current)) return;
+      S.raw = raw; S.items = items; S.periods = result[1] || [];
+      S.overview = overview; S.activity = activity; S.ledger = ledger;
+      S.auxLoaded = true; S.error = ''; S.auxError = ''; S.periodError = '';
+      if (modal === 'ledger') S.ledgerError = '';
+      render();
+    } catch (_) {
+      // Keep the last successful snapshot; the next visible signal retries.
+    }
+  }
+
+  function registerSync() {
+    if (window.__HASNARIA_DATA_SYNC) window.__HASNARIA_DATA_SYNC.register('stock-control-v3', syncRefresh);
   }
 
   function statusLabel(status) {
@@ -720,6 +798,7 @@
   function render() {
     var host = document.getElementById('stok');
     if (!host) return;
+    S.viewSeq++;
     ensureCss();
     host.__sc3Rendering = true;
     var shell = host.querySelector('.sc3-shell,[data-stock-v3-boot="1"]');
@@ -875,6 +954,8 @@
   }, true);
 
   ensureCss();
+  registerSync();
+  document.addEventListener('hasnaria:data-sync-ready', registerSync);
   watch();
   mount(true);
 })();

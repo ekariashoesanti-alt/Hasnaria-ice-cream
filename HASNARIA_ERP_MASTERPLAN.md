@@ -164,6 +164,7 @@ Rule-driven approvals, immutable audit, self-approval prevention, exception mode
 | HSN-008 | M0 | P1 | TODO | Responsive baseline desktop/tablet/mobile | HSN-003 |
 | HSN-009 | M0 | P0 | TODO | Smoke test login-dashboard-navigation | HSN-001, HSN-003 |
 | HSN-010 | M0 | P0 | TODO | Parity checklist ChatGPT Site vs repository | HSN-009 |
+| HSN-011 | M0 | P0 | IN_PROGRESS | Sinkronisasi data HP Owner/Staff dengan web tanpa perubahan UI/UX | HSN-004, HSN-602 |
 | HSN-100 | M1 | P0 | TODO | Tetapkan ERP source-of-truth architecture | HSN-010 |
 | HSN-101 | M1 | P0 | TODO | Organization/brand boundary model | HSN-100 |
 | HSN-102 | M1 | P0 | DONE | Outlet master model | HSN-101 |
