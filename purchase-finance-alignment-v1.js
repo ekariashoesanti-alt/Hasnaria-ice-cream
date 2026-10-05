@@ -119,6 +119,7 @@ async function load(force){
 }
 function resetData(){rows=[];control={};overview=null;chartRows=[];loadedAt=0;loadedPeriod='';category='all';modalOpen=false}
 function schedule(){clearTimeout(timer);timer=setTimeout(function(){if(!document.getElementById('paRoot'))return;render();if(!loading&&(!rows.length||loadedPeriod!==periodValue()))load(false)},80)}
+window.__HASNARIA_PURCHASE_FINANCE_REFRESH=function(){return load(true)};
 function boot(){
   db=window.__HASNARIA_DB||null;var tries=0;
   (function wait(){db=db||window.__HASNARIA_DB||null;var host=document.getElementById('pembelian');if(db&&host){

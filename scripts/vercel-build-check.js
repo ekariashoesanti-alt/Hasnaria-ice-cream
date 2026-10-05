@@ -24,7 +24,8 @@ const REQUIRED_RUNTIME_FILES = [
   'stock-monitor.js',
   'sales-board.js',
   'sales-ui-patch.js',
-  'xlsx-preload.js'
+  'xlsx-preload.js',
+  'data-sync.js'
 ];
 const TEXT_RUNTIME_RE = /\.(?:html?|js|css)$/i;
 const STATIC_ASSET_RE = /\.(?:html?|js|css|json|svg|png|jpe?g|webp|gif|ico|woff2?|ttf|map)$/i;
@@ -236,6 +237,7 @@ run(process.execPath, ['tests/erp-ui.test.js']);
 run(process.execPath, ['tests/p2-owner-performance.test.js']);
 run(process.execPath, ['tests/purchase-fast-load.test.js']);
 run(process.execPath, ['tests/month-filter-owner-tabs.test.js']);
+run(process.execPath, ['tests/data-sync-runtime.test.js']);
 
 const dist = path.join(ROOT, 'dist');
 fs.rmSync(dist, { recursive: true, force: true });

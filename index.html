@@ -45,6 +45,7 @@ window.hasnariaGoogle = async function (ev) {
 <script src="/erp.js?v=ui2"></script>
 <script src="/app.js?v=p056"></script>
 <script src="/nav-patch.js?v=15"></script>
+<script src="/data-sync.js?v=1"></script>
 <script>(function(){var btn=document.getElementById("resetBtn");if(!btn)return;btn.addEventListener("click",async function(){var email=(document.getElementById("email").value||"").trim(),msg=document.getElementById("authMsg");if(!email){if(msg)msg.textContent="Isi email dulu untuk reset password.";return}if(typeof supabase==="undefined"){if(msg)msg.textContent="Pustaka login belum siap.";return}if(msg)msg.textContent="Mengirim tautan reset…";try{var create=window.__HASNARIA_ORIGINAL_CREATE_CLIENT||supabase.createClient.bind(supabase);var client=create(window.HASNARIA_SB,window.HASNARIA_KEY,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false,flowType:"implicit",storageKey:"hasnaria-reset"}});var r=await client.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname+'?password-activation=1'});if(r.error)throw r.error;if(msg){msg.style.color="#166534";msg.textContent="Tautan reset sudah dikirim. Cek email."}}catch(e){if(msg)msg.textContent=e&&e.message?e.message:"Gagal mengirim reset password."}});})();</script>
 </body>
 </html>
