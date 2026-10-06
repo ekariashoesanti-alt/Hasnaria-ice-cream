@@ -99,6 +99,10 @@ async function syncReport(){
     if(seq!==state.seq||state.loading||state.period!==p||c!==window.__HASNARIA_CONTEXT||h!==getHost()||root!==h.querySelector('[data-finance-v6="1"]')||!canSyncReport())return;
     all.forEach(function(r){if(r.error)throw r.error});
     var pack=all[0].data||{periods:[],income:[],position:[],notes:[]},detail=all[1].data||null,alerts=all[2].data||[];
+    if(!(pack.periods||[]).some(function(x){return periodKey(x.period_month)===p})){
+      var selected=(state.pack&&state.pack.periods||[]).find(function(x){return periodKey(x.period_month)===p});
+      pack=Object.assign({},pack,{periods:(pack.periods||[]).concat([selected||{period_month:p}])});
+    }
     var changed=JSON.stringify([state.pack,state.detail,state.alerts])!==JSON.stringify([pack,detail,alerts]);
     state.pack=pack;state.detail=detail;state.alerts=alerts;state.detailRows={};
     if(changed)render();

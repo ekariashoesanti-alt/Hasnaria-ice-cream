@@ -88,7 +88,7 @@ assert(staffV5Source.includes("if(sameContext(c))resumed=await resumeStaff()") &
 assert(staffV5Source.includes("staff_pin_login") && staffV5Source.includes("staff_owner_save"), 'UI-7 Staff portal must preserve PIN login and owner save flows');
 assert(staffOwnerStableSource.includes('hso-ui7-summary') && staffOwnerStableSource.includes("data-hso-action=\"staff-detail\""), 'UI-7 Owner Mobile must use employee snapshot and isolated detail overlay');
 assert(!appSource.includes("load('/finance-purchase-basis-v1.js"), 'Finance management runtime must be lazy-owned by the Owner Finance shell');
-assert(appSource.includes("var SALES = '/sales-board.js?v=48';"), 'Sales lazy runtime cache version is current');
+assert(appSource.includes("var SALES = '/sales-board.js?v=49';"), 'Sales lazy runtime cache version is current');
 assert(appSource.includes('window.__HASNARIA_LOAD_SALES=ensureSalesRuntime'), 'Sales runtime must be exposed as a lazy loader');
 assert(!appSource.includes('purchase-inventory-status.js'), 'startup must not load the legacy 10k-row Purchase inventory helper');
 assert(!/function afterCore\(\)[\s\S]*?load\(SALES[,)]/.test(appSource), 'Sales must not be fetched unconditionally during application startup');
@@ -168,7 +168,7 @@ assert(!salesBoardSource.includes('sales-hourly-chart.js'), 'Sales board must no
 assert(!purchasePreloadSource.includes('purchase-rankings-five.js'), 'legacy Purchase ranking patch must not load beside canonical Finance reconciliation');
 assert(!purchasePreloadSource.includes('purchase-chart-redesign.js'), 'legacy Purchase chart patch must not race the canonical Purchase DOM');
 assert(purchasePreloadSource.includes("purchase-finance-alignment-v1.css?v=5"), 'canonical Purchase layout cache version must be current');
-assert(purchasePreloadSource.includes("purchase-finance-alignment-v1.js?v=9"), 'canonical Purchase runtime cache version must be current');
+assert(purchasePreloadSource.includes("purchase-finance-alignment-v1.js?v=10"), 'canonical Purchase runtime cache version must be current');
 assert(!purchaseInventorySource.includes('pa-stock-grid'), 'Purchase inventory helper must not inject detailed Stock cards back into Pembelian');
 assert(!purchaseInventorySource.includes("querySelectorAll('.pa-lower-grid article')"), 'Purchase inventory helper must remain KPI-only');
 assert(purchaseFinanceCss.includes(':has(>#purchaseFinanceAlignment)'), 'Purchase canonical layout must activate only when reconciliation is present');

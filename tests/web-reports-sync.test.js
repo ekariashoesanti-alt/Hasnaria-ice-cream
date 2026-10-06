@@ -222,6 +222,14 @@ function harness(file, handlerName) {
       assert.match(missing.rendered, /Oktober 2026/, file + ': refreshed report stays labeled with its snapshot month');
       assert.match(missing.rendered, /90/, file + ': refreshed data is applied even when the catalog no longer lists its month');
     }
+    if (file === 'finance-accuracy-v6.js') {
+      const missing = harness(file, handlerName); await missing.start();
+      missing.data.get_finance_reporting_pack_v1.periods = [{ period_month: '2026-09-01', period_status: 'closed' }];
+      change(missing.data[table]); await missing.refresh(); await missing.settle();
+      assert.equal(missing.elements.financeV6Period.value, '2026-10-01', 'Finance catalog removal cannot relabel the selected-month report');
+      assert.match(missing.rendered, /Oktober 2026/, 'Finance keeps the selected snapshot month visible');
+      assert.match(missing.rendered, /90/, 'Finance still applies refreshed selected-month detail data');
+    }
 
     const race = harness(file, handlerName);
     race.data.ui_period_catalog_v1.push({ period_start: '2026-09-01', period_key: '2026-09' });
