@@ -7,7 +7,7 @@ var BRAND='a36d4b4f-3ccc-4a78-8aeb-b868f0407ea4';
 var CATS=['Beban Administrasi','Beban Pemeliharaan','Beban Bahan Baku','Beban Kepegawaian'];
 var CAT_LABEL={'Beban Administrasi':'6100 · Administrasi','Beban Pemeliharaan':'6110 · Pemeliharaan','Beban Bahan Baku':'6120 · Bahan Baku','Beban Kepegawaian':'6200 · Kepegawaian'};
 var MONTHS=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
-var db=null,rows=[],control={},overview=null,chartRows=[],periods=[],loading=false,error='',observer=null,timer=0,loadedAt=0,loadedPeriod='',syncingStock=false,lastStockSync='',category='all',modalOpen=false,requestSeq=0;
+var db=null,rows=[],control={},overview=null,chartRows=[],periods=[],loading=false,error='',observer=null,timer=0,loadedAt=0,loadedPeriod='',syncingStock=false,lastStockSync='',category='all',modalOpen=false,requestSeq=0,syncing=false;
 
 function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function n(v){v=Number(v);return isFinite(v)?v:0}
@@ -98,15 +98,16 @@ async function loadPeriods(){
 async function syncStockForPeriod(){
   var r=monthRange();if(!db||!r||syncingStock||lastStockSync===r.key)return false;
   syncingStock=true;
-  try{var q=await db.rpc('sync_purchase_quantity_stock_v1',{p_from:r.from,p_to:r.to});if(q.error)throw q.error;lastStockSync=r.key;return true}catch(e){if(console&&console.warn)console.warn('Purchase quantity → Stock sync:',e);return false}finally{syncingStock=false}
+  try{var q=await db.rpc('sync_purchase_quantity_stock_v1',{p_from:r.from,p_to:r.to});if(q.error)throw q.error;lastStockSync=r.key;if(window.__HASNARIA_DATA_SYNC)window.__HASNARIA_DATA_SYNC.notify('purchase-stock-synced');return true}catch(e){if(console&&console.warn)console.warn('Purchase quantity → Stock sync:',e);return false}finally{syncingStock=false}
 }
+function purchasePack(period){return db.rpc('get_purchase_control_period_v1',{p_brand:BRAND,p_period:period+'-01'})}
 async function load(force){
   var p=periodValue();if(!p)return;
   if(loading){if(force)requestSeq++;return}
   if(!force&&rows.length&&loadedPeriod===p&&Date.now()-loadedAt<60000){render();return}
   var seq=++requestSeq;db=db||window.__HASNARIA_DB;if(!db)return;loading=true;error='';render();
   try{
-    var q=await db.rpc('get_purchase_control_period_v1',{p_brand:BRAND,p_period:p+'-01'});
+    var q=await purchasePack(p);
     if(seq!==requestSeq)return;
     if(q.error)throw q.error;
     var pack=q.data||{};rows=Array.isArray(pack.rows)?pack.rows:[];control=pack.control||{};
@@ -117,9 +118,36 @@ async function load(force){
   }catch(e){if(seq!==requestSeq)return;rows=[];control={};overview=null;chartRows=[];loadedPeriod='';loadedAt=0;error='Gagal memuat ringkasan Pembelian: '+(e&&e.message?e.message:String(e))}
   finally{if(seq===requestSeq){loading=false;render()}else{loading=false;setTimeout(function(){if(periodValue())load(true)},0)}}
 }
+function canSyncReport(){var h=document.getElementById('pembelian'),c=window.__HASNARIA_CONTEXT,s=window.__HASNARIA_DATA_SYNC;return!!(h&&!h.classList.contains('hidden')&&c&&c.role==='owner'&&document.getElementById('paRoot')&&!modalOpen&&s&&s.canRefresh(h,'#paPeriod,#pfaCategory'))}
+async function syncReport(){
+  if(loading||syncing||syncingStock||!canSyncReport())return;var p=periodValue();db=db||window.__HASNARIA_DB;if(!p||!db)return;
+  var seq=requestSeq,c=window.__HASNARIA_CONTEXT,root=document.getElementById('paRoot');syncing=true;
+  try{
+    // Polling reads persisted Stock/Finance status; only import events post stock.
+    var all=await Promise.all([
+      purchasePack(p),
+      db.rpc('get_ui_period_catalog_fast_v1',{p_brand:BRAND,p_module:'pembelian'})
+    ]);
+    if(seq!==requestSeq||loading||p!==periodValue()||c!==window.__HASNARIA_CONTEXT||root!==document.getElementById('paRoot')||!canSyncReport())return;
+    all.forEach(function(r){if(r.error)throw r.error});
+    // Derive the same summary/chart as the foreground canonical pack, so a
+    // freshness tick cannot switch reporting sources or reintroduce slow views.
+    var next=all[0].data||{},nr=Array.isArray(next.rows)?next.rows:[],nc=next.control||{},no=null,chart=[],ps=all[1].data||[];
+    // A removed catalog entry must not relabel the selected month's snapshot.
+    if(!ps.some(function(x){return periodKey(x.period_start||x.period_key)===p})){
+      var selected=periods.find(function(x){return periodKey(x.period_start||x.period_key)===p});
+      ps=ps.concat([selected||{period_start:p+'-01'}]);
+    }
+    var changed=!!error||JSON.stringify([rows,control,overview,chartRows,periods])!==JSON.stringify([nr,nc,no,chart,ps]);
+    rows=nr;control=nc;overview=no;chartRows=chart;periods=ps;loadedAt=Date.now();loadedPeriod=p;error='';
+    if(changed)render();
+  }finally{syncing=false}
+}
+function registerSync(){var s=window.__HASNARIA_DATA_SYNC;if(s)s.register('owner-purchase-report',syncReport)}
+registerSync();window.addEventListener('hasnaria:data-sync-ready',registerSync);
 function resetData(){rows=[];control={};overview=null;chartRows=[];loadedAt=0;loadedPeriod='';category='all';modalOpen=false}
 function schedule(){clearTimeout(timer);timer=setTimeout(function(){if(!document.getElementById('paRoot'))return;render();if(!loading&&(!rows.length||loadedPeriod!==periodValue()))load(false)},80)}
-window.__HASNARIA_PURCHASE_FINANCE_REFRESH=function(){return load(true)};
+window.__HASNARIA_PURCHASE_FINANCE_REFRESH=syncReport;
 function boot(){
   db=window.__HASNARIA_DB||null;var tries=0;
   (function wait(){db=db||window.__HASNARIA_DB||null;var host=document.getElementById('pembelian');if(db&&host){

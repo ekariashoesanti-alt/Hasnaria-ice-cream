@@ -11,7 +11,7 @@
     runs:[],periods:[],period:'',loading:false,error:'',loaded:false,
     activeRun:null,items:[],itemPage:1,itemTotal:0,itemLoading:false,itemError:'',
     createOpen:false,members:[],membersLoading:false,membersLoaded:false,membersError:'',
-    busy:false,notice:'',actionError:''
+    busy:false,notice:'',actionError:'',itemSaves:0,loadSeq:0,itemSeq:0,viewSeq:0,syncSeq:0,syncing:false
   };
 
   function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
@@ -33,6 +33,7 @@
   function css(){if(document.getElementById('operational-v1-css'))return;var l=document.createElement('link');l.id='operational-v1-css';l.rel='stylesheet';l.href='/operational-v1.css?v=2';document.head.appendChild(l)}
   function memberName(m){return m.full_name||m.display_name||m.email||m.id}
   function clearAction(){state.notice='';state.actionError=''}
+  function notifyChange(){if(window.__HASNARIA_DATA_SYNC)window.__HASNARIA_DATA_SYNC.notify()}
 
   function counts(){var x={open:0,review:0,done:0};state.runs.forEach(function(r){if(r.status==='submitted')x.review++;else if(r.status==='approved'||r.status==='closed')x.done++;else x.open++});return x}
 
@@ -86,6 +87,7 @@
 
   function render(){
     var h=host();if(!h)return;css();var c=counts();
+    state.viewSeq++;
     h.innerHTML='<div class="op1-shell" data-operational-v1="1"><div class="op1-head"><div><div class="op1-eyebrow">OPERASIONAL · '+esc(monthLabel(state.period))+'</div><h2>Pelaksanaan & Kontrol Harian</h2><p>Daftar pekerjaan ringan; anggota tim dan detail opname hanya dimuat saat dibutuhkan.</p></div><div class="op1-head-actions"><label class="op1-month"><span>Bulan</span><select id="op1Month" data-month-filter="operasional">'+periodOptions()+'</select></label>'+(isOwner()?'<button type="button" class="op1-new" data-op-action="new-opname">+ Stock Opname</button>':'')+'<button type="button" class="op1-refresh" data-op-action="refresh">↻ Refresh</button></div></div>'+
       '<div class="op1-kpis"><div><span>Aktif</span><strong>'+c.open+'</strong></div><div><span>Menunggu Review</span><strong>'+c.review+'</strong></div><div><span>Selesai</span><strong>'+c.done+'</strong></div></div>'+
       (state.notice?'<div class="op1-notice">'+esc(state.notice)+'</div>':'')+(state.actionError?'<div class="op1-alert">'+esc(state.actionError)+'</div>':'')+(state.error?'<div class="op1-alert">'+esc(state.error)+'</div>':'')+(state.loading&&!state.loaded?'<div class="op1-loading">Memuat daftar pekerjaan…</div>':'')+
@@ -94,28 +96,35 @@
     bind(h);
   }
 
-  async function loadPeriods(){
+  function periodList(rows){var seen={};(rows||[]).forEach(function(x){var p=String(x.scheduled_date||'').slice(0,7);if(/^\d{4}-\d{2}$/.test(p))seen[p]=1});return Object.keys(seen).sort().reverse()}
+  function readPeriods(d){return d.from('operational_runs').select('scheduled_date').order('scheduled_date',{ascending:false}).limit(500)}
+  async function loadPeriods(seq){
     var d=db();if(!d)return;
-    var q=await d.from('operational_runs').select('scheduled_date').order('scheduled_date',{ascending:false}).limit(500);
+    var q=await readPeriods(d);
+    if(seq!==state.loadSeq)return;
     if(q.error)throw q.error;
-    var seen={};(q.data||[]).forEach(function(x){var p=String(x.scheduled_date||'').slice(0,7);if(/^\d{4}-\d{2}$/.test(p))seen[p]=1});
-    state.periods=Object.keys(seen).sort().reverse();
+    state.periods=periodList(q.data);
     if(!state.period||state.periods.indexOf(state.period)<0)state.period=state.periods[0]||today().slice(0,7);
   }
 
   async function loadRuns(keepId,refreshPeriods){
     if(state.loading)return;var d=db();if(!d){state.error='Sesi database belum siap.';render();return}
+    var seq=++state.loadSeq;
     state.loading=true;state.error='';if(!state.loaded)render();
     try{
-      if(!state.periods.length||refreshPeriods)await loadPeriods();
-      var from=state.period+'-01',to=nextMonth(state.period);
-      var q=d.from('operational_runs').select('id,run_type,title,scheduled_date,status,priority,assigned_to,review_notes,submitted_at,reviewed_at,updated_at').gte('scheduled_date',from).lt('scheduled_date',to).order('scheduled_date',{ascending:false}).order('updated_at',{ascending:false}).limit(30);
-      var res=await q;
-      if(res.error)throw res.error;state.runs=res.data||[];state.loaded=true;
+      if(!state.periods.length||refreshPeriods)await loadPeriods(seq);
+      if(seq!==state.loadSeq)return;
+      var period=state.period,q=await readRuns(d,period);
+      if(seq!==state.loadSeq||period!==state.period)return;
+      if(q.error)throw q.error;state.runs=q.data||[];state.loaded=true;
       var id=keepId||(state.activeRun&&state.activeRun.id),same=id&&state.runs.find(function(x){return x.id===id});
       if(same)state.activeRun=same;else if(id){state.activeRun=null;state.items=[];state.itemTotal=0}
-    }catch(e){state.error=e&&e.message?e.message:String(e)}finally{state.loading=false;render()}
+    }catch(e){if(seq===state.loadSeq)state.error=e&&e.message?e.message:String(e)}finally{if(seq===state.loadSeq){state.loading=false;render()}}
   }
+
+  function readRuns(d,period){var from=period+'-01',to=nextMonth(period);return d.from('operational_runs').select('id,run_type,title,scheduled_date,status,priority,assigned_to,review_notes,submitted_at,reviewed_at,updated_at').gte('scheduled_date',from).lt('scheduled_date',to).order('scheduled_date',{ascending:false}).order('updated_at',{ascending:false}).limit(30)}
+  function readRun(d,id){return d.from('operational_runs').select('id,run_type,title,scheduled_date,status,priority,assigned_to,review_notes,submitted_at,reviewed_at,updated_at').eq('id',id).limit(1)}
+  function readItems(d,runId,page){var from=(page-1)*PAGE_SIZE,to=from+PAGE_SIZE-1;return d.from('operational_run_items').select('id,item_order,label,item_type,required,inventory_item_id,expected_qty,bool_value,numeric_value,text_value,notes,completed_at',{count:'exact'}).eq('run_id',runId).order('item_order',{ascending:true}).range(from,to)}
 
   async function loadMembers(){
     if(state.membersLoading||state.membersLoaded)return;state.membersLoading=true;state.membersError='';render();
@@ -126,13 +135,41 @@
   }
 
   async function loadItemPage(runId,page){
-    if(!runId||state.itemLoading)return;state.itemLoading=true;state.itemError='';state.itemPage=page||1;render();
+    if(!runId)return;var seq=++state.itemSeq;state.itemLoading=true;state.itemError='';state.itemPage=page||1;page=state.itemPage;render();
     try{
-      var from=(state.itemPage-1)*PAGE_SIZE,to=from+PAGE_SIZE-1;
-      var q=await db().from('operational_run_items').select('id,item_order,label,item_type,required,inventory_item_id,expected_qty,bool_value,numeric_value,text_value,notes,completed_at',{count:'exact'}).eq('run_id',runId).order('item_order',{ascending:true}).range(from,to);
+      var q=await readItems(db(),runId,page);
+      if(seq!==state.itemSeq||!state.activeRun||state.activeRun.id!==runId||state.itemPage!==page)return;
       if(q.error)throw q.error;state.items=q.data||[];state.itemTotal=q.count||0;
-    }catch(e){state.itemError=e&&e.message?e.message:String(e)}finally{state.itemLoading=false;render()}
+    }catch(e){if(seq===state.itemSeq)state.itemError=e&&e.message?e.message:String(e)}finally{if(seq===state.itemSeq){state.itemLoading=false;render()}}
   }
+
+  function syncContext(){return JSON.stringify([state.loadSeq,state.itemSeq,state.viewSeq,state.period,state.activeRun&&state.activeRun.id,state.itemPage,state.createOpen,context()])}
+  function canSync(){var sync=window.__HASNARIA_DATA_SYNC;return!!(sync&&db()&&active()&&state.loaded&&!!state.period&&!state.loading&&!state.itemLoading&&!state.membersLoading&&!state.busy&&!state.itemSaves&&!state.createOpen&&sync.canRefresh(host(),'#op1Month'))}
+  async function syncRefresh(){
+    if(state.syncing||!canSync())return;
+    var seq=++state.syncSeq,key=syncContext(),d=db(),period=state.period,runId=state.activeRun&&state.activeRun.id,page=state.itemPage,c=context(),h=host(),root=h.querySelector('[data-operational-v1="1"]');state.syncing=true;
+    function valid(){return seq===state.syncSeq&&key===syncContext()&&d===db()&&c===context()&&h===host()&&root===h.querySelector('[data-operational-v1="1"]')&&canSync()}
+    try{
+      var reads=[readRuns(d,period),readPeriods(d)];if(runId)reads.push(readItems(d,runId,page));
+      var results=await Promise.all(reads);
+      if(results.some(function(q){return q.error}))return;
+      if(!valid())return;
+      var runs=results[0].data||[],selected=runId?runs.find(function(r){return r.id===runId}):null;
+      if(runId&&!selected){
+        var currentRun=await readRun(d,runId);
+        if(currentRun.error||!valid())return;
+        selected=currentRun.data&&currentRun.data[0];
+      }
+      var periods=periodList(results[1].data),items=selected&&results[2]?results[2].data||[]:[],total=selected&&results[2]?results[2].count||0:0;
+      if(periods.indexOf(period)<0)periods=periods.concat([period]).sort().reverse();
+      var next=[runs,selected||null,items,total,'','',periods];
+      var current=[state.runs,state.activeRun,state.items,state.itemTotal,state.error,state.itemError,state.periods];
+      if(JSON.stringify(next)===JSON.stringify(current))return;
+      state.runs=runs;state.periods=periods;state.activeRun=selected||null;state.items=items;state.itemTotal=total;state.error='';state.itemError='';render();
+    }catch(_){/* Keep the last successful view and retry on the next freshness signal. */}
+    finally{state.syncing=false}
+  }
+  function registerSync(){if(window.__HASNARIA_DATA_SYNC)window.__HASNARIA_DATA_SYNC.register('operational-v1',syncRefresh)}
 
   async function openRun(id){
     var r=state.runs.find(function(x){return x.id===id});if(!r)return;clearAction();state.activeRun=r;state.items=[];state.itemTotal=0;state.itemPage=1;render();await loadItemPage(id,1);
@@ -144,13 +181,14 @@
     state.busy=true;clearAction();render();
     try{
       var q=await db().rpc('create_stock_opname_run',{p_assigned_to:assignee.value,p_scheduled_date:date.value,p_title:title.value.trim()||'Stock Opname'});
-      if(q.error)throw q.error;var id=q.data;state.period=String(date.value||today()).slice(0,7);state.createOpen=false;state.notice='Stock Opname berhasil dibuat. Isi hitungan fisik per item, lalu kirim untuk review.';await loadRuns(id,true);if(id)await openRun(id);
+      if(q.error)throw q.error;notifyChange();var id=q.data;state.period=String(date.value||today()).slice(0,7);state.createOpen=false;state.notice='Stock Opname berhasil dibuat. Isi hitungan fisik per item, lalu kirim untuk review.';await loadRuns(id,true);if(id)await openRun(id);
     }catch(e){state.actionError=e&&e.message?e.message:String(e)}finally{state.busy=false;render()}
   }
 
   function itemById(id){return state.items.find(function(x){return x.id===id})}
   async function saveItem(id,button){
     var item=itemById(id);if(!item||!editable(state.activeRun)||state.busy)return;
+    var run=state.activeRun;
     var valueEl=host().querySelector('[data-op-value="'+id+'"]'),boolEl=host().querySelector('[data-op-bool="'+id+'"]'),textEl=host().querySelector('[data-op-text="'+id+'"]'),noteEl=host().querySelector('[data-op-note="'+id+'"]');
     var numeric=null,boolVal=null,textVal=null;
     if(item.item_type==='stock_count'||item.item_type==='number'){
@@ -160,19 +198,25 @@
       if(!boolEl||!boolEl.value){state.actionError='Pilih nilai checklist.';render();return}boolVal=boolEl.value==='true';
     }else{textVal=textEl?textEl.value.trim():''}
     if(button){button.disabled=true;button.textContent='Menyimpan…'}
+    var rowHost=button&&button.closest?button.closest('tr'):null;
+    var fields=[valueEl,boolEl,textEl,noteEl].filter(function(el){return!!el}),values=fields.map(function(el){return el.value});
+    state.itemSaves++;state.syncSeq++;
     state.actionError='';
     try{
       var q=await db().rpc('set_operational_run_item',{p_item_id:id,p_bool_value:boolVal,p_numeric_value:numeric,p_text_value:textVal||null,p_notes:noteEl&&noteEl.value.trim()?noteEl.value.trim():null});
-      if(q.error)throw q.error;var row=Array.isArray(q.data)?q.data[0]:q.data;if(row)Object.assign(item,row);if(state.activeRun.status==='draft'||state.activeRun.status==='rejected')state.activeRun.status='in_progress';
+      if(q.error)throw q.error;var row=Array.isArray(q.data)?q.data[0]:q.data;if(row)Object.assign(item,row);if(run.status==='draft'||run.status==='rejected')run.status='in_progress';
+      var sync=window.__HASNARIA_DATA_SYNC;
+      if(sync&&rowHost&&fields.every(function(el,index){return el.value===values[index]}))sync.clearDraft(rowHost);
+      notifyChange();
       if(button){button.textContent='Tersimpan';button.classList.add('saved');setTimeout(function(){if(button&&button.isConnected){button.textContent='Simpan';button.classList.remove('saved');button.disabled=false}},900)}
-    }catch(e){state.actionError=e&&e.message?e.message:String(e);if(button){button.disabled=false;button.textContent='Simpan'}render()}
+    }catch(e){state.actionError=e&&e.message?e.message:String(e);if(button){button.disabled=false;button.textContent='Simpan'}render()}finally{state.itemSaves--}
   }
 
   async function submitRun(){
     if(!state.activeRun||!editable(state.activeRun)||state.busy)return;
     if(!window.confirm('Kirim Stock Opname ini untuk review? Setelah dikirim, hitungan tidak bisa diedit sampai dikembalikan reviewer.'))return;
     state.busy=true;clearAction();render();var id=state.activeRun.id;
-    try{var q=await db().rpc('submit_operational_run',{p_run_id:id});if(q.error)throw q.error;state.notice='Stock Opname dikirim untuk review.';await loadRuns(id);await loadItemPage(id,state.itemPage)}catch(e){state.actionError=e&&e.message?e.message:String(e)}finally{state.busy=false;render()}
+    try{var q=await db().rpc('submit_operational_run',{p_run_id:id});if(q.error)throw q.error;notifyChange();state.notice='Stock Opname dikirim untuk review.';await loadRuns(id);await loadItemPage(id,state.itemPage)}catch(e){state.actionError=e&&e.message?e.message:String(e)}finally{state.busy=false;render()}
   }
 
   function reviewNotes(){var el=document.getElementById('opReviewNotes');return el?el.value.trim():''}
@@ -180,18 +224,18 @@
     if(!reviewable(state.activeRun)||state.busy)return;
     if(!window.confirm('Approve Stock Opname dan posting hasil hitung ke saldo stok? Proses ini akan membuat checkpoint opname final untuk seluruh item.'))return;
     var id=state.activeRun.id,notes=reviewNotes();state.busy=true;clearAction();render();
-    try{var q=await db().rpc('approve_stock_opname_run',{p_run_id:id,p_review_notes:notes||null});if(q.error)throw q.error;state.notice='Stock Opname disetujui dan checkpoint stok berhasil diposting.';await loadRuns(id);await loadItemPage(id,state.itemPage)}catch(e){state.actionError=e&&e.message?e.message:String(e)}finally{state.busy=false;render()}
+    try{var q=await db().rpc('approve_stock_opname_run',{p_run_id:id,p_review_notes:notes||null});if(q.error)throw q.error;notifyChange();state.notice='Stock Opname disetujui dan checkpoint stok berhasil diposting.';await loadRuns(id);await loadItemPage(id,state.itemPage)}catch(e){state.actionError=e&&e.message?e.message:String(e)}finally{state.busy=false;render()}
   }
 
   async function rejectRun(){
     if(!reviewable(state.activeRun)||state.busy)return;var notes=reviewNotes();if(!notes){state.actionError='Catatan koreksi wajib diisi sebelum mengembalikan pekerjaan.';render();return}
     if(!window.confirm('Kembalikan Stock Opname ini untuk dikoreksi?'))return;
     var id=state.activeRun.id;state.busy=true;clearAction();render();
-    try{var q=await db().rpc('reject_operational_run',{p_run_id:id,p_review_notes:notes});if(q.error)throw q.error;state.notice='Stock Opname dikembalikan untuk koreksi.';await loadRuns(id);await loadItemPage(id,state.itemPage)}catch(e){state.actionError=e&&e.message?e.message:String(e)}finally{state.busy=false;render()}
+    try{var q=await db().rpc('reject_operational_run',{p_run_id:id,p_review_notes:notes});if(q.error)throw q.error;notifyChange();state.notice='Stock Opname dikembalikan untuk koreksi.';await loadRuns(id);await loadItemPage(id,state.itemPage)}catch(e){state.actionError=e&&e.message?e.message:String(e)}finally{state.busy=false;render()}
   }
 
   function bind(h){
-    h.onchange=function(e){if(e.target&&e.target.id==='op1Month'){state.period=String(e.target.value||'').slice(0,7);state.activeRun=null;state.items=[];state.itemTotal=0;state.itemPage=1;clearAction();loadRuns();}};
+    h.onchange=function(e){if(e.target&&e.target.id==='op1Month'){state.period=String(e.target.value||'').slice(0,7);state.loadSeq++;state.itemSeq++;state.syncSeq++;state.loading=false;state.itemLoading=false;state.activeRun=null;state.items=[];state.itemTotal=0;state.itemPage=1;clearAction();loadRuns();}};
     h.onclick=function(e){var b=e.target&&e.target.closest?e.target.closest('button'):null;if(!b)return;var action=b.getAttribute('data-op-action');
       if(action==='refresh'){clearAction();loadRuns(null,true);return}
       if(action==='new-opname'){state.createOpen=true;clearAction();render();loadMembers();return}
@@ -208,6 +252,8 @@
 
   function mount(opts){if(!active())return;css();render();if(!state.loaded&&!state.loading)loadRuns();else if(opts&&opts.force&&!state.loading)loadRuns(state.activeRun&&state.activeRun.id)}
   window.__HASNARIA_OPERATIONS_V1_MOUNT=mount;
+  registerSync();
+  document.addEventListener('hasnaria:data-sync-ready',registerSync);
   css();
   setTimeout(function(){if(active())mount({force:false})},0);
 })();

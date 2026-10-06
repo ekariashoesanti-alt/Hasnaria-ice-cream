@@ -4,7 +4,7 @@ if(window.__HASNARIA_ADMIN_V2&&typeof window.__HASNARIA_ADMIN_V2.mount==='functi
 
 var BRAND='a36d4b4f-3ccc-4a78-8aeb-b868f0407ea4';
 var MONTHS=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
-var S={periods:[],period:'',overview:null,chart:[],detail:[],loading:false,error:'',detailOpen:false,detailLoading:false,detailError:'',seq:0};
+var S={periods:[],period:'',overview:null,chart:[],detail:[],loading:false,error:'',detailOpen:false,detailLoading:false,detailError:'',seq:0,syncing:false};
 
 function db(){return window.__HASNARIA_DB}
 function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
@@ -104,6 +104,30 @@ async function mount(o){
  if(S.overview&&!(o&&o.force)){render();return}
  await loadSummary(!!(o&&o.force));
 }
+function canSyncReport(){var h=document.getElementById('administrasi'),c=window.__HASNARIA_CONTEXT,s=window.__HASNARIA_DATA_SYNC;return!!(h&&!h.classList.contains('hidden')&&c&&c.role==='owner'&&h.querySelector('.ad5-shell')&&!S.detailOpen&&!S.detailLoading&&s&&s.canRefresh(h,'#ad5Period'))}
+async function syncReport(){
+ if(S.loading||S.syncing||!S.period||!db()||!canSyncReport())return;
+ var p=S.period,seq=S.seq,c=window.__HASNARIA_CONTEXT,h=document.getElementById('administrasi'),root=h.querySelector('.ad5-shell');S.syncing=true;
+ try{
+   var all=await Promise.all([
+     db().from('ui_administration_overview_v1').select('*').eq('brand_id',BRAND).eq('period_month',p+'-01').limit(1),
+     db().from('ui_administration_category_chart_v1').select('category,admin_rows,amount').eq('brand_id',BRAND).eq('period_month',p+'-01').order('amount',{ascending:false}),
+     db().rpc('get_ui_period_catalog_fast_v1',{p_brand:BRAND,p_module:'administrasi'})
+   ]);
+   if(seq!==S.seq||S.loading||p!==S.period||c!==window.__HASNARIA_CONTEXT||h!==document.getElementById('administrasi')||root!==h.querySelector('.ad5-shell')||!canSyncReport())return;
+   all.forEach(function(r){if(r.error)throw r.error});
+   var overview=all[0].data&&all[0].data[0]||null,chart=all[1].data||[],periods=all[2].data||[];
+   if(!periods.some(function(x){return key(x.period_start||x.period_key)===p})){
+     var selected=S.periods.find(function(x){return key(x.period_start||x.period_key)===p});
+     periods=periods.concat([selected||{period_start:p+'-01'}]);
+   }
+   var changed=!!S.error||JSON.stringify([S.overview,S.chart,S.periods])!==JSON.stringify([overview,chart,periods]);
+   S.overview=overview;S.chart=chart;S.periods=periods;S.detail=[];S.detailError='';S.error='';
+   if(changed)render();
+ }finally{S.syncing=false}
+}
+function registerSync(){var s=window.__HASNARIA_DATA_SYNC;if(s)s.register('owner-administration-report',syncReport)}
+registerSync();window.addEventListener('hasnaria:data-sync-ready',registerSync);
 window.__HASNARIA_ADMIN_V2={mount:mount};
 window.__HASNARIA_ADMIN_V1=window.__HASNARIA_ADMIN_V2;
 })();

@@ -196,7 +196,67 @@ EESE=2|ODENG TIPIS=2|Topokki=5|BAKSO UDANG=1|CHIKUWA=1|KUAH ODENG=2|SCALLOP=1|IC
     ensureBoard();
   }
 
+  var salesSyncing = false, salesSyncGeneration = 0;
+  function salesSyncView() {
+    return JSON.stringify([STATE.viewFrom, STATE.viewTo, STATE.viewMonth, STATE.mode, STATE.slice, STATE.skuMetric]);
+  }
+  function canSyncSales() {
+    var h = document.getElementById('sales'), app = document.getElementById('app');
+    var context = window.__HASNARIA_CONTEXT, sync = window.__HASNARIA_DATA_SYNC;
+    return !!(h && app && context && context.role === 'owner' && (!context.brandId || context.brandId === BRAND) &&
+      !app.classList.contains('hidden') && !h.classList.contains('hidden') && hasBoard(h) &&
+      STATE.fetched && !STATE.loading && !STATE.draw && !STATE.importing && !STATE.showHelp && !STATE.importStatus &&
+      !(STATE.stagedFiles && STATE.stagedFiles.length) && sync && sync.canRefresh(h, '#sbMonth'));
+  }
+  async function syncSales() {
+    if (salesSyncing || !canSyncSales()) return false;
+    var h = document.getElementById('sales'), root = h.querySelector('.sale-board');
+    var context = window.__HASNARIA_CONTEXT, view = salesSyncView(), generation = salesSyncGeneration;
+    var previousRows = STATE.rows, previousHourly = STATE.hourlySales;
+    function current() {
+      return generation === salesSyncGeneration && context === window.__HASNARIA_CONTEXT &&
+        h === document.getElementById('sales') && root === h.querySelector('.sale-board') &&
+        view === salesSyncView() && previousRows === STATE.rows && previousHourly === STATE.hourlySales && canSyncSales();
+    }
+    salesSyncing = true;
+    try {
+      var token = await getTok();
+      if (!token || !current()) return false;
+      var headers = { Authorization: 'Bearer ' + token };
+      var raw = await api('daily_metrics?brand_id=eq.' + encodeURIComponent(BRAND) + '&limit=5000&select=metric_date,cash_revenue,transactions,notes,brand_id&order=metric_date.asc', { headers: headers });
+      if (token !== await getTok() || !current()) return false;
+      var rows = (raw || []).map(function (r) {
+        return Object.assign({}, r, { cash_revenue: Number(r.cash_revenue || 0), transactions: Number(r.transactions || 0) });
+      });
+      var minDate = rows.length ? rows[0].metric_date : '';
+      var maxDate = rows.length ? rows[rows.length - 1].metric_date : '';
+      var hourly = minDate && maxDate ? (await api('sales?brand_id=eq.' + encodeURIComponent(BRAND) + '&sold_at=gte.' + encodeURIComponent(minDate) + '&sold_at=lte.' + encodeURIComponent(maxDate) + '&select=sold_at,sold_hour,transaction_count&limit=50000&order=sold_at.asc', { headers: headers }) || []) : [];
+      if (token !== await getTok() || !current()) return false;
+      var changed = !!STATE.error || JSON.stringify([STATE.rows, STATE.hourlySales]) !== JSON.stringify([rows, hourly]);
+      STATE.rows = rows; STATE.hourlySales = hourly; STATE.error = '';
+      if (changed) draw();
+      return true;
+    } catch (_) {
+      return false;
+    } finally {
+      salesSyncing = false;
+    }
+  }
+  function registerSalesSync() {
+    var sync = window.__HASNARIA_DATA_SYNC;
+    if (sync) sync.register('owner-sales', syncSales);
+  }
+  function invalidateSalesDraft(e) {
+    var h = document.getElementById('sales');
+    if (h && h.contains(e.target)) salesSyncGeneration++;
+  }
+  document.addEventListener('input', invalidateSalesDraft, true);
+  document.addEventListener('change', invalidateSalesDraft, true);
+  window.addEventListener('hasnaria:data-sync-ready', registerSalesSync);
+  registerSalesSync();
+
   window.__hasnariaReloadSales = function () {
+    salesSyncGeneration++;
     STATE.fetched = false;
     STATE.error = '';
     loadMetrics();
@@ -205,6 +265,7 @@ EESE=2|ODENG TIPIS=2|Topokki=5|BAKSO UDANG=1|CHIKUWA=1|KUAH ODENG=2|SCALLOP=1|IC
   document.addEventListener('click', function (e) {
     var t = e.target && e.target.closest ? e.target.closest('[data-tab="sales"],.tab') : null;
     if (!t) return;
+    salesSyncGeneration++;
     var id = t.getAttribute('data-tab');
     if (id === 'sales' || (t.textContent || '').toLowerCase().indexOf('penjualan') !== -1) {
       setTimeout(mount, 40);

@@ -56,9 +56,9 @@ assert.match(index, /\/app\.js\?v=p056/,
   'application runtime must be cache-busted');
 assert.match(index, /\/nav-patch\.js\?v=15/,
   'navigation runtime must be cache-busted');
-assert.match(shell, /\/administration-v1\.js\?v=5/,
+assert.match(shell, /\/administration-v1\.js\?v=6/,
   'Administration runtime must be cache-busted');
-assert.match(buildIndex, /owner-shell-guard\.js\?v=3/,
+assert.match(buildIndex, /owner-shell-guard\.js\?v=8/,
   'production Owner shell must be cache-busted');
 
 console.log('P2 Owner runtime performance contracts: PASS');

@@ -5,7 +5,7 @@ window.__HASNARIA_DASHBOARD_UI6=true;
 
 var BRAND='a36d4b4f-3ccc-4a78-8aeb-b868f0407ea4';
 var MONTHS=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
-var db=null,S={periods:[],rows:[],period:'',loading:false,error:'',detailOpen:false,seq:0,loaded:false,hpp:null,hppLoading:false};
+var db=null,S={periods:[],rows:[],period:'',loading:false,error:'',detailOpen:false,seq:0,loaded:false,hpp:null,hppLoading:false,syncing:false,stale:false};
 
 function $(id){return document.getElementById(id)}
 function client(){return db||(db=window.__HASNARIA_DB)}
@@ -96,30 +96,57 @@ function render(){
  '</div>';
  bind(h);
 }
+function sameView(ctx,h){return window.__HASNARIA_CONTEXT===ctx&&ctx&&ctx.role==='owner'&&h===$('dashboard')&&!h.classList.contains('hidden')}
 async function loadHpp(seq){
   if(S.hppLoading)return;
+  var ctx=window.__HASNARIA_CONTEXT,h=$('dashboard');
   S.hppLoading=true;render();
   try{
     var q=await client().from('hpp_sales_coverage_p11_v1').select('sales_volume_modeled_pct').eq('brand_id',BRAND).limit(1);
-    if(seq!==S.seq)return;
+    if(seq!==S.seq||!sameView(ctx,h))return;
     if(!q.error&&q.data&&q.data[0])S.hpp=n(q.data[0].sales_volume_modeled_pct);
   }catch(_){}
-  finally{if(seq===S.seq){S.hppLoading=false;render()}}
+  finally{if(seq===S.seq){S.hppLoading=false;if(sameView(ctx,h))render()}}
 }
 async function load(force){
-  if(S.loading&&!force)return;var seq=++S.seq;S.loading=true;S.error='';render();
+  if(S.loading&&!force)return;var seq=++S.seq,ctx=window.__HASNARIA_CONTEXT,h=$('dashboard');S.loading=true;S.error='';render();
   try{
     var r=await dashboardPack();
-    if(seq!==S.seq)return;
+    if(seq!==S.seq||!sameView(ctx,h))return;
     if(r.error)throw r.error;
     var pack=r.data||{};
     S.periods=Array.isArray(pack.periods)?pack.periods:[];
     S.rows=Array.isArray(pack.rows)?pack.rows:[];
     if(!S.period||!S.periods.some(function(x){return key(x.period_start||x.period_key)===S.period}))S.period=S.periods.length?key(S.periods[0].period_start||S.periods[0].period_key):'';
-    S.loaded=true;
-  }catch(e){if(seq!==S.seq)return;S.error='Gagal memuat Ringkasan CEO: '+(e&&e.message?e.message:String(e))}
-  finally{if(seq===S.seq){S.loading=false;render();if(S.loaded&&S.hpp==null)loadHpp(seq)}}
+    S.loaded=true;S.stale=false;
+  }catch(e){if(seq!==S.seq||!sameView(ctx,h))return;S.error='Gagal memuat Ringkasan CEO: '+(e&&e.message?e.message:String(e))}
+  finally{if(seq===S.seq){S.loading=false;if(sameView(ctx,h)){render();if(S.loaded&&S.hpp==null)loadHpp(seq)}}}
 }
+function canSync(){var h=$('dashboard'),ctx=window.__HASNARIA_CONTEXT,sync=window.__HASNARIA_DATA_SYNC;return!!(h&&ctx&&ctx.role==='owner'&&!h.classList.contains('hidden')&&h.querySelector('[data-ceo-one-view="1"]')&&S.loaded&&!S.loading&&!S.hppLoading&&!S.detailOpen&&sync&&sync.canRefresh(h,'#hx6Period'))}
+async function syncRefresh(){
+  if(S.syncing||!client()||!canSync())return false;
+  var seq=S.seq,p=S.period,ctx=window.__HASNARIA_CONTEXT,h=$('dashboard'),root=h.querySelector('[data-ceo-one-view="1"]');S.syncing=true;
+  try{
+    var all=await Promise.all([
+      dashboardPack(),
+      client().from('hpp_sales_coverage_p11_v1').select('sales_volume_modeled_pct').eq('brand_id',BRAND).limit(1)
+    ]);
+    if(seq!==S.seq||p!==S.period||!sameView(ctx,h)||root!==h.querySelector('[data-ceo-one-view="1"]')||!canSync())return false;
+    all.forEach(function(q){if(q.error)throw q.error});
+    var pack=all[0].data||{},periods=Array.isArray(pack.periods)?pack.periods:[],rows=Array.isArray(pack.rows)?pack.rows:[];
+    if(p&&!periods.some(function(x){return key(x.period_start||x.period_key)===p})){
+      var selected=S.periods.find(function(x){return key(x.period_start||x.period_key)===p});
+      periods=periods.concat([selected||{period_start:p+'-01'}]);
+    }
+    var hpp=all[1].data&&all[1].data[0]?n(all[1].data[0].sales_volume_modeled_pct):null;
+    var changed=!!S.error||JSON.stringify([S.periods,S.rows,S.hpp])!==JSON.stringify([periods,rows,hpp]);
+    S.periods=periods;S.rows=rows;S.hpp=hpp;S.error='';S.stale=false;
+    if(changed)render();
+    return true;
+  }catch(_){return false}
+  finally{S.syncing=false}
+}
+function registerSync(){var sync=window.__HASNARIA_DATA_SYNC;if(sync)sync.register('owner-dashboard',function(reason){if(reason==='changed')window.__HASNARIA_DASHBOARD_ONE_VIEW.invalidate();return syncRefresh()})}
 function bind(h){
  h.onclick=function(e){
   var close=e.target&&e.target.closest?e.target.closest('[data-hx6-close]'):null;
@@ -130,12 +157,14 @@ function bind(h){
  h.onchange=function(e){if(e.target&&e.target.id==='hx6Period'){S.period=key(e.target.value);S.detailOpen=false;render()}};
  h.onkeydown=function(e){if(e.key==='Escape'&&S.detailOpen){S.detailOpen=false;render()}};
 }
-async function mount(){
+async function mount(opts){
  var ctx=window.__HASNARIA_CONTEXT,h=$('dashboard');
  if(!ctx||ctx.role!=='owner'||!client()||!h||h.classList.contains('hidden'))return false;
+ if(opts&&opts.silent)return syncRefresh();
  css();
- if(S.loaded){render();return true}
- await load(false);return true;
+ if(S.loaded&&!S.stale&&!(opts&&opts.force)){render();return true}
+ await load(!!(opts&&opts.force));return true;
 }
-window.__HASNARIA_DASHBOARD_ONE_VIEW={mount:mount,invalidate:function(){S.loaded=false;S.periods=[];S.rows=[];S.period='';S.hpp=null}};
+window.__HASNARIA_DASHBOARD_ONE_VIEW={mount:mount,invalidate:function(){S.seq++;S.stale=true;S.loading=false;S.hppLoading=false}};
+registerSync();window.addEventListener('hasnaria:data-sync-ready',registerSync);
 })();

@@ -79,6 +79,18 @@
   ],
   "tasks": [
     {
+      "id": "HSN-011",
+      "milestone": "M0",
+      "priority": "P0",
+      "status": "REVIEW",
+      "title": "Sinkronisasi data HP Owner/Staff dengan web tanpa perubahan UI/UX",
+      "dependencies": ["HSN-004", "HSN-602"],
+      "acceptance": "HP Owner, HP Staff, dan web membaca authority Supabase yang sama; perubahan eksternal disegarkan tanpa mereset form, header, navigasi, atau tampilan; mutasi dan sesi tetap dilindungi database; regression dan build lulus.",
+      "owner": "Codex/ChatGPT",
+      "updated_at": "2026-10-06",
+      "notes": "Implementasi dan 23 berkas tes/build produksi lulus; CSS serta markup layar tetap sama dengan main. Rekonsiliasi akun Owner/Staff asli di produksi masih diperlukan. Bukti: docs/MOBILE_WEB_SYNC_2026-10-06.md."
+    },
+    {
       "id": "HSN-001",
       "milestone": "M0",
       "priority": "P0",

@@ -5,7 +5,7 @@ window.__HASNARIA_FINANCE_PURCHASE_BASIS_V3=true;
 window.__HASNARIA_FINANCE_PURCHASE_BASIS_V2=true;
 
 var BRAND='a36d4b4f-3ccc-4a78-8aeb-b868f0407ea4';
-var db=null,pack=null,observer=null,timer=0,patching=false,loading=false,loadedPeriod='';
+var db=null,pack=null,observer=null,timer=0,patching=false,loading=false,loadedPeriod='',requestSeq=0,syncing=false,lastReport=null,lastReportMarkup='';
 var MONTHS=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
 
 function n(v){v=Number(v);return isFinite(v)?v:0}
@@ -24,10 +24,10 @@ function ensureCss(){}
 
 function patchHealth(r){
   var h=r&&r.querySelector('.finv7-health');if(!h)return;
-  Array.prototype.slice.call(h.children).forEach(function(x){if(/Coverage HPP|Basis laporan/i.test(x.textContent||''))x.remove()});
+  Array.prototype.slice.call(h.children).forEach(function(x){if(/Coverage HPP|Basis laporan/i.test(x.textContent||'')&&!x.hasAttribute('data-finmg-basis'))x.remove()});
   var c=pack&&pack.purchase_control_current||{},match=c.finance_link_status==='MATCH';
-  var basis=h.querySelector('[data-finmg-basis]');if(!basis){basis=document.createElement('span');basis.setAttribute('data-finmg-basis','1');h.insertBefore(basis,h.firstChild)}basis.innerHTML='Basis laporan <b>Pembelian</b>';
-  var link=h.querySelector('[data-finmg-link]');if(!link){link=document.createElement('span');link.setAttribute('data-finmg-link','1');h.insertBefore(link,basis.nextSibling)}link.className=match?'':'warn';link.innerHTML='Purchase → Journal <b>'+(match?'MATCH':'CHECK')+'</b>';
+  var basis=h.querySelector('[data-finmg-basis]');if(!basis){basis=document.createElement('span');basis.setAttribute('data-finmg-basis','1');h.insertBefore(basis,h.firstChild)}if(basis.innerHTML!=='Basis laporan <b>Pembelian</b>')basis.innerHTML='Basis laporan <b>Pembelian</b>';
+  var link=h.querySelector('[data-finmg-link]');if(!link){link=document.createElement('span');link.setAttribute('data-finmg-link','1');h.insertBefore(link,basis.nextSibling)}var cls=match?'':'warn',html='Purchase → Journal <b>'+(match?'MATCH':'CHECK')+'</b>';if(link.className!==cls)link.className=cls;if(link.innerHTML!==html)link.innerHTML=html;
 }
 function patchNotesCards(report){
   Array.prototype.forEach.call(report.querySelectorAll('.finv7-note-card'),function(card){var s=card.querySelector('span'),b=card.querySelector('b');if(s&&/Status HPP/i.test(s.textContent||'')){s.textContent='Basis biaya';if(b)b.textContent='Pembelian · jurnal double-entry'}})
@@ -36,7 +36,7 @@ function patchNotesCards(report){
 function renderIncome(report){
   if(!pack)return;var c=pack.current||{},p=pack.previous||{},ctl=pack.purchase_control_current||{},match=ctl.finance_link_status==='MATCH',stockOk=ctl.stock_link_status==='OK';
   var curRev=n(c.revenue_sales)+n(c.other_income),prevRev=n(p.revenue_sales)+n(p.other_income);
-  report.innerHTML='<div class="fsv2-report-title"><div><small>HASNARIA TERRACE · LAPORAN MANAJEMEN</small><h2>Laba Rugi</h2><p>'+esc(monthLabel(pack.period))+' · komparatif '+esc(monthLabel(pack.previous_period))+'</p></div><span class="fsv2-badge '+(match?'':'warn')+'">Basis Pembelian · Jurnal</span></div>'+
+  var html='<div class="fsv2-report-title"><div><small>HASNARIA TERRACE · LAPORAN MANAJEMEN</small><h2>Laba Rugi</h2><p>'+esc(monthLabel(pack.period))+' · komparatif '+esc(monthLabel(pack.previous_period))+'</p></div><span class="fsv2-badge '+(match?'':'warn')+'">Basis Pembelian · Jurnal</span></div>'+
     '<div class="fsv2-kpis"><div class="fsv2-kpi"><span>Pendapatan</span><strong>'+esc(money(curRev))+'</strong></div><div class="fsv2-kpi"><span>Total Beban Pembelian</span><strong>'+esc(money(c.total_purchase_expense))+'</strong></div><div class="fsv2-kpi"><span>Laba / Rugi Bersih</span><strong>'+esc(money(c.profit_after_tax))+'</strong></div><div class="fsv2-kpi"><span>Relasi Purchase → Finance</span><strong>'+(match?'MATCH':'CHECK')+'</strong></div></div>'+
     '<div class="fsv2-pl"><div class="finv7-compare-head"><span>Akun</span><span>'+esc(monthLabel(pack.period))+'</span><span>'+esc(monthLabel(pack.previous_period))+'</span></div>'+
       row('Pendapatan Penjualan',c.revenue_sales,p.revenue_sales)+row('Pendapatan Lain-lain',c.other_income,p.other_income)+row('Jumlah Pendapatan',curRev,prevRev,'sub')+
@@ -49,25 +49,34 @@ function renderIncome(report){
     '<div class="finmg-note">Konsep aktif: nilai Pembelian dibebankan sekali melalui jurnal double-entry; kuantitas barang tetap dikelola di Stok. HPP tidak digunakan.</div>'+
     (n(ctl.provisional_journal_rows)>0?'<div class="finmg-note warn"><b>'+n(ctl.provisional_journal_rows).toLocaleString('id-ID')+' transaksi</b> belum memiliki sumber pembayaran final. Nilai beban tetap tercatat, tetapi akun lawan sementara harus direkonsiliasi sebelum tutup buku.</div>':'')+
     (!match?'<div class="finmg-note bad">Nilai Pembelian dan jurnal belum sama. Tutup buku tidak boleh dilakukan sampai delta menjadi Rp0.</div>':'');
+  if(lastReport!==report||lastReportMarkup!==html){report.innerHTML=html;lastReport=report;lastReportMarkup=html}
 }
 function patchReport(){
-  if(patching)return;var r=root();if(!r)return;patchHealth(r);var report=r.querySelector('.fsv2-report');if(!report)return;
+  if(patching||loadedPeriod!==selectedPeriod())return;var r=root();if(!r)return;patchHealth(r);var report=r.querySelector('.fsv2-report');if(!report)return;
   patching=true;try{if(incomeActive(r)&&pack)renderIncome(report);else patchNotesCards(report)}finally{patching=false}
 }
 async function load(force){
   if(!db||!isOwner())return;var p=selectedPeriod();if(!p||loading)return;
   if(!force&&pack&&loadedPeriod===p){patchReport();return}
-  loading=true;
-  try{var q=await db.rpc('get_finance_management_period_v1',{p_brand:BRAND,p_period:p});if(q.error)throw q.error;pack=q.data||null;loadedPeriod=p;setTimeout(patchReport,20)}catch(e){if(window.console&&console.warn)console.warn('Finance management purchase-journal:',e&&e.message?e.message:e)}finally{loading=false}
+  loading=true;var seq=++requestSeq,c=window.__HASNARIA_CONTEXT;
+  try{var q=await db.rpc('get_finance_management_period_v1',{p_brand:BRAND,p_period:p});if(q.error)throw q.error;if(seq!==requestSeq||p!==selectedPeriod()||c!==window.__HASNARIA_CONTEXT)return;pack=q.data||null;loadedPeriod=p;setTimeout(patchReport,20)}catch(e){if(window.console&&console.warn)console.warn('Finance management purchase-journal:',e&&e.message?e.message:e)}finally{loading=false;if((seq!==requestSeq||p!==selectedPeriod())&&selectedPeriod())schedule(false)}
 }
+function canSyncReport(){var h=host(),s=window.__HASNARIA_DATA_SYNC,modal=['finV6Modal','finP4Modal','finP4ActionModal','finP5Modal','finP5Reopen'].some(function(id){return!!document.getElementById(id)});return!!(isOwner()&&root()&&!modal&&s&&s.canRefresh(h,'#financeV6Period'))}
+async function syncReport(){
+  if(loading||syncing||!canSyncReport())return;var p=selectedPeriod();db=db||window.__HASNARIA_DB;if(!p||!db)return;
+  var seq=requestSeq,c=window.__HASNARIA_CONTEXT,r=root();syncing=true;
+  try{var q=await db.rpc('get_finance_management_period_v1',{p_brand:BRAND,p_period:p});if(q.error)throw q.error;if(seq!==requestSeq||loading||p!==selectedPeriod()||c!==window.__HASNARIA_CONTEXT||r!==root()||!canSyncReport())return;var next=q.data||null,changed=JSON.stringify(pack)!==JSON.stringify(next);pack=next;loadedPeriod=p;if(changed)patchReport()}finally{syncing=false}
+}
+function registerSync(){var s=window.__HASNARIA_DATA_SYNC;if(s)s.register('owner-finance-management',syncReport)}
+registerSync();window.addEventListener('hasnaria:data-sync-ready',registerSync);
 function schedule(force){ensureCss();clearTimeout(timer);timer=setTimeout(function(){patchReport();load(!!force)},80)}
 function boot(){
   db=window.__HASNARIA_DB||null;var tries=0;
   (function wait(){db=db||window.__HASNARIA_DB||null;var h=document.getElementById('ops');if(db&&h&&isOwner()){
     ensureCss();observer=new MutationObserver(function(){if(!patching&&root())schedule(false)});observer.observe(h,{childList:true,subtree:true});
-    document.addEventListener('change',function(e){if(e.target&&e.target.id==='financeV6Period'){pack=null;loadedPeriod='';schedule(true)}},true);
+    document.addEventListener('change',function(e){if(e.target&&e.target.id==='financeV6Period'){requestSeq++;pack=null;loadedPeriod='';schedule(true)}},true);
     document.addEventListener('click',function(e){var t=e.target&&e.target.closest?e.target.closest('[data-tab="ops"],[data-fin-view]'):null;if(t)setTimeout(function(){schedule(false)},120)},true);
-    window.addEventListener('hasnaria:finance-rebuilt',function(){pack=null;loadedPeriod='';schedule(true)});
+    window.addEventListener('hasnaria:finance-rebuilt',function(){requestSeq++;pack=null;loadedPeriod='';schedule(true)});
     schedule(true);return
   }if(tries++<150)setTimeout(wait,100)})()
 }

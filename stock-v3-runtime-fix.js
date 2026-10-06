@@ -57,7 +57,7 @@
     if(document.getElementById('hasnaria-stock-control-v3-canonical-js'))return;
     var s=document.createElement('script');
     s.id='hasnaria-stock-control-v3-canonical-js';
-    s.src='/stock-control-v3.js?v=7';
+    s.src='/stock-control-v3.js?v=8';
     s.async=false;
     s.onload=function(){
       setTimeout(markCanonical,0);

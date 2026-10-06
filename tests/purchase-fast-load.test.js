@@ -26,11 +26,11 @@ assert.match(analytics,/select\('source_period,item_name,total_amount,raw_data'\
 assert.doesNotMatch(analytics,/select\('id,source_period,source_file,row_no,purchase_date,item_name,quantity_text,unit_text,unit_price,total_amount,payment_method,notes,raw_data'\)/,
   'Purchase analytics must not fetch the previous wide history payload');
 
-assert.match(preload,/purchase-finance-alignment-v1\.js\?v=9/,
+assert.match(preload,/purchase-finance-alignment-v1\.js\?v=10/,
   'optimized canonical Purchase runtime must be cache-busted');
 assert.match(lazy,/purchase-analytics\.js\?v=4/,
   'optimized Purchase analytics runtime must be cache-busted');
-assert.match(app,/xlsx-preload\.js\?v=7/,
+assert.match(app,/xlsx-preload\.js\?v=8/,
   'Purchase preload entry runtime must be cache-busted');
 
 console.log('Purchase fast-load contract: PASS');

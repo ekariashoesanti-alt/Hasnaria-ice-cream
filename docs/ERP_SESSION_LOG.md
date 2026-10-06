@@ -226,3 +226,12 @@ Append-only working journal. Newest session goes at the top.
 
 ## 2026-09-18 — HSN-010 UI migration
 User scoped work to UI migration; Next.js deferred. Added navy responsive shell and bootstrap-v4 owner dashboard, lazy inventory/HPP/action/audit views. Preserved operational/auth/import code and Supabase. Fixed build style insertion scope with execution regression test. Existing build gate passed. Status REVIEW pending authenticated preview and production checks.
+## 2026-10-06 — HSN-011 sinkronisasi HP Owner/Staff dengan web
+
+Implementasi menggunakan RPC/view Supabase existing dan satu coordinator pembacaan aktif 30 detik, focus/online/visibility, serta sinyal perubahan tanpa data bisnis/token. Owner, Staff, Gudang, rekonsiliasi, dashboard, Penjualan, Pembelian, Keuangan, Administrasi, Stok, dan Operasional menjaga draft, dialog, bulan/tanggal, identitas sesi/root, dan respons stale. Polling tidak memanggil posting stok atau rebuild jurnal.
+
+Digabung dengan main terbaru sampai `2d9524d` (termasuk #81) untuk mempertahankan UI terbaru dan fast paths; CSS serta markup tampilan entrypoint identik dengan main. Public refresh hooks tetap tersedia, dengan satu coordinator sebelum modul. Tidak ada perubahan schema/data produksi.
+
+Validasi: 23 berkas tes lulus, syntax 117 JS + Sales multipart lulus, full `node scripts/vercel-build.js` lulus. Detail bukti dan batas verifikasi: `docs/MOBILE_WEB_SYNC_2026-10-06.md`.
+
+HSN-011 → REVIEW; belum DONE karena alur akun Owner/Staff asli dan angka produksi belum direkonsiliasi. Berikutnya: CI/preview PR dan rekonsiliasi akun uji pada target sebelum landing/produksi.

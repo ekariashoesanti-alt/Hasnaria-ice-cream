@@ -72,7 +72,7 @@ for (const task of data.tasks) {
   }
 }
 
-assert(appSource.includes("var OWNER_SHELL = '/owner-shell-guard.js?v=7';"), 'owner navigation guard cache version is current');
+assert(appSource.includes("var OWNER_SHELL = '/owner-shell-guard.js?v=8';"), 'owner navigation guard cache version is current');
 assert(!appSource.includes("load('/xlsx-preload.js?v=6');"), 'Purchase/XLSX must not load unconditionally at startup');
 assert(appSource.includes('window.__HASNARIA_LOAD_PURCHASE=ensurePurchaseRuntime'), 'Purchase runtime must be exposed as a lazy loader');
 assert(appSource.includes('window.__HASNARIA_LOAD_STOCK=ensureStockRuntime'), 'Stock runtime must be exposed as a lazy loader');
@@ -84,11 +84,11 @@ assert(accountManagerSource.includes('hamAccountSummary') && accountManagerSourc
 assert(accountManagerSource.includes("account_manager_list_v1") && accountManagerSource.includes("account_manager_upsert_v1") && accountManagerSource.includes("generate-account-link"), 'UI-7 account settings must preserve canonical account actions');
 assert(accountManagerCss.includes('.ham-summary') && accountManagerCss.includes('.ham-modal-backdrop'), 'UI-7 account summary/modal styles must be present');
 assert(staffV5Source.includes('PEGAWAI · DATA PER') && staffV5Source.includes("staff-detail-open"), 'UI-7 Staff portal must show employee snapshot and explicit detail overlay');
-assert(staffV5Source.includes("if(state.view==='login')await resumeStaff()") && staffV5Source.includes("if(state.view==='login'||state.view==='staff')render()"), 'Staff bootstrap must not rerender and wipe an active Owner login form');
+assert(staffV5Source.includes("if(sameContext(c))resumed=await resumeStaff()") && staffV5Source.includes("if(sameContext(c)||resumed)render()"), 'Staff bootstrap must not rerender and wipe an active Owner login form');
 assert(staffV5Source.includes("staff_pin_login") && staffV5Source.includes("staff_owner_save"), 'UI-7 Staff portal must preserve PIN login and owner save flows');
 assert(staffOwnerStableSource.includes('hso-ui7-summary') && staffOwnerStableSource.includes("data-hso-action=\"staff-detail\""), 'UI-7 Owner Mobile must use employee snapshot and isolated detail overlay');
 assert(!appSource.includes("load('/finance-purchase-basis-v1.js"), 'Finance management runtime must be lazy-owned by the Owner Finance shell');
-assert(appSource.includes("var SALES = '/sales-board.js?v=48';"), 'Sales lazy runtime cache version is current');
+assert(appSource.includes("var SALES = '/sales-board.js?v=49';"), 'Sales lazy runtime cache version is current');
 assert(appSource.includes('window.__HASNARIA_LOAD_SALES=ensureSalesRuntime'), 'Sales runtime must be exposed as a lazy loader');
 assert(!appSource.includes('purchase-inventory-status.js'), 'startup must not load the legacy 10k-row Purchase inventory helper');
 assert(!/function afterCore\(\)[\s\S]*?load\(SALES[,)]/.test(appSource), 'Sales must not be fetched unconditionally during application startup');
@@ -112,7 +112,7 @@ assert(p1LazyBootstrap.includes('get_ui_monthly_trend_v1') && p1LazyBootstrap.in
 
 assert(ownerShellSource.includes('window.__HASNARIA_OWNER_SHELL_BOOTSTRAPPED'), 'Owner executive guard must remain idempotent');
 assert(ownerShellSource.includes("var EXEC_SRC='/owner-executive-v1.js?v=1'"), 'Owner shell must load the executive one-view runtime');
-assert(ownerShellSource.includes("var DASH_SRC='/owner-dashboard-one-view.js?v=7'"), 'Owner shell must load the UI-6 dashboard cache');
+assert(ownerShellSource.includes("var DASH_SRC='/owner-dashboard-one-view.js?v=8'"), 'Owner shell must load the UI-6 dashboard cache');
 assert(dashboardSource.includes('__HASNARIA_DASHBOARD_UI6'), 'Dashboard UI-6 runtime marker must be present');
 assert(dashboardSource.includes('get_ui_dashboard_pack_v1') && dashboardSource.includes('p_months:18'), 'Dashboard UI-6 must use the bounded canonical dashboard RPC');
 assert(dashboardSource.includes('async function dashboardPack()') && dashboardSource.includes('statement timeout'), 'Dashboard UI-6 must retry one transient statement timeout without changing data semantics');
@@ -128,7 +128,7 @@ assert(!ownerShellSource.includes('event.stopImmediatePropagation();'), 'Owner g
 assert(ownerShellSource.includes('c.navigate=safeNavigate'), 'Owner context navigation must be redirected to executive safe navigation');
 assert(ownerShellSource.includes('if(++tries<80)setTimeout(boot,100)'), 'Owner executive bootstrap retry must stay bounded');
 assert(!ownerShellSource.includes('owner-finance-stock-v3.js'), 'Owner shell must not load the legacy Finance/Stock shell in executive mode');
-assert(ownerShellSource.includes("/administration-v1.js?v=5"), 'Owner shell must load the current Administrasi runtime cache');
+assert(ownerShellSource.includes("/administration-v1.js?v=6"), 'Owner shell must load the current Administrasi runtime cache');
 assert(administrationSource.includes('__HASNARIA_ADMIN_V2'), 'Administrasi UI-5 runtime marker must be present');
 assert(administrationSource.includes('window.__HASNARIA_ADMIN_V2={mount:mount}') && administrationSource.includes('window.__HASNARIA_ADMIN_V1=window.__HASNARIA_ADMIN_V2'), 'Administrasi UI-5 must expose V2 runtime with V1 compatibility alias');
 assert(administrationSource.includes('get_ui_period_catalog_fast_v1') && administrationSource.includes('ui_administration_overview_v1') && administrationSource.includes('ui_administration_category_chart_v1') && administrationSource.includes('ui_administration_detail_v1'), 'Administrasi must use fast period RPC plus canonical overview, category, and detail views');
@@ -137,7 +137,7 @@ assert(administrationCss.includes('.ad5-chart') && administrationCss.includes('.
 assert(!ownerShellSource.includes('finance-hpp-p3.js'), 'HPP workbench must not be loaded by Owner shell');
 assert(!/\.(?:from|insert|update|delete|rpc)\s*\(/.test(ownerShellSource), 'Owner navigation guard contains no database mutation/query path');
 
-assert(ownerFinanceStockSource.includes("finance-purchase-basis-v1.js?v=5"), 'Owner Finance shim must load Purchase-journal reporting v3');
+assert(ownerFinanceStockSource.includes("finance-purchase-basis-v1.js?v=6"), 'Owner Finance shim must load Purchase-journal reporting v3');
 assert(!purchaseBasisSource.includes("createElement('style')"), 'Finance runtime must not inject style elements under strict CSP');
 const financeAccuracySource = fs.readFileSync(path.join(root, 'finance-accuracy-v6.js'), 'utf8');
 assert(!financeAccuracySource.includes("createElement('style')") && !financeAccuracySource.includes('style="'), 'Finance reporting must use external CSS only');
@@ -168,7 +168,7 @@ assert(!salesBoardSource.includes('sales-hourly-chart.js'), 'Sales board must no
 assert(!purchasePreloadSource.includes('purchase-rankings-five.js'), 'legacy Purchase ranking patch must not load beside canonical Finance reconciliation');
 assert(!purchasePreloadSource.includes('purchase-chart-redesign.js'), 'legacy Purchase chart patch must not race the canonical Purchase DOM');
 assert(purchasePreloadSource.includes("purchase-finance-alignment-v1.css?v=5"), 'canonical Purchase layout cache version must be current');
-assert(purchasePreloadSource.includes("purchase-finance-alignment-v1.js?v=9"), 'canonical Purchase runtime cache version must be current');
+assert(purchasePreloadSource.includes("purchase-finance-alignment-v1.js?v=10"), 'canonical Purchase runtime cache version must be current');
 assert(!purchaseInventorySource.includes('pa-stock-grid'), 'Purchase inventory helper must not inject detailed Stock cards back into Pembelian');
 assert(!purchaseInventorySource.includes("querySelectorAll('.pa-lower-grid article')"), 'Purchase inventory helper must remain KPI-only');
 assert(purchaseFinanceCss.includes(':has(>#purchaseFinanceAlignment)'), 'Purchase canonical layout must activate only when reconciliation is present');
@@ -207,7 +207,7 @@ assert(canonicalPurchaseFinanceMigration.includes("'hpp','retired'"), 'managemen
 assert(operationalBridgeSource.includes("Object.defineProperty(window,'__HASNARIA_OPERATIONS_V1_MOUNT'"), 'Operasional bridge intercepts mount assignment for an idempotency guard');
 assert(operationalBridgeSource.includes("if(!force&&mounted())return"), 'observer-driven non-force Operasional mounts are skipped after the shell exists');
 assert(operationalBridgeSource.includes('__hasnariaOperationalMountGuard'), 'wrapped Operasional mount is marked to prevent duplicate wrapping');
-assert(operationalBridgeSource.includes("s.src='/operational-v1.js?v=4'"), 'Operasional runtime remains lazy-loaded only when needed');
+assert(operationalBridgeSource.includes("s.src='/operational-v1.js?v=5'"), 'Operasional runtime remains lazy-loaded only when needed');
 assert(operationalBridgeSource.includes("state.navObserver.observe(tabs,{childList:true})"), 'Operasional bridge observes only direct navigation child changes');
 assert(operationalBridgeSource.includes("state.mainObserver.observe(main,{childList:true})"), 'Operasional bridge observes only direct main-section child changes');
 assert(!operationalBridgeSource.includes("observe(document.body,{childList:true,subtree:true})"), 'Operasional bridge must not observe the entire document subtree');
