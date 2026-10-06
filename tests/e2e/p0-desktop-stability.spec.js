@@ -3,7 +3,7 @@ const { test, expect } = require('@playwright/test');
 const BASE_URL = process.env.HASNARIA_BASE_URL || 'https://hasnaria-business-analyzer.vercel.app';
 const EMAIL = process.env.HASNARIA_E2E_EMAIL || '';
 const PASSWORD = process.env.HASNARIA_E2E_PASSWORD || '';
-const TABS = ['dashboard', 'sales', 'pembelian', 'operasional', 'ops', 'stok'];
+const TABS = ['dashboard', 'sales', 'pembelian', 'operasional', 'administrasi', 'ops', 'stok'];
 
 function requireCredentials() {
   if (!EMAIL || !PASSWORD) throw new Error('HASNARIA_E2E_EMAIL and HASNARIA_E2E_PASSWORD are required.');
@@ -28,10 +28,10 @@ async function submitLogin(page) {
   } catch (error) {
     let authMessage = '';
     try { authMessage = (await page.locator('#authMsg').textContent()) || ''; } catch (_) {}
-    try { await password.fill(''); } catch (_) {}
+    try { await page.evaluate(() => { const el=document.getElementById('password'); if(el)el.value=''; }); } catch (_) {}
     throw new Error(`Owner login failed${authMessage ? `: ${authMessage}` : ''}`);
   }
-  try { await password.fill(''); } catch (_) {}
+  try { await page.evaluate(() => { const el=document.getElementById('password'); if(el)el.value=''; }); } catch (_) {}
 }
 
 async function login(page) {
@@ -44,9 +44,48 @@ async function login(page) {
   await expect(page.locator('[data-tab="dashboard"]')).toBeVisible({ timeout: 20000 });
 }
 
+async function assertDesktopOneView(page, id) {
+  const metrics = await page.evaluate((activeId) => {
+    const doc = document.documentElement;
+    const body = document.body;
+    const active = document.getElementById(activeId);
+    const rect = active && active.getBoundingClientRect();
+    const tolerance = 2;
+    return {
+      viewportWidth: window.innerWidth,
+      viewportHeight: window.innerHeight,
+      docWidth: Math.max(doc.scrollWidth, body ? body.scrollWidth : 0),
+      docHeight: Math.max(doc.scrollHeight, body ? body.scrollHeight : 0),
+      activeRight: rect ? rect.right : null,
+      activeBottom: rect ? rect.bottom : null,
+      activeClientWidth: active ? active.clientWidth : null,
+      activeScrollWidth: active ? active.scrollWidth : null,
+      activeClientHeight: active ? active.clientHeight : null,
+      activeScrollHeight: active ? active.scrollHeight : null,
+      horizontalOverflow: Math.max(doc.scrollWidth, body ? body.scrollWidth : 0) > window.innerWidth + tolerance,
+      verticalOverflow: Math.max(doc.scrollHeight, body ? body.scrollHeight : 0) > window.innerHeight + tolerance,
+      activeEscapesRight: !!rect && rect.right > window.innerWidth + tolerance,
+      activeEscapesBottom: !!rect && rect.bottom > window.innerHeight + tolerance,
+      activeWidthOverflow: !!active && active.scrollWidth > active.clientWidth + tolerance,
+      activeHeightOverflow: !!active && active.scrollHeight > active.clientHeight + tolerance,
+    };
+  }, id);
+
+  expect(metrics.horizontalOverflow, `${id} horizontal overflow: ${JSON.stringify(metrics)}`).toBe(false);
+  expect(metrics.verticalOverflow, `${id} vertical overflow: ${JSON.stringify(metrics)}`).toBe(false);
+  expect(metrics.activeEscapesRight, `${id} active surface escapes right: ${JSON.stringify(metrics)}`).toBe(false);
+  expect(metrics.activeEscapesBottom, `${id} active surface escapes bottom: ${JSON.stringify(metrics)}`).toBe(false);
+  expect(metrics.activeWidthOverflow, `${id} active section width overflow: ${JSON.stringify(metrics)}`).toBe(false);
+  expect(metrics.activeHeightOverflow, `${id} active section height overflow: ${JSON.stringify(metrics)}`).toBe(false);
+}
+
 async function waitCanonicalSurface(page, id) {
   if (id === 'dashboard') {
-    await expect(page.locator('#dashboard')).not.toHaveClass(/hidden/);
+    await expect(page.locator('#dashboard .hx6-shell')).toBeVisible({ timeout: 20000 });
+    await expect(page.locator('#dashboard .hx-error')).toHaveCount(0);
+    await expect(page.locator('#hx6Period option')).not.toHaveCount(0);
+    await expect(page.locator('#dashboard .hx6-status-list')).toContainText('POSTED');
+    await expect(page.locator('#dashboard .hx6-bars [style]')).toHaveCount(0);
     return;
   }
   if (id === 'sales') {
@@ -54,19 +93,25 @@ async function waitCanonicalSurface(page, id) {
     return;
   }
   if (id === 'pembelian') {
-    await expect(page.locator('#pembelian #paRoot')).toBeVisible({ timeout: 20000 });
+    await expect(page.locator('#pembelian #purchaseFinanceAlignment')).toBeVisible({ timeout: 20000 });
     return;
   }
   if (id === 'operasional') {
     await expect(page.locator('#operasional [data-operational-v1="1"]')).toBeVisible({ timeout: 20000 });
     return;
   }
+  if (id === 'administrasi') {
+    await expect(page.locator('[data-tab="administrasi"]')).toHaveClass(/on/);
+    await expect(page.locator('#administrasi .ad5-shell')).toBeVisible({ timeout: 20000 });
+    return;
+  }
   if (id === 'ops') {
     await expect(page.locator('#ops [data-finance-v6="1"]')).toBeVisible({ timeout: 20000 });
+    await expect(page.locator('#hasnaria-finance-emkm-css,#finance-management-v3-css')).toHaveCount(0);
     return;
   }
   if (id === 'stok') {
-    await expect(page.locator('#stok .sc3-shell')).toBeVisible({ timeout: 20000 });
+    await expect(page.locator('#stok .sc4-main-grid')).toBeVisible({ timeout: 20000 });
   }
 }
 
@@ -74,10 +119,17 @@ test('P0 desktop: repeated Owner tab cycle stays single-surface and duplicate-fr
   test.setTimeout(120000);
   const pageErrors = [];
   const consoleErrors = [];
+  const httpErrors = [];
 
   page.on('pageerror', error => pageErrors.push(String(error && error.message ? error.message : error)));
   page.on('console', msg => {
-    if (msg.type() === 'error') consoleErrors.push(msg.text());
+    if (msg.type() === 'error') {
+      const loc = msg.location && msg.location();
+      consoleErrors.push(msg.text() + (loc && loc.url ? ' @ ' + loc.url : ''));
+    }
+  });
+  page.on('response', response => {
+    if (response.status() >= 400) httpErrors.push(response.status() + ' ' + response.url());
   });
 
   await login(page);
@@ -106,6 +158,9 @@ test('P0 desktop: repeated Owner tab cycle stays single-surface and duplicate-fr
       await tab.click();
       await expect(page.locator(`#${id}`)).not.toHaveClass(/hidden/);
       await waitCanonicalSurface(page, id);
+      if (round === 0) {
+        await assertDesktopOneView(page, id);
+      }
 
       const state = await page.evaluate((tabs) => {
         const visible = tabs.filter(name => {
@@ -122,6 +177,8 @@ test('P0 desktop: repeated Owner tab cycle stays single-surface and duplicate-fr
           operationalRoots: document.querySelectorAll('#operasional [data-operational-v1="1"]').length,
           financeRoots: document.querySelectorAll('#ops [data-finance-v6="1"]').length,
           stockRoots: document.querySelectorAll('#stok .sc3-shell').length,
+          adminRoots: document.querySelectorAll('#administrasi .ad5-shell').length,
+          dashboardRoots: document.querySelectorAll('#dashboard .hx6-shell').length,
         };
       }, TABS);
 
@@ -131,6 +188,8 @@ test('P0 desktop: repeated Owner tab cycle stays single-surface and duplicate-fr
       expect(state.operationalRoots).toBeLessThanOrEqual(1);
       expect(state.financeRoots).toBeLessThanOrEqual(1);
       expect(state.stockRoots).toBeLessThanOrEqual(1);
+      expect(state.adminRoots).toBeLessThanOrEqual(1);
+      expect(state.dashboardRoots).toBeLessThanOrEqual(1);
     }
   }
 
@@ -142,5 +201,64 @@ test('P0 desktop: repeated Owner tab cycle stays single-surface and duplicate-fr
 
   expect(invalidFrames, `Frames with zero/multiple Owner surfaces: ${JSON.stringify(invalidFrames.slice(0, 10))}`).toEqual([]);
   expect(pageErrors, `Uncaught page errors: ${pageErrors.join(' | ')}`).toEqual([]);
+  expect(httpErrors, `HTTP errors: ${httpErrors.join(' | ')}`).toEqual([]);
   expect(consoleErrors, `Console errors: ${consoleErrors.join(' | ')}`).toEqual([]);
+});
+
+
+test('UI-7 desktop: Account Settings opens snapshot then detail without mutation', async ({ page }) => {
+  test.setTimeout(90000);
+  const pageErrors = [];
+  page.on('pageerror', error => pageErrors.push(String(error && error.message ? error.message : error)));
+
+  await login(page);
+  await expect(page.locator('#hasnariaAccountMenuBtn')).toBeVisible({ timeout: 20000 });
+  await page.locator('#hasnariaAccountMenuBtn').click();
+  await expect(page.locator('#hasnariaAccountSettings')).toBeVisible();
+  await page.locator('#hasnariaAccountSettings').click();
+
+  await expect(page.locator('#hasnariaAccountPage')).toHaveClass(/open/, { timeout: 15000 });
+  await expect(page.locator('#hamAccountSummary')).toBeVisible({ timeout: 20000 });
+  await expect(page.locator('#hamOpenDetails')).toBeVisible();
+  await page.locator('#hamOpenDetails').click();
+  await expect(page.locator('#hamDetailModal')).not.toHaveClass(/hidden/);
+  await expect(page.locator('#hasnariaAccountList')).toBeVisible();
+  await page.locator('#hamCloseDetails').click();
+  await expect(page.locator('#hamDetailModal')).toHaveClass(/hidden/);
+
+  expect(pageErrors, `Unexpected Account Settings page errors: ${pageErrors.join(' | ')}`).toEqual([]);
+});
+
+test('UI-7 mobile Owner: Pegawai snapshot opens stable detail overlay', async ({ page }) => {
+  test.setTimeout(90000);
+  const pageErrors = [];
+  page.on('pageerror', error => pageErrors.push(String(error && error.message ? error.message : error)));
+
+  requireCredentials();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(new URL('/staff/', BASE_URL).toString(), { waitUntil: 'domcontentloaded', timeout: 45000 });
+  await expect(page.locator('[data-act="owner-open"]').first()).toBeVisible({ timeout: 20000 });
+  await page.locator('[data-act="owner-open"]').first().click();
+
+  const ownerLogin = page.locator('[data-act="owner-login"]');
+  if (await ownerLogin.count()) {
+    await expect(page.locator('#oemail')).toBeVisible();
+    await page.locator('#oemail').fill(EMAIL);
+    await page.locator('#opass').fill(PASSWORD);
+    await ownerLogin.click();
+  }
+
+  await expect(page.locator('#hsoShell')).toBeVisible({ timeout: 30000 });
+  await expect(page.locator('#hasnariaMobileOverlay')).toHaveCount(0);
+  await expect(page.locator('#hasnariaMobileNav')).toHaveCount(0);
+  const employeeNav = page.locator('#hsoNav [data-hso-nav="users"]');
+  await expect(employeeNav).toHaveCount(1);
+  await employeeNav.click();
+  await expect(page.locator('.hso-ui7-summary')).toBeVisible();
+  await page.locator('[data-hso-action="staff-detail"]').click();
+  await expect(page.locator('#hsoEditor')).toBeVisible();
+  await expect(page.locator('#hsoEditor .hso-person-list')).toBeVisible();
+  await page.locator('#hsoEditor [data-hso-action="cancel-edit"]').click();
+
+  expect(pageErrors, `Unexpected Owner Mobile page errors: ${pageErrors.join(' | ')}`).toEqual([]);
 });

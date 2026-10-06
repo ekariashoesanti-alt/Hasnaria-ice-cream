@@ -51,6 +51,8 @@ function fixture(file, exports, tab) {
         select(fields, options) { query.fields = fields; query.options = options; return builder; },
         order() { return builder; }, limit(limit) { query.limit = limit; return builder; },
         eq(key, value) { query.filters.push([key, value]); return builder; },
+        gte(key, value) { (query.bounds ||= []).push(['gte', key, value]); return builder; },
+        lt(key, value) { (query.bounds ||= []).push(['lt', key, value]); return builder; },
         range(from, to) { query.range = [from, to]; return builder; },
         then(yes, no) {
           queries.push(clone(query));
@@ -81,7 +83,16 @@ function fixture(file, exports, tab) {
     localStorage: { length: 0 }, MutationObserver: function() { this.observe = () => {}; },
     setTimeout() { return 1; },
     async fetch(url, options) {
-      const [table, query] = url.split('/rest/v1/')[1].split('?');
+      const resource = url.split('/rest/v1/')[1];
+      if (resource.startsWith('rpc/')) {
+        const rpc = resource.slice(4), args = JSON.parse(options.body);
+        queries.push({ rpc, method: options.method, args });
+        const handler = handlers.get(rpc);
+        assert.ok(handler, 'expected read RPC ' + rpc);
+        const data = await handler(args);
+        return { ok: true, json: async () => clone(data) };
+      }
+      const [table, query] = resource.split('?');
       queries.push({ table, method: options.method || 'GET', query: Object.fromEntries(new URLSearchParams(query)) });
       const handler = handlers.get(table);
       assert.ok(handler, 'expected GET ' + table);
@@ -115,6 +126,7 @@ function stockFixture() {
     ['inventory_recipe_components', 'recipes'], ['ui_stock_activity_chart_v1', 'activity'], ['ui_stock_detail_v1', 'ledger']
   ]) f.handlers.set(table, () => clone(data[value]));
   f.handlers.set('ui_stock_overview_v1', () => [clone(data.overview)]);
+  f.handlers.set('get_ui_period_catalog_fast_v1', () => clone(data.periods));
   f.handlers.set('purchase_order_items', () => []);
   f.api.render(); f.data = data;
   return f;
@@ -125,7 +137,7 @@ function operationsFixture() {
   const run = { id: 'run-a', run_type: 'stock_opname', title: 'Opname', scheduled_date: '2026-10-01', status: 'in_progress', updated_at: 'old' };
   const items = [{ id: 'item-26', label: 'Susu', item_type: 'stock_count', numeric_value: 10, notes: '', expected_qty: 9 }];
   const data = { runs: [run], selected: run, items, total: 80 };
-  Object.assign(f.api.state, { loaded: true, runs: clone(data.runs), activeRun: clone(run), items: clone(items), itemPage: 2, itemTotal: 80 });
+  Object.assign(f.api.state, { loaded: true, periods: ['2026-10'], period: '2026-10', runs: clone(data.runs), activeRun: clone(run), items: clone(items), itemPage: 2, itemTotal: 80 });
   f.handlers.set('operational_runs', query => ({ data: clone(query.filters.length ? [data.selected] : data.runs), error: null }));
   f.handlers.set('operational_run_items', () => ({ data: clone(data.items), count: data.total, error: null }));
   f.api.render(); f.data = data;
@@ -161,7 +173,13 @@ async function main() {
   assert.equal(stock.api.S.items[0].balance_qty, 5);
   assert.equal(stock.api.S.period, '2026-10', 'newest catalog entry does not select a different period');
   assert.equal(stock.api.S.category, 'Bahan'); assert.equal(stock.api.S.page, 2); assert.equal(stock.api.S.modal, 'position');
-  assert.ok(stock.queries.every(query => query.method === 'GET'), 'background stock refresh only performs GET reads');
+  assert.ok(stock.queries.every(query => query.method === 'GET' || query.rpc === 'get_ui_period_catalog_fast_v1'), 'background stock refresh only performs GET reads and the authorized read-only period RPC');
+  assert.ok(stock.queries.some(query => query.rpc === 'get_ui_period_catalog_fast_v1' && query.args.p_module === 'stok'), 'stock refresh retains the fast module-specific period catalog');
+  assert.ok(!stock.queries.some(query => query.table === 'ui_period_catalog_v1'), 'stock synchronization avoids the monolithic period catalog');
+  stock.data.periods = [{ period_start: '2026-11-01' }];
+  await stock.api.syncRefresh();
+  assert.equal(stock.api.S.period, '2026-10', 'a removed catalog entry cannot relabel the stock snapshot');
+  assert.ok(stock.api.S.periods.some(period => String(period.period_start || period.period_key).slice(0, 7) === '2026-10'), 'the stock dropdown keeps an option for its selected snapshot');
   stock.api.S.modal = 'ledger'; stock.api.S.ledger = clone(stock.data.ledger); stock.api.S.ledgerPage = 2;
   stock.data.ledger[0].qty_delta = 3;
   await stock.api.syncRefresh();
@@ -173,10 +191,13 @@ async function main() {
   assert.equal(operations.api.state.activeRun.status, 'submitted');
   assert.equal(operations.api.state.items[0].numeric_value, 12); assert.equal(operations.api.state.itemPage, 2);
   assert.ok(operations.queries.every(query => !query.rpc), 'background operations refresh performs SELECT reads only');
+  assert.ok(operations.queries.filter(query => query.table === 'operational_runs' && query.bounds).every(query => JSON.stringify(query.bounds) === JSON.stringify([['gte', 'scheduled_date', '2026-10-01'], ['lt', 'scheduled_date', '2026-11-01']])), 'operation header refresh respects the selected month');
   assert.ok(operations.queries.filter(q => q.table === 'operational_run_items').every(q => q.range.join(',') === '25,49'));
   operations.data.runs = [];
   await operations.api.syncRefresh();
   assert.equal(operations.api.state.activeRun.id, 'run-a', 'opened run stays selected outside the latest 30 headers');
+  assert.equal(operations.api.state.period, '2026-10');
+  assert.ok(operations.api.state.periods.includes('2026-10'), 'the selected operations month stays visible after its catalog entry disappears');
 
   // Failures, a navigation change, or a new edit during reads keep the last successful view.
   for (const f of [stock, operations]) {

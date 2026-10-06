@@ -8,10 +8,10 @@
 
   var PAGE_SIZE=25;
   var state={
-    runs:[],loading:false,error:'',loaded:false,
+    runs:[],periods:[],period:'',loading:false,error:'',loaded:false,
     activeRun:null,items:[],itemPage:1,itemTotal:0,itemLoading:false,itemError:'',
     createOpen:false,members:[],membersLoading:false,membersLoaded:false,membersError:'',
-    busy:false,notice:'',actionError:'',itemSaves:0,loadSeq:0,itemSeq:0,viewSeq:0,syncSeq:0
+    busy:false,notice:'',actionError:'',itemSaves:0,loadSeq:0,itemSeq:0,viewSeq:0,syncSeq:0,syncing:false
   };
 
   function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
@@ -21,7 +21,11 @@
   function context(){return window.__HASNARIA_CONTEXT||{}}
   function isOwner(){return context().role==='owner'}
   function today(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+  var MONTHS=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
   function fmtDate(v){if(!v)return'—';var p=String(v).slice(0,10).split('-');return p.length===3?Number(p[2])+'/'+Number(p[1])+'/'+p[0]:v}
+  function monthLabel(v){var s=String(v||'').slice(0,7),m=Number(s.slice(5,7));return /^\d{4}-\d{2}$/.test(s)&&m>=1&&m<=12?MONTHS[m-1]+' '+s.slice(0,4):'Bulan belum tersedia'}
+  function nextMonth(v){var s=String(v||'').slice(0,7),y=Number(s.slice(0,4)),m=Number(s.slice(5,7));if(!y||!m)return'';m++;if(m>12){m=1;y++}return y+'-'+String(m).padStart(2,'0')+'-01'}
+  function periodOptions(){var ps=state.periods.length?state.periods:[state.period||today().slice(0,7)];return ps.map(function(p){return '<option value="'+esc(p)+'"'+(p===state.period?' selected':'')+'>'+esc(monthLabel(p))+'</option>'}).join('')}
   function statusLabel(s){return{draft:'Draft',in_progress:'Dikerjakan',submitted:'Menunggu Review',approved:'Disetujui',rejected:'Perlu Koreksi',closed:'Ditutup'}[s]||s||'—'}
   function typeLabel(t){return{stock_opname:'Stock Opname',opening:'Opening',closing:'Closing',hygiene:'Hygiene',equipment:'Peralatan',custom:'Operasional'}[t]||t||'Operasional'}
   function editable(r){return!!(r&&['draft','in_progress','rejected'].indexOf(r.status)>=0)}
@@ -84,7 +88,7 @@
   function render(){
     var h=host();if(!h)return;css();var c=counts();
     state.viewSeq++;
-    h.innerHTML='<div class="op1-shell" data-operational-v1="1"><div class="op1-head"><div><div class="op1-eyebrow">OPERASIONAL</div><h2>Pelaksanaan & Kontrol Harian</h2><p>Daftar pekerjaan ringan; anggota tim dan detail opname hanya dimuat saat dibutuhkan.</p></div><div class="op1-head-actions">'+(isOwner()?'<button type="button" class="op1-new" data-op-action="new-opname">+ Stock Opname</button>':'')+'<button type="button" class="op1-refresh" data-op-action="refresh">↻ Refresh</button></div></div>'+
+    h.innerHTML='<div class="op1-shell" data-operational-v1="1"><div class="op1-head"><div><div class="op1-eyebrow">OPERASIONAL · '+esc(monthLabel(state.period))+'</div><h2>Pelaksanaan & Kontrol Harian</h2><p>Daftar pekerjaan ringan; anggota tim dan detail opname hanya dimuat saat dibutuhkan.</p></div><div class="op1-head-actions"><label class="op1-month"><span>Bulan</span><select id="op1Month" data-month-filter="operasional">'+periodOptions()+'</select></label>'+(isOwner()?'<button type="button" class="op1-new" data-op-action="new-opname">+ Stock Opname</button>':'')+'<button type="button" class="op1-refresh" data-op-action="refresh">↻ Refresh</button></div></div>'+
       '<div class="op1-kpis"><div><span>Aktif</span><strong>'+c.open+'</strong></div><div><span>Menunggu Review</span><strong>'+c.review+'</strong></div><div><span>Selesai</span><strong>'+c.done+'</strong></div></div>'+
       (state.notice?'<div class="op1-notice">'+esc(state.notice)+'</div>':'')+(state.actionError?'<div class="op1-alert">'+esc(state.actionError)+'</div>':'')+(state.error?'<div class="op1-alert">'+esc(state.error)+'</div>':'')+(state.loading&&!state.loaded?'<div class="op1-loading">Memuat daftar pekerjaan…</div>':'')+
       renderCreate()+'<div class="op1-grid"><section><div class="op1-section-title"><strong>Pekerjaan terbaru</strong><span>Maks. 30 run</span></div>'+renderRunList()+'</section>'+renderDetails()+'</div>'+
@@ -92,20 +96,34 @@
     bind(h);
   }
 
-  async function loadRuns(keepId){
+  function periodList(rows){var seen={};(rows||[]).forEach(function(x){var p=String(x.scheduled_date||'').slice(0,7);if(/^\d{4}-\d{2}$/.test(p))seen[p]=1});return Object.keys(seen).sort().reverse()}
+  function readPeriods(d){return d.from('operational_runs').select('scheduled_date').order('scheduled_date',{ascending:false}).limit(500)}
+  async function loadPeriods(seq){
+    var d=db();if(!d)return;
+    var q=await readPeriods(d);
+    if(seq!==state.loadSeq)return;
+    if(q.error)throw q.error;
+    state.periods=periodList(q.data);
+    if(!state.period||state.periods.indexOf(state.period)<0)state.period=state.periods[0]||today().slice(0,7);
+  }
+
+  async function loadRuns(keepId,refreshPeriods){
     if(state.loading)return;var d=db();if(!d){state.error='Sesi database belum siap.';render();return}
     var seq=++state.loadSeq;
     state.loading=true;state.error='';if(!state.loaded)render();
     try{
-      var q=await readRuns(d);
+      if(!state.periods.length||refreshPeriods)await loadPeriods(seq);
       if(seq!==state.loadSeq)return;
+      var period=state.period,q=await readRuns(d,period);
+      if(seq!==state.loadSeq||period!==state.period)return;
       if(q.error)throw q.error;state.runs=q.data||[];state.loaded=true;
       var id=keepId||(state.activeRun&&state.activeRun.id),same=id&&state.runs.find(function(x){return x.id===id});
       if(same)state.activeRun=same;else if(id){state.activeRun=null;state.items=[];state.itemTotal=0}
     }catch(e){if(seq===state.loadSeq)state.error=e&&e.message?e.message:String(e)}finally{if(seq===state.loadSeq){state.loading=false;render()}}
   }
 
-  function readRuns(d){return d.from('operational_runs').select('id,run_type,title,scheduled_date,status,priority,assigned_to,review_notes,submitted_at,reviewed_at,updated_at').order('scheduled_date',{ascending:false}).order('updated_at',{ascending:false}).limit(30)}
+  function readRuns(d,period){var from=period+'-01',to=nextMonth(period);return d.from('operational_runs').select('id,run_type,title,scheduled_date,status,priority,assigned_to,review_notes,submitted_at,reviewed_at,updated_at').gte('scheduled_date',from).lt('scheduled_date',to).order('scheduled_date',{ascending:false}).order('updated_at',{ascending:false}).limit(30)}
+  function readRun(d,id){return d.from('operational_runs').select('id,run_type,title,scheduled_date,status,priority,assigned_to,review_notes,submitted_at,reviewed_at,updated_at').eq('id',id).limit(1)}
   function readItems(d,runId,page){var from=(page-1)*PAGE_SIZE,to=from+PAGE_SIZE-1;return d.from('operational_run_items').select('id,item_order,label,item_type,required,inventory_item_id,expected_qty,bool_value,numeric_value,text_value,notes,completed_at',{count:'exact'}).eq('run_id',runId).order('item_order',{ascending:true}).range(from,to)}
 
   async function loadMembers(){
@@ -125,28 +143,31 @@
     }catch(e){if(seq===state.itemSeq)state.itemError=e&&e.message?e.message:String(e)}finally{if(seq===state.itemSeq){state.itemLoading=false;render()}}
   }
 
-  function syncContext(){return JSON.stringify([state.loadSeq,state.itemSeq,state.viewSeq,state.activeRun&&state.activeRun.id,state.itemPage,state.createOpen,context()])}
-  function canSync(){var sync=window.__HASNARIA_DATA_SYNC;return!!(sync&&db()&&active()&&state.loaded&&!state.loading&&!state.itemLoading&&!state.membersLoading&&!state.busy&&!state.itemSaves&&!state.createOpen&&sync.canRefresh(host()))}
+  function syncContext(){return JSON.stringify([state.loadSeq,state.itemSeq,state.viewSeq,state.period,state.activeRun&&state.activeRun.id,state.itemPage,state.createOpen,context()])}
+  function canSync(){var sync=window.__HASNARIA_DATA_SYNC;return!!(sync&&db()&&active()&&state.loaded&&!!state.period&&!state.loading&&!state.itemLoading&&!state.membersLoading&&!state.busy&&!state.itemSaves&&!state.createOpen&&sync.canRefresh(host(),'#op1Month'))}
   async function syncRefresh(){
-    if(!canSync())return;
-    var seq=++state.syncSeq,key=syncContext(),d=db(),runId=state.activeRun&&state.activeRun.id,page=state.itemPage;
+    if(state.syncing||!canSync())return;
+    var seq=++state.syncSeq,key=syncContext(),d=db(),period=state.period,runId=state.activeRun&&state.activeRun.id,page=state.itemPage,c=context(),h=host(),root=h.querySelector('[data-operational-v1="1"]');state.syncing=true;
+    function valid(){return seq===state.syncSeq&&key===syncContext()&&d===db()&&c===context()&&h===host()&&root===h.querySelector('[data-operational-v1="1"]')&&canSync()}
     try{
-      var reads=[readRuns(d)];if(runId)reads.push(readItems(d,runId,page));
+      var reads=[readRuns(d,period),readPeriods(d)];if(runId)reads.push(readItems(d,runId,page));
       var results=await Promise.all(reads);
       if(results.some(function(q){return q.error}))return;
-      if(seq!==state.syncSeq||key!==syncContext()||d!==db()||!canSync())return;
+      if(!valid())return;
       var runs=results[0].data||[],selected=runId?runs.find(function(r){return r.id===runId}):null;
       if(runId&&!selected){
-        var currentRun=await readRuns(d).eq('id',runId).limit(1);
-        if(currentRun.error||seq!==state.syncSeq||key!==syncContext()||d!==db()||!canSync())return;
+        var currentRun=await readRun(d,runId);
+        if(currentRun.error||!valid())return;
         selected=currentRun.data&&currentRun.data[0];
       }
-      var items=selected&&results[1]?results[1].data||[]:[],total=selected&&results[1]?results[1].count||0:0;
-      var next=[runs,selected||null,items,total,'',''];
-      var current=[state.runs,state.activeRun,state.items,state.itemTotal,state.error,state.itemError];
+      var periods=periodList(results[1].data),items=selected&&results[2]?results[2].data||[]:[],total=selected&&results[2]?results[2].count||0:0;
+      if(periods.indexOf(period)<0)periods=periods.concat([period]).sort().reverse();
+      var next=[runs,selected||null,items,total,'','',periods];
+      var current=[state.runs,state.activeRun,state.items,state.itemTotal,state.error,state.itemError,state.periods];
       if(JSON.stringify(next)===JSON.stringify(current))return;
-      state.runs=runs;state.activeRun=selected||null;state.items=items;state.itemTotal=total;state.error='';state.itemError='';render();
+      state.runs=runs;state.periods=periods;state.activeRun=selected||null;state.items=items;state.itemTotal=total;state.error='';state.itemError='';render();
     }catch(_){/* Keep the last successful view and retry on the next freshness signal. */}
+    finally{state.syncing=false}
   }
   function registerSync(){if(window.__HASNARIA_DATA_SYNC)window.__HASNARIA_DATA_SYNC.register('operational-v1',syncRefresh)}
 
@@ -160,7 +181,7 @@
     state.busy=true;clearAction();render();
     try{
       var q=await db().rpc('create_stock_opname_run',{p_assigned_to:assignee.value,p_scheduled_date:date.value,p_title:title.value.trim()||'Stock Opname'});
-      if(q.error)throw q.error;notifyChange();var id=q.data;state.createOpen=false;state.notice='Stock Opname berhasil dibuat. Isi hitungan fisik per item, lalu kirim untuk review.';await loadRuns(id);if(id)await openRun(id);
+      if(q.error)throw q.error;notifyChange();var id=q.data;state.period=String(date.value||today()).slice(0,7);state.createOpen=false;state.notice='Stock Opname berhasil dibuat. Isi hitungan fisik per item, lalu kirim untuk review.';await loadRuns(id,true);if(id)await openRun(id);
     }catch(e){state.actionError=e&&e.message?e.message:String(e)}finally{state.busy=false;render()}
   }
 
@@ -214,8 +235,9 @@
   }
 
   function bind(h){
+    h.onchange=function(e){if(e.target&&e.target.id==='op1Month'){state.period=String(e.target.value||'').slice(0,7);state.loadSeq++;state.itemSeq++;state.syncSeq++;state.loading=false;state.itemLoading=false;state.activeRun=null;state.items=[];state.itemTotal=0;state.itemPage=1;clearAction();loadRuns();}};
     h.onclick=function(e){var b=e.target&&e.target.closest?e.target.closest('button'):null;if(!b)return;var action=b.getAttribute('data-op-action');
-      if(action==='refresh'){clearAction();loadRuns();return}
+      if(action==='refresh'){clearAction();loadRuns(null,true);return}
       if(action==='new-opname'){state.createOpen=true;clearAction();render();loadMembers();return}
       if(action==='close-create'){state.createOpen=false;clearAction();render();return}
       if(action==='confirm-create'){createRun();return}

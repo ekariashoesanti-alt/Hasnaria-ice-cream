@@ -20,7 +20,7 @@ function selectedPeriod(){var e=document.getElementById('financeV6Period');retur
 function incomeActive(r){return!!(r&&r.querySelector('[data-fin-view="income"].on'))}
 function row(label,cur,prev,cls,negative){return'<div class="finv7-row '+(cls||'')+'"><span>'+esc(label)+'</span><strong>'+(negative?'-':'')+esc(money(cur))+'</strong><strong>'+(negative?'-':'')+esc(money(prev))+'</strong></div>'}
 function pill(text,cls){return'<span class="finmg-pill '+(cls||'')+'">'+esc(text)+'</span>'}
-function ensureCss(){if(document.getElementById('finance-management-v3-css'))return;var s=document.createElement('style');s.id='finance-management-v3-css';s.textContent='.finmg-control{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:10px 0}.finmg-control>div{border:1px solid #e0ebe6;border-radius:11px;padding:9px 10px;background:#fafcfb}.finmg-control b{display:block;font-size:9.5px;color:#315e4f;margin-bottom:4px}.finmg-control span{font-size:9px;color:#687d74}.finmg-pill{display:inline-block!important;border-radius:999px;padding:3px 6px!important;font-size:8.5px!important;font-weight:900!important;background:#eef3f1;color:#52675f}.finmg-pill.ok{background:#e7f7ef;color:#176b55}.finmg-pill.warn{background:#fff6dc;color:#8a6615}.finmg-pill.bad{background:#fff0f0;color:#a13d3d}.finmg-note{margin-top:9px;border-radius:10px;padding:8px 10px;font-size:9.5px;line-height:1.5;background:#eef8f4;color:#315e4f}.finmg-note.warn{background:#fff8df;color:#735710}.finmg-note.bad{background:#fff0f0;color:#973d3d}@media(max-width:760px){.finmg-control{grid-template-columns:1fr}}';document.head.appendChild(s)}
+function ensureCss(){}
 
 function patchHealth(r){
   var h=r&&r.querySelector('.finv7-health');if(!h)return;

@@ -9,6 +9,7 @@ const owner = fs.readFileSync(path.join(ROOT, 'staff-owner-stable-v1.js'), 'utf8
 const ownerCss = fs.readFileSync(path.join(ROOT, 'staff-owner-stable-v1.css'), 'utf8');
 const entry = fs.readFileSync(path.join(ROOT, 'staff-owner-entry-v1.js'), 'utf8');
 const compat = fs.readFileSync(path.join(ROOT, 'staff-owner-compat-v1.js'), 'utf8');
+const mobileShell = fs.readFileSync(path.join(ROOT, 'staff-mobile-shell-v1.js'), 'utf8');
 const manifest = fs.readFileSync(path.join(ROOT, 'staff.webmanifest'), 'utf8');
 const serviceWorker = fs.readFileSync(path.join(ROOT, 'staff-sw.js'), 'utf8');
 
@@ -23,7 +24,8 @@ function assertOwnerEntry(name, source) {
   assert.ok(entryScript > stableScript && entryScript < legacyRenderer, `${name}: Owner entry bridge must intercept before legacy staff-v5 renderer`);
   assert.ok(stableScript < legacyRenderer, `${name}: Owner stable renderer must load before legacy staff-v5 renderer`);
   assert.ok(compatScript > legacyRenderer && compatScript < workflow, `${name}: Owner compatibility sentinel must load after legacy renderer and before workflow observers`);
-  assert.ok(source.includes('/staff-owner-stable-v1.css?v=2'), `${name}: Owner stable stylesheet v2 must be loaded`);
+  assert.ok(source.includes('/staff-owner-stable-v1.css?v=3'), `${name}: Owner stable stylesheet v3 must be loaded`);
+  assert.ok(source.includes('/staff-mobile-shell-v1.js?v=3'), `${name}: mobile shell v3 must yield to Owner stable handoff`);
   assert.ok(source.includes('/staff-mobile-stability-v2.css?v=1'), `${name}: mobile stability stylesheet must be loaded`);
 }
 
@@ -50,6 +52,9 @@ assert.ok(entry.includes("act==='owner-login'"), 'Owner entry bridge must interc
 assert.ok(entry.includes('triggerStable()'), 'Owner entry bridge must activate stable shell directly');
 assert.ok(compat.includes("className='owner-mobile-nav'"), 'Compatibility sentinel must preserve legacy Owner detection');
 assert.ok(compat.includes('sentinel.hidden=true'), 'Compatibility sentinel must have zero visual layout output');
+assert.ok(mobileShell.includes('function ownerLoginVisible()'), 'Mobile shell must recognize Owner login as a login state, not an authenticated Owner state');
+assert.ok(mobileShell.includes('function stableOwnerHandoff()'), 'Mobile shell must detect the stable Owner handoff sentinel');
+assert.ok(mobileShell.includes('if(stableOwnerHandoff())'), 'Mobile enhancer must stand down once stable Owner handoff begins');
 assert.match(manifest, /"start_url"\s*:\s*"\/staff\/\?source=pwa"/, 'PWA must continue to enter through /staff/');
 assert.match(manifest, /"scope"\s*:\s*"\/staff\/"/, 'PWA scope must stay on /staff/');
 assert.ok(serviceWorker.includes("const CACHE_NAME='hasnaria-staff-pwa-v3'"), 'PWA cache must rotate after Owner Mobile cutover');

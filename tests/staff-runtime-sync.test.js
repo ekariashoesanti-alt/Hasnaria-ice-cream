@@ -206,6 +206,27 @@ function staffFixture() {
 }
 
 async function staffCases() {
+  const bootstrap = browserFixture(), directory = deferred();
+  bootstrap.run('data-sync.js', 'canRefresh');
+  const bootstrapApi = bootstrap.run('staff-v5.js', 'state,start,ownerOpen');
+  bootstrap.handlers.set('staff_login_directory', () => directory.promise);
+  bootstrap.window.supabase.createClient().auth.getSession = async () => ({ data: { session: null }, error: null });
+  const starting = bootstrapApi.start();
+  await tick();
+  await bootstrapApi.ownerOpen();
+  const email = bootstrap.document.getElementById('oemail');
+  const password = bootstrap.document.getElementById('opass');
+  email.value = 'owner@example.test';
+  password.value = 'unsaved login input';
+  const loginWrites = bootstrap.root.writes;
+  directory.resolve([{ employee_id: 'employee-a', full_name: 'Staff A' }]);
+  await starting;
+  assert.equal(bootstrapApi.state.view, 'owner-login', 'late staff directory cannot leave the Owner login');
+  assert.equal(bootstrap.root.writes, loginWrites, 'bootstrap does not replace an active Owner login form');
+  assert.equal(bootstrap.document.getElementById('oemail'), email);
+  assert.equal(password.value, 'unsaved login input');
+  assert.equal(bootstrap.calls.some(call => call.name === 'staff_session_info'), false, 'bootstrap cannot resume Staff after opening Owner login');
+
   const unchanged = staffFixture();
   const content = unchanged.root.querySelector('.staff-content');
   const header = unchanged.root.querySelector('.staff-top');
@@ -347,6 +368,12 @@ async function staffCases() {
   assert.equal(input.value, 'Focused draft');
   assert.equal(ownerContent.querySelector('button'), focusedButton);
   owner.document.activeElement = null;
+  assert.match(owner.root.innerHTML, /ui7-staff-overview/, 'latest Pegawai overview markup remains present');
+  owner.document.emit('click', owner.root.querySelector('[data-act="staff-detail-open"]'));
+  assert.equal(owner.api.state.employeeDetailOpen, true);
+  const detailModal = owner.root.querySelector('.ui7-staff-modal');
+  await owner.api.syncRefresh();
+  assert.equal(owner.root.querySelector('.ui7-staff-modal'), detailModal, 'silent refresh preserves an opened employee detail modal');
   owner.api.state.edit = { employee_id: 'employee-a', full_name: 'Owner draft', modules: ['absensi'], staff_active: true, pin_set: true };
   owner.api.render();
   const name = owner.document.getElementById('ename');
@@ -354,6 +381,9 @@ async function staffCases() {
   await owner.api.syncRefresh();
   assert.equal(owner.document.getElementById('ename'), name);
   assert.equal(name.value, 'Unsaved owner edit', 'active owner editor remains intact');
+  owner.document.emit('click', owner.root.querySelector('[data-act="staff-detail-close"]'));
+  assert.equal(owner.api.state.employeeDetailOpen, false);
+  assert.equal(owner.root.querySelector('.ui7-staff-modal'), null);
 
   const coalesced = staffFixture();
   const session = deferred();

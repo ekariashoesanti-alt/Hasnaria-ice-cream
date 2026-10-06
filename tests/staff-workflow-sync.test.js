@@ -8,6 +8,7 @@ const instrumented = source.replace(/\}\)\(\);\s*$/, `window.__workflowTest = {
   loadContext, openWorkflow, loadDay, closeOverlay, refreshWorkflow,
   openSupervisor, openSupervisorDetail, closeSupervisor, loadSupervisor,
   mutateDay, mutateSupervisor, submitDay,
+  addStock, updateLastQty,
   context: function () { return context; },
   state: function () { return overlayState; }
 }; })();`);
@@ -65,6 +66,7 @@ function harness() {
   const defaults = {
     staff_session_context_v2: [contextRow], staff_daily_context_v1: dayRow,
     staff_inventory_options_v1: [{ inventory_item_id: 'ice', item_name: 'Ice', ledger_qty: 1, unit: 'kg' }],
+    staff_stock_opname_history_v1: [{ inventory_item_id: 'ice', item_name: 'Ice', physical_qty: 3, opname_date: '2026-10-02', unit: 'kg' }],
     staff_supervisor_queue_v1: [{ batch_id: 'batch-a', full_name: 'Staff A', status: 'submitted' }],
     staff_supervisor_batch_detail_v1: { batch_id: 'batch-a', full_name: 'Staff A', status: 'submitted' }
   };
@@ -89,6 +91,7 @@ function harness() {
     api: window.__workflowTest, document, calls, handlers, defaults, callbacks,
     token(value) { sessionToken = value; }, block(value) { blocked = value; },
     time(value) { currentTime = Date.parse(value); },
+    field(id, value) { const field = new Element(); field.id = id; field.value = value; document.getElementById('hswOverlay').appendChild(field); return field; },
     notifications: () => notifications
   };
 }
@@ -127,6 +130,32 @@ test('Gudang refresh refetches cached inventory quantities', async () => {
   await h.api.loadDay('gudang', true);
   assert.equal(h.api.state().inventory[0].ledger_qty, 8);
   assert.equal(h.calls.filter(x => x.name === 'staff_inventory_options_v1').length, 2);
+});
+
+test('Gudang refresh updates opname history and preserves the current quantity flow from main', async () => {
+  const h = harness(); h.defaults.staff_daily_context_v1 = { ...dayRow, is_supervisor: true };
+  await h.api.loadContext(true); await h.api.openWorkflow('gudang');
+  const host = h.document.getElementById('hswOverlay');
+  assert(host.innerHTML.includes('Qty saat ini')); assert(!host.innerHTML.includes('hswSType'));
+  assert(host.innerHTML.includes('Riwayat Stok Opname'));
+  const item = h.field('hswSItem', 'ice'), quantity = h.field('hswSQty', ''), notes = h.field('hswSNotes', '');
+  h.api.updateLastQty(); assert.equal(quantity.value, 3); assert.equal(quantity.placeholder, 'Qty terakhir');
+  assert(notes.value.includes('2026-10-02'));
+  quantity.value = '7'; notes.value = 'Physical count'; h.block(true);
+  const historyCalls = h.calls.filter(call => call.name === 'staff_stock_opname_history_v1').length;
+  await h.api.loadDay('gudang', true);
+  assert.equal(h.calls.filter(call => call.name === 'staff_stock_opname_history_v1').length, historyCalls);
+  assert.equal(quantity.value, '7', 'unsaved physical quantity stays attached');
+  await h.api.addStock();
+  const write = h.calls.find(call => call.name === 'staff_daily_add_stock_v1');
+  assert.equal(write.args.p_inventory_item_id, item.value);
+  assert.equal(write.args.p_movement_type, 'OPNAME_CORRECTION'); assert.equal(write.args.p_qty_delta, 7);
+  assert.equal(write.args.p_date, '2026-10-03'); assert.equal(h.api.state().msg, 'Kuantitas stok hari ini disimpan.');
+  h.defaults.staff_stock_opname_history_v1 = [{ inventory_item_id: 'ice', item_name: 'Ice', physical_qty: 9, opname_date: '2026-10-03', unit: 'kg' }];
+  h.block(false); await h.api.loadDay('gudang', true);
+  assert.equal(h.api.state().opnameHistory[0].physical_qty, 9);
+  const latestQuantity = h.field('hswSQty', ''), latestNotes = h.field('hswSNotes', ''); h.field('hswSItem', 'ice');
+  h.api.updateLastQty(); assert.equal(latestQuantity.value, 9); assert(latestNotes.value.includes('2026-10-03'));
 });
 
 test('old token context cannot replace a new staff context', async () => {

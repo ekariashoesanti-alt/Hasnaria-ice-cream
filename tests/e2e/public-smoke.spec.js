@@ -27,3 +27,17 @@ test('Public production login shell renders across core viewport widths', async 
 
   expect(pageErrors, `Unexpected browser page errors: ${pageErrors.join(' | ')}`).toEqual([]);
 });
+
+
+test('Public Staff portal renders without browser errors on mobile', async ({ page }) => {
+  const pageErrors = [];
+  page.on('pageerror', error => pageErrors.push(String(error && error.message ? error.message : error)));
+  await page.setViewportSize({ width: 390, height: 844 });
+
+  const response = await page.goto(new URL('/staff/', BASE_URL).toString(), { waitUntil: 'domcontentloaded', timeout: 45000 });
+  expect(response).not.toBeNull();
+  expect(response.status()).toBeLessThan(400);
+  await expect(page.locator('#staffRoot .staff-shell')).toBeVisible({ timeout: 20000 });
+  await expect(page.locator('[data-act="owner-open"]').first()).toBeVisible();
+  expect(pageErrors, `Unexpected Staff portal page errors: ${pageErrors.join(' | ')}`).toEqual([]);
+});

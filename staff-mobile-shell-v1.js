@@ -12,9 +12,11 @@
   function shell(){return q('#staffRoot .staff-shell');}
   function overlay(){return q('#hasnariaMobileOverlay');}
   function mobileNav(){return q('#hasnariaMobileNav');}
-  function isOwner(){return !!q('.owner-mobile-nav') || /Owner Mobile/i.test(text(q('.staff-brand-copy b')));}
+  function stableOwnerHandoff(){return !!q('#hsoShell')||!!q('[data-hso-entry-sentinel="1"]');}
+  function ownerLoginVisible(){return !!q('[data-act="owner-login"]')||!!(q('#oemail')&&q('#opass'));}
+  function isOwner(){return !ownerLoginVisible()&&(!!q('.owner-mobile-nav')||/Owner Mobile/i.test(text(q('.staff-brand-copy b'))));}
   function isStaff(){return !!q('.staff-nav');}
-  function isLogin(){return !isOwner()&&!isStaff();}
+  function isLogin(){return ownerLoginVisible()||(!isOwner()&&!isStaff());}
 
   function icon(name){
     var path={
@@ -219,7 +221,8 @@
 
   function enhance(){
     scheduled=false;
-    if(!shell()||isLogin()){var n=mobileNav();if(n)n.remove();return;}
+    if(stableOwnerHandoff()){removeOverlay();var stableNav=mobileNav();if(stableNav)stableNav.remove();return;}
+    if(!shell()||isLogin()){removeOverlay();var n=mobileNav();if(n)n.remove();return;}
     clearShellClasses();
     if(isOwner()){
       captureOwner();

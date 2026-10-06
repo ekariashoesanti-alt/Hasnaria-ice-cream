@@ -31,8 +31,9 @@ function harness() {
         html = value; el.writes++;
         if (id === 'staffRoot') {
           for (const key of ['hsoShell', 'hsoContent', 'hsoEditor', 'hsoNav', 'hsoMessage']) elements[key] = element(key);
+          elements.hsoEditor.hidden = true;
         }
-        if (id === 'hsoContent' && value.includes('id="hsoSupervisor"')) {
+        if (value.includes('id="hsoSupervisor"')) {
           elements.hsoSupervisor = element('hsoSupervisor');
           const selected = value.match(/<option value="([^"]*)" selected/);
           elements.hsoSupervisor.value = selected ? selected[1] : '';
@@ -91,21 +92,28 @@ function harness() {
     };
     for (const callback of listeners.click || []) callback({ target, preventDefault() {} });
   }
-  return { elements, data, control, calls, refresh: () => callbacks['owner-mobile']('test'), click };
+  function detailMarkup() {
+    click('data-hso-action', 'staff-detail');
+    const markup = elements.hsoEditor.innerHTML;
+    click('data-hso-action', 'cancel-edit');
+    return markup;
+  }
+  return { elements, data, control, calls, refresh: () => callbacks['owner-mobile']('test'), click, detailMarkup };
 }
 
 (async () => {
   const h = harness();
   await flush();
   h.click('data-hso-nav', 'users');
-  assert.match(h.elements.hsoContent.innerHTML, /Alice/);
+  assert.match(h.elements.hsoContent.innerHTML, /Detail Pegawai/);
+  assert.match(h.detailMarkup(), /Alice/);
   const rootWrites = h.elements.staffRoot.writes, initialWrites = h.elements.hsoContent.writes;
   const shell = h.elements.hsoShell, nav = h.elements.hsoNav;
   await h.refresh();
   assert.equal(h.elements.hsoContent.writes, initialWrites, 'identical database reads must not rerender');
   h.data.staff_owner_list[0].full_name = 'Alice updated on web';
   await h.refresh();
-  assert.match(h.elements.hsoContent.innerHTML, /Alice updated on web/);
+  assert.match(h.detailMarkup(), /Alice updated on web/);
   assert.equal(h.elements.staffRoot.writes, rootWrites, 'background refresh must preserve root markup');
   assert.equal(h.elements.hsoShell, shell);
   assert.equal(h.elements.hsoNav, nav, 'bottom navigation keeps its DOM instance');
@@ -119,13 +127,21 @@ function harness() {
   assert.equal(h.elements.hsoName.value, 'Unsaved mobile name');
   assert.equal(h.elements.hsoContent.writes, beforeEditorWrites);
   h.click('data-hso-action', 'cancel-edit');
-  h.control.canRefresh = false;
+  h.click('data-hso-action', 'staff-detail');
+  const detailWrites = h.elements.hsoEditor.writes, detailCalls = h.calls.length;
   h.elements.hsoSupervisor.value = 'unsaved-choice';
   await h.refresh();
-  assert.equal(h.elements.hsoSupervisor.value, 'unsaved-choice', 'coordinator form guard preserves Supervisor selection');
+  assert.equal(h.calls.length, detailCalls, 'latest Detail Pegawai modal defers background reads');
+  assert.equal(h.elements.hsoEditor.writes, detailWrites, 'detail modal keeps its DOM');
+  assert.equal(h.elements.hsoSupervisor.value, 'unsaved-choice', 'detail modal guard preserves Supervisor selection');
+  h.click('data-hso-action', 'cancel-edit');
+  h.control.canRefresh = false;
+  const unsafeCalls = h.calls.length;
+  await h.refresh();
+  assert.equal(h.calls.length, unsafeCalls, 'coordinator draft guard defers reads');
   h.control.canRefresh = true;
   await h.refresh();
-  assert.match(h.elements.hsoContent.innerHTML, /Another web edit/);
+  assert.match(h.detailMarkup(), /Another web edit/);
 
   h.control.readGate = deferred();
   h.data.staff_owner_list[0].full_name = 'Single flight';
@@ -138,11 +154,11 @@ function harness() {
   h.control.readGate.resolve();
   await first;
   assert.equal(h.elements.hsoName.value, 'Draft while request in flight');
-  assert.doesNotMatch(h.elements.hsoContent.innerHTML, /Single flight/, 'editor opened during fetch prevents applying response');
   h.control.readGate = null;
   h.click('data-hso-action', 'cancel-edit');
+  assert.doesNotMatch(h.detailMarkup(), /Single flight/, 'editor opened during fetch prevents applying response');
   await h.refresh();
-  assert.match(h.elements.hsoContent.innerHTML, /Single flight/, 'deferred change appears after editor closes');
+  assert.match(h.detailMarkup(), /Single flight/, 'deferred change appears after editor closes');
 
   h.click('data-hso-edit', 'alice');
   h.elements.hsoName.value = 'Saved mobile name';
@@ -161,7 +177,7 @@ function harness() {
   h.control.writeGate = null;
   h.click('data-hso-action', 'cancel-edit');
   await h.refresh();
-  assert.match(h.elements.hsoContent.innerHTML, /Saved mobile name/);
+  assert.match(h.detailMarkup(), /Saved mobile name/);
 
   const race = harness();
   await flush();
@@ -174,12 +190,12 @@ function harness() {
   race.elements.hsoName.value = 'Newer mutation';
   race.click('data-hso-action', 'save-user');
   await flush();
-  assert.match(race.elements.hsoContent.innerHTML, /Newer mutation/);
+  assert.match(race.detailMarkup(), /Newer mutation/);
   const afterMutation = race.elements.hsoContent.writes;
   staleGate.resolve();
   await staleRefresh;
   assert.equal(race.elements.hsoContent.writes, afterMutation, 'older read cannot overwrite a completed own mutation');
-  assert.match(race.elements.hsoContent.innerHTML, /Newer mutation/);
+  assert.match(race.detailMarkup(), /Newer mutation/);
 
   const failure = harness();
   await flush();
@@ -191,7 +207,7 @@ function harness() {
   failure.control.failReads = false;
   failure.data.staff_owner_list[0].full_name = 'Recovered';
   await failure.refresh();
-  assert.match(failure.elements.hsoContent.innerHTML, /Recovered/);
+  assert.match(failure.detailMarkup(), /Recovered/);
 
   const external = harness();
   await flush();

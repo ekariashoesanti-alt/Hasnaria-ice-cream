@@ -109,3 +109,19 @@ textarea{resize:vertical}
 @media(min-width:430px){.staff-content{padding-left:20px;padding-right:20px}}
 @media(max-width:420px){.attendance-time-big{font-size:46px}.attendance-action-row,.attendance-form-grid,.attendance-summary-grid{grid-template-columns:1fr}.attendance-detail-times{grid-template-columns:1fr}.approval-card-head{align-items:center}.approval-current{display:grid}.approval-current b{text-align:left}}
 @media(max-width:360px){.staff-brand img{width:98px}.staff-brand-copy span{display:none}.staff-content{padding-left:12px;padding-right:12px}.staff-card{padding:15px}.owner-checks{grid-template-columns:1fr}.attendance-menu-card{grid-template-columns:48px 1fr 16px;padding:15px 14px}.attendance-menu-icon{width:48px;height:48px;font-size:20px}.attendance-illustration{height:230px}}
+
+
+/* UI-7 Pegawai snapshot + detail overlay */
+.ui7-staff-overview{position:relative}
+.ui7-staff-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:14px 0}
+.ui7-staff-kpis>div{min-width:0;border:1px solid var(--line);border-radius:14px;background:#f8fbfa;padding:10px 11px}
+.ui7-staff-kpis span,.ui7-staff-kpis small{display:block}.ui7-staff-kpis span{font-size:9px;font-weight:900;letter-spacing:.04em;text-transform:uppercase;color:#74827c}.ui7-staff-kpis strong{display:block;margin:4px 0 2px;font-size:20px;color:var(--green)}.ui7-staff-kpis small{font-size:8.5px;color:#87938d}
+.ui7-staff-detail-btn{max-width:240px;margin-top:2px}
+.ui7-staff-modal-backdrop{position:fixed;inset:0;z-index:120;display:grid;place-items:center;background:rgba(10,29,23,.48);padding:18px}
+.ui7-staff-modal{width:min(820px,96vw);max-height:90vh;overflow:auto;background:#fff;border:1px solid var(--line);border-radius:20px;box-shadow:0 24px 70px rgba(0,0,0,.22);padding:16px}
+.ui7-staff-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding-bottom:10px;border-bottom:1px solid var(--line)}
+.ui7-staff-modal-head h2{margin:2px 0 4px;font-size:20px}.ui7-staff-modal-head p{margin:0;max-width:580px;color:var(--muted);font-size:11px;line-height:1.45}
+.ui7-staff-close{width:38px;height:38px;min-height:38px;border:0;border-radius:999px;background:#eef4f1;color:var(--green);font-size:21px;line-height:1}
+.ui7-staff-add{max-width:190px;margin-top:12px}
+.ui7-staff-modal .owner-list{margin-top:10px}.ui7-staff-modal>.staff-card{margin-top:12px;box-shadow:none}
+@media(max-width:650px){.ui7-staff-kpis{grid-template-columns:1fr 1fr}.ui7-staff-detail-btn{max-width:none}.ui7-staff-modal-backdrop{padding:7px}.ui7-staff-modal{width:100%;max-height:95vh;border-radius:16px;padding:12px}.ui7-staff-add{max-width:none}}

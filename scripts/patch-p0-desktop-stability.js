@@ -11,7 +11,7 @@ function patch(name,fn){let s=fs.readFileSync(fp(name),'utf8');s=fn(s);save(name
 patch('owner-shell-guard.js',s=>{
  s=one(s,"var state={active:'dashboard',initialized:false,scheduled:false,salesRetries:0,finStockLoad:null,operationalLoad:null,adminLoad:null,dashboardLoad:null};","var state={active:'dashboard',initialized:false,scheduled:false,salesRetries:0,finStockLoad:null,operationalLoad:null,adminLoad:null,dashboardLoad:null,navEpoch:0};",'owner state');
  const old=`  function safeNavigate(id){\n    if(!isOwner()||OWNER_TABS.indexOf(id)<0)return false;\n    state.active=id;state.initialized=true;state.salesRetries=0;setExecutiveFlag(id==='dashboard');setVisibility(id);patchContext();\n    if(id==='dashboard')ensureDashboard();\n    if(id==='sales')ensureSales();\n    if(id==='pembelian')ensurePurchase();\n    if(id==='operasional')ensureOperational(true);\n    if(id==='administrasi')ensureAdministration(true);\n    if(id==='ops')ensureFinance(true);\n    if(id==='stok')ensureStock(true);\n    return true;\n  }`;
- const neu=`  function safeNavigate(id){\n    if(!isOwner()||OWNER_TABS.indexOf(id)<0)return false;\n    var epoch=++state.navEpoch;\n    state.active=id;state.initialized=true;state.salesRetries=0;setExecutiveFlag(id==='dashboard');setVisibility(id);patchContext();\n    try{document.dispatchEvent(new CustomEvent('hasnaria:owner-tab-change',{detail:{tab:id,epoch:epoch}}))}catch(_){}\n    if(id==='dashboard')ensureDashboard();\n    if(id==='sales')ensureSales();\n    if(id==='pembelian')ensurePurchase();\n    if(id==='operasional')ensureOperational(true);\n    if(id==='ops')ensureFinance(true);\n    if(id==='stok')ensureStock(true);\n    return true;\n  }`;
+ const neu=`  function safeNavigate(id){\n    if(!isOwner()||OWNER_TABS.indexOf(id)<0)return false;\n    var epoch=++state.navEpoch;\n    state.active=id;state.initialized=true;state.salesRetries=0;setExecutiveFlag(id==='dashboard');setVisibility(id);patchContext();\n    try{document.dispatchEvent(new CustomEvent('hasnaria:owner-tab-change',{detail:{tab:id,epoch:epoch}}))}catch(_){}\n    if(id==='dashboard')ensureDashboard();\n    if(id==='sales')ensureSales();\n    if(id==='pembelian')ensurePurchase();\n    if(id==='operasional')ensureOperational(true);\n    if(id==='administrasi')ensureAdministration(true);\n    if(id==='ops')ensureFinance(true);\n    if(id==='stok')ensureStock(true);\n    return true;\n  }`;
  s=one(s,old,neu,'owner navigation');
  s=one(s,"window.__HASNARIA_OWNER_SHELL={navigate:safeNavigate,isOwner:isOwner,getActive:function(){return state.active},reconcile:reconcile};","window.__HASNARIA_OWNER_SHELL={navigate:safeNavigate,isOwner:isOwner,getActive:function(){return state.active},getEpoch:function(){return state.navEpoch},isCurrent:function(tab,epoch){return isOwner()&&state.active===tab&&(epoch==null||state.navEpoch===epoch)},reconcile:reconcile};",'owner lifecycle api');
  return s;
@@ -29,7 +29,8 @@ patch('purchase-lazy-loader.js',s=>one(s,
 
 patch('purchase-finance-alignment-v1.js',s=>{
  if(s.includes('__HASNARIA_PURCHASE_FINANCE_ALIGNMENT_V12')){
-  for(const marker of ['requestSeq=0','ui_period_catalog_v1','ui_purchase_overview_v1','data-pfa-detail-open','if(loading){if(force)requestSeq++;return}','seq!==requestSeq'])if(!s.includes(marker))throw new Error('purchase UI-3 stability marker missing: '+marker);
+  for(const marker of ['requestSeq=0','get_ui_period_catalog_fast_v1',"p_module:'pembelian'",'get_purchase_control_period_v1','data-pfa-detail-open','if(loading){if(force)requestSeq++;return}','seq!==requestSeq'])if(!s.includes(marker))throw new Error('purchase UI-3 stability marker missing: '+marker);
+  for(const slow of ['ui_period_catalog_v1','ui_purchase_overview_v1','ui_purchase_category_chart_v1'])if(s.includes(slow))throw new Error('purchase UI-3 slow path survived: '+slow);
   return s;
  }
  s=one(s,"var db=null,rows=[],control={},loading=false,error='',observer=null,timer=0,loadedAt=0,loadedPeriod='',syncingStock=false,lastStockSync='',category='all';","var db=null,rows=[],control={},loading=false,error='',observer=null,timer=0,loadedAt=0,loadedPeriod='',syncingStock=false,lastStockSync='',category='all',requestSeq=0;",'purchase seq');
@@ -51,9 +52,15 @@ patch('operational-v1.js',s=>{
 });
 
 patch('finance-accuracy-v6.js',s=>{
- const a="function ensureRoot(){var h=getHost();if(!h||h.classList.contains('hidden'))return null;var r=h.querySelector('[data-finance-v6=\"1\"]');if(r)return r;h.innerHTML='<div class=\"fsv2-shell finv7-root\" data-finance-v6=\"1\"><div class=\"fsv2-report\" style=\"min-height:220px;display:grid;place-items:center\"><span class=\"finv7-spinner\"></span></div></div>';return h.querySelector('[data-finance-v6=\"1\"]')}";
- const b="function ensureRoot(){var h=getHost();if(!h||h.classList.contains('hidden'))return null;var r=h.querySelector('[data-finance-v6=\"1\"]');if(r)return r;var boot=h.querySelector('[data-finance-boot=\"1\"]');if(boot){boot.className='fsv2-shell finv7-root';boot.removeAttribute('data-finance-boot');boot.setAttribute('data-finance-v6','1');boot.innerHTML='<div class=\"fsv2-report\" style=\"min-height:220px;display:grid;place-items:center\"><span class=\"finv7-spinner\"></span></div>';return boot}h.innerHTML='<div class=\"fsv2-shell finv7-root\" data-finance-v6=\"1\"><div class=\"fsv2-report\" style=\"min-height:220px;display:grid;place-items:center\"><span class=\"finv7-spinner\"></span></div></div>';return h.querySelector('[data-finance-v6=\"1\"]')}";
- return one(s,a,b,'finance boot reuse');
+ const markers=[
+   "var boot=h.querySelector('[data-finance-boot=\"1\"]')",
+   "boot.removeAttribute('data-finance-boot')",
+   "boot.setAttribute('data-finance-v6','1')",
+   'finv7-loading-panel'
+ ];
+ for(const marker of markers)if(!s.includes(marker))throw new Error('finance stable CSP boot marker missing: '+marker);
+ if(s.includes('style="min-height:220px;display:grid;place-items:center"'))throw new Error('finance CSP-unsafe loading style survived');
+ return s;
 });
 
 patch('stock-v3-runtime-fix.js',s=>one(s,
@@ -63,12 +70,14 @@ patch('stock-v3-runtime-fix.js',s=>one(s,
 
 patch('stock-control-v3.js',s=>{
  if(s.includes('__HASNARIA_STOCK_UI4')){
-  for(const marker of ['ui_period_catalog_v1','ui_stock_overview_v1','ui_stock_activity_chart_v1','ui_stock_detail_v1','data-sc4-modal="ledger"','data-sc4-action="opname"','shell.setAttribute(\'data-stock-v4\',\'1\')'])if(!s.includes(marker))throw new Error('Stock UI-4 stability marker missing: '+marker);
+  for(const marker of ['get_ui_period_catalog_fast_v1','ui_stock_overview_v1','ui_stock_activity_chart_v1','ui_stock_detail_v1','data-sc4-modal="ledger"','data-sc4-action="opname"','shell.setAttribute(\'data-stock-v4\',\'1\')'])if(!s.includes(marker))throw new Error('Stock UI-4 stability marker missing: '+marker);
   return s;
  }
  const a=`    host.__sc3Rendering = true;\n    var alert = S.error ? '<div class="sc3-alert">' + esc(S.error) + '</div>' : '';\n    var loading = S.baseLoading && !S.baseLoaded ? '<div class="sc3-loading">Memuat data utama persediaan…</div>' : '';\n    var refresh = S.baseLoading && S.baseLoaded ? '<div class="sc3-auxbar"><span class="sc3-pulse"></span>Memperbarui data utama tanpa mengosongkan tabel…</div>' : '';\n    host.innerHTML = '<div class="sc3-shell">' + renderHeader() + alert + loading + (S.baseLoaded ? refresh + renderFormula() + renderAuxState() + renderFilters() + renderTable() + renderNotes() : '') + '</div>';\n    bind(host);\n    host.__sc3Rendering = false;`;
  const b=`    host.__sc3Rendering = true;\n    var shell = host.querySelector('.sc3-shell,[data-stock-v3-boot="1"]');\n    if (!shell) { shell = document.createElement('div'); host.replaceChildren(shell); }\n    shell.className = 'sc3-shell'; shell.removeAttribute('data-stock-v3-boot'); shell.setAttribute('data-stock-v4','1');\n    var alert = S.error ? '<div class="sc3-alert">' + esc(S.error) + '</div>' : '';\n    var loading = S.baseLoading && !S.baseLoaded ? '<div class="sc3-loading">Memuat data utama persediaan…</div>' : '';\n    var refresh = S.baseLoading && S.baseLoaded ? '<div class="sc3-auxbar"><span class="sc3-pulse"></span>Memperbarui data utama tanpa mengosongkan tabel…</div>' : '';\n    shell.innerHTML = renderHeader() + alert + loading + (S.baseLoaded ? refresh + renderFormula() + renderAuxState() + renderFilters() + renderTable() + renderNotes() : '');\n    bind(host);\n    host.__sc3Rendering = false;`;
  return one(s,a,b,'stock stable root');
 });
+
+if(!fs.readFileSync(fp('owner-shell-guard.js'),'utf8').includes("if(id==='administrasi')ensureAdministration(true);"))throw new Error('P0 owner navigation lost Administrasi mount');
 
 console.log('P0 desktop stability: PASS');

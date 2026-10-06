@@ -73,7 +73,7 @@
   function mount(force){
     if(typeof window.__HASNARIA_OPERATIONS_V1_MOUNT==='function'){window.__HASNARIA_OPERATIONS_V1_MOUNT({force:!!force});return}
     if(state.load){state.load.then(function(){if(state.active&&typeof window.__HASNARIA_OPERATIONS_V1_MOUNT==='function')window.__HASNARIA_OPERATIONS_V1_MOUNT({force:!!force})});return}
-    state.load=new Promise(function(resolve){var s=document.createElement('script');s.id='hasnaria-operational-role-runtime';s.src='/operational-v1.js?v=4';s.async=true;s.onload=resolve;s.onerror=function(){state.load=null;resolve()};document.head.appendChild(s)});
+    state.load=new Promise(function(resolve){var s=document.createElement('script');s.id='hasnaria-operational-role-runtime';s.src='/operational-v1.js?v=5';s.async=true;s.onload=resolve;s.onerror=function(){state.load=null;resolve()};document.head.appendChild(s)});
     state.load.then(function(){if(state.active&&typeof window.__HASNARIA_OPERATIONS_V1_MOUNT==='function')window.__HASNARIA_OPERATIONS_V1_MOUNT({force:!!force})});
   }
 

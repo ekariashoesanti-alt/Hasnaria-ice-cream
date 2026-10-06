@@ -67,6 +67,37 @@
     });
   }
 
+  function ensureAccountManager(){
+    function mount(){
+      if(window.__HASNARIA_ACCOUNT_MANAGER_V1&&typeof window.__HASNARIA_ACCOUNT_MANAGER_V1.mount==='function'){
+        return Promise.resolve(window.__HASNARIA_ACCOUNT_MANAGER_V1.mount()).catch(function(e){
+          var msg=document.getElementById('hasnariaActivationMsg');
+          if(msg){msg.style.color='#b43b3b';msg.textContent=e&&e.message?e.message:'Gagal memuat Pengaturan Akun.'}
+          return false;
+        });
+      }
+      return Promise.resolve(false);
+    }
+    if(window.__HASNARIA_ACCOUNT_MANAGER_V1)return mount();
+    var old=document.getElementById('hasnaria-account-manager-v1-js');
+    if(old){
+      return new Promise(function(resolve){
+        if(window.__HASNARIA_ACCOUNT_MANAGER_V1){mount().then(resolve);return}
+        old.addEventListener('load',function(){mount().then(resolve)},{once:true});
+        old.addEventListener('error',function(){resolve(false)},{once:true});
+      });
+    }
+    return new Promise(function(resolve){
+      var s=document.createElement('script');
+      s.id='hasnaria-account-manager-v1-js';
+      s.src='/account-manager-v1.js?v=2';
+      s.async=true;
+      s.onload=function(){mount().then(resolve)};
+      s.onerror=function(){resolve(false)};
+      document.head.appendChild(s);
+    });
+  }
+
   async function showAccountPage(mode){
     var page=document.getElementById('hasnariaAccountPage');
     if(!page){
@@ -137,9 +168,10 @@
       settings.classList.add('hidden');pass.classList.remove('hidden');title.textContent='Aktivasi Password Aplikasi';desc.textContent='Buat password sendiri agar akun ini dapat login dengan email + password.';
     }else{
       settings.classList.remove('hidden');pass.classList.add('hidden');title.textContent='Pengaturan Akun';desc.textContent='Kelola akses akun dan password aplikasi Hasnaria.';
-      document.getElementById('hasnariaActivationMsg').textContent='';
+      var activationMsg=document.getElementById('hasnariaActivationMsg');if(activationMsg)activationMsg.textContent='';
     }
     page.classList.add('open');
+    if(mode!=='password')ensureAccountManager();
   }
 
   function openAccountSettings(){ closeAccountMenu(); showAccountPage('settings'); }
@@ -294,6 +326,6 @@
   function ownerShellActive(){try{return !!(window.__HASNARIA_CONTEXT&&window.__HASNARIA_CONTEXT.role==='owner');}catch(_){return false}}
   function run(){injectStyle();injectAccountPageStyle();moveNav();styleButtons();if(!ownerShellActive())syncGroupedContent();ensureAccountMenu();loadSettings();watchPasswordRecovery();showPasswordActivation()}
   function scheduleRun(){if(runTimer)return;runTimer=setTimeout(function(){runTimer=null;run()},120)}
-  function start(){run();new MutationObserver(scheduleRun).observe(document.body,{childList:true,subtree:true})}
+  function start(){run();var tabs=document.getElementById('tabs'),box=document.querySelector('#app .user-box');if(tabs)new MutationObserver(scheduleRun).observe(tabs,{childList:true,subtree:true});if(box)new MutationObserver(scheduleRun).observe(box,{childList:true,subtree:true})}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
 })();

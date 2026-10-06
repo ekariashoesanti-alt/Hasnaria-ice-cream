@@ -1,14 +1,11 @@
 v class="sb-period">' +
       '<div class="sb-cal">' +
-      '<b>Periode</b>' +
-      '<label>Bulan <select id="sbMonth">' + monthOpts + '</select></label>' +
-      '<label>Dari <input id="sbFrom" type="date" value="' + esc(STATE.viewFrom) + '" min="' + esc(mm.min) + '" max="' + esc(mm.max) + '"></label>' +
-      '<label>Sampai <input id="sbTo" type="date" value="' + esc(STATE.viewTo) + '" min="' + esc(mm.min) + '" max="' + esc(mm.max) + '"></label>' +
+      '<label><span>Bulan</span><select id="sbMonth" data-month-filter="sales">' + monthOpts + '</select></label>' +
       '<span>' + esc(active.start) + ' s/d ' + esc(active.end) + ' · ' + ar.length + ' hari aktif</span>' +
       '</div>' +
       '<div class="sb-toggle">' +
-      ['daily', 'weekly', 'monthly'].map(function (m) {
-        var t = m === 'daily' ? 'Harian' : m === 'weekly' ? 'Mingguan' : 'Tahunan';
+      ['daily', 'weekly'].map(function (m) {
+        var t = m === 'daily' ? 'Harian' : 'Mingguan';
         return '<button type="button" class="' + (STATE.mode === m ? 'on' : '') + '" data-mode="' + m + '">' + t + '</button>';
       }).join('') +
       '</div>' +
@@ -206,35 +203,19 @@ v class="sb-period">' +
       };
     }
 
-    // Date filters
-    var monthEl = host.querySelector('#sbMonth'), fromEl = host.querySelector('#sbFrom'), toEl = host.querySelector('#sbTo');
+    // Single monthly period filter. Day/week buttons only change chart granularity inside the selected month.
+    var monthEl = host.querySelector('#sbMonth');
     if (monthEl) {
       monthEl.onchange = function () {
         var ym = monthEl.value;
+        if (!ym) return;
         STATE.viewMonth = ym;
         STATE.slice = null;
-        if (!ym) {
-          var mm = dataMinMax();
-          STATE.viewFrom = mm.min; STATE.viewTo = mm.max;
-        } else {
-          applyModeWindow();
-        }
+        STATE.viewFrom = ym + '-01';
+        STATE.viewTo = lastDayOfMonth(ym);
         draw();
       };
     }
-
-    function applyDates() {
-      if (!fromEl || !toEl) return;
-      var a = fromEl.value, b = toEl.value;
-      if (!a || !b) return;
-      STATE.viewFrom = a <= b ? a : b;
-      STATE.viewTo = a <= b ? b : a;
-      STATE.viewMonth = (STATE.viewFrom.slice(0, 7) === STATE.viewTo.slice(0, 7)) ? STATE.viewFrom.slice(0, 7) : '';
-      STATE.slice = null;
-      draw();
-    }
-    if (fromEl) fromEl.onchange = applyDates;
-    if (toEl) toEl.onchange = applyDates;
   }
 
   function addScript(src) {

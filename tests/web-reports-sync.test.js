@@ -18,7 +18,7 @@ function harness(file, handlerName) {
     get_finance_reporting_pack_v1: { periods: [{ period_month: '2026-10-01', period_status: 'closed' }] },
     get_finance_period_pack_v1: { period: '2026-10-01', income_current: { revenue_sales: 10 }, income_previous: {}, readiness: {} },
     get_finance_management_period_v1: { period: '2026-10-01', previous_period: '2026-09-01', current: { revenue_sales: 10 }, previous: {} },
-    get_purchase_control_period_v1: { rows: [], control: { finance_link_status: 'MATCH' } },
+    get_purchase_control_period_v1: { rows: [{ total_amount: 10, expense_account_code: '6100', expense_category: 'Beban Administrasi' }], control: { finance_link_status: 'MATCH' } },
     ui_finance_alerts: [],
     ui_period_catalog_v1: [{ period_start: '2026-10-01', period_key: '2026-10' }],
     ui_purchase_overview_v1: [{ total_purchase_amount: 10, purchase_rows: 1 }],
@@ -60,7 +60,8 @@ function harness(file, handlerName) {
     async rpc(name, args) {
       calls.push({ name, args, kind: 'rpc' });
       assert.match(name, /^get_/, 'report synchronization must never call a mutating RPC');
-      const payload = clone(data[name]);
+      assert.ok(name === 'get_ui_period_catalog_fast_v1' || Object.hasOwn(data, name), 'expected read RPC ' + name);
+      const payload = clone(name === 'get_ui_period_catalog_fast_v1' ? data.ui_period_catalog_v1 : data[name]);
       if (payload && payload.period && args.p_period) payload.period = args.p_period;
       const failed = control.fail;
       if (control.gate) await control.gate.promise;
@@ -141,7 +142,7 @@ function harness(file, handlerName) {
   const modules = [
     ['finance-accuracy-v6.js', 'owner-finance-report', 'get_finance_period_pack_v1', x => x.income_current.revenue_sales = 90],
     ['finance-purchase-basis-v1.js', 'owner-finance-management', 'get_finance_management_period_v1', x => x.current.revenue_sales = 90],
-    ['purchase-finance-alignment-v1.js', 'owner-purchase-report', 'ui_purchase_overview_v1', x => x[0].total_purchase_amount = 90],
+    ['purchase-finance-alignment-v1.js', 'owner-purchase-report', 'get_purchase_control_period_v1', x => x.rows[0].total_amount = 90],
     ['administration-v1.js', 'owner-administration-report', 'ui_administration_overview_v1', x => x[0].admin_amount = 90]
   ];
   for (const [file, handlerName, table, change] of modules) {
@@ -205,11 +206,30 @@ function harness(file, handlerName) {
     const periodCalls = h.calls.filter(call => call.args && (call.args.p_period || call.args.period_month));
     assert.ok(periodCalls.length, file + ': synchronization is scoped to the selected month');
     assert.ok(periodCalls.every(call => (call.args.p_period || call.args.period_month) === '2026-10-01'));
+    if (file.startsWith('purchase-') || file.startsWith('administration-')) {
+      assert.ok(h.calls.some(call => call.name === 'get_ui_period_catalog_fast_v1'), file + ': foreground and sync retain the fast period catalog');
+      assert.ok(!h.calls.some(call => call.name === 'ui_period_catalog_v1'), file + ': sync does not regress to the monolithic period view');
+    }
+    if (file.startsWith('purchase-')) {
+      assert.ok(!h.calls.some(call => /^ui_purchase_(overview|category_chart)_v1$/.test(call.name)), 'purchase refresh derives the report from the canonical pack without expensive aggregate reads');
+    }
+
+    if (file.startsWith('purchase-') || file.startsWith('administration-')) {
+      const missing = harness(file, handlerName); await missing.start();
+      missing.data.ui_period_catalog_v1 = [{ period_start: '2026-09-01', period_key: '2026-09' }];
+      change(missing.data[table]); await missing.refresh(); await missing.settle();
+      assert.equal(missing.elements[file.startsWith('purchase-') ? 'paPeriod' : 'ad5Period'].value, '2026-10', file + ': catalog removal cannot change the selected month');
+      assert.match(missing.rendered, /Oktober 2026/, file + ': refreshed report stays labeled with its snapshot month');
+      assert.match(missing.rendered, /90/, file + ': refreshed data is applied even when the catalog no longer lists its month');
+    }
 
     const race = harness(file, handlerName);
     race.data.ui_period_catalog_v1.push({ period_start: '2026-09-01', period_key: '2026-09' });
     race.data.get_finance_reporting_pack_v1.periods.unshift({ period_month: '2026-09-01', period_status: 'closed' });
     await race.start();
+    // Purchase boot starts immediately when the fixture is constructed. Apply
+    // the expanded period catalog before simulating a user selecting September.
+    await race.refresh(); await race.settle();
     race.control.gate = deferred();
     const oldPeriod = race.refresh(); await flush();
     change(race.data[table]);

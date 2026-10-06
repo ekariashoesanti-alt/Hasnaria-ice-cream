@@ -157,6 +157,22 @@
     return res.json();
   }
 
+  async function rpc(name, payload) {
+    var t = await token();
+    if (!t) throw new Error('Session belum tersedia. Silakan login kembali.');
+    var res = await fetch(SB + '/rest/v1/rpc/' + name, {
+      method: 'POST',
+      headers: { apikey: KEY, Authorization: 'Bearer ' + t, 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload || {})
+    });
+    if (!res.ok) {
+      var text = '';
+      try { text = await res.text(); } catch (_) {}
+      throw new Error('Gagal memuat kontrol stok (' + res.status + ')' + (text ? ': ' + text.slice(0, 140) : ''));
+    }
+    return res.json();
+  }
+
   function qs(obj) {
     var q = new URLSearchParams();
     Object.keys(obj || {}).forEach(function (k) {
@@ -389,13 +405,7 @@
     render();
     try {
       if (!S.periods.length || force) {
-        var pq = qs({
-          brand_id: 'eq.' + BRAND,
-          module: 'eq.stok',
-          select: 'period_start,period_key',
-          order: 'period_start.desc'
-        });
-        var ps = await request('ui_period_catalog_v1?' + pq);
+        var ps = await rpc('get_ui_period_catalog_fast_v1', { p_brand: BRAND, p_module: 'stok' });
         if (seq !== S.periodSeq) return;
         S.periods = ps || [];
         if (!S.period || !S.periods.some(function (x) { return monthKey(x.period_start || x.period_key) === S.period; })) {
@@ -492,7 +502,7 @@
         order: 'category.asc,item_name.asc'});
       var reads = [
         request('inventory_stock_reconciliation?' + baseQuery),
-        request('ui_period_catalog_v1?' + qs({brand_id: 'eq.' + BRAND, module: 'eq.stok', select: 'period_start,period_key', order: 'period_start.desc'}))
+        rpc('get_ui_period_catalog_fast_v1', { p_brand: BRAND, p_module: 'stok' })
       ];
       if (period) {
         reads.push(request('ui_stock_overview_v1?' + qs({brand_id: 'eq.' + BRAND, period_month: 'eq.' + period + '-01', select: '*', limit: '1'})));
@@ -520,10 +530,15 @@
       var overview = period && result[2] && result[2][0] ? result[2][0] : null;
       var activity = period ? result[3] || [] : [];
       var ledger = modal === 'ledger' && period ? result[4] || [] : S.ledger;
-      var next = [raw, items, result[1] || [], overview, activity, ledger, true, '', '', '', modal === 'ledger' ? '' : S.ledgerError];
+      var periods = result[1] || [];
+      if (period && !periods.some(function (x) { return monthKey(x.period_start || x.period_key) === period; })) {
+        var selected = S.periods.find(function (x) { return monthKey(x.period_start || x.period_key) === period; });
+        periods = periods.concat([selected || { period_start: period + '-01' }]);
+      }
+      var next = [raw, items, periods, overview, activity, ledger, true, '', '', '', modal === 'ledger' ? '' : S.ledgerError];
       var current = [S.raw, S.items, S.periods, S.overview, S.activity, S.ledger, S.auxLoaded, S.error, S.auxError, S.periodError, S.ledgerError];
       if (JSON.stringify(next) === JSON.stringify(current)) return;
-      S.raw = raw; S.items = items; S.periods = result[1] || [];
+      S.raw = raw; S.items = items; S.periods = periods;
       S.overview = overview; S.activity = activity; S.ledger = ledger;
       S.auxLoaded = true; S.error = ''; S.auxError = ''; S.periodError = '';
       if (modal === 'ledger') S.ledgerError = '';
@@ -606,7 +621,7 @@
       return '<option value="' + esc(k) + '"' + (k === S.period ? ' selected' : '') + '>' + esc(monthLabel(k)) + '</option>';
     }).join('');
     return '<div class="sc3-head"><div><div class="sc3-eyebrow">STOK · ' + esc(cutLabel()) + '</div><h2>Stok &amp; Pergerakan Material</h2><p>Ringkasan periode menampilkan jumlah SKU dan aktivitas. Quantity antar satuan tidak dijumlahkan menjadi satu angka.</p></div>' +
-      '<div class="sc4-head-tools"><label><span>Cut periode</span><select id="sc4Period">' + options + '</select></label><div class="sc3-actions"><button type="button" class="sc3-btn" data-sc3-action="refresh">↻ Refresh</button><button type="button" class="sc3-btn" data-sc3-action="export"' + (!S.baseLoaded ? ' disabled' : '') + '>Export CSV</button></div></div></div>';
+      '<div class="sc4-head-tools"><label><span>Bulan</span><select id="sc4Period" data-month-filter="stok">' + options + '</select></label><div class="sc3-actions"><button type="button" class="sc3-btn" data-sc3-action="refresh">↻ Refresh</button><button type="button" class="sc3-btn" data-sc3-action="export"' + (!S.baseLoaded ? ' disabled' : '') + '>Export CSV</button></div></div></div>';
   }
 
   function renderFormula() {

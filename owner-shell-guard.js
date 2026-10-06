@@ -10,7 +10,7 @@
   /* Compatibility marker kept for release tests; this full executive runtime is
      deliberately NOT loaded because it used to take ownership of every tab. */
   var EXEC_SRC='/owner-executive-v1.js?v=1';
-  var DASH_SRC='/owner-dashboard-one-view.js?v=2';
+  var DASH_SRC='/owner-dashboard-one-view.js?v=8';
   var OWNER_TABS=['dashboard','sales','pembelian','operasional','administrasi','ops','stok'];
   var SECTION_IDS=['dashboard','sales','pembelian','operasional','administrasi','ops','stok','shift','social','approval','team','sistem','karyawan'];
   var state={active:'dashboard',initialized:false,scheduled:false,salesRetries:0,finStockLoad:null,operationalLoad:null,adminLoad:null,dashboardLoad:null};
@@ -53,13 +53,13 @@
 
   function ensureShellCss(){
     var l=document.getElementById('ofs3-css');
-    if(!l){l=document.createElement('link');l.id='ofs3-css';l.rel='stylesheet';l.href='/owner-finance-stock-v3.css?v=3';document.head.appendChild(l)}
-    else if(l.getAttribute('href')!=='/owner-finance-stock-v3.css?v=3')l.href='/owner-finance-stock-v3.css?v=3';
+    if(!l){l=document.createElement('link');l.id='ofs3-css';l.rel='stylesheet';l.href='/owner-finance-stock-v3.css?v=4';document.head.appendChild(l)}
+    else if(l.getAttribute('href')!=='/owner-finance-stock-v3.css?v=4')l.href='/owner-finance-stock-v3.css?v=4';
   }
 
   function ensureFinanceWorkbenches(){
     if(!document.getElementById('hasnaria-finance-purchase-basis-v1-js')){
-      var pb=document.createElement('script');pb.id='hasnaria-finance-purchase-basis-v1-js';pb.src='/finance-purchase-basis-v1.js?v=5';pb.async=true;document.head.appendChild(pb);
+      var pb=document.createElement('script');pb.id='hasnaria-finance-purchase-basis-v1-js';pb.src='/finance-purchase-basis-v1.js?v=6';pb.async=true;document.head.appendChild(pb);
     }
     var stale=document.querySelector('[data-fin-hpp-p3-open]');if(stale)stale.remove();
     var staleModal=document.getElementById('finHppP3Modal');if(staleModal)staleModal.remove();
@@ -157,7 +157,7 @@
     if(existing){afterRuntime(id,requestRender);return}
     if(state.finStockLoad){state.finStockLoad.then(function(){afterRuntime(id,requestRender)});return}
     state.finStockLoad=new Promise(function(resolve){
-      var s=document.createElement('script');s.id='hasnaria-owner-finance-stock-v3-js';s.src='/owner-finance-stock-v3'+'.js?v=10';s.async=true;
+      var s=document.createElement('script');s.id='hasnaria-owner-finance-stock-v3-js';s.src='/owner-finance-stock-v3'+'.js?v=12';s.async=true;
       s.onload=resolve;s.onerror=function(){state.finStockLoad=null;resolve()};document.head.appendChild(s);
     });
     state.finStockLoad.then(function(){afterRuntime(id,requestRender)});
@@ -169,18 +169,30 @@
     if(typeof window.__HASNARIA_OPERATIONS_V1_MOUNT==='function'){window.__HASNARIA_OPERATIONS_V1_MOUNT({force:!!requestRender});return}
     if(state.operationalLoad){state.operationalLoad.then(function(){if(isOwner()&&state.active==='operasional'&&typeof window.__HASNARIA_OPERATIONS_V1_MOUNT==='function')window.__HASNARIA_OPERATIONS_V1_MOUNT({force:!!requestRender})});return}
     state.operationalLoad=new Promise(function(resolve){
-      var s=document.createElement('script');s.id='hasnaria-operational-v1-js';s.src='/operational-v1.js?v=4';s.async=true;
+      var s=document.createElement('script');s.id='hasnaria-operational-v1-js';s.src='/operational-v1.js?v=5';s.async=true;
       s.onload=resolve;s.onerror=function(){state.operationalLoad=null;resolve()};document.head.appendChild(s);
     });
     state.operationalLoad.then(function(){if(isOwner()&&state.active==='operasional'&&typeof window.__HASNARIA_OPERATIONS_V1_MOUNT==='function')window.__HASNARIA_OPERATIONS_V1_MOUNT({force:!!requestRender})});
   }
 
+  function adminRuntime(){var a=window.__HASNARIA_ADMIN_V2||window.__HASNARIA_ADMIN_V1;return a&&typeof a.mount==='function'?a:null}
+  function mountAdministration(requestRender){var a=adminRuntime();if(!a||!isOwner()||state.active!=='administrasi')return false;a.mount({force:!!requestRender});return true}
   function ensureAdministration(requestRender){
     if(!isOwner())return;var h=section('administrasi');if(!h||h.classList.contains('hidden'))return;
-    if(window.__HASNARIA_ADMIN_V1&&typeof window.__HASNARIA_ADMIN_V1.mount==='function'){window.__HASNARIA_ADMIN_V1.mount({force:!!requestRender});return}
-    if(state.adminLoad){state.adminLoad.then(function(){if(isOwner()&&state.active==='administrasi'&&window.__HASNARIA_ADMIN_V1)window.__HASNARIA_ADMIN_V1.mount({force:!!requestRender})});return}
-    state.adminLoad=new Promise(function(resolve){var s=document.createElement('script');s.id='hasnaria-admin-v1-js';s.src='/administration-v1.js?v=3';s.async=true;s.onload=resolve;s.onerror=function(){state.adminLoad=null;resolve()};document.head.appendChild(s)});
-    state.adminLoad.then(function(){if(isOwner()&&state.active==='administrasi'&&window.__HASNARIA_ADMIN_V1)window.__HASNARIA_ADMIN_V1.mount({force:!!requestRender})});
+    if(mountAdministration(requestRender))return;
+    if(state.adminLoad){state.adminLoad.then(function(){mountAdministration(requestRender)});return}
+    state.adminLoad=new Promise(function(resolve){
+      var old=document.getElementById('hasnaria-admin-v1-js');
+      if(old){
+        if(adminRuntime()){resolve();return}
+        var done=false,finish=function(){if(done)return;done=true;resolve()};
+        old.addEventListener('load',finish,{once:true});old.addEventListener('error',finish,{once:true});
+        setTimeout(finish,1200);return
+      }
+      var s=document.createElement('script');s.id='hasnaria-admin-v1-js';s.src='/administration-v1.js?v=6';s.async=true;
+      s.onload=resolve;s.onerror=function(){state.adminLoad=null;resolve()};document.head.appendChild(s)
+    });
+    state.adminLoad.then(function(){mountAdministration(requestRender)});
   }
 
   function nudgeLegacyStockFallback(){

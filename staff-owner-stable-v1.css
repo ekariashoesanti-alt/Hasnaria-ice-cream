@@ -27,3 +27,11 @@
   .hso-profile{display:grid;place-items:center;text-align:center;padding:24px 16px}.hso-avatar{width:66px;height:66px;border-radius:50%;background:#edf7f3;color:var(--hso-green);display:grid;place-items:center;font-size:26px;font-weight:900;margin-bottom:12px}.hso-profile b{font-size:17px}.hso-profile small{display:block;margin-top:5px;color:#7c8782;font-size:11px}
   @media(max-width:380px){.hso-main{padding-left:12px;padding-right:12px}.hso-summary{gap:7px}.hso-card{padding:13px}.hso-nav button{font-size:8px}.hso-checks{grid-template-columns:1fr}}
 }
+
+/* UI-7 Owner Mobile employee snapshot. */
+@media (max-width:760px){
+  .hso-ui7-date{display:block;margin-bottom:4px;font-size:9px;font-weight:900;letter-spacing:.08em;color:#125644;text-transform:uppercase}
+  .hso-ui7-summary{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:0 0 14px}
+  .hso-ui7-summary>div{border:1px solid var(--hso-line);border-radius:16px;background:#f8fbfa;padding:12px}
+  .hso-ui7-summary span,.hso-ui7-summary small{display:block}.hso-ui7-summary span{font-size:9px;font-weight:900;letter-spacing:.04em;text-transform:uppercase;color:#7b8782}.hso-ui7-summary strong{display:block;margin:4px 0 2px;font-size:21px;color:var(--hso-green)}.hso-ui7-summary small{font-size:9px;color:#88938e}
+}

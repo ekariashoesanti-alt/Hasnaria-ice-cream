@@ -1,58 +1,170 @@
 (function(){
 'use strict';
-if(window.__HASNARIA_DASHBOARD_ONE_VIEW)return;
-var db=null,state={period:new Date(new Date().getFullYear(),new Date().getMonth(),1),seq:0,cache:{},cacheAt:{},prewarmed:false};
+if(window.__HASNARIA_DASHBOARD_UI6)return;
+window.__HASNARIA_DASHBOARD_UI6=true;
+
+var BRAND='a36d4b4f-3ccc-4a78-8aeb-b868f0407ea4';
+var MONTHS=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+var db=null,S={periods:[],rows:[],period:'',loading:false,error:'',detailOpen:false,seq:0,loaded:false,hpp:null,hppLoading:false,syncing:false,stale:false};
+
 function $(id){return document.getElementById(id)}
-function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function client(){return db||(db=window.__HASNARIA_DB)}
-function monthISO(){return state.period.getFullYear()+'-'+String(state.period.getMonth()+1).padStart(2,'0')+'-01'}
-function monthLabel(){return new Intl.DateTimeFormat('id-ID',{month:'short',year:'numeric'}).format(state.period)}
-function rp(v){return new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',maximumFractionDigits:0}).format(Number(v||0))}
-function compact(v){var n=Number(v||0),a=Math.abs(n);if(a>=1e9)return(n/1e9).toLocaleString('id-ID',{maximumFractionDigits:1})+' M';if(a>=1e6)return(n/1e6).toLocaleString('id-ID',{maximumFractionDigits:1})+' jt';if(a>=1e3)return(n/1e3).toLocaleString('id-ID',{maximumFractionDigits:0})+' rb';return n.toLocaleString('id-ID',{maximumFractionDigits:0})}
-function num(v){return new Intl.NumberFormat('id-ID',{maximumFractionDigits:0}).format(Number(v||0))}
-function pct(v){return Number(v||0).toLocaleString('id-ID',{maximumFractionDigits:1})+'%'}
-function css(){if($('hx-exec-css'))return;var l=document.createElement('link');l.id='hx-exec-css';l.rel='stylesheet';l.href='/owner-executive-v1.css?v=3';document.head.appendChild(l)}
-function loadScript(id,src){return new Promise(function(resolve){var old=$(id);if(old){if(old.getAttribute('data-loaded')==='1')return resolve();old.addEventListener('load',resolve,{once:true});old.addEventListener('error',resolve,{once:true});return}var s=document.createElement('script');s.id=id;s.src=src;s.async=true;s.onload=function(){s.setAttribute('data-loaded','1');resolve()};s.onerror=resolve;document.head.appendChild(s)})}
-function prewarm(){if(state.prewarmed)return;state.prewarmed=true;var run=function(){try{if(typeof window.__HASNARIA_LOAD_SALES==='function')window.__HASNARIA_LOAD_SALES();if(typeof window.__HASNARIA_LOAD_PURCHASE==='function')window.__HASNARIA_LOAD_PURCHASE();if(window.HasnariaPurchaseLazy&&typeof window.HasnariaPurchaseLazy.load==='function')window.HasnariaPurchaseLazy.load();if(typeof window.__HASNARIA_LOAD_STOCK==='function')window.__HASNARIA_LOAD_STOCK();loadScript('hasnaria-owner-finance-stock-v3-js','/owner-finance-stock-v3.js?v=11');loadScript('hasnaria-operational-v1-js','/operational-v1.js?v=4')}catch(_){}};if(typeof window.requestIdleCallback==='function')window.requestIdleCallback(run,{timeout:1600});else setTimeout(run,650)}
-function kpi(label,value,meta,cls){return '<div class="hx-kpi '+(cls||'')+'"><span>'+esc(label)+'</span><strong>'+value+'</strong>'+(meta?'<small>'+esc(meta)+'</small>':'')+'</div>'}
-function toolbar(){return '<div class="hx-toolbar"><div class="hx-title"><h1>Ringkasan CEO</h1><p>Satu layar untuk keputusan utama</p></div><div class="hx-actions"><button class="hx-btn icon" data-ceo-period="-1" aria-label="Periode sebelumnya">‹</button><span class="hx-period">'+esc(monthLabel())+'</span><button class="hx-btn icon" data-ceo-period="1" aria-label="Periode berikutnya">›</button></div></div>'}
-function trend(rows){
- rows=Array.isArray(rows)?rows.slice(-6):[];if(!rows.length)return'<div class="hx-empty">Belum ada tren.</div>';
- var W=760,H=235,L=64,R=18,T=18,B=38,PW=W-L-R,PH=H-T-B;
- var values=[];rows.forEach(function(r){values.push(Number(r.revenue||0),Number(r.expense||0),Number(r.profit||0))});
- var min=Math.min.apply(null,values.concat([0])),max=Math.max.apply(null,values.concat([1]));if(max===min)max=min+1;
- var x=function(i){return rows.length===1?L+PW/2:L+(PW*i/(rows.length-1))};
- var y=function(v){return T+((max-Number(v||0))/(max-min))*PH};
- var grid='',labels='',rev=[],exp=[],pro=[],dots='';
- for(var g=0;g<=4;g++){var val=max-(max-min)*(g/4),gy=T+PH*(g/4);grid+='<line class="hx-ts-grid" x1="'+L+'" y1="'+gy.toFixed(1)+'" x2="'+(W-R)+'" y2="'+gy.toFixed(1)+'"></line><text class="hx-ts-axis hx-ts-y" x="'+(L-8)+'" y="'+(gy+3).toFixed(1)+'" text-anchor="end">'+esc(compact(val))+'</text>'}
- rows.forEach(function(r,i){var xx=x(i),rv=Number(r.revenue||0),ev=Number(r.expense||0),pv=Number(r.profit||0),d=new Date(String(r.month).slice(0,10)+'T00:00:00'),lab=new Intl.DateTimeFormat('id-ID',{month:'short'}).format(d);rev.push(xx.toFixed(1)+','+y(rv).toFixed(1));exp.push(xx.toFixed(1)+','+y(ev).toFixed(1));pro.push(xx.toFixed(1)+','+y(pv).toFixed(1));labels+='<text class="hx-ts-axis hx-ts-x" x="'+xx.toFixed(1)+'" y="'+(H-11)+'" text-anchor="middle">'+esc(lab)+'</text>';dots+='<circle class="hx-ts-dot revenue" cx="'+xx.toFixed(1)+'" cy="'+y(rv).toFixed(1)+'" r="4"><title>'+esc(lab+' · Penjualan '+rp(rv))+'</title></circle><circle class="hx-ts-dot expense" cx="'+xx.toFixed(1)+'" cy="'+y(ev).toFixed(1)+'" r="4"><title>'+esc(lab+' · Beban '+rp(ev))+'</title></circle><circle class="hx-ts-dot profit" cx="'+xx.toFixed(1)+'" cy="'+y(pv).toFixed(1)+'" r="4"><title>'+esc(lab+' · Laba/Rugi '+rp(pv))+'</title></circle>'});
- return '<div class="hx-time-series"><svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Tren penjualan, beban, dan laba rugi enam bulan">'+grid+'<line class="hx-ts-zero" x1="'+L+'" y1="'+y(0).toFixed(1)+'" x2="'+(W-R)+'" y2="'+y(0).toFixed(1)+'"></line><polyline class="hx-ts-line revenue" points="'+rev.join(' ')+'"></polyline><polyline class="hx-ts-line expense" points="'+exp.join(' ')+'"></polyline><polyline class="hx-ts-line profit" points="'+pro.join(' ')+'"></polyline>'+dots+labels+'</svg><div class="hx-ts-legend"><span><i class="revenue"></i>Penjualan</span><span><i class="expense"></i>Beban</span><span><i class="profit"></i>Laba/Rugi</span></div></div>'
+function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+function n(v){v=Number(v);return Number.isFinite(v)?v:0}
+function money(v){return'Rp'+n(v).toLocaleString('id-ID',{maximumFractionDigits:0})}
+function key(v){var s=String(v||'');return /^\d{4}-\d{2}/.test(s)?s.slice(0,7):''}
+function monthLabel(v){var k=key(v);return k?MONTHS[Number(k.slice(5,7))-1]+' '+k.slice(0,4):'Periode belum tersedia'}
+function cutLabel(){var k=key(S.period);if(!k)return'Periode belum tersedia';var y=Number(k.slice(0,4)),m=Number(k.slice(5,7)),last=new Date(Date.UTC(y,m,0)).getUTCDate();return'1–'+last+' '+monthLabel(k)}
+function pct(v){return n(v).toLocaleString('id-ID',{maximumFractionDigits:2})+'%'}
+function hppText(){return S.hpp==null?'—':pct(S.hpp)}
+function wait(ms){return new Promise(function(resolve){setTimeout(resolve,ms)})}
+async function dashboardPack(){
+  var r=await client().rpc('get_ui_dashboard_pack_v1',{p_brand:BRAND,p_months:18});
+  if(r.error&&/statement timeout|canceling statement due to statement timeout/i.test(String(r.error.message||r.error))){
+    await wait(450);
+    r=await client().rpc('get_ui_dashboard_pack_v1',{p_brand:BRAND,p_months:18});
+  }
+  return r
 }
-function alerts(d){var a=Array.isArray(d.alerts)?d.alerts:[];if(!a.length)return'<div class="hx-empty">Tidak ada alert.</div>';return '<div class="hx-alerts">'+a.map(function(x){var c=Number(x.count||0);return '<div class="hx-alert '+(c?'attn':'')+'"><b>'+esc(x.label)+'</b><span>'+num(c)+'</span></div>'}).join('')+'</div>'}
-function render(d){var change=Number(d.previous_revenue||0)?((Number(d.revenue||0)-Number(d.previous_revenue||0))/Number(d.previous_revenue||0)*100):0;return '<div class="hx-shell" data-ceo-one-view="1">'+toolbar()+'<div class="hx-grid">'+kpi('Penjualan',rp(d.revenue),pct(change)+' vs bulan lalu',change>=0?'positive':'negative')+kpi('Beban Pembelian',rp(d.purchase_expense),'Purchase-basis')+kpi('Beban Karyawan',rp(d.payroll_expense),'Payroll posted')+kpi('Laba / Rugi',rp(d.profit),pct(d.margin)+' margin',Number(d.profit)>=0?'positive':'negative')+'</div><div class="hx-main"><div class="hx-card"><h2>Tren 6 bulan</h2>'+trend(d.trend)+'</div><div class="hx-card"><h2>Perlu perhatian</h2>'+alerts(d)+'<div class="hx-note">Supervisor aktif: '+esc((d.supervisor&&d.supervisor.full_name)||'belum ditetapkan')+' · stok rendah: '+num(d.stock_low)+'</div></div></div></div>'}
-function setBusy(h,busy){var r=h&&h.querySelector('[data-ceo-one-view="1"]');if(!r)return;if(busy){r.classList.add('hx-refreshing');r.setAttribute('aria-busy','true')}else{r.classList.remove('hx-refreshing');r.removeAttribute('aria-busy')}}
+function css(){if($('hx-exec-css')){var x=$('hx-exec-css');if(x.getAttribute('href')!=='/owner-executive-v1.css?v=5')x.href='/owner-executive-v1.css?v=5';return}var l=document.createElement('link');l.id='hx-exec-css';l.rel='stylesheet';l.href='/owner-executive-v1.css?v=5';document.head.appendChild(l)}
+function current(){return S.rows.find(function(x){return key(x.period_month)===S.period})||null}
+function periodOptions(){return S.periods.map(function(x){var k=key(x.period_start||x.period_key);return'<option value="'+esc(k)+'"'+(k===S.period?' selected':'')+'>'+esc(monthLabel(k))+'</option>'}).join('')}
+function syncText(v){return v===true?'MATCH':v===false?'MISMATCH':'N/A'}
+function syncClass(v){return v===true?'ok':v===false?'bad':'na'}
+function purchaseText(v){return v&&v.purchase_sync_state==='POSTED_CANONICAL'?'POSTED':syncText(v&&v.purchase_sync_ok)}
+function purchaseClass(v){return v&&v.purchase_sync_state==='POSTED_CANONICAL'?'ok':syncClass(v&&v.purchase_sync_ok)}
+function kpi(label,value,meta,cls){return'<article class="hx6-kpi '+(cls||'')+'"><span>'+esc(label)+'</span><strong>'+esc(value)+'</strong><small>'+esc(meta||'')+'</small></article>'}
+
+function trendRows(){
+ var idx=S.rows.findIndex(function(x){return key(x.period_month)===S.period});
+ if(idx<0)return[];
+ return S.rows.slice(idx,idx+6).slice().reverse();
+}
+function trendMarkup(){
+ var rows=trendRows();if(!rows.length)return'<div class="hx6-empty">Belum ada tren.</div>';
+ var max=Math.max.apply(null,rows.reduce(function(a,x){a.push(n(x.sales_revenue),n(x.purchase_amount));return a},[1]));
+ return'<div class="hx6-trend">'+rows.map(function(x){
+   var s=Math.max(3,n(x.sales_revenue)/max*100),p=Math.max(2,n(x.purchase_amount)/max*100);
+   return'<div class="hx6-trend-col"><div class="hx6-bars"><svg viewBox="0 0 44 100" role="img" aria-label="'+esc(monthLabel(x.period_month)+' · Penjualan '+money(x.sales_revenue)+' · Pembelian '+money(x.purchase_amount))+'"><rect class="sales" x="4" y="'+(100-s).toFixed(2)+'" width="14" height="'+s.toFixed(2)+'"><title>'+esc('Penjualan '+money(x.sales_revenue))+'</title></rect><rect class="purchase" x="26" y="'+(100-p).toFixed(2)+'" width="14" height="'+p.toFixed(2)+'"><title>'+esc('Pembelian '+money(x.purchase_amount))+'</title></rect></svg></div><b>'+esc(String(monthLabel(x.period_month)).split(' ')[0].slice(0,3))+'</b><small>'+esc(money(x.sales_revenue))+'</small></div>';
+ }).join('')+'</div><div class="hx6-legend"><span><i class="sales"></i>Penjualan</span><span><i class="purchase"></i>Pembelian</span></div>';
+}
+function flowMarkup(v){
+ return'<div class="hx6-flow">'+
+   '<div class="hx6-flow-node sales"><span>SUMBER</span><b>Penjualan</b><strong>'+esc(money(v.sales_revenue))+'</strong><small>'+n(v.sales_rows).toLocaleString('id-ID')+' transaksi</small></div>'+
+   '<i>→</i><div class="hx6-flow-node finance"><span>OUTPUT</span><b>Keuangan</b><strong class="'+syncClass(v.sales_sync_ok)+'">'+esc(syncText(v.sales_sync_ok))+'</strong><small>pendapatan otomatis</small></div>'+
+   '<div class="hx6-flow-node purchase"><span>SUMBER</span><b>Pembelian</b><strong>'+esc(money(v.purchase_amount))+'</strong><small>'+n(v.purchase_rows).toLocaleString('id-ID')+' transaksi</small></div>'+
+   '<i>→</i><div class="hx6-flow-split"><div><b>Keuangan</b><span class="'+purchaseClass(v)+'">'+esc(purchaseText(v))+'</span></div><div><b>Stok</b><span>Qty otomatis</span></div></div>'+
+   '<div class="hx6-flow-node admin"><span>SUBSET PEMBELIAN</span><b>Administrasi</b><strong>'+esc(money(v.admin_amount))+'</strong><small>'+n(v.admin_rows).toLocaleString('id-ID')+' transaksi non-stock</small></div>'+
+   '<i>→</i><div class="hx6-flow-node finance"><span>OUTPUT</span><b>Keuangan</b><strong class="'+syncClass(v.admin_sync_ok)+'">'+esc(syncText(v.admin_sync_ok))+'</strong><small>tanpa posting stok</small></div>'+
+ '</div>';
+}
+function statusPanel(v){
+ var rows=[
+  ['Penjualan → Keuangan',syncText(v.sales_sync_ok),syncClass(v.sales_sync_ok)],
+  ['Pembelian → Keuangan',purchaseText(v),purchaseClass(v)],
+  ['Administrasi → Keuangan',syncText(v.admin_sync_ok),syncClass(v.admin_sync_ok)]
+ ];
+ return'<div class="hx6-status-list">'+rows.map(function(x){return'<div><span>'+esc(x[0])+'</span><b class="'+x[2]+'">'+esc(x[1])+'</b></div>'}).join('')+'</div>'+
+ '<div class="hx6-info">Pembelian pada Ringkasan CEO dibaca dari jurnal canonical yang sudah ter-posting agar dashboard tetap cepat. Rekonsiliasi source-to-journal tetap dilakukan di tab Pembelian/Keuangan. Administrasi adalah subset Pembelian non-stock dan tidak dijumlahkan ulang.</div>';
+}
+function detailMarkup(v){
+ if(!S.detailOpen)return'';
+ var fields=[
+  ['Penjualan',money(v.sales_revenue),n(v.sales_rows).toLocaleString('id-ID')+' transaksi'],
+  ['Pembelian',money(v.purchase_amount),n(v.purchase_rows).toLocaleString('id-ID')+' jurnal canonical'],
+  ['Administrasi',money(v.admin_amount),n(v.admin_rows).toLocaleString('id-ID')+' transaksi · subset Pembelian'],
+  ['Coverage HPP model',hppText(),'coverage model penjualan saat ini']
+ ];
+ return'<div class="hx6-modal-backdrop" data-hx6-close="1"><section class="hx6-modal" role="dialog" aria-modal="true" aria-labelledby="hx6ModalTitle"><div class="hx6-modal-head"><div><div class="hx6-eyebrow">DETAIL RINGKASAN CEO</div><h3 id="hx6ModalTitle">'+esc(monthLabel(S.period))+'</h3><p>'+esc(cutLabel())+' · angka berasal dari sumber canonical per modul; Pembelian memakai jurnal posted.</p></div><button type="button" class="hx6-close" data-hx6-close="1" aria-label="Tutup">×</button></div><div class="hx6-detail-grid">'+fields.map(function(x){return'<article><span>'+esc(x[0])+'</span><strong>'+esc(x[1])+'</strong><small>'+esc(x[2])+'</small></article>'}).join('')+'</div><div class="hx6-detail-sync"><h4>Status Sinkronisasi</h4>'+statusPanel(v)+'</div></section></div>';
+}
+function render(){
+ var h=$('dashboard');if(!h)return;css();
+ var v=current()||{};
+ if(S.loading&&!S.loaded){h.innerHTML='<div class="hx-shell"><div class="hx-loading">Memuat Ringkasan CEO…</div></div>';return}
+ h.innerHTML='<div class="hx-shell hx6-shell" data-ceo-one-view="1">'+
+  '<div class="hx6-toolbar"><div><div class="hx6-eyebrow">RINGKASAN CEO · '+esc(cutLabel())+'</div><h1>Ringkasan CEO</h1><p>Visual singkat lintas Penjualan, Pembelian, Administrasi, Keuangan, dan Stok.</p></div><div class="hx6-tools"><label><span>Bulan</span><select id="hx6Period" data-month-filter="dashboard">'+periodOptions()+'</select></label><button type="button" data-hx6-detail="1">Lihat Detail</button></div></div>'+
+  (S.error?'<div class="hx-error">'+esc(S.error)+'</div>':'')+
+  '<div class="hx6-kpis">'+
+   kpi('Penjualan',S.loading&&!S.loaded?'…':money(v.sales_revenue),n(v.sales_rows).toLocaleString('id-ID')+' transaksi','sales')+
+   kpi('Pembelian',S.loading&&!S.loaded?'…':money(v.purchase_amount),n(v.purchase_rows).toLocaleString('id-ID')+' jurnal canonical','purchase')+
+   kpi('Administrasi',S.loading&&!S.loaded?'…':money(v.admin_amount),n(v.admin_rows).toLocaleString('id-ID')+' transaksi · subset Pembelian','admin')+
+   kpi('Coverage HPP Model',S.loading&&!S.loaded?'…':hppText(),S.hppLoading?'memuat coverage…':'coverage model saat ini','hpp')+
+  '</div>'+
+  '<div class="hx6-main"><article class="hx6-panel"><div class="hx6-panel-head"><div><h2>Tren 6 Periode</h2><p>Penjualan dibanding Pembelian. Administrasi tetap bagian dari Pembelian.</p></div></div>'+trendMarkup()+'</article><article class="hx6-panel"><div class="hx6-panel-head"><div><h2>Status Sinkronisasi</h2><p>Hanya mismatch nyata yang ditandai.</p></div></div>'+statusPanel(v)+'</article></div>'+
+  '<article class="hx6-panel hx6-flow-panel"><div class="hx6-panel-head"><div><h2>Alur Bisnis Otomatis</h2><p>Sumber transaksi menuju modul tujuan tanpa input nilai kedua.</p></div></div>'+flowMarkup(v)+'</article>'+
+  detailMarkup(v)+
+ '</div>';
+ bind(h);
+}
+function sameView(ctx,h){return window.__HASNARIA_CONTEXT===ctx&&ctx&&ctx.role==='owner'&&h===$('dashboard')&&!h.classList.contains('hidden')}
+async function loadHpp(seq){
+  if(S.hppLoading)return;
+  var ctx=window.__HASNARIA_CONTEXT,h=$('dashboard');
+  S.hppLoading=true;render();
+  try{
+    var q=await client().from('hpp_sales_coverage_p11_v1').select('sales_volume_modeled_pct').eq('brand_id',BRAND).limit(1);
+    if(seq!==S.seq||!sameView(ctx,h))return;
+    if(!q.error&&q.data&&q.data[0])S.hpp=n(q.data[0].sales_volume_modeled_pct);
+  }catch(_){}
+  finally{if(seq===S.seq){S.hppLoading=false;if(sameView(ctx,h))render()}}
+}
+async function load(force){
+  if(S.loading&&!force)return;var seq=++S.seq,ctx=window.__HASNARIA_CONTEXT,h=$('dashboard');S.loading=true;S.error='';render();
+  try{
+    var r=await dashboardPack();
+    if(seq!==S.seq||!sameView(ctx,h))return;
+    if(r.error)throw r.error;
+    var pack=r.data||{};
+    S.periods=Array.isArray(pack.periods)?pack.periods:[];
+    S.rows=Array.isArray(pack.rows)?pack.rows:[];
+    if(!S.period||!S.periods.some(function(x){return key(x.period_start||x.period_key)===S.period}))S.period=S.periods.length?key(S.periods[0].period_start||S.periods[0].period_key):'';
+    S.loaded=true;S.stale=false;
+  }catch(e){if(seq!==S.seq||!sameView(ctx,h))return;S.error='Gagal memuat Ringkasan CEO: '+(e&&e.message?e.message:String(e))}
+  finally{if(seq===S.seq){S.loading=false;if(sameView(ctx,h)){render();if(S.loaded&&S.hpp==null)loadHpp(seq)}}}
+}
+function canSync(){var h=$('dashboard'),ctx=window.__HASNARIA_CONTEXT,sync=window.__HASNARIA_DATA_SYNC;return!!(h&&ctx&&ctx.role==='owner'&&!h.classList.contains('hidden')&&h.querySelector('[data-ceo-one-view="1"]')&&S.loaded&&!S.loading&&!S.hppLoading&&!S.detailOpen&&sync&&sync.canRefresh(h,'#hx6Period'))}
+async function syncRefresh(){
+  if(S.syncing||!client()||!canSync())return false;
+  var seq=S.seq,p=S.period,ctx=window.__HASNARIA_CONTEXT,h=$('dashboard'),root=h.querySelector('[data-ceo-one-view="1"]');S.syncing=true;
+  try{
+    var all=await Promise.all([
+      dashboardPack(),
+      client().from('hpp_sales_coverage_p11_v1').select('sales_volume_modeled_pct').eq('brand_id',BRAND).limit(1)
+    ]);
+    if(seq!==S.seq||p!==S.period||!sameView(ctx,h)||root!==h.querySelector('[data-ceo-one-view="1"]')||!canSync())return false;
+    all.forEach(function(q){if(q.error)throw q.error});
+    var pack=all[0].data||{},periods=Array.isArray(pack.periods)?pack.periods:[],rows=Array.isArray(pack.rows)?pack.rows:[];
+    if(p&&!periods.some(function(x){return key(x.period_start||x.period_key)===p})){
+      var selected=S.periods.find(function(x){return key(x.period_start||x.period_key)===p});
+      periods=periods.concat([selected||{period_start:p+'-01'}]);
+    }
+    var hpp=all[1].data&&all[1].data[0]?n(all[1].data[0].sales_volume_modeled_pct):null;
+    var changed=!!S.error||JSON.stringify([S.periods,S.rows,S.hpp])!==JSON.stringify([periods,rows,hpp]);
+    S.periods=periods;S.rows=rows;S.hpp=hpp;S.error='';S.stale=false;
+    if(changed)render();
+    return true;
+  }catch(_){return false}
+  finally{S.syncing=false}
+}
+function registerSync(){var sync=window.__HASNARIA_DATA_SYNC;if(sync)sync.register('owner-dashboard',function(reason){if(reason==='changed')window.__HASNARIA_DASHBOARD_ONE_VIEW.invalidate();return syncRefresh()})}
+function bind(h){
+ h.onclick=function(e){
+  var close=e.target&&e.target.closest?e.target.closest('[data-hx6-close]'):null;
+  if(close&&(e.target===close||close.classList.contains('hx6-close'))){S.detailOpen=false;render();return}
+  var detail=e.target&&e.target.closest?e.target.closest('[data-hx6-detail]'):null;
+  if(detail){S.detailOpen=true;render()}
+ };
+ h.onchange=function(e){if(e.target&&e.target.id==='hx6Period'){S.period=key(e.target.value);S.detailOpen=false;render()}};
+ h.onkeydown=function(e){if(e.key==='Escape'&&S.detailOpen){S.detailOpen=false;render()}};
+}
 async function mount(opts){
- opts=opts||{};var ctx=window.__HASNARIA_CONTEXT,h=$('dashboard');
+ var ctx=window.__HASNARIA_CONTEXT,h=$('dashboard');
  if(!ctx||ctx.role!=='owner'||!client()||!h||h.classList.contains('hidden'))return false;
- var sync=window.__HASNARIA_DATA_SYNC;
- if(opts.silent&&sync&&!sync.canRefresh(h))return false;
- css();prewarm();var seq=++state.seq,key=monthISO(),cached=state.cache[key],hadContent=!!h.querySelector('[data-ceo-one-view="1"]');
- if(!opts.force&&cached&&Date.now()-(state.cacheAt[key]||0)<30000){h.innerHTML=render(cached);return true}
- if(!opts.silent){if(hadContent)setBusy(h,true);else h.innerHTML='<div class="hx-shell"><div class="hx-loading">Memuat Ringkasan CEO…</div></div>'}
- try{
-   var r=await client().rpc('owner_executive_tab_v1',{p_tab:'dashboard',p_period:key});if(r.error)throw r.error;
-   if(seq!==state.seq||key!==monthISO()||h.classList.contains('hidden')||window.__HASNARIA_CONTEXT!==ctx)return true;
-   if(opts.silent&&sync&&!sync.canRefresh(h))return false;
-   var next=r.data||{},changed=JSON.stringify(cached)!==JSON.stringify(next);
-   state.cache[key]=next;state.cacheAt[key]=Date.now();
-   if(!opts.silent||changed||!hadContent)h.innerHTML=render(next);
- }catch(e){if(!opts.silent&&seq===state.seq){if(hadContent){setBusy(h,false);var old=h.querySelector('.hx-error-inline');if(old)old.remove();var n=document.createElement('div');n.className='hx-error hx-error-inline';n.textContent='Gagal memperbarui Ringkasan CEO: '+(e&&e.message||e);h.prepend(n)}else h.innerHTML='<div class="hx-shell"><div class="hx-error">Gagal memuat Ringkasan CEO: '+esc(e&&e.message||e)+'</div></div>'}}
- return true;
+ if(opts&&opts.silent)return syncRefresh();
+ css();
+ if(S.loaded&&!S.stale&&!(opts&&opts.force)){render();return true}
+ await load(!!(opts&&opts.force));return true;
 }
-document.addEventListener('click',function(e){var b=e.target&&e.target.closest?e.target.closest('[data-ceo-period]'):null;if(!b)return;state.period=new Date(state.period.getFullYear(),state.period.getMonth()+Number(b.getAttribute('data-ceo-period')||0),1);mount()},true);
-window.__HASNARIA_DASHBOARD_ONE_VIEW={mount:mount,invalidate:function(){state.seq++;state.cache={};state.cacheAt={}}};
-if(window.__HASNARIA_DATA_SYNC)window.__HASNARIA_DATA_SYNC.register('owner-dashboard',function(reason){
- if(reason==='changed')window.__HASNARIA_DASHBOARD_ONE_VIEW.invalidate();
- return mount({force:true,silent:true});
-});
+window.__HASNARIA_DASHBOARD_ONE_VIEW={mount:mount,invalidate:function(){S.seq++;S.stale=true;S.loading=false;S.hppLoading=false}};
+registerSync();window.addEventListener('hasnaria:data-sync-ready',registerSync);
 })();

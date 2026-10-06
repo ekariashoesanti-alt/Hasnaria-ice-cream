@@ -311,7 +311,7 @@ ice && STATE.slice.type === 'day' && STATE.slice.id === x.key;
 
     var mm = dataMinMax();
     var months = monthsInData();
-    var monthOpts = '<option value="">Semua</option>' + months.map(function (ym) {
+    var monthOpts = months.map(function (ym) {
       var IDM = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
       var lab = IDM[Number(ym.slice(5, 7))] + ' ' + ym.slice(0, 4);
       return '<option value="' + ym + '"' + (STATE.viewMonth === ym ? ' selected' : '') + '>' + lab + '</option>';

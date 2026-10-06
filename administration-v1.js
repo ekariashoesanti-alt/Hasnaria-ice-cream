@@ -1,7 +1,6 @@
 (function(){
 'use strict';
-if(window.__HASNARIA_ADMIN_V2)return;
-window.__HASNARIA_ADMIN_V2=true;
+if(window.__HASNARIA_ADMIN_V2&&typeof window.__HASNARIA_ADMIN_V2.mount==='function')return;
 
 var BRAND='a36d4b4f-3ccc-4a78-8aeb-b868f0407ea4';
 var MONTHS=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
@@ -43,7 +42,7 @@ function render(){
  var h=document.getElementById('administrasi');if(!h)return;ensureCss();
  var v=S.overview||{},sync=v.sync_ok===true;
  h.innerHTML='<section class="ad5-shell">'+
-   '<div class="ad5-head"><div><div class="ad5-eyebrow">ADMINISTRASI · '+esc(cutLabel())+'</div><h2>Administrasi</h2><p>Pengeluaran operasional non-inventory. Nilai berasal dari Pembelian, tidak mengubah stok, dan otomatis masuk Keuangan.</p></div><div class="ad5-period"><label><span>Cut periode</span><select id="ad5Period">'+periodOptions()+'</select></label></div></div>'+
+   '<div class="ad5-head"><div><div class="ad5-eyebrow">ADMINISTRASI · '+esc(cutLabel())+'</div><h2>Administrasi</h2><p>Pengeluaran operasional non-inventory. Nilai berasal dari Pembelian, tidak mengubah stok, dan otomatis masuk Keuangan.</p></div><div class="ad5-period"><label><span>Bulan</span><select id="ad5Period" data-month-filter="administrasi">'+periodOptions()+'</select></label></div></div>'+
    (S.error?'<div class="ad5-error">'+esc(S.error)+'</div>':'')+
    '<div class="ad5-cards">'+
      card('Total Administrasi',S.loading&&!S.overview?'…':money(v.admin_amount),n(v.admin_rows).toLocaleString('id-ID')+' transaksi','total')+
@@ -58,7 +57,7 @@ function render(){
  bind(h);
 }
 async function loadPeriods(){
- var q=await db().from('ui_period_catalog_v1').select('period_start,period_key').eq('brand_id',BRAND).eq('module','administrasi').order('period_start',{ascending:false});
+ var q=await db().rpc('get_ui_period_catalog_fast_v1',{p_brand:BRAND,p_module:'administrasi'});
  if(q.error)throw q.error;S.periods=q.data||[];
  if(!S.period||!S.periods.some(function(x){return key(x.period_start||x.period_key)===S.period}))S.period=S.periods.length?key(S.periods[0].period_start||S.periods[0].period_key):'';
 }
@@ -113,11 +112,15 @@ async function syncReport(){
    var all=await Promise.all([
      db().from('ui_administration_overview_v1').select('*').eq('brand_id',BRAND).eq('period_month',p+'-01').limit(1),
      db().from('ui_administration_category_chart_v1').select('category,admin_rows,amount').eq('brand_id',BRAND).eq('period_month',p+'-01').order('amount',{ascending:false}),
-     db().from('ui_period_catalog_v1').select('period_start,period_key').eq('brand_id',BRAND).eq('module','administrasi').order('period_start',{ascending:false})
+     db().rpc('get_ui_period_catalog_fast_v1',{p_brand:BRAND,p_module:'administrasi'})
    ]);
    if(seq!==S.seq||S.loading||p!==S.period||c!==window.__HASNARIA_CONTEXT||h!==document.getElementById('administrasi')||root!==h.querySelector('.ad5-shell')||!canSyncReport())return;
    all.forEach(function(r){if(r.error)throw r.error});
    var overview=all[0].data&&all[0].data[0]||null,chart=all[1].data||[],periods=all[2].data||[];
+   if(!periods.some(function(x){return key(x.period_start||x.period_key)===p})){
+     var selected=S.periods.find(function(x){return key(x.period_start||x.period_key)===p});
+     periods=periods.concat([selected||{period_start:p+'-01'}]);
+   }
    var changed=!!S.error||JSON.stringify([S.overview,S.chart,S.periods])!==JSON.stringify([overview,chart,periods]);
    S.overview=overview;S.chart=chart;S.periods=periods;S.detail=[];S.detailError='';S.error='';
    if(changed)render();
@@ -125,5 +128,6 @@ async function syncReport(){
 }
 function registerSync(){var s=window.__HASNARIA_DATA_SYNC;if(s)s.register('owner-administration-report',syncReport)}
 registerSync();window.addEventListener('hasnaria:data-sync-ready',registerSync);
-window.__HASNARIA_ADMIN_V1={mount:mount};
+window.__HASNARIA_ADMIN_V2={mount:mount};
+window.__HASNARIA_ADMIN_V1=window.__HASNARIA_ADMIN_V2;
 })();
