@@ -235,3 +235,11 @@ Digabung dengan main terbaru sampai `2d9524d` (termasuk #81) untuk mempertahanka
 Validasi: 23 berkas tes lulus, syntax 117 JS + Sales multipart lulus, full `node scripts/vercel-build.js` lulus. Detail bukti dan batas verifikasi: `docs/MOBILE_WEB_SYNC_2026-10-06.md`.
 
 HSN-011 → REVIEW; belum DONE karena alur akun Owner/Staff asli dan angka produksi belum direkonsiliasi. Berikutnya: CI/preview PR dan rekonsiliasi akun uji pada target sebelum landing/produksi.
+
+## 2026-10-08 — HSN-1002: Administration/Finance loading (P1 frontend)
+
+- User selected performance work before merging Administration into Operations. Based on main 287fda8, including PR #81/#82 guarded synchronization.
+- Administration navigation reuses successful same-session summaries for at most 30 seconds, including empty summaries. Explicit force refresh and guarded background synchronization bypass this cache. Selected-month changes invalidate it and are no longer dropped during a foreground request.
+- Finance renders its canonical report as soon as the detail read finishes, while alerts continue loading. Successful empty alert responses are cached. Month control is disabled while foreground loading to avoid relabeling an in-flight response. Journal rebuilding and closed-period behavior remain unchanged.
+- Verification: 25 synchronization tests PASS; Vercel build gate PASS; git diff --check PASS. Added request-count, expiry, session, empty-data, delayed-alert and foreground month-race regressions.
+- Status REVIEW: not deployed, no authenticated production browser measurement. HSN-1003 query/index tuning remains TODO; this patch does not claim to fix cold database query timeouts. See REPORT_LOADING_2026-10-08.md.
