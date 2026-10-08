@@ -235,3 +235,11 @@ Digabung dengan main terbaru sampai `2d9524d` (termasuk #81) untuk mempertahanka
 Validasi: 23 berkas tes lulus, syntax 117 JS + Sales multipart lulus, full `node scripts/vercel-build.js` lulus. Detail bukti dan batas verifikasi: `docs/MOBILE_WEB_SYNC_2026-10-06.md`.
 
 HSN-011 → REVIEW; belum DONE karena alur akun Owner/Staff asli dan angka produksi belum direkonsiliasi. Berikutnya: CI/preview PR dan rekonsiliasi akun uji pada target sebelum landing/produksi.
+
+## 2026-10-08 — HSN-614 catatan absensi staf dan GPS baru
+
+Task dipilih eksplisit oleh pengguna setelah melihat layar HP Staff. Catatan Riwayat Hari Ini hanya muncul dari waktu absensi tersimpan: Clock In hijau; Clock Out merah di bawahnya. Setiap tap memperoleh GPS baru, memeriksa radius50m dan melanjutkan melalui enforcement RPC yang sudah ada. Timestamp mutasi tetap tampil bila read laporan berikutnya gagal; gagal mutasi tidak membuat timestamp semu. Header geolocation diubah ke self agar GPS first-party dapat diminta.
+
+Validasi:25 berkas tes lulus, termasuk10 kasus lokasi/mutasi dan6 kasus kartu; fullVercel build lulus. Shared DOM fixture diekstrak agar tes sinkronisasi dan absensi memakai harness yang sama. Kedua entrypoint Staff tetap identik, dengan cache runtime/mobile shell diperbarui.
+
+Tidak ada perubahan SQL/schema/data produksi atau login. HSN-614 → REVIEW menunggu acceptance GPS dan akun Staff asli di target. Detail: `docs/STAFF_CLOCK_HISTORY_2026-10-08.md`.

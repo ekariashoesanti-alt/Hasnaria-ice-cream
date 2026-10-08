@@ -79,6 +79,18 @@
   ],
   "tasks": [
     {
+      "id": "HSN-614",
+      "milestone": "M6",
+      "priority": "P0",
+      "status": "REVIEW",
+      "title": "Catatan Clock In/Out staf di lokasi toko",
+      "dependencies": ["HSN-602", "HSN-011"],
+      "acceptance": "Clock In/Out mengambil GPS baru dan hanya disimpan di radius toko; kartu Clock In hijau muncul dari waktu tersimpan, Clock Out merah di bawahnya; gagal simpan tidak membuat catatan; sesi dan sinkronisasi tetap aman.",
+      "owner": "Codex/ChatGPT",
+      "updated_at": "2026-10-08",
+      "notes": "Catatan masuk hijau dan pulang merah dari waktu tersimpan; GPS baru setiap klik, fallback respons mutasi, dan header GPS first-party.25 berkas tes serta full build lulus; acceptance akun Staff/GPS asli di produksi belum dilakukan. Bukti: docs/STAFF_CLOCK_HISTORY_2026-10-08.md."
+    },
+    {
       "id": "HSN-011",
       "milestone": "M0",
       "priority": "P0",

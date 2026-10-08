@@ -28,6 +28,7 @@
       pin:'<path d="M12 22s7-5.3 7-12a7 7 0 1 0-14 0c0 6.7 7 12 7 12Z"/><circle cx="12" cy="10" r="2.5"/>',
       cart:'<path d="M3 4h2l2.2 10.2a2 2 0 0 0 2 1.6h7.6a2 2 0 0 0 2-1.5L20 8H7"/><circle cx="10" cy="20" r="1"/><circle cx="18" cy="20" r="1"/>',
       box:'<path d="m4 7 8-4 8 4-8 4Z"/><path d="M4 7v10l8 4 8-4V7"/><path d="M12 11v10"/>',
+      shop:'<rect x="5" y="2" width="14" height="20" rx="1"/><path d="M10 22v-5h4v5M9 6h.01M15 6h.01M9 10h.01M15 10h.01M9 14h.01M15 14h.01"/>',
       clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'
     }[name]||'';
     return '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">'+path+'</svg>';
@@ -81,18 +82,35 @@
     var s=shell();var box=q('.attendance-illustration-card');
     if(!s||!box)return;
     s.classList.add('mobile-clock-mode');
-    if(box.getAttribute('data-mobile-enhanced')==='1')return;
-    box.setAttribute('data-mobile-enhanced','1');
-    var timeBoxes=qa('.attendance-times>div',box);
+    var timeContainer=q('.attendance-times',box);
+    var timeBoxes=timeContainer?timeContainer.children:[];
     var inTime=timeBoxes[0]?text(q('strong',timeBoxes[0])):'—';
     var outTime=timeBoxes[1]?text(q('strong',timeBoxes[1])):'—';
-    var history=document.createElement('div');
-    history.className='mobile-today-history';
+    // The source times come from persisted attendance, never a button click or GPS result.
+    var validTime=/^(?:[01]\d|2[0-3]):[0-5]\d$/;
+    inTime=validTime.test(inTime)?inTime:'';
+    outTime=validTime.test(outTime)?outTime:'';
+    var history=q('.mobile-today-history',box);
+    var timesKey=inTime+'|'+outTime;
+    if(history&&history.getAttribute('data-clock-times')===timesKey)return;
+    if(!history){
+      history=document.createElement('div');
+      history.className='mobile-today-history';
+      box.insertBefore(history,box.firstChild);
+    }
+    box.setAttribute('data-mobile-enhanced','1');
+    history.setAttribute('data-clock-times',timesKey);
+    function card(kind,time,label){
+      if(!time)return '';
+      var savedStatus='Absensi '+label+' tersimpan otomatis; tidak memerlukan persetujuan Owner.';
+      return '<div class="mobile-history-card mobile-history-'+kind+'" data-clock-record="'+kind+'">'
+        +'<span class="mobile-history-accent" aria-hidden="true"></span><time class="mobile-history-time">'+esc(time)+'</time>'
+        +'<span class="mobile-history-icon">'+icon('shop')+'</span><b>'+label+'</b>'
+        +'<span class="mobile-history-status" title="'+esc(savedStatus)+'" aria-label="'+esc(savedStatus)+'">Disetujui</span></div>';
+    }
     history.innerHTML='<h2>Riwayat Hari Ini</h2><div class="mobile-history-list">'
-      +'<div class="mobile-history-card"><span class="mobile-history-accent"></span><span class="mobile-history-icon">'+icon('home')+'</span><div><b>Clock In</b><small>'+esc(inTime||'—')+'</small></div></div>'
-      +'<div class="mobile-history-card"><span class="mobile-history-accent"></span><span class="mobile-history-icon">'+icon('home')+'</span><div><b>Clock Out</b><small>'+esc(outTime||'—')+'</small></div></div>'
+      +card('in',inTime,'Clock In')+card('out',outTime,'Clock Out')
       +'</div>';
-    box.insertBefore(history,box.firstChild);
   }
 
   function staffExploreHtml(){

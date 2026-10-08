@@ -44,6 +44,9 @@ jobs:
       - name: Mobile and web data synchronization regressions
         run: node --test tests/*sync.test.js
 
+      - name: Staff attendance location and saved history
+        run: node --test tests/staff-clock-location.test.js tests/staff-clock-history.test.js
+
       - name: Runtime source integrity
         shell: bash
         run: |

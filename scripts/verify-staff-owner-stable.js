@@ -25,7 +25,7 @@ function assertOwnerEntry(name, source) {
   assert.ok(stableScript < legacyRenderer, `${name}: Owner stable renderer must load before legacy staff-v5 renderer`);
   assert.ok(compatScript > legacyRenderer && compatScript < workflow, `${name}: Owner compatibility sentinel must load after legacy renderer and before workflow observers`);
   assert.ok(source.includes('/staff-owner-stable-v1.css?v=3'), `${name}: Owner stable stylesheet v3 must be loaded`);
-  assert.ok(source.includes('/staff-mobile-shell-v1.js?v=3'), `${name}: mobile shell v3 must yield to Owner stable handoff`);
+  assert.ok(source.includes('/staff-mobile-shell-v1.js?v=4'), `${name}: mobile shell v4 must yield to Owner stable handoff`);
   assert.ok(source.includes('/staff-mobile-stability-v2.css?v=1'), `${name}: mobile stability stylesheet must be loaded`);
 }
 
