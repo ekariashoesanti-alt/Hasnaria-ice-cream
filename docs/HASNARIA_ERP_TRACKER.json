@@ -79,6 +79,18 @@
   ],
   "tasks": [
     {
+      "id": "HSN-615",
+      "milestone": "M6",
+      "priority": "P1",
+      "status": "REVIEW",
+      "title": "Team Portal branding pada header dan logo HP",
+      "dependencies": ["HSN-011"],
+      "acceptance": "Header memakai Team Portal/Hasnaria Team dan logo aplikasi bertuliskan TEAM; layout, jalur portal, identitas sesi, dan akses tetap.",
+      "owner": "Codex/ChatGPT",
+      "updated_at": "2026-10-08",
+      "notes": "Staff Portal menjadi Team Portal; Hasnaria Team pada header, boot screen, metadata dan bantuan instalasi; SVG logo TEAM. Layout/CSS, nama pegawai, jalur, role, session key dan RPC tetap. Versi aset/manifest serta cache PWA diperbarui. Tiga berkas tes Staff existing, full build dan review independen lulus; acceptance versi target produksi masih pending saat commit."
+    },
+    {
       "id": "HSN-614",
       "milestone": "M6",
       "priority": "P0",

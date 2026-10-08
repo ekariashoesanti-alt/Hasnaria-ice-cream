@@ -25,7 +25,7 @@ function assertOwnerEntry(name, source) {
   assert.ok(stableScript < legacyRenderer, `${name}: Owner stable renderer must load before legacy staff-v5 renderer`);
   assert.ok(compatScript > legacyRenderer && compatScript < workflow, `${name}: Owner compatibility sentinel must load after legacy renderer and before workflow observers`);
   assert.ok(source.includes('/staff-owner-stable-v1.css?v=3'), `${name}: Owner stable stylesheet v3 must be loaded`);
-  assert.ok(source.includes('/staff-mobile-shell-v1.js?v=4'), `${name}: mobile shell v4 must yield to Owner stable handoff`);
+  assert.ok(source.includes('/staff-mobile-shell-v1.js?v=5'), `${name}: mobile shell v5 must yield to Owner stable handoff`);
   assert.ok(source.includes('/staff-mobile-stability-v2.css?v=1'), `${name}: mobile stability stylesheet must be loaded`);
 }
 
@@ -57,6 +57,6 @@ assert.ok(mobileShell.includes('function stableOwnerHandoff()'), 'Mobile shell m
 assert.ok(mobileShell.includes('if(stableOwnerHandoff())'), 'Mobile enhancer must stand down once stable Owner handoff begins');
 assert.match(manifest, /"start_url"\s*:\s*"\/staff\/\?source=pwa"/, 'PWA must continue to enter through /staff/');
 assert.match(manifest, /"scope"\s*:\s*"\/staff\/"/, 'PWA scope must stay on /staff/');
-assert.ok(serviceWorker.includes("const CACHE_NAME='hasnaria-staff-pwa-v3'"), 'PWA cache must rotate after Owner Mobile cutover');
+assert.ok(serviceWorker.includes("const CACHE_NAME='hasnaria-staff-pwa-v4'"), 'PWA cache must rotate after Team branding update');
 
 console.log('Owner Mobile persistent single-renderer gate: PASS for staff.html and /staff/');

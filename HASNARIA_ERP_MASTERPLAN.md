@@ -246,6 +246,7 @@ Rule-driven approvals, immutable audit, self-approval prevention, exception mode
 | HSN-515 | M5 | P0 | REVIEW | Finance reconciliation test pack | HSN-508, HSN-510, HSN-511 |
 | HSN-600 | M6 | P0 | DONE | Employee master | HSN-101 |
 | HSN-614 | M6 | P0 | REVIEW | Catatan Clock In/Out staf di lokasi toko | HSN-602, HSN-011 |
+| HSN-615 | M6 | P1 | REVIEW | Team Portal branding pada header dan logo HP | HSN-011 |
 | HSN-601 | M6 | P0 | DONE | Shift template and roster | HSN-600, HSN-102 |
 | HSN-602 | M6 | P0 | DONE | Attendance check-in/out | HSN-601 |
 | HSN-603 | M6 | P1 | REVIEW | Late/absence rules | HSN-602 |

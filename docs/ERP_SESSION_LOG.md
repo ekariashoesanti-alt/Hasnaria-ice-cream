@@ -243,3 +243,9 @@ Task dipilih eksplisit oleh pengguna setelah melihat layar HP Staff. Catatan Riw
 Validasi:25 berkas tes lulus, termasuk10 kasus lokasi/mutasi dan6 kasus kartu; fullVercel build lulus. Shared DOM fixture diekstrak agar tes sinkronisasi dan absensi memakai harness yang sama. Kedua entrypoint Staff tetap identik, dengan cache runtime/mobile shell diperbarui.
 
 Tidak ada perubahan SQL/schema/data produksi atau login. HSN-614 → REVIEW menunggu acceptance GPS dan akun Staff asli di target. Detail: `docs/STAFF_CLOCK_HISTORY_2026-10-08.md`.
+
+## 2026-10-08 — HSN-615 Team Portal pada header dan logo
+
+Permintaan eksplisit pengguna: Staff Portal menjadi Team Portal, dengan Hasnaria Team pada header mobile, boot screen, judul aplikasi/metadata, manifest dan bantuan pemasangan. Dua logo SVG aplikasi mengganti tulisan STAFF menjadi TEAM tanpa mengubah geometri, warna atau font. Logo utama HASNARIA/TERRACE serta PNG tidak diubah. CSS/layout, nama pegawai, role, token/session key, jalur /staff/, RPC dan semua logic tetap identik.
+
+Versi aset runtime/mobile shell/boot/PWA dan manifest diperbarui; cache service worker menjadi v4 dengan prefix cleanup serta scope yang sama. Kedua entrypoint tetap byte-identical. Tiga berkas tes Staff existing, full Vercel build dan review independen lulus. HSN-615 → REVIEW saat commit; publikasi dan verifikasi tampilan/versi produksi dilanjutkan melalui PR.
