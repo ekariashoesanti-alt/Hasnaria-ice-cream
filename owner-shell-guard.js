@@ -157,7 +157,7 @@
     if(existing){afterRuntime(id,requestRender);return}
     if(state.finStockLoad){state.finStockLoad.then(function(){afterRuntime(id,requestRender)});return}
     state.finStockLoad=new Promise(function(resolve){
-      var s=document.createElement('script');s.id='hasnaria-owner-finance-stock-v3-js';s.src='/owner-finance-stock-v3'+'.js?v=12';s.async=true;
+      var s=document.createElement('script');s.id='hasnaria-owner-finance-stock-v3-js';s.src='/owner-finance-stock-v3'+'.js?v=13';s.async=true;
       s.onload=resolve;s.onerror=function(){state.finStockLoad=null;resolve()};document.head.appendChild(s);
     });
     state.finStockLoad.then(function(){afterRuntime(id,requestRender)});
@@ -176,7 +176,7 @@
   }
 
   function adminRuntime(){var a=window.__HASNARIA_ADMIN_V2||window.__HASNARIA_ADMIN_V1;return a&&typeof a.mount==='function'?a:null}
-  function mountAdministration(requestRender){var a=adminRuntime();if(!a||!isOwner()||state.active!=='administrasi')return false;a.mount({force:!!requestRender});return true}
+  function mountAdministration(requestRender){var a=adminRuntime();if(!a||!isOwner()||state.active!=='administrasi')return false;a.mount({force:!!requestRender,navigation:true});return true}
   function ensureAdministration(requestRender){
     if(!isOwner())return;var h=section('administrasi');if(!h||h.classList.contains('hidden'))return;
     if(mountAdministration(requestRender))return;
@@ -189,7 +189,7 @@
         old.addEventListener('load',finish,{once:true});old.addEventListener('error',finish,{once:true});
         setTimeout(finish,1200);return
       }
-      var s=document.createElement('script');s.id='hasnaria-admin-v1-js';s.src='/administration-v1.js?v=6';s.async=true;
+      var s=document.createElement('script');s.id='hasnaria-admin-v1-js';s.src='/administration-v1.js?v=7';s.async=true;
       s.onload=resolve;s.onerror=function(){state.adminLoad=null;resolve()};document.head.appendChild(s)
     });
     state.adminLoad.then(function(){mountAdministration(requestRender)});

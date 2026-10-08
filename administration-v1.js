@@ -4,7 +4,7 @@ if(window.__HASNARIA_ADMIN_V2&&typeof window.__HASNARIA_ADMIN_V2.mount==='functi
 
 var BRAND='a36d4b4f-3ccc-4a78-8aeb-b868f0407ea4';
 var MONTHS=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
-var S={periods:[],period:'',overview:null,chart:[],detail:[],loading:false,error:'',detailOpen:false,detailLoading:false,detailError:'',seq:0,syncing:false};
+var S={periods:[],period:'',overview:null,chart:[],detail:[],loading:false,error:'',detailOpen:false,detailLoading:false,detailError:'',seq:0,loadedAt:0,dataContext:null,syncing:false};
 
 function db(){return window.__HASNARIA_DB}
 function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
@@ -62,20 +62,20 @@ async function loadPeriods(){
  if(!S.period||!S.periods.some(function(x){return key(x.period_start||x.period_key)===S.period}))S.period=S.periods.length?key(S.periods[0].period_start||S.periods[0].period_key):'';
 }
 async function loadSummary(force){
- if(S.loading&&!force)return;var seq=++S.seq;S.loading=true;S.error='';render();
+ var seq=++S.seq,context=window.__HASNARIA_CONTEXT;S.loading=true;S.loadedAt=0;S.error='';render();
  try{
    if(!S.periods.length||force)await loadPeriods();
-   if(seq!==S.seq)return;
+   if(seq!==S.seq||context!==window.__HASNARIA_CONTEXT)return;
    if(!S.period){S.overview=null;S.chart=[];return}
    var month=S.period+'-01';
    var pair=await Promise.all([
      db().from('ui_administration_overview_v1').select('*').eq('brand_id',BRAND).eq('period_month',month).limit(1),
      db().from('ui_administration_category_chart_v1').select('category,admin_rows,amount').eq('brand_id',BRAND).eq('period_month',month).order('amount',{ascending:false})
    ]);
-   if(seq!==S.seq)return;
+   if(seq!==S.seq||context!==window.__HASNARIA_CONTEXT)return;
    if(pair[0].error)throw pair[0].error;if(pair[1].error)throw pair[1].error;
-   S.overview=pair[0].data&&pair[0].data[0]?pair[0].data[0]:null;S.chart=pair[1].data||[];
- }catch(e){if(seq!==S.seq)return;S.overview=null;S.chart=[];S.error='Gagal memuat Administrasi: '+(e&&e.message?e.message:String(e))}
+   S.overview=pair[0].data&&pair[0].data[0]?pair[0].data[0]:null;S.chart=pair[1].data||[];S.loadedAt=Date.now();S.dataContext=context;
+ }catch(e){if(seq!==S.seq||context!==window.__HASNARIA_CONTEXT)return;S.overview=null;S.chart=[];S.error='Gagal memuat Administrasi: '+(e&&e.message?e.message:String(e))}
  finally{if(seq===S.seq){S.loading=false;render()}}
 }
 async function loadDetail(){
@@ -94,14 +94,15 @@ function bind(h){
    if(detail){S.detailOpen=true;loadDetail();return}
  };
  h.onchange=function(e){
-   if(e.target&&e.target.id==='ad5Period'){S.period=key(e.target.value);S.overview=null;S.chart=[];S.detail=[];S.detailOpen=false;loadSummary(false)}
+   if(e.target&&e.target.id==='ad5Period'){S.period=key(e.target.value);S.loadedAt=0;S.overview=null;S.chart=[];S.detail=[];S.detailOpen=false;loadSummary(false)}
  };
  h.onkeydown=function(e){if(e.key==='Escape'&&S.detailOpen){S.detailOpen=false;render()}};
 }
 async function mount(o){
  var h=document.getElementById('administrasi');if(!h||h.classList.contains('hidden'))return;ensureCss();
  if(S.loading)return;
- if(S.overview&&!(o&&o.force)){render();return}
+ // Reuse recent navigation reads; explicit refresh and data-sync still fetch.
+ if(S.dataContext===window.__HASNARIA_CONTEXT&&S.loadedAt&&Date.now()-S.loadedAt<30000&&(!(o&&o.force)||(o&&o.navigation))){render();return}
  await loadSummary(!!(o&&o.force));
 }
 function canSyncReport(){var h=document.getElementById('administrasi'),c=window.__HASNARIA_CONTEXT,s=window.__HASNARIA_DATA_SYNC;return!!(h&&!h.classList.contains('hidden')&&c&&c.role==='owner'&&h.querySelector('.ad5-shell')&&!S.detailOpen&&!S.detailLoading&&s&&s.canRefresh(h,'#ad5Period'))}
@@ -122,7 +123,7 @@ async function syncReport(){
      periods=periods.concat([selected||{period_start:p+'-01'}]);
    }
    var changed=!!S.error||JSON.stringify([S.overview,S.chart,S.periods])!==JSON.stringify([overview,chart,periods]);
-   S.overview=overview;S.chart=chart;S.periods=periods;S.detail=[];S.detailError='';S.error='';
+   S.overview=overview;S.chart=chart;S.periods=periods;S.detail=[];S.detailError='';S.error='';S.loadedAt=Date.now();S.dataContext=c;
    if(changed)render();
  }finally{S.syncing=false}
 }

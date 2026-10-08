@@ -2031,14 +2031,14 @@
       "id": "HSN-1002",
       "milestone": "M10",
       "priority": "P0",
-      "status": "TODO",
+      "status": "REVIEW",
       "title": "Performance budget",
       "dependencies": [
         "HSN-800"
       ],
       "acceptance": "Core dashboard target load/query count/response time didefinisikan dan diuji.",
       "owner": "Codex/ChatGPT",
-      "updated_at": "2026-09-18"
+      "updated_at": "2026-10-08"
     },
     {
       "id": "HSN-1003",
