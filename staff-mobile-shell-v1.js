@@ -72,7 +72,7 @@
     var tiles=enabled.map(function(k){return '<button class="mobile-explore-tile" data-mod="'+k+'"><span>'+icon(moduleIcon[k])+'</span><b>'+moduleLabel[k]+'</b></button>';}).join('');
     var parent=card.parentNode;
     parent.innerHTML=''
-      +'<div class="mobile-dashboard-head"><div><span class="mobile-kicker">Hasnaria Staff</span><h1>Halo, '+esc(memo.staffName)+'</h1><p>Selamat bekerja. Semua aktivitas utama ada di satu tempat.</p></div><img src="/hasnaria-logo.svg" alt="Hasnaria"></div>'
+      +'<div class="mobile-dashboard-head"><div><span class="mobile-kicker">Hasnaria Team</span><h1>Halo, '+esc(memo.staffName)+'</h1><p>Selamat bekerja. Semua aktivitas utama ada di satu tempat.</p></div><img src="/hasnaria-logo.svg" alt="Hasnaria"></div>'
       +'<section class="mobile-section"><div class="mobile-section-head"><h2>Informasi Untuk Anda</h2></div><button class="mobile-info-card mobile-info-action" data-mobile-route="att-clock"><span>'+icon('clock')+'</span><div><b>Status Kehadiran</b><small>Buka absensi untuk melihat status dan lokasi hari ini.</small></div><i>›</i></button></section>'
       +'<section class="mobile-section"><div class="mobile-section-head"><h2>Akses Kerja Anda</h2><button data-mobile-target="explore">Lihat Semua</button></div><div class="mobile-home-grid">'+(tiles||'<div class="mobile-empty-card">Belum ada modul yang ditugaskan.</div>')+'</div></section>'
       +'<section class="mobile-section"><div class="mobile-section-head"><h2>Pekerjaan Anda</h2></div><div class="mobile-empty-card">Akses aktif: '+esc(enabled.map(function(k){return moduleLabel[k];}).join(', ')||'belum ada')+'</div></section>';
@@ -123,7 +123,7 @@
       cards.push(['route','att-summary','grid','Kehadiran Saya']);
       cards.push(['route','att-correction','clock','Koreksi']);
     }
-    return '<div class="mobile-overlay-head"><span class="mobile-kicker">Hasnaria Staff</span><h1>Jelajah</h1><p>Pilih fungsi kerja yang dibutuhkan.</p></div><div class="mobile-explore-grid">'+cards.map(function(c){
+    return '<div class="mobile-overlay-head"><span class="mobile-kicker">Hasnaria Team</span><h1>Jelajah</h1><p>Pilih fungsi kerja yang dibutuhkan.</p></div><div class="mobile-explore-grid">'+cards.map(function(c){
       var attr=c[0]==='route'?'data-mobile-route="'+c[1]+'"':'data-mod="'+c[0]+'"';
       return '<button class="mobile-explore-tile" '+attr+'><span>'+icon(c[2])+'</span><b>'+esc(c[3])+'</b></button>';
     }).join('')+'</div>';
@@ -139,7 +139,7 @@
 
   function profileHtml(owner){
     var name=owner?'Owner Hasnaria':memo.staffName;
-    return '<div class="mobile-overlay-head"><span class="mobile-kicker">'+(owner?'Owner Mobile':'Hasnaria Staff')+'</span><h1>Profil</h1></div>'
+    return '<div class="mobile-overlay-head"><span class="mobile-kicker">'+(owner?'Owner Mobile':'Hasnaria Team')+'</span><h1>Profil</h1></div>'
       +'<div class="mobile-profile-card"><div class="mobile-avatar">'+icon('user')+'</div><div><b>'+esc(name)+'</b><small>'+(owner?'Owner':'Pegawai')+'</small></div></div>'
       +(owner?'<button class="mobile-list-row" data-otab="users"><span>'+icon('user')+'</span><div><b>Kelola Akun Staff</b><small>PIN, akses, dan status staff</small></div><i>›</i></button><button class="mobile-list-row" data-otab="location"><span>'+icon('pin')+'</span><div><b>Lokasi Absensi</b><small>Atur titik Warung dan radius 50 m</small></div><i>›</i></button><button class="staff-btn ghost mobile-logout" data-act="owner-out">Keluar Owner</button>':'<button class="mobile-list-row" data-mobile-route="att-summary"><span>'+icon('check')+'</span><div><b>Kehadiran Saya</b><small>Lihat ringkasan kehadiran</small></div><i>›</i></button><button class="staff-btn ghost mobile-logout" data-act="staff-out">Keluar</button>');
   }
