@@ -2182,6 +2182,20 @@
       "acceptance": "P0 selesai, reconciliation sign-off, no unresolved critical defects.",
       "owner": "Codex/ChatGPT",
       "updated_at": "2026-09-18"
+    },
+    {
+      "id": "HSN-618",
+      "milestone": "M6",
+      "priority": "P0",
+      "status": "REVIEW",
+      "title": "GPS Android: pulih dari fix awal meleset dan izin lokasi",
+      "dependencies": [
+        "HSN-616"
+      ],
+      "acceptance": "GPS fresh yang masih outside tetap disampling; timestamp stale/future ditolak; kembali dari background/izin memperbarui preview tanpa menulis absensi otomatis; radius50m, UI dan credential tetap.",
+      "owner": "Codex/ChatGPT",
+      "updated_at": "2026-10-10",
+      "notes": "Fresh precise outside tetap disampling sampai posisi dalamradius/deadline; timestamp max5s lama/1s future; budget setelahizin/callback; resume preview tanpa autowrite.30 kasus GPS,25 berkas tes/full build, dua mode Chromium Android dan review independen lulus. Tidak ada perubahan radius50m, titik toko, UI/auth/DB. RealAndroid physicalGPS acceptance masih diperlukan. Bukti: docs/TEAM_ANDROID_GPS_2026-10-10.md."
     }
   ]
 }
