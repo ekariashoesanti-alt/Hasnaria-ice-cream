@@ -82,13 +82,13 @@
       "id": "HSN-616",
       "milestone": "M6",
       "priority": "P0",
-      "status": "IN_PROGRESS",
+      "status": "REVIEW",
       "title": "GPS absensi akurat dan pemeriksaan ulang lokasi toko",
       "dependencies": ["HSN-602", "HSN-614"],
       "acceptance": "GPS awal yang kasar/stale tidak mengunci clock; setiap percobaan memperoleh GPS baru dan akurat; hanya jarak <=50m dapat disimpan; sesi dan tampilan tetap.",
       "owner": "Codex/ChatGPT",
       "updated_at": "2026-10-10",
-      "notes": "Pengguna melaporkan jarak >50m padahal berada di toko; audit GPS/outlet/titik tersimpan dan perbaikan sampling tanpa memperbesar radius."
+      "notes": "GPS awal/clock mengambil fresh precise fix dengan sampling maksimum 12 detik dan accuracy<=50m; pembacaan outside lama dapat dicoba ulang. Radius pusat tetap50m dan SQL produksi tetap menolak outside.21 kasus lokasi serta25 berkas tes/full build lulus; review independen tanpa blocker. Titik toko tidak diganti tanpa bukti koordinat fisik. Acceptance GPS HP asli masih diperlukan. Bukti: docs/TEAM_ATTENDANCE_GPS_2026-10-10.md."
     },
     {
       "id": "HSN-617",

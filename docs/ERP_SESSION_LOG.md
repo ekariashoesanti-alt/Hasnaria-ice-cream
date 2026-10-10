@@ -255,3 +255,11 @@ Versi aset runtime/mobile shell/boot/PWA dan manifest diperbarui; cache service 
 Nama mengikuti instruksi terbaru pengguna: Tari. Akun yang dipilih adalah satu employee bernama Arum pada brand Hasnaria, dikonfirmasi juga dari directory login publik. Kode pegawai pada data live tidak cocok dengan nama seed historis, sehingga target dipilih dari identitas akun yang dibaca, bukan menebak employee_no.
 
 UPDATE hanya menyentuh full_name dan updated_at pada employees. Lock/snapshot dan assertion dalam transaksi memverifikasi seluruh staff_access, sessions (selain last_seen_at), employee ID, outlet/status dan field pegawai lain identik. PIN, modules, active flag dan sesi tidak diubah; Owner save yang mencabut sesi tidak dipanggil. Verifikasi sesudah perubahan melalui public.staff_login_directory mengembalikan Tari pada ID yang sama. HSN-617 → DONE. Tidak ada perubahan schema/Auth. Bukti: docs/TEAM_EMPLOYEE_RENAME_2026-10-10.md.
+
+## 2026-10-10 — HSN-616 perbaikan GPS awal dan retry absensi
+
+Pengguna melaporkan jarak >50m padahal berada di toko. GPS awal sebelumnya menerima satu hasil/cache sampai30detik, lalu tombol dan doClock dapat terkunci oleh state outside lama. GPS awal dan percobaan Clock sekarang mengambil fix baru (maximumAge0), menunggu sampling dengan accuracy<=50m maksimal12detik, dan membersihkan watch/timer ketika selesai, konteks berubah, atau halaman disembunyikan. State outside/error lama dapat dicoba ulang; write tetap wajib koordinat baru di radius50m. Akurasi tidak ditambahkan ke radius.
+
+SQL produksi diverifikasi: check-in/out menolak v_distance>50, titik pusat berjarak0m dan offset51m dihitung51m. Ada satu outlet Hasnaria aktif pada data yang diaudit, sehingga mismatch roster/outlet bukan bukti penyebab laporan ini. Titik toko tersimpan tidak dipindah tanpa angka GPS/koordinat fisik pembanding. Tidak ada perubahan CSS, schema, Auth atau data absensi. Versi kedua entrypoint runtime menjadi v8 dan tetap byte-identical.
+
+Validasi:21 kasus lokasi,25 berkas tes existing dan full Vercel build lulus; review independen tidak menemukan blocker. HSN-616 → REVIEW menunggu acceptance GPS perangkat asli; verifikasi browser sintetis dan versi deployment dilanjutkan melalui PR. Detail: docs/TEAM_ATTENDANCE_GPS_2026-10-10.md.
