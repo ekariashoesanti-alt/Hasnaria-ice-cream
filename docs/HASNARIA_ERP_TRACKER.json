@@ -79,6 +79,30 @@
   ],
   "tasks": [
     {
+      "id": "HSN-616",
+      "milestone": "M6",
+      "priority": "P0",
+      "status": "REVIEW",
+      "title": "GPS absensi akurat dan pemeriksaan ulang lokasi toko",
+      "dependencies": ["HSN-602", "HSN-614"],
+      "acceptance": "GPS awal yang kasar/stale tidak mengunci clock; setiap percobaan memperoleh GPS baru dan akurat; hanya jarak <=50m dapat disimpan; sesi dan tampilan tetap.",
+      "owner": "Codex/ChatGPT",
+      "updated_at": "2026-10-10",
+      "notes": "GPS awal/clock mengambil fresh precise fix dengan sampling maksimum 12 detik dan accuracy<=50m; pembacaan outside lama dapat dicoba ulang. Radius pusat tetap50m dan SQL produksi tetap menolak outside.21 kasus lokasi serta25 berkas tes/full build lulus; review independen tanpa blocker. Titik toko tidak diganti tanpa bukti koordinat fisik. Acceptance GPS HP asli masih diperlukan. Bukti: docs/TEAM_ATTENDANCE_GPS_2026-10-10.md."
+    },
+    {
+      "id": "HSN-617",
+      "milestone": "M6",
+      "priority": "P1",
+      "status": "DONE",
+      "title": "Ubah nama Arum menjadi Tari dengan kredensial yang sama",
+      "dependencies": ["HSN-600"],
+      "acceptance": "Employee Arum tampil sebagai Tari dengan employee ID, PIN, akses modul, outlet, dan sesi yang sama; tidak reset kredensial.",
+      "owner": "Codex/ChatGPT",
+      "updated_at": "2026-10-10",
+      "notes": "Nama Arum menjadi Tari pada employees.full_name produksi, dengan guard satu akun yang cocok. Snapshot dan assertion transaksi membuktikan PIN/access/sessions/ID dan field pegawai lain tetap; public.staff_login_directory sesudah perubahan mengembalikan Tari. Tidak memakai Owner save/reset PIN. Bukti: docs/TEAM_EMPLOYEE_RENAME_2026-10-10.md."
+    },
+    {
       "id": "HSN-615",
       "milestone": "M6",
       "priority": "P1",
