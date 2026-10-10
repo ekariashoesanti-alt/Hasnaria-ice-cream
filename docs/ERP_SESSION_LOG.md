@@ -249,3 +249,9 @@ Tidak ada perubahan SQL/schema/data produksi atau login. HSN-614 → REVIEW menu
 Permintaan eksplisit pengguna: Staff Portal menjadi Team Portal, dengan Hasnaria Team pada header mobile, boot screen, judul aplikasi/metadata, manifest dan bantuan pemasangan. Dua logo SVG aplikasi mengganti tulisan STAFF menjadi TEAM tanpa mengubah geometri, warna atau font. Logo utama HASNARIA/TERRACE serta PNG tidak diubah. CSS/layout, nama pegawai, role, token/session key, jalur /staff/, RPC dan semua logic tetap identik.
 
 Versi aset runtime/mobile shell/boot/PWA dan manifest diperbarui; cache service worker menjadi v4 dengan prefix cleanup serta scope yang sama. Kedua entrypoint tetap byte-identical. Tiga berkas tes Staff existing, full Vercel build dan review independen lulus. HSN-615 → REVIEW saat commit; publikasi dan verifikasi tampilan/versi produksi dilanjutkan melalui PR.
+
+## 2026-10-10 — HSN-617 nama Arum menjadi Tari, kredensial tetap
+
+Nama mengikuti instruksi terbaru pengguna: Tari. Akun yang dipilih adalah satu employee bernama Arum pada brand Hasnaria, dikonfirmasi juga dari directory login publik. Kode pegawai pada data live tidak cocok dengan nama seed historis, sehingga target dipilih dari identitas akun yang dibaca, bukan menebak employee_no.
+
+UPDATE hanya menyentuh full_name dan updated_at pada employees. Lock/snapshot dan assertion dalam transaksi memverifikasi seluruh staff_access, sessions (selain last_seen_at), employee ID, outlet/status dan field pegawai lain identik. PIN, modules, active flag dan sesi tidak diubah; Owner save yang mencabut sesi tidak dipanggil. Verifikasi sesudah perubahan melalui public.staff_login_directory mengembalikan Tari pada ID yang sama. HSN-617 → DONE. Tidak ada perubahan schema/Auth. Bukti: docs/TEAM_EMPLOYEE_RENAME_2026-10-10.md.
