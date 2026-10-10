@@ -9,7 +9,7 @@ var ADDRESS='Jl. Kates No.71, Utara, MAN1, Kec. Boyolali, Kabupaten Boyolali, Ja
 var db=null;
 var state={view:'login',dir:[],staff:null,token:'',module:'home',sub:'',msg:'',today:null,hist:[],corr:[],month:new Date(),selected:'',geo:null,owner:null,ownerRows:[],approvals:[],loc:null,ownerTab:'users',edit:null,employeeDetailOpen:false};
 var syncBusy=false,mutating=false,mutationGeneration=0,viewGeneration=0,renderedData='',readGeneration={today:0,hist:0,corr:0,owner:0,directory:0};
-var positionCapture=null,geoGeneration=0;
+var positionCapture=null,geoGeneration=0,previewTimer=null,previewContext=null;
 function syncCoordinator(){return window.__HASNARIA_DATA_SYNC;}
 function notifyWrite(){var s=syncCoordinator();if(s)s.notify();}
 function requestContext(){return {token:state.token,storedToken:storedToken(),view:state.view,module:state.module,sub:state.sub,month:state.month.getFullYear()+'-'+state.month.getMonth(),selected:state.selected,ownerId:state.owner&&state.owner.id,ownerTab:state.ownerTab,employeeDetailOpen:state.employeeDetailOpen,generation:mutationGeneration,viewGeneration:viewGeneration};}
@@ -43,7 +43,7 @@ function loginView(){var opts=state.dir.map(function(x){return '<option value="'
 function homeView(){var mods={absensi:['✓','Absensi','Clock in, riwayat, dan koreksi kehadiran'],kasir:['▣','Kasir','Transaksi keuangan Penjualan dan Pembelian'],gudang:['□','Gudang','Stok, penerimaan, dan opname']};return '<div class="staff-shell">'+top('Keluar','staff-out')+'<section class="staff-content"><div class="staff-card staff-greeting"><div class="staff-eyebrow">Selamat bekerja</div><h1>Halo, '+esc(state.staff.fullName)+'</h1><p>Pilih fungsi yang dibutuhkan.</p><div class="staff-tiles">'+Object.keys(mods).map(function(k){var m=mods[k],ok=hasModule(k);return '<button class="staff-tile '+(ok?'':'locked')+'" data-mod="'+k+'" '+(ok?'':'disabled')+'><span class="tile-icon">'+m[0]+'</span><span><strong>'+m[1]+'</strong><small>'+(ok?m[2]:'Belum ditugaskan Owner')+'</small></span><span class="arrow">›</span></button>';}).join('')+'</div></div></section>'+nav()+'</div>';}
 function attendanceMenu(){var a=[['clock','☉','Clock In - Clock Out','Absen masuk dan pulang dalam radius 50 m'],['history','▤','Riwayat','Riwayat kehadiran anda'],['summary','▤','Kehadiran Saya','Ringkasan kehadiran bulan ini'],['corr','✎','Koreksi Kehadiran','Ajukan koreksi manual ke Owner'],['mine','◷','Koreksi Saya','Status persetujuan koreksi'],['schedule','◔','Waktu Kerja','Jadwal kerja yang tersedia']];return '<div class="staff-shell attendance-shell">'+top(state.staff.fullName,'staff-out')+'<section class="staff-content"><div class="attendance-page-title"><div><h1>Kehadiran</h1><p>Absensi normal tidak perlu approval bila berada ≤ 50 m dari Warung Hasnaria.</p></div></div><div class="attendance-menu-list">'+a.map(function(x){return '<button class="attendance-menu-card" data-sub="'+x[0]+'"><span class="attendance-menu-icon">'+x[1]+'</span><span><strong>'+x[2]+'</strong><small>'+x[3]+'</small></span><span>›</span></button>';}).join('')+'</div>'+note()+'</section>'+nav()+'</div>';}
 function dist(lat,lng,a,b){var R=6371000,r=function(x){return x*Math.PI/180;},d1=r(a-lat),d2=r(b-lng),z=Math.sin(d1/2)*Math.sin(d1/2)+Math.cos(r(lat))*Math.cos(r(a))*Math.sin(d2/2)*Math.sin(d2/2);return 2*R*Math.atan2(Math.sqrt(z),Math.sqrt(1-z));}
-async function gps(){if(mutating)return;var c=requestContext(),seq=++geoGeneration;state.geo={loading:true};render();try{var p=await clockPosition(c);if(seq!==geoGeneration||!sameContext(c))return;state.geo={lat:p.coords.latitude,lng:p.coords.longitude,accuracy:p.coords.accuracy};recalcGeo();render();}catch(e){if(seq!==geoGeneration||!sameContext(c))return;state.geo={error:errText(e)};render();}}
+async function gps(){if(mutating)return;var priorError=state.geo&&state.geo.error;if(priorError&&state.msg===priorError)state.msg='';var c=requestContext(),seq=++geoGeneration;state.geo={loading:true};render();try{var p=await clockPosition(c);if(seq!==geoGeneration||!sameContext(c))return;state.geo={lat:p.coords.latitude,lng:p.coords.longitude,accuracy:p.coords.accuracy};recalcGeo();render();}catch(e){if(seq!==geoGeneration||!sameContext(c))return;state.geo={error:errText(e)};render();}}
 function clockView(){var t=state.today||{},g=state.geo||{},inside=!!g.inRange,configured=!!t.location_configured,ci=t.check_in_at,co=t.check_out_at,status=!configured?'Titik Warung belum diset Owner':g.error?g.error:g.loading?'Memeriksa lokasi...':inside?'Anda berada dalam radius Warung Hasnaria':'Anda berada di luar radius 50 m';return '<div class="staff-shell attendance-shell">'+top('Kembali','att-back')+'<section class="attendance-full-head"><div class="attendance-title-row"><div><h1>Kehadiran</h1><p>'+esc(fmtDate(new Date()))+'</p><div class="attendance-time-big">'+esc(now())+'</div></div><div class="attendance-office-pill">'+esc(t.outlet_name||'Hasnaria')+'</div></div></section><section class="staff-content staff-content-tight"><div class="attendance-illustration-card"><div class="attendance-alert '+(inside?'ok':'warn')+'">'+esc(status)+'</div><div class="attendance-geo-meta"><div><b>Jarak</b><span>'+meters(g.distance)+'</span></div><div><b>GPS saat ini</b><span>'+coords(g.lat)+' / '+coords(g.lng)+'</span></div><div><b>Titik Warung</b><span>'+coords(t.office_lat)+' / '+coords(t.office_lng)+'</span></div></div><div class="attendance-times"><div><span>Masuk</span><strong>'+fmtTime(ci)+'</strong></div><div><span>Pulang</span><strong>'+fmtTime(co)+'</strong></div></div><div class="attendance-action-row"><button class="staff-btn success" data-clock="in" '+(configured&&!ci&&!g.loading&&!mutating?'':'disabled')+'>Clock In</button><button class="staff-btn danger-solid" data-clock="out" '+(configured&&ci&&!co&&!g.loading&&!mutating?'':'disabled')+'>Clock Out</button></div><button class="staff-btn ghost" data-act="gps">Perbarui Lokasi</button><div class="attendance-footnote">Absensi normal langsung tersimpan tanpa approval. Di luar radius, gunakan Koreksi Kehadiran manual.</div>'+note()+'</div></section>'+nav()+'</div>';}
 function historyView(){var y=state.month.getFullYear(),m=state.month.getMonth(),first=new Date(y,m,1),last=new Date(y,m+1,0),map={};state.hist.forEach(function(x){map[x.attendance_date]=x;});var cells='';for(var i=0;i<first.getDay();i++)cells+='<div></div>';for(var d=1;d<=last.getDate();d++){var k=iso(new Date(y,m,d)),x=map[k],mark=x?(x.check_in_at?'✓':'•'):'';cells+='<button class="attendance-cal-cell '+(state.selected===k?'selected':'')+'" data-day="'+k+'"><span>'+d+'</span><span class="mark '+(x&&x.check_in_at?'check':'dot')+'">'+mark+'</span></button>';}var s=map[state.selected]||{};return '<div class="staff-shell attendance-shell">'+top('Kembali','att-back')+'<section class="staff-content"><div class="attendance-page-title"><h1>Riwayat Kehadiran</h1></div><div class="attendance-month-nav"><button class="icon-btn" data-month="-1">‹</button><b>'+esc(fmtMonth(state.month))+'</b><button class="icon-btn" data-month="1">›</button></div><div class="attendance-calendar"><div class="attendance-weekdays">'+['MIN','SEN','SEL','RAB','KAM','JUM','SAB'].map(function(x){return '<span>'+x+'</span>';}).join('')+'</div><div class="attendance-cal-grid">'+cells+'</div></div><div class="attendance-detail-card"><h2>'+esc(fmtDate(new Date(state.selected+'T00:00:00')))+'</h2><p>Masuk: <b>'+fmtTime(s.check_in_at)+'</b> · Pulang: <b>'+fmtTime(s.check_out_at)+'</b></p><button class="staff-btn primary" data-sub="corr">Koreksi Kehadiran</button></div></section>'+nav()+'</div>';}
 function correctionView(){return '<div class="staff-shell attendance-shell">'+top('Kembali','att-back')+'<section class="staff-content"><div class="attendance-page-title"><div><h1>Koreksi Kehadiran</h1><p>Hanya koreksi manual yang memerlukan persetujuan Owner.</p></div></div><label class="staff-field"><span>Tipe *</span><select id="ctype"><option value="check_in">Clock In</option><option value="check_out">Clock Out</option></select></label><div class="attendance-form-grid"><label class="staff-field"><span>Tanggal *</span><input id="cdate" type="date" value="'+esc(state.selected)+'"></label><label class="staff-field"><span>Waktu *</span><input id="ctime" type="time"></label></div><label class="staff-field"><span>Alasan *</span><textarea id="creason" rows="5" placeholder="Jelaskan alasan koreksi"></textarea></label><button class="staff-btn primary" data-act="submit-corr">Kirim untuk Persetujuan Owner</button>'+note()+'</section>'+nav()+'</div>';}
@@ -81,16 +81,32 @@ async function syncRefresh(){if(syncBusy||mutating||document.visibilityState==='
 async function staffLogin(){var c=requestContext(),id=el('emp')&&el('emp').value,p=el('pin')&&el('pin').value;if(!id||!/^[0-9]{6}$/.test(p||'')){state.msg='Pilih nama dan masukkan PIN 6 digit.';render();return;}try{var a=await rpc('staff_pin_login',{p_employee_id:id,p_pin:p});if(!sameContext(c))return;if(!a.length)throw new Error('Login gagal.');var x=a[0];state.token=x.session_token;saveToken(state.token);state.staff={employeeId:x.employee_id,fullName:x.full_name,modules:x.modules||[]};state.view='staff';state.module='home';state.sub='';state.msg='';render();}catch(e){if(sameContext(c)){state.msg=errText(e);render();}}}
 async function staffLogout(){viewGeneration++;var c=requestContext();try{if(c.token)await rpc('staff_logout',{p_token:c.token});}catch(_){}if(!sameContext(c))return;if(storedToken()===c.token)saveToken('');clearStaffState();c=requestContext();try{await loadDirectory(c);}catch(e){if(sameContext(c))state.msg=errText(e);}if(sameContext(c))render();}
 async function openAbs(sub){state.module='absensi';state.sub=sub||'';state.msg='';var c=requestContext();try{await refreshAttendance(c);}catch(e){if(sameContext(c))state.msg=errText(e);}if(!sameContext(c))return;render();if(sub==='clock')gps();}
-function cancelStalePosition(){if(positionCapture&&!sameContext(positionCapture.context))positionCapture.cancel();}
-function cancelPosition(){if(positionCapture)positionCapture.cancel();}
+function cancelPreview(){if(previewTimer!==null){clearTimeout(previewTimer);previewTimer=null;}previewContext=null;}
+function cancelStalePosition(){if(previewContext&&!sameContext(previewContext))cancelPreview();if(positionCapture&&!sameContext(positionCapture.context))positionCapture.cancel();}
+function cancelPosition(){cancelPreview();if(positionCapture)positionCapture.cancel();}
+function clockActive(){return document.visibilityState!=='hidden'&&state.view==='staff'&&state.module==='absensi'&&state.sub==='clock'&&hasModule('absensi')&&state.token===storedToken();}
+function resumeClockPreview(){
+  if(!clockActive()||previewTimer!==null)return;
+  var c=requestContext();previewContext=c;
+  // Run after canceled GPS continuations release the mutation lock. Resuming a
+  // page refreshes the preview only; attendance always needs a new user click.
+  previewTimer=setTimeout(function(){previewTimer=null;previewContext=null;if(!sameContext(c)||!clockActive()||mutating)return;cancelStalePosition();if(!positionCapture)gps();},0);
+}
+function locationError(e){
+  var android=/Android/i.test(navigator.userAgent||'');
+  if(e&&e.code===1)return new Error('Izin lokasi ditolak. Izinkan Lokasi untuk Hasnaria Team di browser dan aktifkan lokasi presisi.');
+  if(e&&e.code===2)return new Error('Lokasi GPS belum tersedia. Aktifkan Lokasi'+(android?' dan Akurasi Lokasi Google':'')+', lalu coba lagi di area terbuka.');
+  if(e&&e.code===3)return new Error('GPS belum mendapatkan lokasi tepat waktu. Aktifkan lokasi presisi'+(android?' dan Akurasi Lokasi Google':'')+', lalu perbarui lokasi.');
+  return new Error(errText(e));
+}
 function clockPosition(c){
   c=c||requestContext();cancelPosition();
   return new Promise(function(resolve,reject){
     var geo=navigator.geolocation;
-    if(!geo){reject(new Error('GPS tidak tersedia.'));return;}
-    // A fresh first sample can still be a coarse network fix. Wait for a precise
-    // fix without extending the store radius or treating accuracy as distance.
-    var settled=false,watchId=null,deadline=null,retryTimer=null,best=null,lastError=null;
+    if(!geo){reject(new Error('GPS tidak tersedia. Buka Hasnaria Team di browser yang mendukung lokasi dan aktifkan Lokasi perangkat.'));return;}
+    // Android can report a precise first fix outside the store before its GPS
+    // settles. Keep collecting without extending the radius or changing a fix.
+    var settled=false,watchId=null,deadline=null,retryTimer=null,best=null,preciseOutside=null,lastError=null,budgetStarted=false,permissionStatus=null,permissionListener=null;
     var watching=typeof geo.watchPosition==='function'&&typeof geo.clearWatch==='function';
     var capture={context:c,cancel:function(){var e=new Error('Pengambilan lokasi dibatalkan.');e.name='AbortError';finish(null,e);}};
     positionCapture=capture;
@@ -98,33 +114,62 @@ function clockPosition(c){
       if(watchId!==null){geo.clearWatch(watchId);watchId=null;}
       if(deadline!==null){clearTimeout(deadline);deadline=null;}
       if(retryTimer!==null){clearTimeout(retryTimer);retryTimer=null;}
+      if(permissionStatus&&permissionListener)permissionStatus.removeEventListener('change',permissionListener);
+      permissionStatus=null;permissionListener=null;
       if(positionCapture===capture)positionCapture=null;
     }
     function finish(p,e){if(settled)return;settled=true;cleanup();if(e)reject(e);else resolve(p);}
     function current(){if(settled)return false;if(!sameContext(c)){capture.cancel();return false;}return true;}
+    function expire(){
+      if(!current())return;
+      // Outside fixes are returned only for distance diagnostics/rejection.
+      // A stale inside fix is never retained as an attendance candidate.
+      if(preciseOutside)finish(preciseOutside);
+      else if(best)finish(null,new Error('GPS belum cukup akurat (±'+Math.round(best.coords.accuracy)+' m). Aktifkan lokasi presisi'+(/Android/i.test(navigator.userAgent||'')?' dan Akurasi Lokasi Google':'')+', lalu perbarui lokasi dan coba lagi.'));
+      else finish(null,lastError||new Error('GPS belum mendapatkan lokasi yang akurat. Aktifkan lokasi presisi, lalu perbarui lokasi dan coba lagi.'));
+    }
+    function startBudget(){if(!current()||budgetStarted)return;budgetStarted=true;deadline=setTimeout(expire,12000);}
     function retry(){if(watching||settled)return;retryTimer=setTimeout(function(){retryTimer=null;if(current())read();},250);}
     function accept(p){
       if(!current())return;
+      startBudget();
+      var age=Date.now()-(p&&p.timestamp);
+      if(!p||typeof p.timestamp!=='number'||!isFinite(p.timestamp)||age>5000||age < -1000){lastError=new Error('Lokasi GPS belum terbaru. Perbarui lokasi dan coba lagi.');retry();return;}
       var x=p&&p.coords;
       if(!x||typeof x.latitude!=='number'||typeof x.longitude!=='number'||!isFinite(x.latitude)||!isFinite(x.longitude)||Math.abs(x.latitude)>90||Math.abs(x.longitude)>180){lastError=new Error('Lokasi GPS tidak valid. Perbarui lokasi dan coba lagi.');retry();return;}
       if(typeof x.accuracy==='number'&&isFinite(x.accuracy)&&x.accuracy>=0){
         if(!best||x.accuracy<best.coords.accuracy)best=p;
-        if(best.coords.accuracy<=50){finish(best);return;}
+        if(x.accuracy<=50){
+          var t=state.today;
+          if(t&&t.location_configured&&dist(x.latitude,x.longitude,t.office_lat,t.office_lng)<=50){finish(p);return;}
+          if(!preciseOutside||x.accuracy<=preciseOutside.coords.accuracy)preciseOutside=p;
+        }
       }
       retry();
     }
     function fail(e){
       if(!current())return;
-      lastError=e;
-      if(!e||!e.code||e.code===1){finish(null,new Error(errText(e)));return;}
+      startBudget();lastError=locationError(e);
+      if(!e||!e.code||e.code===1){finish(null,lastError);return;}
+      if(e.code===3){expire();return;}
       retry();
     }
     function read(){try{geo.getCurrentPosition(accept,fail,{enableHighAccuracy:true,timeout:12000,maximumAge:0});}catch(e){finish(null,e);}}
-    deadline=setTimeout(function(){
-      if(!current())return;
-      if(best)finish(null,new Error('GPS belum cukup akurat (±'+Math.round(best.coords.accuracy)+' m). Aktifkan lokasi presisi, lalu perbarui lokasi dan coba lagi.'));
-      else finish(null,new Error(lastError?errText(lastError):'GPS belum mendapatkan lokasi yang akurat. Aktifkan lokasi presisi, lalu perbarui lokasi dan coba lagi.'));
-    },12000);
+    function permissionChanged(){
+      if(!current()||!permissionStatus)return;
+      if(permissionStatus.state==='denied')finish(null,locationError({code:1}));
+      else if(permissionStatus.state==='granted')startBudget();
+    }
+    // Query is advisory and never blocks the native permission prompt/watch.
+    // Its late result cannot attach a listener after cancellation or completion.
+    if(navigator.permissions&&typeof navigator.permissions.query==='function'){
+      try{Promise.resolve(navigator.permissions.query({name:'geolocation'})).then(function(status){
+        if(!current())return;
+        permissionStatus=status;
+        if(status&&typeof status.addEventListener==='function'&&typeof status.removeEventListener==='function'){permissionListener=permissionChanged;status.addEventListener('change',permissionListener);}
+        permissionChanged();
+      }).catch(function(){/* Native timeout and the first callback own the fallback budget. */});}catch(_){/* Permissions API support differs across browsers. */}
+    }
     if(watching){
       try{watchId=geo.watchPosition(accept,fail,{enableHighAccuracy:true,timeout:12000,maximumAge:0});if(settled&&watchId!==null){geo.clearWatch(watchId);watchId=null;}}
       catch(e){finish(null,e);}
@@ -168,8 +213,9 @@ async function decide(id,action){if(mutating)return;var reason=null;if(action===
 function setLocation(){if(mutating)return;if(!navigator.geolocation){state.msg='GPS tidak tersedia.';render();return;}mutating=true;mutationGeneration++;var c=requestContext();state.msg='Mengambil lokasi HP...';render();navigator.geolocation.getCurrentPosition(async function(p){var saved=false;try{if(!sameContext(c))return;var a=await rpc('staff_owner_set_attendance_location',{p_lat:p.coords.latitude,p_lng:p.coords.longitude});saved=true;if(!sameContext(c))return;state.loc=a[0]||null;state.msg='Titik Warung tersimpan. Radius aktif 50 m.';render();}catch(e){if(sameContext(c)){state.msg=errText(e);render();}}finally{mutating=false;if(saved)notifyWrite();}},function(e){mutating=false;if(!sameContext(c))return;state.msg=e.message||'Izin lokasi ditolak';render();},{enableHighAccuracy:true,timeout:12000,maximumAge:0});}
 document.addEventListener('click',function(e){var q=e.target.closest('[data-mod]');if(q&&!q.disabled&&state.staff){var m=q.getAttribute('data-mod');if(m!=='home'&&!hasModule(m))return;viewGeneration++;state.module=m;state.sub='';state.msg='';if(m==='absensi')openAbs('');else render();return;}q=e.target.closest('[data-sub]');if(q){viewGeneration++;state.sub=q.getAttribute('data-sub');state.msg='';if(state.module==='absensi')openAbs(state.sub);else render();return;}q=e.target.closest('[data-day]');if(q){viewGeneration++;state.selected=q.getAttribute('data-day');render();return;}q=e.target.closest('[data-month]');if(q){viewGeneration++;state.month=new Date(state.month.getFullYear(),state.month.getMonth()+Number(q.getAttribute('data-month')),1);state.selected=iso(state.month);var c=requestContext();loadHist(c).then(function(applied){if(applied&&sameContext(c))render();}).catch(function(e){if(sameContext(c)){state.msg=errText(e);render();}});return;}q=e.target.closest('[data-clock]');if(q){doClock(q.getAttribute('data-clock'));return;}q=e.target.closest('[data-otab]');if(q){viewGeneration++;state.ownerTab=q.getAttribute('data-otab');state.msg='';state.edit=null;state.employeeDetailOpen=false;render();return;}q=e.target.closest('[data-edit]');if(q){viewGeneration++;var id=q.getAttribute('data-edit'),x=state.ownerRows.find(function(r){return r.employee_id===id;});state.edit={employee_id:x.employee_id,full_name:x.full_name,modules:(x.modules||[]).slice(),staff_active:!!x.staff_active,pin_set:!!x.pin_set};render();return;}q=e.target.closest('[data-approve]');if(q){decide(q.getAttribute('data-approve'),'approve');return;}q=e.target.closest('[data-reject]');if(q){decide(q.getAttribute('data-reject'),'reject');return;}q=e.target.closest('[data-act]');if(!q)return;var a=q.getAttribute('data-act');if(a==='staff-login'){viewGeneration++;staffLogin();}else if(a==='staff-out')staffLogout();else if(a==='owner-open'){viewGeneration++;ownerOpen();}else if(a==='owner-login'){viewGeneration++;ownerSign();}else if(a==='owner-out'){viewGeneration++;client().auth.signOut().then(function(){viewGeneration++;state.view='login';state.owner=null;render();});}else if(a==='login-back'){viewGeneration++;state.view='login';render();}else if(a==='att-back'){viewGeneration++;state.sub='';render();}else if(a==='mod-back'){viewGeneration++;state.module='home';state.sub='';render();}else if(a==='kasir-back'){viewGeneration++;state.sub='';render();}else if(a==='gps')gps();else if(a==='submit-corr')submitCorrection();else if(a==='staff-detail-open'){viewGeneration++;state.employeeDetailOpen=true;state.edit=null;render();}else if(a==='staff-detail-close'){viewGeneration++;state.employeeDetailOpen=false;state.edit=null;render();}else if(a==='new-user'){viewGeneration++;state.employeeDetailOpen=true;state.edit={employee_id:null,full_name:'',modules:['absensi'],staff_active:false,pin_set:false};render();}else if(a==='cancel-edit'){viewGeneration++;state.edit=null;render();}else if(a==='save-user')saveUser();else if(a==='set-location')setLocation();});
 document.addEventListener('click',cancelStalePosition);
-document.addEventListener('visibilitychange',function(){if(document.visibilityState==='hidden')cancelPosition();});
+document.addEventListener('visibilitychange',function(){if(document.visibilityState==='hidden')cancelPosition();else resumeClockPreview();});
 window.addEventListener('pagehide',cancelPosition);
+window.addEventListener('pageshow',resumeClockPreview);
 window.addEventListener('storage',function(e){if(e.key!==TOKEN_KEY||(state.view!=='staff'&&state.view!=='login'))return;if(state.token!==storedToken()){clearStaffState();render();}syncRefresh();});
 async function start(){render();var c=requestContext(),resumed=false;try{client();await loadDirectory(c);if(sameContext(c))resumed=await resumeStaff();}catch(e){if(sameContext(c))state.msg=errText(e);}if(sameContext(c)||resumed)render();var s=syncCoordinator();if(s)s.register('staff-runtime',syncRefresh);}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
