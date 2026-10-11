@@ -1,4 +1,6 @@
 -- Isolated CI after pausing Owner conversion; all checks are read-only.
+select set_config('app.test_role','owner',false);
+select set_config('app.test_uid','00000000-0000-0000-0000-000000009999',false);
 do $test$
 declare bad boolean:=false; n int;
 begin
