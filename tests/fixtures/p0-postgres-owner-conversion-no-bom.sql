@@ -100,6 +100,45 @@ begin
 end;
 $owner$;
 
+-- Additional draft for the SAME SKU with a different purchase unit.
+-- Once the Owner verified 'pack', verifying 'box' must be explicitly
+-- reviewed as a separate master-conversion policy, not silently accepted.
+begin;
+insert into public.inventory_unit_conversions
+ (id,brand_id,inventory_item_id,product_id,status,purchase_unit,sale_unit,
+  units_per_purchase_unit)
+values('00000000-0000-0000-0000-000000000805',
+       '00000000-0000-0000-0000-000000000001',
+       '00000000-0000-0000-0000-000000000102',
+       '00000000-0000-0000-0000-000000000901',
+       'needs_verification','box','pcs',24);
+do $same_sku$
+declare denied boolean:=false;
+begin
+ begin
+   perform public.resolve_inventory_conversion(
+     '00000000-0000-0000-0000-000000000805',24,
+     'Invoice case SKU-102 second packaging conversion pending separate Owner review');
+ exception when others then
+   denied:=position('aturan verified lain' in sqlerrm)>0;
+ end;
+ if not denied then raise exception 'Second same-SKU conversion was approved without dedicated reconciliation'; end if;
+ if (select count(*) from public.inventory_unit_conversions
+    where brand_id='00000000-0000-0000-0000-000000000001'
+      and inventory_item_id='00000000-0000-0000-0000-000000000102'
+      and status='verified')<>1 then
+   raise exception 'Unexpected second verified conversion for SKU 102';
+ end if;
+ if (select count(*) from pg_indexes
+    where schemaname='public' and tablename='inventory_unit_conversions'
+      and indexname='inventory_unit_conversion_verified_key_uidx')<>1 then
+    raise exception 'Partial unique verified conversion index missing';
+ end if;
+ raise notice 'HSN P0.2 CONCURRENT SAFETY PASS: same SKU second verified request blocked and unique index installed.';
+end;
+$same_sku$;
+rollback;
+
 -- A malicious caller (even one with Stock table UPDATE privileges and
 -- a fake Owner claim) can set custom PostgreSQL GUCs directly.
 -- Verify that this NEVER grants the right to bypass the audited RPC.
