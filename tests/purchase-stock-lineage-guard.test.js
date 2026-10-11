@@ -239,3 +239,25 @@ test('Owner verification UI requires preview before persistence and has no auto-
   assert.doesNotMatch(apply,/syncStockForPeriod/);
   assert.doesNotMatch(apply,/notify\('purchase-stock-synced'\)/);
 });
+
+
+const readOnlyReleaseGateSql=fs.readFileSync(
+  path.join(__dirname,'..','supabase','tests',
+    'p0_live_release_gate_read_only_20261011.sql'),'utf8');
+test('Production release gate stays SELECT-only and checks Purchase, Sales, Stock & provenance',()=>{
+  const sections=readOnlyReleaseGateSql.split(/(?=-- [1-4]\. )/).slice(1);
+  assert.equal(sections.length,4);
+  for(const [index,part] of sections.entries()){
+    const sql=part.replace(/^--.*$/gm,'').trim();
+    assert.match(sql,/^(select|with)\b/i,'Audit section '+(index+1)+' must be read-only SELECT/CTE');
+    assert.doesNotMatch(sql,/\b(?:insert\s+into|delete\s+from|update\s+\w+|drop\s+\w+|alter\s+\w+|grant\s+|revoke\s+|create\s+\w+|call\s+)\b/i);
+  }
+  assert.match(readOnlyReleaseGateSql,/finance_purchase_reconciliation_monthly_v1/);
+  assert.match(readOnlyReleaseGateSql,/finance_sales_sync_status_v1/);
+  assert.match(readOnlyReleaseGateSql,/purchase_journal_delta/);
+  assert.match(readOnlyReleaseGateSql,/journal_balance_delta/);
+  assert.match(readOnlyReleaseGateSql,/inventory_stock_reconciliation/);
+  assert.match(readOnlyReleaseGateSql,/inventory_purchase_log/);
+  assert.match(readOnlyReleaseGateSql,/owner_unit_table_live/);
+  assert.match(readOnlyReleaseGateSql,/orphan_receipt_count/);
+});
