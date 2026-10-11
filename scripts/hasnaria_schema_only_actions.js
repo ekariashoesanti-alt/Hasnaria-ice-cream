@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 'use strict';
-// Schema-only copy to Hasnaria Singapore, with no artifacts, backups or customer rows.
+// Read-only schema preflight for Hasnaria Singapore: no permanent restore, artifacts, or customer rows.
 // Do NOT print private connection URLs or SQL in public GitHub Actions logs.
 const fs=require('node:fs');
 const os=require('node:os');
@@ -44,6 +44,7 @@ const roleSql=[
 'coalesce((select rolsuper or rolcreaterole or rolcreatedb or rolreplication or rolbypassrls from pg_catalog.pg_roles where rolname=current_user),true)',
 "or has_database_privilege(current_user,current_database(),'CREATE')",
 "or has_schema_privilege(current_user,'public','CREATE')",
+"or has_schema_privilege(current_user,'private','CREATE')",
 "or exists(select 1 from pg_catalog.pg_class c join pg_catalog.pg_namespace n on n.oid=c.relnamespace where n.nspname in ('public','private') and c.relkind in ('r','p') and has_table_privilege(current_user,c.oid,'INSERT,UPDATE,DELETE,TRUNCATE'))",
 "then 'DENY' else 'OK' end"
 ].join(' ');
@@ -74,10 +75,9 @@ function main(){
   if(process.argv.includes('--self-test'))return selfTest();
   if(process.env.GITHUB_REPOSITORY!=='ekariashoesanti-alt/Hasnaria-ice-cream'||process.env.GITHUB_REF!=='refs/heads/main')
     throw Error('BLOCK: manual workflow must run from Hasnaria main');
+  // Only validation is permitted until an independent reviewed restore procedure.
   const mode=process.env.HSN_SCHEMA_OPERATION||'validate-only';
-  if(!['validate-only','restore-staging'].includes(mode))throw Error('Invalid operation');
-  if(mode==='restore-staging'&&process.env.HSN_RESTORE_CONFIRM!=='RESTORE_TO_SINGAPORE_STAGING')
-    throw Error('BLOCK: explicit staging restore confirmation required');
+  if(mode!=='validate-only')throw Error('BLOCK: staging restore is deliberately unavailable');
   const src=process.env.HSN_PROD_READONLY_DB_URL||'';
   const dest=process.env.HSN_STAGING_DB_URL||'';
   verifyUrl(src,PROD,true);verifyUrl(dest,STAGE,false);
@@ -97,13 +97,7 @@ function main(){
     if(query(dest,stageSql)!=='OK')throw Error('BLOCK: staging changed after trial');
     console.log('PASS: public + private schema exported; Singapore trial rolled back');
     console.log('SQL size: '+stat.size+' bytes; SHA-256: '+sha);
-    if(mode==='restore-staging'){
-      // Separate manual run with confirmation. All-or-nothing restore to Singapore.
-      invoke('psql',['-X','-q','--set=ON_ERROR_STOP=1','--dbname',dest,'--single-transaction','--file',dump]);
-      const count=query(dest,"select count(*) from pg_catalog.pg_class c join pg_catalog.pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relkind in ('r','p')");
-      if(Number(count)<80)throw Error('STOP: staging catalog parity incomplete; DBA review required');
-      console.log('RESTORED: only Singapore staging changed (public tables: '+count+')');
-    }else console.log('VALIDATE ONLY: no permanent database changes; no raw SQL uploaded');
+    console.log('VALIDATE ONLY: no permanent database changes; no raw SQL uploaded');
   }finally{fs.rmSync(temp,{recursive:true,force:true})}
 }
 if(require.main===module){try{main()}catch(e){console.error(e.message);process.exitCode=1}}
