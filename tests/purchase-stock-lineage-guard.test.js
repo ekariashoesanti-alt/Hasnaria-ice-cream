@@ -484,3 +484,51 @@ test('P0.2 master evidence emergency pause keeps read-only queue and old evidenc
  assert.match(masterReviewPause,/P0\.2 PAUSED/);
  assert.doesNotMatch(masterReviewPause,/\b(?:insert\s+into|delete\s+from|update\s+\w+|drop\s+table|truncate\s+table)\b/i);
 });
+
+
+const p03OwnerMappingMigration=fs.readFileSync(path.join(__dirname,'..','supabase',
+ 'migrations','20261011234000_p03_owner_purchase_mapping_decisions.sql'),'utf8');
+const p04PeriodReadinessMigration=fs.readFileSync(path.join(__dirname,'..','supabase',
+ 'migrations','20261011235000_p03_p04_owner_readiness_reports.sql'),'utf8');
+const p03P04ReviewUi=fs.readFileSync(path.join(__dirname,'..',
+ 'owner-p03-p04-reconciliation-v1.js'),'utf8');
+test('P0.3 Owner mapping is evidence-only with source-locked preview, never Stock/Finance writes',()=>{
+ assert.match(p03OwnerMappingMigration,/private\.purchase_unmapped_owner_decisions_v1/);
+ assert.match(p03OwnerMappingMigration,/enable row level security/i);
+ assert.match(p03OwnerMappingMigration,/revoke all on private\.purchase_unmapped_owner_decisions_v1/i);
+ assert.match(p03OwnerMappingMigration,/private\.owner_stock_review_assert_v1\(\)/);
+ assert.match(p03OwnerMappingMigration,/p_token is distinct from v_pre->>'token'/);
+ assert.match(p03OwnerMappingMigration,/pg_advisory_xact_lock/);
+ assert.match(p03OwnerMappingMigration,/DOCUMENTED_NOT_APPLIED/);
+ for(const state of ['MAP_EXISTING_SKU','CLASSIFY_EXPENSE','NOT_FOR_STOCK','HOLD_FOR_EVIDENCE'])
+    assert.match(p03OwnerMappingMigration,new RegExp(state));
+ assert.doesNotMatch(p03OwnerMappingMigration,
+   /\b(?:insert\s+into|update|delete\s+from)\s+public\.(?:inventory_purchase_log|inventory_movements|offline_purchase_history|finance_\w+|purchase_item_rules)/i);
+});
+test('P0.4 readiness reports business period, not upload timestamp, without generating data',()=>{
+ assert.match(p04PeriodReadinessMigration,/private\.owner_p04_import_readiness_v1/);
+ assert.match(p04PeriodReadinessMigration,/private\.owner_p03_work_queue_v1/);
+ assert.match(p04PeriodReadinessMigration,/private\.owner_stock_review_assert_v1/);
+ assert.match(p04PeriodReadinessMigration,/public\.sales_import_batches/);
+ assert.match(p04PeriodReadinessMigration,/public\.import_jobs/);
+ assert.match(p04PeriodReadinessMigration,/purchas(?:e_date|ing)/);
+ assert.match(p04PeriodReadinessMigration,/NO_SOURCE_UPLOAD_FOUND/);
+ assert.match(p04PeriodReadinessMigration,/UPLOAD_ATTEMPT_NO_CANONICAL_DATA/);
+ assert.match(p04PeriodReadinessMigration,/PRESENT_IN_CANONICAL/);
+ assert.match(p04PeriodReadinessMigration,/import_created_at_not_business_date/);
+ assert.doesNotMatch(p04PeriodReadinessMigration,
+  /\b(?:insert\s+into|update\s+\w+|delete\s+from|drop\s+\w+|alter\s+\w+|truncate\s+\w+)\b/i);
+});
+test('P0.3/P0.4 Owner web module is syntax valid and never posts to business tables',()=>{
+ assert.doesNotThrow(()=>new Function(p03P04ReviewUi));
+ assert.match(ownerOrphanIndex,/owner-p03-p04-reconciliation-v1\.js\?v=1/);
+ assert.match(p03P04ReviewUi,/c&&c\.role==='owner'/);
+ assert.match(p03P04ReviewUi,/sessionContext|window\.__HASNARIA_CONTEXT===context/);
+ for(const name of ['owner_p03_work_queue_v1','owner_p04_import_readiness_v1',
+  'owner_purchase_unmapped_preview_v1','owner_purchase_unmapped_apply_v1'])
+  assert.match(p03P04ReviewUi,new RegExp("db\\.rpc\\('"+name+"'"));
+ assert.match(p03P04ReviewUi,/Tanggal file diunggah bukan tanggal transaksi/);
+ assert.match(p03P04ReviewUi,/tidak akan memposting Stok/i);
+ assert.doesNotMatch(p03P04ReviewUi,
+  /db\.(?:from\(['"](?:inventory_movements|inventory_purchase_log|offline_purchase_history|finance_journal_entries)|rpc\(['"]sync_purchase_quantity_stock_v1)/i);
+});
