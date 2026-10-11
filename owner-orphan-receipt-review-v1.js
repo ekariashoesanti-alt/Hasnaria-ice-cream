@@ -166,5 +166,14 @@ function start(){
  new MutationObserver(patch).observe(root,{subtree:true,childList:true});
  patch();
 }
+// Never leave historical Purchase evidence visible after Owner logout.
+function monitorAppVisibility(){
+ var app=document.getElementById('app');
+ if(!app)return;
+ new MutationObserver(function(){
+  if(app.classList.contains('hidden')&&opened)close();
+ }).observe(app,{attributes:true,attributeFilter:['class']});
+}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
+monitorAppVisibility();
 })();
