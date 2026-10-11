@@ -72,6 +72,13 @@ begin
    'Staff must never cancel a source unit verification');
  exception when others then denied:=true; end;
  if not denied then raise exception 'Staff can revoke Owner source evidence'; end if;
+ denied:=false;
+ begin
+  perform public.resolve_inventory_conversion(
+    '00000000-0000-0000-0000-000000000802',8,
+    'Staff is not the authorized Owner of this supplier packaging proof');
+ exception when others then denied:=true; end;
+ if not denied then raise exception 'Staff can verify pack conversion and silently affect BOM'; end if;
 end;
 $staff$;
 
