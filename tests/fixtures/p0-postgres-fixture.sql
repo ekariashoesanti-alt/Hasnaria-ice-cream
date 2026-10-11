@@ -75,7 +75,8 @@ create table public.inventory_recipe_components (
 create table public.inventory_movements (
  id uuid primary key default gen_random_uuid(), brand_id uuid not null,
  inventory_item_id uuid not null, movement_date date not null,
- movement_type text not null, qty_delta numeric not null
+ movement_type text not null, qty_delta numeric not null,
+ reference_type text, reference_id uuid
 );
 create or replace function private.same_brand(uuid) returns boolean language sql
 as $$ select true $$;
@@ -127,6 +128,21 @@ values
  ('00000000-0000-0000-0000-000000000302','00000000-0000-0000-0000-000000000001',
   '00000000-0000-0000-0000-000000000103',current_date - 9,6,'pcs',99,
   '00000000-0000-0000-0000-000000000299','old-source.xlsx',77);
+
+-- Historic generated receipt movements are preserved exactly in production.
+-- Seed a matching pair for the orphan and original linked receipt in CI.
+insert into public.inventory_movements
+ (brand_id,inventory_item_id,movement_date,movement_type,qty_delta,
+  reference_type,reference_id)
+values
+ ('00000000-0000-0000-0000-000000000001',
+  '00000000-0000-0000-0000-000000000103',current_date-5,
+  'PURCHASE_RECEIPT',1,'inventory_purchase_log',
+  '00000000-0000-0000-0000-000000000301'),
+ ('00000000-0000-0000-0000-000000000001',
+  '00000000-0000-0000-0000-000000000103',current_date-9,
+  'PURCHASE_RECEIPT',6,'inventory_purchase_log',
+  '00000000-0000-0000-0000-000000000302');
 
 create or replace view public.purchase_inventory_bridge
 with (security_invoker=true) as
