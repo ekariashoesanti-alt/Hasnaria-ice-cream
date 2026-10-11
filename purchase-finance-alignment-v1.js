@@ -41,7 +41,7 @@ function syncPeriodOptions(){
 function card(label,value,sub,cls){return'<article class="pfa-card '+(cls||'')+'"><span>'+esc(label)+'</span><strong>'+esc(value)+'</strong><small>'+esc(sub||'')+'</small></article>'}
 function stockCell(r){
   if(r.stock_status==='posted_to_stock')return statusPill('+'+qty(r.posted_stock_qty||r.source_stock_qty)+' '+(r.posted_stock_unit||r.source_stock_unit||'unit'),'ok')+'<small class="pfa-action">'+esc(r.inventory_item_name||'Stok')+'</small>';
-  if(r.stock_status==='ready_to_stock')return statusPill('Siap sinkron','warn')+'<small class="pfa-action">'+esc(qty(r.source_stock_qty))+' '+esc(r.source_stock_unit||'unit')+' · '+esc(r.inventory_item_name||'stok')+'</small>';
+  if(r.stock_status==='ready_to_stock')return statusPill(!r.source_stock_unit?'Perlu verifikasi satuan':'Cek satuan & konversi','warn')+'<small class="pfa-action">'+esc(qty(r.source_stock_qty))+' '+esc(r.source_stock_unit||'satuan belum ada')+' · '+esc(r.inventory_item_name||'stok')+'</small>';
   if(r.stock_status==='stock_review_required')return statusPill('Perlu mapping','warn')+'<small class="pfa-action">'+esc(r.stock_mapping_status||'mapping stok')+'</small>';
   return statusPill('Non-stok','');
 }
