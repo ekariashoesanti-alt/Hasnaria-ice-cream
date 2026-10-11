@@ -37,8 +37,9 @@ create unique index inventory_purchase_log_source_history_uidx
 create table public.inventory_unit_conversions (
  id uuid primary key default gen_random_uuid(),
  brand_id uuid not null, inventory_item_id uuid not null,
+ product_id uuid not null default '00000000-0000-0000-0000-000000000901'::uuid,
  status text not null, purchase_unit text not null, sale_unit text not null,
- units_per_purchase_unit numeric
+ units_per_purchase_unit numeric, updated_at timestamptz default now()
 );
 create table private.purchase_stock_reviews (
  id uuid primary key default gen_random_uuid(),
@@ -86,6 +87,34 @@ create or replace function private.can_import_module(text) returns boolean langu
 as $$ select true $$;
 create or replace function private.can_stock_write() returns boolean language sql
 as $$ select true $$;
+
+
+-- Mock-only Product and business audit sink for exercising the existing ERP
+-- conversion RPC: the real Supabase function writes audit logs but must not
+-- create/update/activate recipe BOM from packaging factor verification.
+create table public.products (
+ id uuid primary key,brand_id uuid not null,name text not null
+);
+insert into public.products(id,brand_id,name)
+values('00000000-0000-0000-0000-000000000901',
+       '00000000-0000-0000-0000-000000000001','SYNTHETIC PRODUCT');
+create table private.fixture_unit_conversion_audit(
+ id bigint generated always as identity primary key,
+ action text,entity_id uuid,before_state jsonb,after_state jsonb,
+ reason text,details jsonb
+);
+create or replace function private.write_audit_log(
+ p_brand_id uuid,p_outlet_id uuid,p_entity_type text,p_entity_id uuid,
+ p_action text,p_actor_id uuid,p_before jsonb,p_after jsonb,
+ p_reason text,p_details jsonb)
+returns void language plpgsql security definer set search_path=''
+as $audit$
+begin
+ insert into private.fixture_unit_conversion_audit
+ (action,entity_id,before_state,after_state,reason,details)
+ values(p_action,p_entity_id,p_before,p_after,p_reason,p_details);
+end;
+$audit$;
 
 -- Stable fixed UUIDs make behavior tests deterministic.
 insert into public.inventory_items(id,brand_id,item_name,category,unit,opening_qty)
