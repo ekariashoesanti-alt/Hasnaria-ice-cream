@@ -103,7 +103,7 @@ as
         END AS status
    FROM base b
      LEFT JOIN purchase_totals p ON p.brand_id = b.brand_id AND p.inventory_item_id = b.inventory_item_id
-     LEFT JOIN sales_totals st ON st.brand_id = b.brand_id AND st.inventory_item_id = b.inventory_item_id;;
+     LEFT JOIN sales_totals st ON st.brand_id = b.brand_id AND st.inventory_item_id = b.inventory_item_id;
 
 grant select on public.inventory_stock_reconciliation to authenticated;
 
