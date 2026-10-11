@@ -85,7 +85,7 @@ create or replace function private.owner_purchase_unit_preview_v1(
  p_source_id uuid,p_source_unit text,p_multiplier numeric)
 returns jsonb language plpgsql stable security definer set search_path=''
 as $pre$
-declare v_brand uuid; b record; i record; r record; v_unit text; v_payload jsonb;
+declare v_brand uuid; b record; i record; v_last_opname date; v_unit text; v_payload jsonb;
 begin
  v_brand:=private.owner_stock_review_assert_v1();
  v_unit:=btrim(coalesce(p_source_unit,''));
@@ -126,7 +126,7 @@ begin
              and a.revoked_at is null) then
    raise exception 'Sudah ada verifikasi aktif; batalkan sebelum revisi';
  end if;
- select last_opname_date into r from public.inventory_stock_reconciliation
+ select last_opname_date into v_last_opname from public.inventory_stock_reconciliation
  where brand_id=v_brand and inventory_item_id=i.id;
  v_payload:=jsonb_build_object(
     'brand_id',v_brand,'source_id',b.id,'source_file',b.source_file,
@@ -137,10 +137,10 @@ begin
     'inventory_item_id',i.id,'stock_item',i.item_name,
     'stock_unit',i.unit,'source_unit',v_unit,
     'multiplier',p_multiplier,'stock_qty',b.quantity_numeric*p_multiplier,
-    'last_opname_date',r.last_opname_date,
-    'baseline_effect',case when r.last_opname_date is null
+    'last_opname_date',v_last_opname,
+    'baseline_effect',case when v_last_opname is null
         then 'NO_PHYSICAL_BASELINE'
-        when b.purchase_date<=r.last_opname_date
+        when b.purchase_date<=v_last_opname
         then 'PRE_OR_ON_OPNAME' else 'POST_OPNAME' end);
  return v_payload||jsonb_build_object('token',md5(v_payload::text),
                      'will_post_stock',false,'will_change_finance',false,
