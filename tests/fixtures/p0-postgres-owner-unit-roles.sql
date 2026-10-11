@@ -79,6 +79,27 @@ begin
     'Staff is not the authorized Owner of this supplier packaging proof');
  exception when others then denied:=true; end;
  if not denied then raise exception 'Staff can verify pack conversion and silently affect BOM'; end if;
+ denied:=false;
+ begin perform public.owner_master_unit_queue_v1(true);
+ exception when others then denied:=true;end;
+ if not denied then raise exception 'Staff can read Owner master-unit queue';end if;
+ denied:=false;
+ begin perform public.owner_master_unit_preview_v1(
+  '00000000-0000-0000-0000-000000000101','DOCUMENT_UNIT','pcs');
+ exception when others then denied:=true;end;
+ if not denied then raise exception 'Staff can preview Owner master-unit correction';end if;
+ denied:=false;
+ begin perform public.owner_master_unit_apply_v1(
+  '00000000-0000-0000-0000-000000000101','DOCUMENT_UNIT','pcs','fake-token',
+  'Invoice fixture 101 proof','Staff must not attest master SKU units without Owner identity');
+ exception when others then denied:=true;end;
+ if not denied then raise exception 'Staff can apply Master SKU review';end if;
+ denied:=false;
+ begin perform public.owner_master_unit_revoke_v1(
+  '00000000-0000-0000-0000-000000000401',
+  'Staff must not revoke master unit decisions from another Owner');
+ exception when others then denied:=true;end;
+ if not denied then raise exception 'Staff can revoke master unit review';end if;
 
  denied:=false;
  begin
@@ -126,6 +147,10 @@ begin
    perform public.owner_orphan_receipt_queue_v1(null);
  exception when others then denied:=true; end;
  if not denied then raise exception 'Unsigned actor can read historical Owner ledger'; end if;
+ denied:=false;
+ begin perform public.owner_master_unit_queue_v1(true);
+ exception when others then denied:=true;end;
+ if not denied then raise exception 'Unsigned actor can read Owner master-unit queue';end if;
 end;
 $unsigned$;
 reset role;
@@ -169,6 +194,12 @@ begin
  if has_function_privilege('anon','public.owner_orphan_receipt_queue_v1(date)','EXECUTE')
    or has_function_privilege('anon','public.owner_orphan_receipt_apply_v1(uuid,text,text,text,text)','EXECUTE')
  then raise exception 'Anonymous access unexpectedly granted to Owner historical RPC'; end if;
+ if has_function_privilege('anon','public.owner_master_unit_queue_v1(boolean)','EXECUTE')
+  or has_function_privilege('anon','public.owner_master_unit_apply_v1(uuid,text,text,text,text,text)','EXECUTE')
+ then raise exception 'Anonymous access unexpectedly granted to Owner master review';end if;
+ if has_table_privilege('authenticated','private.inventory_master_unit_attestations_v1','SELECT')
+  or has_table_privilege('authenticated','private.inventory_master_unit_attestations_v1','INSERT')
+ then raise exception 'Staff can read/write private SKU attestation rows';end if;
  if has_table_privilege('authenticated','private.orphan_receipt_owner_reviews_v1','INSERT')
     or has_table_privilege('authenticated','private.orphan_receipt_owner_reviews_v1','SELECT')
  then raise exception 'Staff can directly access private historical approval records'; end if;
