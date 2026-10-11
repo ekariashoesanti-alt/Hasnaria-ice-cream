@@ -121,11 +121,28 @@ Langkah acceptance setelah administrator memiliki backup privat:
 
 Setiap kasus diberi bukti Owner, waktu, hasil `PASS/FAIL`, dan cap screenshot hanya pada lingkungan staging.
 
+### UAT tambahan — Master SKU fisik Owner (Stage 11, belum dilakukan)
+
+| Kasus | Hasil yang wajib |
+|---|---|
+| Owner membuka **Verifikasi satuan master SKU** | Tampil **14 SKU** berkaitan dengan tracking, receipt, BOM aktif atau Pembelian pending pada snapshot |
+| Owner memilih **Tampilkan seluruh placeholder** | Menampilkan **80 SKU** pada snapshot; review tidak mengubah master |
+| Staff atau pengguna belum login mencoba RPC queue/preview/apply/revoke | Ditolak server |
+| Satuan `purchase_unit`/unknown dicoba sebagai hasil final | Ditolak dengan pesan |
+| Owner menyimpan `DOCUMENT_UNIT` dengan nota/foto dan alasan sah | 1 catatan audit privat saja, `inventory_items.unit` **tidak berubah** |
+| Master/konversi diubah setelah preview | Token usang gagal; diminta preview ulang |
+| Owner membatalkan review | Keputusan lama berstatus revoked dan tetap bisa diaudit |
+| Operator menjalankan pause `20261011233000` pada staging | Approval/revoke ditolak, queue dan catatan lama tetap terbaca |
+| Owner logout atau app disembunyikan | Modal sensitif tidak tertinggal |
+| Periksa checksum/ledger sesudah uji | Receipt 703/movement 703, Stock/BOM/Finance sama, kecuali transaksi sah baru yang diidentifikasi |
+
+**Dokumen pelaksanaan:** `docs/P0_2_OWNER_MASTER_UNIT_STAGE11_2026-10-11.md`. Angka 14/80 adalah snapshot SELECT produksi 11 Oktober 2026; jangan hard-code angka ini sebagai syarat permanen jika transaksi atau master bertambah.
+
 ## 5. Release sequence (baru setelah semua gate)
 
 1. Bekukan jendela re-import Pembelian dan sinkronisasi Stock; ambil snapshot teruji dan baseline dari SQL preflight.
 2. Selesaikan konflik schema/migration dengan `main` terkini, dan konfirmasi semua CI + preview pada commit release.
-3. Terapkan migrasi **sesuai urutan timestamp** setelah backup dan test: `20261011110000` (source lineage), `20261011180000` (stock view), `20261011190000` (posting-unit guard), `20261011193000` (Owner Undo), `20261011194500` (orphan factuur triage), `20261011200000` (Owner unit review), `20261011210000` (orphan active-ledger gate), `20261011220000` (SKU unit triage), `20261011223000` (Owner verified-conversion no-BOM), `20261011230000` (Owner orphan documentary review). Jangan jalankan alur UI review sebelum SQL terkait terpasang dan role staging terbukti.
+3. Terapkan migrasi **sesuai urutan timestamp** setelah backup dan test: `20261011110000` (source lineage), `20261011180000` (stock view), `20261011190000` (posting-unit guard), `20261011193000` (Owner Undo), `20261011194500` (orphan factuur triage), `20261011200000` (Owner unit review), `20261011210000` (orphan active-ledger gate), `20261011220000` (SKU unit triage), `20261011223000` (Owner verified-conversion no-BOM), `20261011230000` (Owner orphan documentary review), `20261011233000` (Owner master SKU documentary unit approval, no Stock updates). Jangan jalankan alur UI review sebelum SQL terkait terpasang dan role staging terbukti.
 4. Uji baca keuangan/stok langsung; pastikan `finance_purchase_reconciliation_monthly_v1` delta nol, stok dibandingkan ledger, dan 86 orphan tetap ada.
 5. Uji login Owner dan Staff; pastikan role enforcement Owner, formular bukti, token, revoke, serta semua modul tetap terbuka.
 6. Aktifkan client version hanya setelah RPC tersedia; monitor error posting, quantity conversion, permission, Finance delta.
@@ -138,6 +155,7 @@ Setiap kasus diberi bukti Owner, waktu, hasil `PASS/FAIL`, dan cap screenshot ha
 - `supabase/rollback/20261011200000_pause_owner_unit_attestations.sql` menonaktifkan approval baru sambil mempertahankan bukti Owner dan antrean baca.
 - `supabase/rollback/20261011223000_pause_owner_conversion_no_bom.sql` menonaktifkan approval konversi baru tanpa mengaktifkan fungsi lama yang menulis BOM.
 - `supabase/rollback/20261011230000_pause_owner_orphan_receipt_reviews.sql` menonaktifkan review historis baru dan revoke, mempertahankan bukti serta antrean baca.
+- `supabase/rollback/20261011233000_pause_owner_master_unit_reviews.sql` menghentikan approval/revoke satuan master SKU sementara tanpa menyentuh historis, Stok, atau BOM.
 - Guard lineage/receipt lebih aman tetap aktif daripada dihapus secara otomatis. Pembatalan guard hanya melalui review DBA dan rollback snapshot resmi bila memang diperlukan.
 
 **Keputusan rilis:** **HOLD** sampai backup+restore nyata, verifikasi fisik/satuan Owner, UAT terautentikasi, dan persetujuan pemilik proses. Tidak ada keputusan merge/deploy otomatis dari file ini.
