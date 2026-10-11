@@ -173,7 +173,10 @@ test('new SQL receipt trigger defends direct writes and real unit conversions', 
   assert.match(verifiedReceiptMigration,/status='verified'/i);
   assert.match(verifiedReceiptMigration,/v_conversion_count=1/i);
   assert.match(verifiedReceiptMigration,/b\.quantity_numeric\*v_factor/i);
-  assert.match(verifiedReceiptMigration,/old\.source_history_id is not null and new\.source_history_id is null/i);
+  assert.match(verifiedReceiptMigration,/new\.source_history_id is distinct from old\.source_history_id/i);
+  assert.match(verifiedReceiptMigration,/new\.id is distinct from old\.id/i);
+  assert.match(verifiedReceiptMigration,/before delete on public\.inventory_purchase_log/i);
+  assert.match(verifiedReceiptMigration,/not exists \(\s*select 1\s*from public\.inventory_purchase_log existing/i);
   assert.match(verifiedReceiptMigration,/pg_advisory_xact_lock/i);
   assert.match(migration,/pg_advisory_xact_lock/i);
   assert.match(verifiedReceiptMigration,/new\.qty is distinct from v_qty/i);
