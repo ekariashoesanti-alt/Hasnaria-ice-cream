@@ -1,4 +1,8 @@
 -- Runs only after emergency pause SQL in isolated GitHub Actions Postgres.
+-- Separate psql invocations have separate session GUCs; restore the simulated
+-- authenticated Owner context established in owner-unit-roles.sql.
+select set_config('app.test_role','owner',false);
+select set_config('app.test_uid','00000000-0000-0000-0000-000000009999',false);
 do $rollback$
 declare p jsonb; rejected boolean := false;
 begin
