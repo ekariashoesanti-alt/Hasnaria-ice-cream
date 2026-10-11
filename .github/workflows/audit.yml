@@ -265,3 +265,5 @@ jobs:
           psql -v ON_ERROR_STOP=1 -f tests/fixtures/p0-postgres-owner-orphan-review-pause.sql
           psql -v ON_ERROR_STOP=1 -f supabase/rollback/20261011233000_pause_owner_master_unit_reviews.sql
           psql -v ON_ERROR_STOP=1 -f tests/fixtures/p0-postgres-owner-master-pause.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/rollback/20261011234000_pause_p03_owner_mapping_reviews.sql
+          psql -v ON_ERROR_STOP=1 -f tests/fixtures/p0-postgres-p03-emergency-pause.sql
