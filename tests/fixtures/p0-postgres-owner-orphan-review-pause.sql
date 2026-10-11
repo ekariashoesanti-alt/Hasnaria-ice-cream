@@ -2,11 +2,12 @@
 -- on disposable Postgres. Recreate authenticated Owner claim in this psql process.
 select set_config('app.test_uid','00000000-0000-0000-0000-000000009999',false);
 select set_config('app.test_role','owner',false);
+create temporary table p0_orphan_review_pre_pause_count as
+select count(*)::bigint as rows_before from private.orphan_receipt_owner_reviews_v1;
 set role authenticated;
 do $paused$
-declare expected boolean; q jsonb; before_reviews bigint;
+declare expected boolean; q jsonb;
 begin
- select count(*) into before_reviews from private.orphan_receipt_owner_reviews_v1;
  expected:=false;
  begin
   perform public.owner_orphan_receipt_apply_v1(
@@ -27,10 +28,15 @@ begin
  if (q->>'total')::integer<>1 then
    raise exception 'Emergency pause disabled historical read-only queue';
  end if;
- if (select count(*) from private.orphan_receipt_owner_reviews_v1)<>before_reviews then
-   raise exception 'Emergency pause modified historical evidence rows';
- end if;
  raise notice 'HSN-P0 ORPHAN REVIEW PAUSE PASS: no writes, old reviews preserved, Owner read queue still available';
 end;
 $paused$;
 reset role;
+do $verify$
+begin
+ if (select count(*) from private.orphan_receipt_owner_reviews_v1) <>
+    (select rows_before from pg_temp.p0_orphan_review_pre_pause_count) then
+   raise exception 'Emergency pause changed documentary Owner rows';
+ end if;
+end;
+$verify$;
