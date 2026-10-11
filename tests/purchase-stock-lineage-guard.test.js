@@ -437,5 +437,5 @@ test('Supabase Free backup handoff captures migration history without claiming A
  assert.doesNotMatch(backupOperatorScript,/\b(?:supabase db reset|supabase db push|psql .*--file|drop database)\b/i);
  assert.match(releaseRecoveryRunbook,/p0_restore_acceptance_read_only_20261011\.sql/);
  assert.match(releaseRecoveryRunbook,/20261011230000/);
- assert.match(releaseRecoveryRunbook,/4 akun/);
+ assert.match(releaseRecoveryRunbook,/Akun `auth\.users`\s*\|\s*\*\*4\*\*/i);
 });
