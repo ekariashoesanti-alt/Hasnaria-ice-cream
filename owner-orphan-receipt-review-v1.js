@@ -6,7 +6,9 @@
 if(window.__HASNARIA_ORPHAN_OWNER_REVIEW_V1)return;
 window.__HASNARIA_ORPHAN_OWNER_REVIEW_V1=true;
 var db=null,opened=false,busy=false,items=[],chosen='',preview=null,
-    filter='all',decision='',evidence='',reason='',error='',notice='',modal=null;
+    filter='all',decision='',evidence='',reason='',error='',notice='',modal=null,
+    requestSeq=0,sessionContext=null;
+function active(){return opened&&owner()&&sessionContext===window.__HASNARIA_CONTEXT}
 function owner(){var c=window.__HASNARIA_CONTEXT;return!!(c&&c.role==='owner')}
 function safe(v){return String(v==null?'':v).replace(/[&<>"']/g,function(x){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[x]})}
 function fmt(v){return Number(v||0).toLocaleString('id-ID',{maximumFractionDigits:3})}
@@ -39,7 +41,7 @@ function selectedRows(){
  return items.filter(function(x){return filter==='all'||String(x.purchase_date||'').slice(0,7)===filter})
 }
 function draw(){
- if(!opened||!owner())return;
+ if(!active())return;
  if(!modal){modal=document.createElement('div');modal.className='pfa-modal-backdrop';modal.setAttribute('data-hsn-legacy-backdrop','1');document.body.appendChild(modal)}
  var x=current(),vis=selectedRows(),periods=Array.from(new Set(items.map(function(i){return String(i.purchase_date||'').slice(0,7)}))).filter(Boolean).sort();
  var head='<div class="pfa-modal-head"><div><div class="pfa-eyebrow">OWNER · HISTORI STOK</div><h3 id="hsnLegacyTitle">Audit bukti sumber Pembelian lama</h3><p>Dokumentasi saja · tidak menautkan UUID lama atau menambah Stok/Keuangan</p></div><button type="button" class="pfa-close" data-hsn-legacy-close="1" aria-label="Tutup">×</button></div>';
@@ -74,34 +76,37 @@ function draw(){
  (notice?'<p role="status" class="pfa-unit-success">'+safe(notice)+'</p>':'')+
  '<div class="pfa-modal-tools">'+opt+'</div>'+table+form+'</section>';
 }
-function close(){opened=false;chosen='';preview=null;if(modal){modal.remove();modal=null}}
+function close(){requestSeq++;opened=false;busy=false;chosen='';preview=null;items=[];sessionContext=null;if(modal){modal.remove();modal=null}}
 async function load(){
- if(!opened||!owner())return;
+ if(!active())return;
  db=db||window.__HASNARIA_DB;
  if(!db){error='Koneksi database belum siap';draw();return}
+ var seq=++requestSeq,ctx=sessionContext;
  busy=true;error='';draw();
  try{
   var r=await db.rpc('owner_orphan_receipt_queue_v1',{p_period:null});
   if(r.error)throw r.error;
-  if(!opened)return;
+  if(!active()||requestSeq!==seq||sessionContext!==ctx)return;
   items=Array.isArray(r.data&&r.data.items)?r.data.items:[];
   if(chosen&&!current()){chosen='';preview=null}
- }catch(e){error='Tidak dapat memuat antrean: '+(e&&e.message?e.message:String(e))}
- finally{busy=false;if(opened)draw()}
+ }catch(e){if(active()&&requestSeq===seq)error='Tidak dapat memuat antrean: '+(e&&e.message?e.message:String(e))}
+ finally{if(active()&&requestSeq===seq){busy=false;draw()}}
 }
 async function verify(){
- if(!opened||!owner()||!current()||busy)return;
+ if(!active()||!current()||busy)return;
+ var seq=++requestSeq,ctx=sessionContext,receipt=chosen,choice=decision;
  busy=true;preview=null;error='';notice='';draw();
  try{
   if(!decision)throw Error('Pilih keputusan review.');
-  var r=await db.rpc('owner_orphan_receipt_preview_v1',{p_receipt_id:chosen,p_decision:decision});
+  var r=await db.rpc('owner_orphan_receipt_preview_v1',{p_receipt_id:receipt,p_decision:choice});
   if(r.error)throw r.error;
-  if(opened&&current())preview=r.data;
- }catch(e){error=e&&e.message?e.message:String(e)}
- finally{busy=false;if(opened)draw()}
+  if(active()&&requestSeq===seq&&sessionContext===ctx&&chosen===receipt&&decision===choice)preview=r.data;
+ }catch(e){if(active()&&requestSeq===seq)error=e&&e.message?e.message:String(e)}
+ finally{if(active()&&requestSeq===seq){busy=false;draw()}}
 }
 async function apply(){
- if(!opened||!owner()||!preview||busy)return;
+ if(!active()||!preview||busy)return;
+ var seq=++requestSeq,ctx=sessionContext;
  busy=true;error='';draw();
  try{
   if(chosen!==preview.receipt_id||decision!==preview.decision)throw Error('Keputusan berubah. Pratinjau ulang.');
@@ -110,27 +115,30 @@ async function apply(){
    p_evidence_reference:evidence.trim(),p_reason:reason.trim()
   });
   if(r.error)throw r.error;
+  if(!active()||requestSeq!==seq||sessionContext!==ctx)return;
   preview=null;notice='Hasil review dicatat. UUID sumber, Stock dan Finance tetap.';
-  await load();
- }catch(e){error=e&&e.message?e.message:String(e)}
- finally{busy=false;if(opened)draw()}
+  busy=false;await load();
+ }catch(e){if(active()&&requestSeq===seq)error=e&&e.message?e.message:String(e)}
+ finally{if(active()&&requestSeq===seq){busy=false;draw()}}
 }
 async function revoke(){
- var x=current();if(!opened||!owner()||!x||!x.review_id||busy)return;
+ var x=current();if(!active()||!x||!x.review_id||busy)return;
+ var seq=++requestSeq,ctx=sessionContext;
  busy=true;error='';draw();
  try{
   var r=await db.rpc('owner_orphan_receipt_revoke_v1',{p_review_id:x.review_id,p_reason:reason.trim()});
   if(r.error)throw r.error;
+  if(!active()||requestSeq!==seq||sessionContext!==ctx)return;
   chosen='';preview=null;decision='';reason='';evidence='';
   notice='Keputusan dibatalkan; histori audit tetap tersimpan.';
-  await load();
- }catch(e){error=e&&e.message?e.message:String(e)}
- finally{busy=false;if(opened)draw()}
+  busy=false;await load();
+ }catch(e){if(active()&&requestSeq===seq)error=e&&e.message?e.message:String(e)}
+ finally{if(active()&&requestSeq===seq){busy=false;draw()}}
 }
 document.addEventListener('click',function(ev){
  var e=ev.target;if(!e||!e.closest)return;
- if(e.closest('[data-hsn-legacy-open]')){if(!owner())return;opened=true;chosen='';preview=null;error='';notice='';load();return}
- if(!opened)return;
+ if(e.closest('[data-hsn-legacy-open]')){if(!owner())return;requestSeq++;opened=true;busy=false;sessionContext=window.__HASNARIA_CONTEXT;chosen='';preview=null;items=[];error='';notice='';load();return}
+ if(!active())return;
  var closeBtn=e.closest('[data-hsn-legacy-close],[data-hsn-legacy-backdrop]');
  if(closeBtn&&e===closeBtn){close();return}
  var selected=e.closest('[data-hsn-legacy-select]');
@@ -140,7 +148,7 @@ document.addEventListener('click',function(ev){
  if(e.closest('[data-hsn-legacy-revoke]')){revoke();return}
 },true);
 document.addEventListener('input',function(ev){
- if(!opened||!ev.target||!ev.target.getAttribute)return;
+ if(!active()||!ev.target||!ev.target.getAttribute)return;
  var key=ev.target.getAttribute('data-hsn-legacy-field');
  if(!key)return;
  if(key==='decision')decision=ev.target.value;
@@ -156,12 +164,12 @@ document.addEventListener('change',function(ev){
   decision=ev.target.value;preview=null;draw();
  }
 },true);
-document.addEventListener('keydown',function(ev){if(ev.key==='Escape'&&opened)close()},true);
+document.addEventListener('keydown',function(ev){if(ev.key==='Escape'&&active())close()},true);
 function start(){
  var root=document.getElementById('pembelian');if(!root)return;
  var scheduled=false;function patch(){
   if(scheduled)return;scheduled=true;
-  setTimeout(function(){scheduled=false;entry();if(opened&&!owner())close()},80);
+  setTimeout(function(){scheduled=false;entry();if(opened&&!active())close()},80);
  }
  new MutationObserver(patch).observe(root,{subtree:true,childList:true});
  patch();
