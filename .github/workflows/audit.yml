@@ -49,6 +49,8 @@ jobs:
 
       - name: Purchase-Stock lineage fail-closed regressions
         run: node --test tests/purchase-stock-lineage-guard.test.js
+      - name: P0.1/P0.2 mock frontend UAT (no business writes)
+        run: node --test tests/frontend-p01-p02-owner-mock-uat.test.js
 
       - name: Runtime source integrity
         shell: bash
