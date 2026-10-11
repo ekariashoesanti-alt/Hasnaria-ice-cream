@@ -190,7 +190,7 @@ values
 create or replace view public.purchase_inventory_bridge
 with (security_invoker=true) as
 select p.id,p.brand_id,p.source_period,p.canonical_loaded_at,p.purchase_date,p.item_name,p.source_file,p.row_no,
- p.unit_text,p.total_amount,p.inventory_item_id,p.quantity_text::numeric as quantity_numeric,
+ p.unit_text,p.total_amount,p.inventory_item_id,p.quantity_text,p.quantity_text::numeric as quantity_numeric,
  coalesce(p.quantity_text::numeric*r.qty_multiplier,p.quantity_text::numeric) as inventory_qty,
  case when r.reviewed_by is not null then 'owner_review'::text
       when p.inventory_item_id is null and p.item_name='AMBIGUOUS TEST' then 'ambiguous_inventory_name'::text
