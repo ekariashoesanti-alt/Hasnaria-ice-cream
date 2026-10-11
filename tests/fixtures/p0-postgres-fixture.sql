@@ -44,6 +44,17 @@ create table public.inventory_stock_opname (
  opname_date date not null, system_qty numeric, physical_qty numeric,
  variance numeric, created_at timestamptz default now()
 );
+-- Source tables for exercising the exact manual Stock-view rollback definition.
+create table public.sales (
+ id uuid primary key, brand_id uuid not null, sold_at date not null
+);
+create table public.sale_items (
+ id uuid primary key, sale_id uuid not null, product_id uuid, qty numeric
+);
+create table public.inventory_recipe_components (
+ brand_id uuid not null, inventory_item_id uuid not null,
+ product_id uuid not null, qty_per_sale numeric not null, active boolean not null
+);
 create table public.inventory_movements (
  id uuid primary key default gen_random_uuid(), brand_id uuid not null,
  inventory_item_id uuid not null, movement_date date not null,
