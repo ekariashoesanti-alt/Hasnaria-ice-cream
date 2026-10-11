@@ -290,3 +290,47 @@ test('Stage 0 fingerprint is read-only, deterministic and explicitly not a backu
    assert.match(body,new RegExp('public\\.'+table+'\\b','i'));
  assert.doesNotMatch(body,/\b(?:insert\s+into|delete\s+from|update\s+\w+|alter\s+\w+|drop\s+\w+|grant\s+|revoke\s+|create\s+\w+)\b/i);
 });
+
+
+const unitMappingTriageMigration=fs.readFileSync(
+ path.join(__dirname,'..','supabase','migrations',
+  '20261011220000_private_purchase_unit_mapping_triage.sql'),'utf8');
+const unitMappingLiveAudit=fs.readFileSync(
+ path.join(__dirname,'..','supabase','tests',
+  'p0_unit_conversion_live_audit_read_only_20261011.sql'),'utf8');
+test('P0 #2 unit conversion review stays private and refuses to auto-certify unknown factors',()=>{
+ assert.match(unitMappingTriageMigration,/with\s*\(security_invoker\s*=\s*true\)/i);
+ assert.match(unitMappingTriageMigration,/private\.inventory_unit_conversion_triage_v1/);
+ assert.match(unitMappingTriageMigration,/private\.purchase_unit_mapping_gate_v1/);
+ assert.match(unitMappingTriageMigration,/BLOCK_MASTER_UNIT_PLACEHOLDER/);
+ assert.match(unitMappingTriageMigration,/BLOCK_MASTER_SALE_UNIT_CONFLICT/);
+ assert.match(unitMappingTriageMigration,/BLOCK_DUPLICATE_OR_CONTRADICTING_FACTORS/);
+ assert.match(unitMappingTriageMigration,/REVIEW_DUPLICATE_UNVERIFIED_RULES/);
+ assert.match(unitMappingTriageMigration,/REVIEW_MISSING_PURCHASE_UNIT/);
+ assert.match(unitMappingTriageMigration,/revoke all on private\.inventory_unit_conversion_triage_v1/);
+ assert.doesNotMatch(unitMappingTriageMigration,/\b(?:insert\s+into|update\s+\w+|delete\s+from|alter\s+table|truncate\s+table)\b/i);
+});
+test('P0 #2 live production audit is strictly SELECT only and checks all four missing-unit gates',()=>{
+ const sections=unitMappingLiveAudit.split(/(?=-- [A-E]\. )/).slice(1);
+ assert.equal(sections.length,5);
+ for(const part of sections){
+  const statement=part.replace(/^--.*$/gm,'').trim();
+  assert.match(statement,/^(select|with)\b/i);
+  assert.doesNotMatch(statement,/\b(?:insert\s+into|update\s+\w+|delete\s+from|drop\s+\w+|alter\s+\w+|grant\s+|revoke\s+|create\s+\w+)\b/i);
+ }
+ for(const text of ['inventory_items','inventory_unit_conversions',
+                   'purchase_inventory_bridge','inventory_purchase_log',
+                   'inventory_stock_reconciliation','purchase_item'])
+  assert.match(unitMappingLiveAudit,new RegExp(text,'i'));
+});
+test('Owner unit preview never trusts a conflict with VERIFIED conversion or placeholder master unit',()=>{
+ assert.match(ownerUnitApprovalMigration,/v_conflicts>0/);
+ assert.match(ownerUnitApprovalMigration,/v_verified_count>1/);
+ assert.match(ownerUnitApprovalMigration,/p_multiplier<>v_verified_factor/);
+ assert.match(ownerUnitApprovalMigration,/v_rule_snapshot/);
+ assert.match(ownerUnitApprovalMigration,/rule_catalog_snapshot/);
+ assert.match(ownerUnitApprovalMigration,/MASTER_UNIT_NEEDS_CORRECTION/);
+ assert.match(ownerUnitUI,/blockedMaster=active\.status==='MASTER_UNIT_NEEDS_CORRECTION'/);
+ assert.match(ownerUnitUI,/Perbaiki satuan master/);
+ assert.match(ownerUnitUI,/Jangan mengisi faktor konversi atau posting/);
+});
