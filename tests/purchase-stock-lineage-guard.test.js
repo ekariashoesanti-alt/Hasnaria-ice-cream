@@ -439,3 +439,35 @@ test('Supabase Free backup handoff captures migration history without claiming A
  assert.match(releaseRecoveryRunbook,/20261011230000/);
  assert.match(releaseRecoveryRunbook,/Akun `auth\.users`\s*\|\s*\*\*4\*\*/i);
 });
+
+
+const ownerMasterUnitReviewMigration=fs.readFileSync(path.join(__dirname,'..',
+ 'supabase','migrations','20261011233000_owner_master_unit_evidence_review.sql'),'utf8');
+const ownerMasterUnitUI=fs.readFileSync(path.join(__dirname,'..',
+ 'owner-master-unit-review-v1.js'),'utf8');
+test('P0.2 Owner SKU master review is private, signed and documentary only',()=>{
+ assert.match(ownerMasterUnitReviewMigration,/private\.inventory_master_unit_attestations_v1/);
+ assert.match(ownerMasterUnitReviewMigration,/alter table private\.inventory_master_unit_attestations_v1 enable row level security/i);
+ assert.match(ownerMasterUnitReviewMigration,/revoke all on private\.inventory_master_unit_attestations_v1/i);
+ assert.match(ownerMasterUnitReviewMigration,/private\.owner_stock_review_assert_v1\(\)/);
+ assert.match(ownerMasterUnitReviewMigration,/private\.owner_master_unit_preview_v1/);
+ assert.match(ownerMasterUnitReviewMigration,/private\.owner_master_unit_apply_v1/);
+ assert.match(ownerMasterUnitReviewMigration,/private\.owner_master_unit_revoke_v1/);
+ assert.match(ownerMasterUnitReviewMigration,/pg_advisory_xact_lock/);
+ assert.match(ownerMasterUnitReviewMigration,/p_token is distinct from v_source->>'token'/);
+ assert.match(ownerMasterUnitReviewMigration,/DOCUMENTED_NOT_APPLIED/);
+ assert.match(ownerMasterUnitReviewMigration,/grant execute on function public\.owner_master_unit_queue_v1/);
+ assert.doesNotMatch(ownerMasterUnitReviewMigration,
+  /\b(?:insert\s+into|update|delete\s+from)\s+public\.(?:inventory_items|inventory_movements|inventory_purchase_log|inventory_recipe_components|offline_purchase_history|finance_\w+)/i);
+});
+test('Owner master-unit web view cannot directly post Stock or change BOM',()=>{
+ assert.match(ownerOrphanIndex,/owner-master-unit-review-v1\.js\?v=1/);
+ assert.match(ownerMasterUnitUI,/c&&c\.role==='owner'/);
+ for(const rpc of ['owner_master_unit_queue_v1','owner_master_unit_preview_v1',
+     'owner_master_unit_apply_v1','owner_master_unit_revoke_v1'])
+   assert.match(ownerMasterUnitUI,new RegExp("db\\.rpc\\('"+rpc+"'"));
+ assert.match(ownerMasterUnitUI,/sessionContext===window\.__HASNARIA_CONTEXT/);
+ assert.match(ownerMasterUnitUI,/snapshot|pratinjau ulang/i);
+ assert.doesNotMatch(ownerMasterUnitUI,
+  /db\.(?:from\(['"](?:inventory_items|inventory_movements|inventory_purchase_log|inventory_recipe_components)|rpc\(['"]sync_purchase_quantity_stock_v1)/i);
+});
