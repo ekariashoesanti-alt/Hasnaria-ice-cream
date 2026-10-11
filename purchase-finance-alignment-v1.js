@@ -7,7 +7,7 @@ var BRAND='a36d4b4f-3ccc-4a78-8aeb-b868f0407ea4';
 var CATS=['Beban Administrasi','Beban Pemeliharaan','Beban Bahan Baku','Beban Kepegawaian'];
 var CAT_LABEL={'Beban Administrasi':'6100 · Administrasi','Beban Pemeliharaan':'6110 · Pemeliharaan','Beban Bahan Baku':'6120 · Bahan Baku','Beban Kepegawaian':'6200 · Kepegawaian'};
 var MONTHS=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
-var db=null,rows=[],control={},overview=null,chartRows=[],periods=[],loading=false,error='',observer=null,timer=0,loadedAt=0,loadedPeriod='',syncingStock=false,lastStockSync='',category='all',modalOpen=false,requestSeq=0,syncing=false;
+var db=null,rows=[],control={},overview=null,chartRows=[],periods=[],loading=false,error='',observer=null,timer=0,loadedAt=0,loadedPeriod='',syncingStock=false,lastStockSync='',category='all',modalOpen=false,requestSeq=0,syncing=false,unitOpen=false,unitBusy=false,unitError='',unitNotice='',unitQueue=[],unitSelected='',unitPreview=null,unitPeriod='',unitDraft={sourceUnit:'',factor:'',evidence:'',reason:''};
 
 function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function n(v){v=Number(v);return isFinite(v)?v:0}
@@ -72,6 +72,99 @@ function modalMarkup(){
   var a=detailRows();
   return'<div class="pfa-modal-backdrop" data-pfa-detail-close="1"><section class="pfa-modal" role="dialog" aria-modal="true" aria-labelledby="pfaModalTitle"><div class="pfa-modal-head"><div><div class="pfa-eyebrow">DETAIL PEMBELIAN</div><h3 id="pfaModalTitle">'+esc(monthLabel(periodValue()))+'</h3><p>'+a.length.toLocaleString('id-ID')+' transaksi · '+esc(money(total(a)))+'</p></div><button type="button" class="pfa-close" data-pfa-detail-close="1" aria-label="Tutup">×</button></div><div class="pfa-modal-tools">'+filterMarkup()+'</div>'+table(a)+'</section></div>'
 }
+
+function ownerUnitRole(){var c=window.__HASNARIA_CONTEXT;return!!(c&&c.role==='owner')}
+function activeUnitItem(){return unitQueue.find(function(x){return x.source_id===unitSelected})||null}
+function unitBaseline(v){return v==='PRE_OR_ON_OPNAME'?'Sebelum/pada opname terakhir':v==='POST_OPNAME'?'Sesudah opname terakhir':'Belum ada opname fisik'}
+function unitVerificationMarkup(){
+  if(!ownerUnitRole())return '';
+  var button='<div class="pfa-detail-cta pfa-unit-entry"><div><b>Verifikasi satuan Pembelian → Stok</b><span>Owner memeriksa kemasan, faktor isi dan bukti. Tidak ada posting Stok atau jurnal Keuangan pada tahap ini.</span></div><button type="button" data-pfa-unit-open="1">Periksa satuan'+(unitPeriod===periodValue()&&unitQueue.length?' ('+unitQueue.length+')':'')+'</button></div>';
+  if(!unitOpen)return button;
+  var active=activeUnitItem(),values=unitQueue||[];
+  var tableHtml=values.length?'<div class="pfa-table-scroll pfa-unit-table"><table class="pfa-table"><thead><tr><th>Tanggal</th><th>SKU</th><th>Qty sumber</th><th>Nilai</th><th>Status</th><th>Aksi</th></tr></thead><tbody>'+values.map(function(x){
+    return '<tr'+(x.source_id===unitSelected?' class="pfa-unit-active"':'')+'><td>'+esc(dateLabel(x.purchase_date))+'</td><td><b>'+esc(x.stock_item||x.item_name)+'</b><small>'+esc(x.stock_unit||'satuan belum ada')+' · '+esc(unitBaseline(x.baseline_effect))+'</small></td><td>'+esc(qty(x.source_qty))+' '+esc(x.canonical_source_unit||'[kosong]')+'</td><td>'+esc(money(x.amount))+'</td><td>'+statusPill(x.approval_id?'Bukti tercatat':'Perlu verifikasi',x.approval_id?'ok':'warn')+'</td><td><button type="button" data-pfa-unit-select="'+esc(x.source_id)+'">Periksa</button></td></tr>'
+  }).join('')+'</tbody></table></div>':'<div class="pfa-empty">Tidak ada transaksi pending untuk diverifikasi pada periode ini.</div>';
+  var formHtml='';
+  if(active){
+    var current=active.approval_id;
+    formHtml='<div class="pfa-unit-form"><h4>'+esc(active.item_name||active.stock_item)+'</h4><p>Qty sumber: <b>'+esc(qty(active.source_qty))+'</b> · Satuan stok: <b>'+esc(active.stock_unit||'—')+'</b> · Nilai '+esc(money(active.amount))+'</p><p class="pfa-unit-hint">'+esc(unitBaseline(active.baseline_effect))+'. Bukti wajib dari nota atau kemasan. Input ini tidak menambahkan stok.</p>';
+    if(current){
+      formHtml+='<p>'+statusPill('Verifikasi terdokumentasi, belum posting','ok')+' · '+esc(active.approved_unit||'')+' × '+esc(qty(active.approved_multiplier))+' = '+esc(qty(active.approved_qty))+' '+esc(active.stock_unit)+'</p><label>Alasan pembatalan/revisi (min. 20 karakter)<textarea data-pfa-unit-field="reason" rows="2" placeholder="Jelaskan bukti koreksi">'+esc(unitDraft.reason)+'</textarea></label><button type="button" data-pfa-unit-revoke="1"'+(unitBusy?' disabled':'')+'>Batalkan verifikasi</button>';
+    }else{
+      formHtml+='<div class="pfa-unit-fields"><label>Satuan saat beli<input data-pfa-unit-field="sourceUnit" maxlength="40" placeholder="Contoh: pack / pcs / botol" value="'+esc(unitDraft.sourceUnit)+'"></label><label>Faktor ke '+esc(active.stock_unit)+'<input data-pfa-unit-field="factor" type="number" min="0.000001" max="999999.999" step="any" placeholder="Isi sesuai bukti" value="'+esc(unitDraft.factor)+'"></label><label>Referensi bukti<input data-pfa-unit-field="evidence" maxlength="400" placeholder="Nomor nota, nama file, foto kemasan" value="'+esc(unitDraft.evidence)+'"></label><label>Alasan verifikasi<textarea data-pfa-unit-field="reason" rows="2" maxlength="1000" placeholder="Jelaskan isi kemasan dan satuan yang diperiksa">'+esc(unitDraft.reason)+'</textarea></label></div><div class="pfa-unit-controls"><button type="button" data-pfa-unit-preview="1"'+(unitBusy?' disabled':'')+'>Pratinjau kuantitas</button>'+(unitPreview?'<button type="button" class="primary" data-pfa-unit-apply="1"'+(unitBusy?' disabled':'')+'>Simpan bukti verifikasi</button>':'')+'</div>';
+      if(unitPreview)formHtml+='<div class="pfa-unit-preview">Hasil terverifikasi: <b>'+esc(qty(unitPreview.stock_qty))+' '+esc(unitPreview.stock_unit)+'</b> dari '+esc(qty(unitPreview.source_qty))+' '+esc(unitPreview.source_unit)+' × '+esc(qty(unitPreview.multiplier))+'. <strong>Tidak ada posting stok/keuangan.</strong></div>';
+    }
+    formHtml+='</div>';
+  }
+  return button+'<div class="pfa-modal-backdrop" data-pfa-unit-close="1"><section class="pfa-modal pfa-unit-modal" role="dialog" aria-modal="true" aria-labelledby="pfaUnitTitle"><div class="pfa-modal-head"><div><div class="pfa-eyebrow">OWNER · PEMBELIAN</div><h3 id="pfaUnitTitle">Verifikasi satuan '+esc(monthLabel(periodValue()))+'</h3><p>Hanya dokumentasi satuan dan bukti · Stock dan Finance tidak berubah</p></div><button type="button" data-pfa-unit-close="1" class="pfa-close" aria-label="Tutup">×</button></div>'+(unitBusy?'<p>Memproses verifikasi…</p>':'')+(unitError?'<p role="alert" class="pfa-error">'+esc(unitError)+'</p>':'')+(unitNotice?'<p role="status" class="pfa-unit-success">'+esc(unitNotice)+'</p>':'')+(unitPeriod!==periodValue()?'':tableHtml)+formHtml+'</section></div>';
+}
+async function unitLoad(){
+  if(!ownerUnitRole()||!unitOpen)return;
+  var p=periodValue();if(!p||!db)return;
+  unitBusy=true;unitError='';render();
+  try{
+    var res=await db.rpc('owner_purchase_unit_queue_v1',{p_period:p+'-01'});
+    if(res.error)throw res.error;
+    if(!unitOpen||p!==periodValue())return;
+    unitPeriod=p;unitQueue=Array.isArray(res.data&&res.data.items)?res.data.items:[];
+    if(unitSelected&&!unitQueue.some(function(x){return x.source_id===unitSelected})){unitSelected='';unitPreview=null}
+  }catch(e){unitError='Gagal memuat verifikasi satuan: '+(e&&e.message?e.message:String(e))}
+  finally{unitBusy=false;if(unitOpen&&p===periodValue())render()}
+}
+function unitFormValues(){
+  var d=Object.assign({},unitDraft),valid=Number(d.factor);
+  if(!d.sourceUnit.trim()||!d.factor.trim()||!Number.isFinite(valid)||valid<=0)throw Error('Masukkan satuan beli dan faktor konversi yang benar.');
+  return{p_source_id:unitSelected,p_source_unit:d.sourceUnit.trim(),p_multiplier:valid};
+}
+async function unitPreviewSelected(){
+  if(!ownerUnitRole()||!activeUnitItem()||unitBusy)return;
+  unitBusy=true;unitError='';unitNotice='';unitPreview=null;
+  try{
+    var args=unitFormValues(),q=await db.rpc('owner_purchase_unit_preview_v1',args);
+    if(q.error)throw q.error;
+    if(!unitOpen||!activeUnitItem())return;
+    unitPreview=q.data;
+  }catch(e){unitError=e&&e.message?e.message:String(e)}
+  finally{unitBusy=false;render()}
+}
+async function unitApplySelected(){
+  if(!ownerUnitRole()||!unitPreview||unitBusy)return;
+  unitBusy=true;unitError='';
+  try{
+    var args=unitFormValues();
+    if(args.p_source_id!==unitPreview.source_id||
+       args.p_source_unit!==unitPreview.source_unit||
+       args.p_multiplier!==Number(unitPreview.multiplier))throw Error('Isian berubah, buat ulang pratinjau.');
+    var q=await db.rpc('owner_purchase_unit_apply_v1',Object.assign(args,{
+      p_token:unitPreview.token,p_evidence:unitDraft.evidence.trim(),p_reason:unitDraft.reason.trim()
+    }));
+    if(q.error)throw q.error;
+    unitNotice='Bukti verifikasi berhasil dicatat. Belum ada perubahan saldo Stok maupun jurnal Keuangan.';
+    unitPreview=null;
+    var k=periodValue(),r=await db.rpc('owner_purchase_unit_queue_v1',{p_period:k+'-01'});
+    if(r.error)throw r.error;
+    if(k===periodValue()){unitQueue=Array.isArray(r.data&&r.data.items)?r.data.items:[];unitPeriod=k}
+  }catch(e){unitError=e&&e.message?e.message:String(e)}
+  finally{unitBusy=false;render()}
+}
+async function unitRevokeSelected(){
+  var a=activeUnitItem();
+  if(!ownerUnitRole()||!a||!a.approval_id||unitBusy)return;
+  unitBusy=true;unitError='';
+  try{
+    var q=await db.rpc('owner_purchase_unit_revoke_v1',{
+      p_review_id:a.approval_id,p_reason:unitDraft.reason.trim()
+    });
+    if(q.error)throw q.error;
+    unitNotice='Verifikasi dibatalkan; bukti tersimpan sebagai histori. Tidak ada perubahan Stok.';
+    unitSelected='';unitPreview=null;unitDraft={sourceUnit:'',factor:'',evidence:'',reason:''};
+    var p=periodValue(),r=await db.rpc('owner_purchase_unit_queue_v1',{p_period:p+'-01'});
+    if(r.error)throw r.error;
+    if(p===periodValue()){unitQueue=Array.isArray(r.data&&r.data.items)?r.data.items:[];unitPeriod=p}
+  }catch(e){unitError=e&&e.message?e.message:String(e)}
+  finally{unitBusy=false;render()}
+}
+
 function render(){
   var root=document.getElementById('paRoot');if(!root)return;patchCore(root);syncPeriodOptions();
   var target=root.querySelector('.pa-controls');if(!target)return;
@@ -89,6 +182,7 @@ function render(){
     '</div>'+
     '<div class="pfa-main-grid"><article class="pfa-panel"><div class="pfa-panel-head"><div><h3>Komposisi Pembelian</h3><p>Nilai per kategori untuk cut '+esc(cutLabel())+'.</p></div></div>'+chartMarkup()+'</article><article class="pfa-panel"><div class="pfa-panel-head"><div><h3>Status Sinkronisasi</h3><p>Pembelian terhubung otomatis ke Keuangan dan Stok.</p></div></div>'+syncMarkup()+'<div class="pfa-note">Nilai rupiah masuk Keuangan satu kali. SKU stockable menambah kuantitas Stok tanpa membuat jurnal nilai kedua.</div></article></div>'+
     '<div class="pfa-detail-cta"><div><b>'+n(v.purchase_rows).toLocaleString('id-ID')+' transaksi pada '+esc(monthLabel(periodValue()))+'</b><span>Tabel lengkap tidak ditampilkan di halaman utama.</span></div><button type="button" class="primary" data-pfa-detail-open="1">Lihat Detail Pembelian</button></div>'+
+    unitVerificationMarkup()+
     modalMarkup();
 }
 async function loadPeriods(){
@@ -118,7 +212,7 @@ async function load(force){
   }catch(e){if(seq!==requestSeq)return;rows=[];control={};overview=null;chartRows=[];loadedPeriod='';loadedAt=0;error='Gagal memuat ringkasan Pembelian: '+(e&&e.message?e.message:String(e))}
   finally{if(seq===requestSeq){loading=false;render()}else{loading=false;setTimeout(function(){if(periodValue())load(true)},0)}}
 }
-function canSyncReport(){var h=document.getElementById('pembelian'),c=window.__HASNARIA_CONTEXT,s=window.__HASNARIA_DATA_SYNC;return!!(h&&!h.classList.contains('hidden')&&c&&c.role==='owner'&&document.getElementById('paRoot')&&!modalOpen&&s&&s.canRefresh(h,'#paPeriod,#pfaCategory'))}
+function canSyncReport(){var h=document.getElementById('pembelian'),c=window.__HASNARIA_CONTEXT,s=window.__HASNARIA_DATA_SYNC;return!!(h&&!h.classList.contains('hidden')&&c&&c.role==='owner'&&document.getElementById('paRoot')&&!modalOpen&&!unitOpen&&s&&s.canRefresh(h,'#paPeriod,#pfaCategory'))}
 async function syncReport(){
   if(loading||syncing||syncingStock||!canSyncReport())return;var p=periodValue();db=db||window.__HASNARIA_DB;if(!p||!db)return;
   var seq=requestSeq,c=window.__HASNARIA_CONTEXT,root=document.getElementById('paRoot');syncing=true;
@@ -145,7 +239,7 @@ async function syncReport(){
 }
 function registerSync(){var s=window.__HASNARIA_DATA_SYNC;if(s)s.register('owner-purchase-report',syncReport)}
 registerSync();window.addEventListener('hasnaria:data-sync-ready',registerSync);
-function resetData(){rows=[];control={};overview=null;chartRows=[];loadedAt=0;loadedPeriod='';category='all';modalOpen=false}
+function resetData(){rows=[];control={};overview=null;chartRows=[];loadedAt=0;loadedPeriod='';category='all';modalOpen=false;unitSelected='';unitPreview=null;unitOpen=false;unitQueue=[];unitPeriod='';unitNotice='';unitError=''}
 function schedule(){clearTimeout(timer);timer=setTimeout(function(){if(!document.getElementById('paRoot'))return;render();if(!loading&&(!rows.length||loadedPeriod!==periodValue()))load(false)},80)}
 window.__HASNARIA_PURCHASE_FINANCE_REFRESH=syncReport;
 function boot(){
@@ -154,12 +248,22 @@ function boot(){
     observer=new MutationObserver(schedule);observer.observe(host,{childList:true,subtree:false});
     document.addEventListener('change',function(e){if(!e.target)return;if(e.target.id==='paPeriod'){resetData();lastStockSync='';load(true);return}if(e.target.id==='pfaCategory'){category=e.target.value;render()}},true);
     document.addEventListener('click',function(e){
+      var unitOpenBtn=e.target&&e.target.closest?e.target.closest('[data-pfa-unit-open]'):null;
+      if(unitOpenBtn&&ownerUnitRole()){unitOpen=true;modalOpen=false;unitError='';unitNotice='';unitSelected='';unitPreview=null;unitLoad();return}
+      var unitCloseBtn=e.target&&e.target.closest?e.target.closest('[data-pfa-unit-close]'):null;
+      if(unitCloseBtn&&e.target===unitCloseBtn){unitOpen=false;unitSelected='';unitPreview=null;render();return}
+      var unitSelectBtn=e.target&&e.target.closest?e.target.closest('[data-pfa-unit-select]'):null;
+      if(unitSelectBtn&&unitOpen){unitSelected=unitSelectBtn.getAttribute('data-pfa-unit-select');unitDraft={sourceUnit:'',factor:'',evidence:'',reason:''};unitPreview=null;unitError='';unitNotice='';render();return}
+      if(e.target&&e.target.closest&&e.target.closest('[data-pfa-unit-preview]')){unitPreviewSelected();return}
+      if(e.target&&e.target.closest&&e.target.closest('[data-pfa-unit-apply]')){unitApplySelected();return}
+      if(e.target&&e.target.closest&&e.target.closest('[data-pfa-unit-revoke]')){unitRevokeSelected();return}
       var open=e.target&&e.target.closest?e.target.closest('[data-pfa-detail-open]'):null;if(open){modalOpen=true;render();return}
       var close=e.target&&e.target.closest?e.target.closest('[data-pfa-detail-close]'):null;if(close&&e.target===close){modalOpen=false;render();return}
       var b=e.target&&e.target.closest?e.target.closest('#paUpload,#purchaseExcelBtn,#purchaseMajooBtn,[data-tab="pembelian"]'):null;if(!b)return;
       if(b.matches('#paUpload,#purchaseExcelBtn,#purchaseMajooBtn'))setTimeout(function(){resetData();lastStockSync='';loadPeriods().then(function(){load(true)})},350);else setTimeout(schedule,120)
     },true);
-    document.addEventListener('keydown',function(e){if(e.key==='Escape'&&modalOpen){modalOpen=false;render()}},true);
+    document.addEventListener('input',function(e){var key=e.target&&e.target.getAttribute&&e.target.getAttribute('data-pfa-unit-field');if(key&&Object.prototype.hasOwnProperty.call(unitDraft,key)){unitDraft[key]=e.target.value;unitPreview=null;var save=document.querySelector('[data-pfa-unit-apply]');if(save)save.disabled=true;var p=document.querySelector('.pfa-unit-preview');if(p)p.textContent='Input berubah. Jalankan pratinjau ulang sebelum menyimpan.'}},true);
+    document.addEventListener('keydown',function(e){if(e.key==='Escape'){if(unitOpen){unitOpen=false;unitPreview=null;render()}else if(modalOpen){modalOpen=false;render()}}},true);
     document.addEventListener('hasnaria:purchase-imported',function(){lastStockSync='';syncStockForPeriod().then(function(){resetData();return loadPeriods()}).then(function(){load(true)})},true);
     loadPeriods().then(function(){load(true)});return
   }if(tries++<150)setTimeout(wait,100)})()
