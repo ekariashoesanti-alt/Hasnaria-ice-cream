@@ -130,6 +130,22 @@
     return selected;
   }
 
+  // Fail before any evidence writes. A canonical replacement generates fresh UUIDs
+  // and would orphan receipts referring to previous source_history_id values.
+  // This is deliberately strict (including legacy/orphan receipts in that month)
+  // until an atomic, reviewed ledger-rebind workflow is available.
+  async function assertSafePeriodsBeforeMerge(db,periods){
+    for(var i=0;i<periods.length;i++){
+      var period=periods[i],y=+period.slice(0,4),m=+period.slice(5,7);
+      if(!/^\d{4}-\d{2}-01$/.test(period)||m<1||m>12)throw Error('Periode Pembelian tidak valid.');
+      var end=new Date(Date.UTC(y,m,0)).toISOString().slice(0,10);
+      var q=await db.from('inventory_purchase_log').select('id')
+        .eq('brand_id',BRAND).gte('purchase_date',period).lte('purchase_date',end).limit(1);
+      if(q.error)throw Error('Preflight relasi Stok gagal: '+(q.error.message||String(q.error))+'; tidak ada data yang diganti.');
+      if(q.data&&q.data.length)throw Error('Impor '+period.slice(0,7)+' ditahan: sudah ada penerimaan Stok pada periode ini. Penggantian canonical dapat memutus referensi. Rekonsiliasi ledger dahulu; data tetap aman.');
+    }
+  }
+
   async function materialize(db,period){
     var evidence=await fetchEvidence(db,period),sel=canonicalize(evidence),unresolved=sel.filter(function(r){return!payNorm(r.payment_method)});
     var rows=sel.map(function(r,i){
@@ -157,6 +173,7 @@
     var preview='Excel Pembelian aman\n'+p.rows.length+' transaksi · '+money(total)+'\n'+money(known)+' sudah punya akun pembayaran.';
     if(p.unmapped)preview+='\n'+p.unmapped+' transaksi belum punya akun pembayaran; tetap masuk sebagai BELUM_DIPETAKAN dan muncul di antrean Kasir Staff.';
     if(p.hasOps)preview+='\nRingkasan B OPERASIONAL tidak diposting sebagai transaksi agar tidak double count.';
+    await assertSafePeriodsBeforeMerge(db,ps);
     if(!confirm(preview+'\n\nLanjutkan safe merge?'))return;
     busy(true);toast('Safe merge Pembelian: mengganti transaksi yang persis dan menambah transaksi baru…','info',0);
     var ins=0,rep=0,canon=0,unres=0,unresAmt=0;
