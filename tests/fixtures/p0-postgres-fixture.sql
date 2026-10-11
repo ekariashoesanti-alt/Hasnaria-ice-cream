@@ -64,8 +64,22 @@ create table public.inventory_stock_opname (
 );
 -- Source tables for exercising the exact manual Stock-view rollback definition.
 create table public.sales (
- id uuid primary key, brand_id uuid not null, sold_at date not null
+ id uuid primary key, brand_id uuid not null, sold_at date not null,
+ created_at timestamptz default now()
 );
+-- Period provenance tables used by the P0.4 Owner read-only readiness report.
+create table public.import_jobs(
+ id uuid primary key default gen_random_uuid(),brand_id uuid not null,
+ module text not null,source_type text,status text not null,
+ period_from date,period_to date,rows_total integer,rows_posted integer,
+ created_at timestamptz default now()
+);
+create table public.sales_import_batches(
+ id uuid primary key default gen_random_uuid(),brand_id uuid not null,
+ source text,status text not null,period_from date,period_to date,
+ row_count integer,created_at timestamptz default now()
+);
+
 create table public.sale_items (
  id uuid primary key, sale_id uuid not null, product_id uuid, qty numeric
 );
@@ -178,7 +192,12 @@ with (security_invoker=true) as
 select p.id,p.brand_id,p.source_period,p.canonical_loaded_at,p.purchase_date,p.item_name,p.source_file,p.row_no,
  p.unit_text,p.total_amount,p.inventory_item_id,p.quantity_text::numeric as quantity_numeric,
  coalesce(p.quantity_text::numeric*r.qty_multiplier,p.quantity_text::numeric) as inventory_qty,
- case when r.reviewed_by is not null then 'owner_review'::text else 'exact_name'::text end as mapping_status,
+ case when r.reviewed_by is not null then 'owner_review'::text
+      when p.inventory_item_id is null and p.item_name='AMBIGUOUS TEST' then 'ambiguous_inventory_name'::text
+      when p.inventory_item_id is null then 'unmatched'::text
+      else 'exact_name'::text end as mapping_status,
+ case when p.inventory_item_id is null and p.item_name='AMBIGUOUS TEST' then 2::bigint
+      when p.inventory_item_id is null then 0::bigint else 1::bigint end as inventory_match_count,
  (p.purchase_date is not null and p.quantity_text::numeric>0) as ready_for_inventory,
  null::text as rule_type
 from public.offline_purchase_history p
