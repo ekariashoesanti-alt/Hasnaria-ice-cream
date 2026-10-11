@@ -22,6 +22,28 @@ begin
   -- also remove its generated PURCHASE_RECEIPT inventory movement.
   if tg_op = 'DELETE' then
     if old.source_history_id is not null then
+      -- Compatibility with the existing audited Owner "undo review" workflow.
+      -- The private review row is marked reverted FIRST within the same
+      -- transaction by owner_stock_review_undo_v1 after all snapshot, period,
+      -- movement, and financial-fingerprint validation has passed. Authenticated
+      -- callers have NO UPDATE grant on private.purchase_stock_reviews.
+      if old.mapping_method = 'owner_source_review'
+         and exists (
+           select 1
+           from private.purchase_stock_reviews r
+           where r.brand_id=old.brand_id
+             and r.source_history_id=old.source_history_id
+             and r.inventory_item_id=old.inventory_item_id
+             and r.reverted_at is not null
+             and r.reverted_by is not null
+             and r.reverted_by=auth.uid()
+             and length(btrim(coalesce(r.revert_reason,'')))>=10
+             and r.log_snapshot->>'id'=old.id::text
+             and r.log_snapshot->>'source_history_id'=old.source_history_id::text
+         )
+         and private.owner_stock_review_assert_v1()=old.brand_id then
+        return old;
+      end if;
       raise exception 'Penerimaan Stok dari Pembelian tidak boleh dihapus langsung; gunakan rekonsiliasi histori terotorisasi'
         using errcode = '23503';
     end if;
