@@ -179,6 +179,8 @@ test('new SQL receipt trigger defends direct writes and real unit conversions', 
   assert.match(verifiedReceiptMigration,/new\.qty is distinct from v_qty/i);
   assert.match(verifiedReceiptMigration,/new\.unit_cost is not null/i);
   assert.match(verifiedReceiptMigration,/on conflict \(source_history_id\)/i);
+  assert.match(verifiedReceiptMigration,/on conflict \(source_history_id\)[\s\S]*?do nothing\s+returning id/i);
+  assert.doesNotMatch(verifiedReceiptMigration,/on conflict \(source_history_id\)[\s\S]*?do update set/i);
 });
 
 test('automatic Purchase sync skips instead of posting unknown units', () => {
