@@ -5,6 +5,15 @@
 -- All Owner signed reviews need an audit reason with packaging/invoice evidence.
 -- Legacy direct conversion RPC stays callable but fails closed (clear error),
 -- while the ERP Action Center's resolve_inventory_conversion API is preserved.
+-- Protect against duplicate verified conversions committed from concurrent
+-- Owner sessions. All existing VERIFIED production keys are unique as of
+-- the read-only preflight; duplicate DRAFT rows remain for Owner review.
+create unique index if not exists inventory_unit_conversion_verified_key_uidx
+on public.inventory_unit_conversions(
+  brand_id,inventory_item_id,
+  lower(btrim(purchase_unit)),lower(btrim(sale_unit))
+) where status='verified';
+
 create or replace function private.guard_verified_inventory_conversion_v1()
 -- SECURITY INVOKER is critical. A SECURITY DEFINER trigger would erase
 -- the execution-role boundary and let a client spoof the transaction GUC.
@@ -105,6 +114,10 @@ begin
  select * into v_before from public.inventory_unit_conversions
  where id=p_conversion_id and brand_id=v_brand for update;
  if not found then raise exception 'Konversi SKU tidak ada atau bukan milik merek ini'; end if;
+ -- Serialize approvals at SKU scope, not only by conversion-row ID.
+ -- Distinct packaging rules for the same SKU cannot race the verified check.
+ perform pg_advisory_xact_lock(hashtextextended(
+   v_brand::text||':'||v_before.inventory_item_id::text,417));
  select i.unit,i.item_name into v_stock_unit,v_inventory_name
  from public.inventory_items i
  where i.brand_id=v_brand and i.id=v_before.inventory_item_id;
