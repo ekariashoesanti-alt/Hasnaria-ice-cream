@@ -256,3 +256,5 @@ jobs:
           psql -v ON_ERROR_STOP=1 -f tests/fixtures/p0-postgres-owner-unit-rollback.sql
           psql -v ON_ERROR_STOP=1 -f supabase/rollback/20261011223000_pause_owner_conversion_no_bom.sql
           psql -v ON_ERROR_STOP=1 -f tests/fixtures/p0-postgres-conversion-emergency-pause.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/rollback/20261011230000_pause_owner_orphan_receipt_reviews.sql
+          psql -v ON_ERROR_STOP=1 -f tests/fixtures/p0-postgres-owner-orphan-review-pause.sql
