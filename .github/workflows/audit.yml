@@ -237,6 +237,7 @@ jobs:
           psql -v ON_ERROR_STOP=1 -f tests/fixtures/p0-postgres-assertions.sql
           psql -v ON_ERROR_STOP=1 -f tests/fixtures/p0-postgres-owner-evidence.sql
           psql -v ON_ERROR_STOP=1 -f tests/fixtures/p0-postgres-owner-unit-attestations.sql
+          psql -v ON_ERROR_STOP=1 -f tests/fixtures/p0-postgres-owner-unit-roles.sql
           # Exercise manual rollback/re-apply against the same ephemeral fixtures.
           psql -v ON_ERROR_STOP=1 -f supabase/rollback/20261011180000_restore_stock_reconciliation.sql
           psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261011180000_stock_reconciliation_ledger_parity.sql
