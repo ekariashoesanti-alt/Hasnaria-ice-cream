@@ -334,3 +334,29 @@ test('Owner unit preview never trusts a conflict with VERIFIED conversion or pla
  assert.match(ownerUnitUI,/Perbaiki satuan master/);
  assert.match(ownerUnitUI,/Jangan mengisi faktor konversi atau posting/);
 });
+
+
+const ownerSafeConversionMigration=fs.readFileSync(path.join(
+ __dirname,'..','supabase','migrations',
+ '20261011223000_owner_conversion_no_recipe_bom.sql'),'utf8');
+const erpActionUi=fs.readFileSync(path.join(__dirname,'..','erp-actions.js'),'utf8');
+test('Legacy conversion is fail closed and Owner ERP verification never rewrites active recipe/BOM',()=>{
+ assert.match(ownerSafeConversionMigration,/private\.guard_verified_inventory_conversion_v1/);
+ assert.match(ownerSafeConversionMigration,/private\.owner_stock_review_assert_v1\(\)/);
+ assert.match(ownerSafeConversionMigration,/guard_verified_inventory_conversion_v1\s*\non\s+public\.inventory_unit_conversions/i);
+ assert.match(ownerSafeConversionMigration,/create or replace function private\.apply_inventory_unit_conversion/i);
+ assert.match(ownerSafeConversionMigration,/Konversi lama dihentikan/);
+ assert.match(ownerSafeConversionMigration,/create or replace function private\.resolve_inventory_conversion_ui/i);
+ assert.match(ownerSafeConversionMigration,/length\(btrim\(coalesce\(p_reason,''\)\)\)<20/);
+ assert.match(ownerSafeConversionMigration,/v_before\.units_per_purchase_unit is distinct from p_units_per_purchase_unit/);
+ assert.match(ownerSafeConversionMigration,/qty_per_sale',null/);
+ assert.match(ownerSafeConversionMigration,/recipe_bom_modified',false/);
+ assert.match(ownerSafeConversionMigration,/private\.write_audit_log/);
+ assert.doesNotMatch(ownerSafeConversionMigration,/\binsert\s+into\s+public\.inventory_recipe_components/i);
+ assert.doesNotMatch(ownerSafeConversionMigration,/\bupdate\s+public\.inventory_recipe_components/i);
+ assert.doesNotMatch(ownerSafeConversionMigration,/\binsert\s+into\s+public\.inventory_movements/i);
+ assert.doesNotMatch(ownerSafeConversionMigration,/\binsert\s+into\s+public\.inventory_purchase_log/i);
+ assert.match(erpActionUi,/source_reference/);
+ assert.match(erpActionUi,/confirm_packaging/);
+ assert.match(erpActionUi,/tidak.*mengubah resep\/BOM/);
+});
