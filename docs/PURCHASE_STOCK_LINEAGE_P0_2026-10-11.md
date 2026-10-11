@@ -44,3 +44,28 @@ This is **containment**, not remediation. It intentionally prevents destructive 
 3. Check other canonical upload paths, Staff/Owner functions and any scheduled synchronizer: all must observe the server guard.
 4. Back up before deploy; verify production branch head and last deployment. **No production apply/merge as part of this PR.**
 5. Rollback guarded code only by approved migration. Do not drop protection while unsafe UUID replacements remain possible.
+
+## Phase 2 — actual per-SKU read-only preview, 11 October 2026
+
+Verified against **production in read-only mode**, with zero business writes:
+
+1. **Unsafe source rebind:** of the 47 September orphan Stock receipt sources, **0** has a same-name and same-amount match among the current canonical Purchase rows (even before requiring same date). Re-using `source_file + row_no` is also unsafe: 47 current rows occupy the same file/line keys but **0** old amounts match, and 46 items differ. No automatic rebind candidate exists.
+2. **Unit gate:** all 139 canonical Purchase September rows lack source_stock_unit; specifically **41 posted**, **32 ready**, **33 stock review**, **33 non-stock**. Of the 28 conversion master records, **25 need verification** and **3 verified**; the 8 currently linked Stock receipts where pack is counted into pcs cannot be accepted as correct until the relevant pack factors are confirmed. Nothing is automatically reposted.
+3. **Ledger-vs-Stock UI formula defect:** `inventory_stock_reconciliation` directly calculates sales usage using today's `inventory_recipe_components.active`, including unverified `product_recipe_verifications`. Meanwhile `private.sync_sale_item_inventory_movement` creates a `SALE_CONSUMPTION` movement only when the product has a verified/effective recipe. Consequently **14 of 41 tracked SKU balances disagree** with `inventory_ledger_balance`.
+4. **Read-only proposed balance preview** (last physical baseline + already-posted purchase receipts - posted `SALE_CONSUMPTION` after opname): all 41 tracked SKU balances reconcile to inventory_ledger_balance, **0 mismatch**. This is a **calculation/view-only change**, not proof of correct physical stock. Negative SKUs move **10 → 7** (SIOMAY **-47 → 20 pcs**, AYAM KATSU **-30 → 6 porsi**, KENTANG **-10 → 3 porsi**); ODENG **-609 → -18 porsi** remains negative and needs genuine stock review.
+5. Existing September old-source receipt dates are before the latest physical count for the 40 tracked source rows. The 7 untracked SKU receipt rows have no latest physical opname, and historic source lineage is still invalid; **do not delete/rebind them automatically**.
+
+### Files staged
+
+- `supabase/migrations/20261011180000_stock_reconciliation_ledger_parity.sql` calculates `sales_usage_qty` from actually recorded `SALE_CONSUMPTION` movements. It preserves original output view columns and security-invoker behavior and changes **no** physical business rows.
+- `supabase/rollback/20261011180000_restore_stock_reconciliation.sql` stores the exact pre-change view formula. It is **manual**, not an auto-applied migration. It will reintroduce virtual unverified consumption and must not be used casually.
+- `supabase/tests/purchase_stock_recovery_preflight_v1.sql` is a read-only per-SKU report of orphan references, unit blockers and proposed stock balances. The numerical result reported above came from directly tested equivalent SELECT queries.
+- CI now includes a regression verifying the Stock view migration reads recorded consumption movements and does not deduct raw draft BOMs.
+
+### Gate remaining
+
+Do not deploy the migrations to production or merge this PR until:
+- SQL migration applied and tested on an isolated DB with fixture copies and parity query; there is **no** paid Supabase preview branch provisioned by this work.
+- Owner verifies stock/units and approves that draft recipes may no longer move displayed on-hand while awaiting verification.
+- Backup of source evidence, canonical purchases, inventory purchase logs, movements, physical opname, and journal entries is taken and a reversible release is prepared.
+- 86 historical orphan references and 25 unverified conversions have a separately approved cleanup plan (not automatically solved by the view formula).
