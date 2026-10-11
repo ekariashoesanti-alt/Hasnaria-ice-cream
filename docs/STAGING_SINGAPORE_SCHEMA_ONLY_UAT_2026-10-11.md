@@ -63,3 +63,57 @@ If a schema statement conflicts with Supabase-provided objects, **stop and revie
 - Vercel Hasnaria workspace `ekariashoesanti-9951s-projects` currently returns 403 to the available Vercel connectors. GitHub/Vercel commit-status checks and simulated staging CI are available, but **authenticated browser UAT is not**.
 - Supabase connector exposes project data/RPC/DDL actions, but does not offer a managed clone/backup action. Do not attempt to simulate full schema parity from 13 incremental P0 migrations or incomplete test fixtures.
 - PR #88 is Draft; schema-ready, owner acceptance and browser UAT are still **OPEN**.
+
+
+## Update — verified staging-only catalog parity guard
+
+The connected staging project now contains two **private-only** control migrations:
+\`staging_singapore_environment_identity_guard\` and
+\`staging_catalog_parity_readonly_guard_v1\`.
+These live under \`staging_guard\`, with no public/anon/authenticated execute.
+Read-only DBA check, on **Singapore** only:
+
+\`\`\`sql
+select * from staging_guard.schema_catalog_parity_v1();
+\`\`\`
+
+Baseline captured read-only from Tokyo production: 87 tables, 176 views/materialized
+views, 163 functions, 61 non-internal triggers, 216 policies and 87 RLS-enabled
+tables in \`public\`. As of this writing Singapore has **0 business objects**;
+the report correctly shows all six business parity metrics as \`false\`.
+The environment identity metric is \`true\`. Catalog parity alone does not
+indicate Auth, Storage, application session, data or UAT readiness.
+
+### Minimal schema-only export handoff (no transaction data)
+
+Use the guarded cross-platform Node helper in the repository instead of the
+full business-data backup script:
+
+\`\`\`bash
+# Run on an operator PC or trusted cloud runner with Supabase CLI + Docker.
+# PRIVATE: set HSN_PROD_READONLY_DB_URL using a trusted secret manager.
+# Example environment names shown; never paste a real connection URL here.
+export HSN_DB_READONLY_CONFIRMED=YES
+node scripts/export_hasnaria_staging_schema_only.js --self-test
+node scripts/export_hasnaria_staging_schema_only.js --outdir /absolute/private/export/folder
+\`\`\`
+
+For Windows PowerShell, use \`$env:HSN_DB_READONLY_CONFIRMED="YES"\` and a
+Windows absolute private folder path for \`--outdir\`. Supabase CLI's Docker
+requirement applies whichever operating system is used.
+
+The helper validates the source Supabase host/project ref; rejects Singapore
+and unrelated projects; refuses paths inside GitHub repo; executes only
+\`supabase db dump --schema public\`; writes SQL and SHA-256 manifest in the
+operator's **private** folder; and does not restore or edit any DB.
+
+**Do not upload unreviewed schema dumps to public GitHub or ChatGPT:** schema
+can contain hard-coded literals in view/function bodies. Inspect for secrets,
+mask sensitive values and verify table-only structure before sharing a
+reviewed file for staging restore.
+
+CI runs \`--self-test\` without credentials, network access or SQL exports.
+**No authorized production schema dump has been performed yet.** This step
+requires a read-only DB URL in an authorized execution environment or an
+operator-provided reviewed \`schema.sql\` file.
+
