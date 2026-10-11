@@ -129,6 +129,16 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
+      - name: Staging Singapore Preview isolation build
+        shell: bash
+        env:
+          HASNARIA_P0_STAGING_PREVIEW: '1'
+        run: |
+          set -euo pipefail
+          node scripts/vercel-build.js
+          test -s dist/auth-bootstrap.js
+          node scripts/p0_staging_isolation_gate.js dist
+
       - name: Required normalized-sales files
         shell: bash
         run: |
