@@ -343,7 +343,10 @@ const erpActionUi=fs.readFileSync(path.join(__dirname,'..','erp-actions.js'),'ut
 test('Legacy conversion is fail closed and Owner ERP verification never rewrites active recipe/BOM',()=>{
  assert.match(ownerSafeConversionMigration,/private\.guard_verified_inventory_conversion_v1/);
  assert.match(ownerSafeConversionMigration,/private\.owner_stock_review_assert_v1\(\)/);
- assert.match(ownerSafeConversionMigration,/guard_verified_inventory_conversion_v1\s*\non\s+public\.inventory_unit_conversions/i);
+ assert.match(ownerSafeConversionMigration,/create trigger guard_verified_inventory_conversion_v1\s+before insert or update or delete on public\.inventory_unit_conversions/i);
+ assert.match(ownerSafeConversionMigration,/returns trigger language plpgsql security invoker/i);
+ assert.match(ownerSafeConversionMigration,/current_user is distinct from/i);
+ assert.match(ownerSafeConversionMigration,/Direct conversion verification forbidden/);
  assert.match(ownerSafeConversionMigration,/create or replace function private\.apply_inventory_unit_conversion/i);
  assert.match(ownerSafeConversionMigration,/Konversi lama dihentikan/);
  assert.match(ownerSafeConversionMigration,/create or replace function private\.resolve_inventory_conversion_ui/i);
