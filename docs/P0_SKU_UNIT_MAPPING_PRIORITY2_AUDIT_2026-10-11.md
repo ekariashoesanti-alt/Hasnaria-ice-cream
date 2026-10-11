@@ -61,3 +61,38 @@ Sebelum rilis produksi:
 - [ ] Posting setelah opname dan dampak finansial ditangani di P0 #3 secara terpisah; tidak ada auto-add saldo dari verifikasi satuan.
 
 **Keputusan:** unit mapping verification code berada di tahap siap diuji. P0 #2 **belum boleh ditandai selesai produksi** sampai Owner menyetujui master+konversi, backup+UAT terpenuhi dan migration deployment terotorisasi.
+
+
+## E. Urutan verifikasi fisik SKU yang benar-benar berdampak (audit read-only baru)
+
+Dari **80** master SKU yang masih menggunakan satuan sementara `purchase_unit`, hanya **14 SKU** yang terkait alur aktif/historis yang harus diamankan terlebih dahulu. **66 SKU lainnya** pada saat audit tidak memiliki tracking aktif, receipt, BOM aktif, ataupun Pembelian kanonis September yang sedang tertunda. Jangan lakukan mass-update pada 80 SKU.
+
+| Nama SKU | Temuan | Gate Owner |
+|---|---|---|
+| SIRUP MELON | Pembelian September pending dan receipt historis | Master unit wajib ditetapkan sebelum approval dan posting |
+| NORI | Komponen resep aktif | Satuan master perlu cocok dengan takaran pemakaian sebenarnya |
+| BUMBU ODENG | Tracking aktif dan receipt historis | Pastikan baseline opname dan unit |
+| BUMBU TOMYUM | Tracking aktif dan receipt historis | Pastikan baseline opname dan unit |
+| BINTANG | Tracking aktif | Verifikasi master terhadap stok fisik |
+| CONE | Tracking aktif | Verifikasi PCS/boks per kemasan |
+| SAUS SACHET PEDAS | Tracking aktif | Verifikasi jumlah sachet dan satuan stok |
+| CUP 12 OZ | Receipt historis | Verifikasi stok unit tanpa menulis ulang receipt |
+| CUP 16 OZ | Receipt historis | Verifikasi stok unit tanpa menulis ulang receipt |
+| CUP 8 OZ | Receipt historis | Verifikasi stok unit tanpa menulis ulang receipt |
+| ICE CREAM | Receipt historis | Verifikasi ukuran kemasan, pail/porsi sesuai produk |
+| MIE KOREA | Receipt historis | Verifikasi unit/pack |
+| PLASTIK 1 KG | Receipt historis | Verifikasi unit bukti supplier |
+| SIRUP COCOPANDAN | Receipt historis | Verifikasi liter/ml/botol dan konversi |
+
+**Kebijakan rilis:** dari 14 ini, SIRUP MELON, NORI dan 5 tracked aktif diprioritaskan untuk mencegah gangguan saldo/penjualan. SKU dengan histori saja tetap butuh review sebelum riwayat lama di-replay. SKU lain yang belum terkait alur inventori dapat dikelola bertahap; **tidak boleh otomatis dikonversi**.
+
+### F. Isolasi resep/BOM dari verifikasi faktor kemasan
+
+Migrasi tambahan `supabase/migrations/20261011223000_owner_conversion_no_recipe_bom.sql` (hanya branch) menonaktifkan jalur lama yang tanpa sengaja mengubah `inventory_recipe_components.qty_per_sale` menjadi `1 / units_per_purchase_unit`. Mengubah faktor kemasan **tidak boleh** otomatis membuat/mengaktifkan/menimpa BOM.
+
+- Fungsi ERP `resolve_inventory_conversion` tetap memakai antarmuka yang sama namun mengharuskan Owner, bukti kemasan/nota, audit alasan dan kecocokan satuan master. **Tidak ada Stock movement atau Finance DML.**
+- Trigger validasi `security invoker` memastikan penanda transaksi `set_config` **tidak dapat dipalsukan oleh pengguna** untuk memaksa VERIFIED. Pengujian menggunakan role `authenticated` sungguhan pada PostgreSQL fixture membuktikan UPDATE dan INSERT VERIFIED dengan marker palsu ditolak.
+- Kunci transaksi per `brand_id + inventory_item_id` dan unique partial index VERIFIED mencegah dua persetujuan bersamaan menghasilkan faktor verified berkonflik.
+- Tetap dibutuhkan persetujuan Owner terhadap angka fisik. **Tidak ada aturan produksi yang otomatis dinaikkan dari draft menjadi verified.**
+
+**Hasil tes otomatis:** GitHub Hasnaria Audit Gate **#1600** (Postgres integration + JS/build static audit) sukses. Seluruh perubahan ini belum diterapkan ke Supabase produksi. Real backup/restoration dan UAT akun Owner+Staff masih diperlukan sebelum merge.
