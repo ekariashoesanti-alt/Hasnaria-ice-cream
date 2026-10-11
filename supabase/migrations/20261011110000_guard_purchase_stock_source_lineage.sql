@@ -41,6 +41,9 @@ begin
     end if;
   end if;
 
+  -- Coordinate with the Stock receipt guard to stop delete/insert races.
+  perform pg_advisory_xact_lock(hashtextextended(v_source::text, 416));
+
   select exists (
     select 1
     from public.inventory_purchase_log l
