@@ -84,6 +84,18 @@ begin
  exception when others then denied:=true;end;
  if not denied then raise exception 'Staff can read Owner master-unit queue';end if;
  denied:=false;
+ begin perform public.owner_p03_work_queue_v1(date_trunc('month',current_date)::date);
+ exception when others then denied:=true;end;
+ if not denied then raise exception 'Staff can access P0.3 mapping queue';end if;
+ denied:=false;
+ begin perform public.owner_p04_import_readiness_v1(date_trunc('month',current_date)::date);
+ exception when others then denied:=true;end;
+ if not denied then raise exception 'Staff can access P0.4 import provenance';end if;
+ denied:=false;
+ begin perform public.owner_purchase_unmapped_queue_v1(date_trunc('month',current_date)::date);
+ exception when others then denied:=true;end;
+ if not denied then raise exception 'Staff can inspect unresolved canonical SKU mapping';end if;
+ denied:=false;
  begin perform public.owner_master_unit_preview_v1(
   '00000000-0000-0000-0000-000000000101','DOCUMENT_UNIT','pcs');
  exception when others then denied:=true;end;
@@ -197,6 +209,14 @@ begin
  if has_function_privilege('anon','public.owner_master_unit_queue_v1(boolean)','EXECUTE')
   or has_function_privilege('anon','public.owner_master_unit_apply_v1(uuid,text,text,text,text,text)','EXECUTE')
  then raise exception 'Anonymous access unexpectedly granted to Owner master review';end if;
+ if has_function_privilege('anon','public.owner_p03_work_queue_v1(date)','EXECUTE')
+    or has_function_privilege('anon','public.owner_p04_import_readiness_v1(date)','EXECUTE')
+    or has_function_privilege('anon','public.owner_purchase_unmapped_queue_v1(date)','EXECUTE')
+    or has_function_privilege('anon','public.owner_purchase_unmapped_apply_v1(uuid,text,uuid,text,text,text,text)','EXECUTE')
+ then raise exception 'Anon can access P0.3/P0.4 Owner-only RPC';end if;
+ if has_table_privilege('authenticated','private.purchase_unmapped_owner_decisions_v1','SELECT')
+    or has_table_privilege('authenticated','private.purchase_unmapped_owner_decisions_v1','INSERT')
+ then raise exception 'Staff can directly access documentary Purchase mapping records';end if;
  if has_table_privilege('authenticated','private.inventory_master_unit_attestations_v1','SELECT')
   or has_table_privilege('authenticated','private.inventory_master_unit_attestations_v1','INSERT')
  then raise exception 'Staff can read/write private SKU attestation rows';end if;
