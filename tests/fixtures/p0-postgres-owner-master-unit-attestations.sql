@@ -3,16 +3,16 @@
 insert into public.inventory_items(
  id,brand_id,item_name,category,unit,opening_qty)
 values
- ('00000000-0000-0000-0000-000000000104',
+ ('00000000-0000-0000-0000-000000000180',
   '00000000-0000-0000-0000-000000000001',
   'P0 RECIPE PLACEHOLDER','Bahan','purchase_unit',0),
- ('00000000-0000-0000-0000-000000000105',
+ ('00000000-0000-0000-0000-000000000181',
   '00000000-0000-0000-0000-000000000001',
   'UNUSED PLACEHOLDER','Kemasan','purchase_unit',0);
 insert into public.inventory_recipe_components(
  brand_id,inventory_item_id,product_id,qty_per_sale,active)
 values('00000000-0000-0000-0000-000000000001',
-       '00000000-0000-0000-0000-000000000104',
+       '00000000-0000-0000-0000-000000000180',
        '00000000-0000-0000-0000-000000000901',0.5,true);
 do $queue$
 declare p jsonb; all_rows jsonb; pv jsonb; b boolean:=false;
@@ -21,24 +21,24 @@ begin
  all_rows:=public.owner_master_unit_queue_v1(false);
  if (p->>'total')::integer<>1
   or (all_rows->>'total')::integer<>2
-  or p->'items'->0->>'item_id'<>'00000000-0000-0000-0000-000000000104'
+  or p->'items'->0->>'item_id'<>'00000000-0000-0000-0000-000000000180'
   or p->'items'->0->>'priority'<>'P0_ACTIVE_DEPENDENCY'
   or p->'items'->0->>'status'<>'REQUIRES_MASTER_UNIT_REVIEW' then
    raise exception 'Owner master-unit triage failed to prioritize active 1 of 2 placeholders: %',p;
  end if;
  begin
   perform public.owner_master_unit_preview_v1(
-   '00000000-0000-0000-0000-000000000104','DOCUMENT_UNIT','purchase_unit');
+   '00000000-0000-0000-0000-000000000180','DOCUMENT_UNIT','purchase_unit');
  exception when others then b:=true;end;
  if not b then raise exception 'Placeholder unit was approved as a real physical unit';end if;
  b:=false;
  begin
   perform public.owner_master_unit_preview_v1(
-   '00000000-0000-0000-0000-000000000104','NOT_FOR_STOCK','pcs');
+   '00000000-0000-0000-0000-000000000180','NOT_FOR_STOCK','pcs');
  exception when others then b:=true;end;
  if not b then raise exception 'NOT_FOR_STOCK should not carry fictitious unit';end if;
  pv:=public.owner_master_unit_preview_v1(
- '00000000-0000-0000-0000-000000000104','DOCUMENT_UNIT','pcs');
+ '00000000-0000-0000-0000-000000000180','DOCUMENT_UNIT','pcs');
  if pv->>'priority'<>'P0_ACTIVE_DEPENDENCY'
     or pv->>'master_unit'<>'purchase_unit'
     or pv->>'proposed_stock_unit'<>'pcs'
@@ -52,13 +52,13 @@ $queue$;
 
 begin;
 update public.inventory_items set unit='pack'
-where id='00000000-0000-0000-0000-000000000104';
+where id='00000000-0000-0000-0000-000000000180';
 do $changed$
 declare denied boolean:=false;
 begin
  begin
   perform public.owner_master_unit_preview_v1(
-   '00000000-0000-0000-0000-000000000104','DOCUMENT_UNIT','pcs');
+   '00000000-0000-0000-0000-000000000180','DOCUMENT_UNIT','pcs');
  exception when others then denied:=true;end;
  if not denied then raise exception 'Stale master unit was approved after changed source';end if;
 end;
@@ -73,16 +73,16 @@ begin
  select count(*) into v_movements from public.inventory_movements;
  select count(*) into v_recipes from public.inventory_recipe_components;
  pv:=public.owner_master_unit_preview_v1(
-   '00000000-0000-0000-0000-000000000104','DOCUMENT_UNIT','pcs');
+   '00000000-0000-0000-0000-000000000180','DOCUMENT_UNIT','pcs');
  begin
   perform public.owner_master_unit_apply_v1(
-    '00000000-0000-0000-0000-000000000104','DOCUMENT_UNIT','pcs',
-    'bad-token','Supplier invoice fixture XX104',
+    '00000000-0000-0000-0000-000000000180','DOCUMENT_UNIT','pcs',
+    'bad-token','Supplier invoice fixture XX180',
     'Owner inspected an example pack and documented pcs, no Stock change');
  exception when others then denied:=true;end;
  if not denied then raise exception 'Invalid master-unit preview token accepted';end if;
  rec:=public.owner_master_unit_apply_v1(
-   '00000000-0000-0000-0000-000000000104','DOCUMENT_UNIT','pcs',
+   '00000000-0000-0000-0000-000000000180','DOCUMENT_UNIT','pcs',
    pv->>'token','Supplier invoice fixture number XX104',
    'Owner inspected an example pack and documented the pcs unit without posting Stock');
  v_review_id:=(rec->>'review_id')::uuid;
@@ -90,7 +90,7 @@ begin
   raise exception 'Master documentary attestation not recorded: %',rec;
  end if;
  if (select unit from public.inventory_items
-      where id='00000000-0000-0000-0000-000000000104')<>'purchase_unit'
+      where id='00000000-0000-0000-0000-000000000180')<>'purchase_unit'
     or (select count(*) from public.inventory_purchase_log)<>v_receipts
     or (select count(*) from public.inventory_movements)<>v_movements
     or (select count(*) from public.inventory_recipe_components)<>v_recipes then
@@ -99,7 +99,7 @@ begin
  denied:=false;
  begin
   perform public.owner_master_unit_apply_v1(
-    '00000000-0000-0000-0000-000000000104','DOCUMENT_UNIT','pcs',
+    '00000000-0000-0000-0000-000000000180','DOCUMENT_UNIT','pcs',
     pv->>'token','Supplier invoice fixture XX104',
     'Owner must not duplicate previous documentary review on the same SKU');
  exception when others then denied:=true;end;
