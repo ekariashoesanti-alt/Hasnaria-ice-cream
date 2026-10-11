@@ -69,3 +69,31 @@ Do not deploy the migrations to production or merge this PR until:
 - Owner verifies stock/units and approves that draft recipes may no longer move displayed on-hand while awaiting verification.
 - Backup of source evidence, canonical purchases, inventory purchase logs, movements, physical opname, and journal entries is taken and a reversible release is prepared.
 - 86 historical orphan references and 25 unverified conversions have a separately approved cleanup plan (not automatically solved by the view formula).
+
+## Stage 3 — Verified Purchase-unit posting guard (11 Oct 2026)
+
+**Completed as source code in this Draft PR; NOT deployed to production.**
+
+The previous `private.sync_purchase_quantity_stock_v1` selected `b.inventory_qty` and `b.unit_text` directly into Stock. A background sync could therefore post a 1 pack Purchase as 1 pcs Stock and immediately create an incorrect `PURCHASE_RECEIPT` movement. Import alias multipliers are all `1`, which is not a substitute for approved pack-size conversions.
+
+Protection staged in `supabase/migrations/20261011190000_guard_purchase_receipt_verified_units.sql`:
+
+- **Direct database trigger** on new/materially updated `inventory_purchase_log` entries linked to canonical Purchase. Requires source Purchase ID/brand/SKU/date/amount to match, Stock unit equal to master SKU unit, null Stock unit cost (Finance expense already booked), positive quantity, and either same named source/stock unit, exactly one `verified` unit conversion, or explicit nonreverted owner review with approved multiplier. Source-less manual Stock workflows retain their existing behavior.
+- Existing orphan/historical receipts are unchanged by this migration. Non-material notes-only updates are permitted; changing an old orphan source ID/qty/unit requires review.
+- Privileged `sync_purchase_quantity_stock_v1` now selects only unit-valid receipts, converts to **master stock unit** before insert, reports `blocked_for_unit_review`, and uses **ON CONFLICT DO NOTHING**. Therefore it never re-writes old source-linked Stock receipts or movements. This remains quantity-only; Finance values are untouched.
+- **Both source-delete and new-receipt guards use the same advisory transaction lock** on purchase UUID to guard against concurrent canonical replacement.
+- Purchase UI changes the inaccurate **“Siap sinkron”** badge to **“Perlu verifikasi satuan”** when unit missing; otherwise shows **“Cek satuan & konversi”**.
+- Emergency SQL `supabase/rollback/20261011190000_pause_purchase_stock_sync.sql` pauses new Purchase→Stock sync completely rather than re-enabling the unsafe pre-fix uploader.
+
+### Read-only preflight results
+
+- September candidates ready-for-Stock in the Purchase bridge: **73** (41 already posted, 32 not posted).
+- Source unit missing: **73/73**. Eligible under this strict guard today: **0/73**. Background run after deployment is designed to **skip all 73** without a data write; already-posted 41 are not reversed or updated.
+- `private.purchase_stock_reviews`: **0 approved/reviewed rows**. Master unit conversion rules: **25 needs_verification**, **3 verified** (not sufficient without source-unit evidence).
+- Direct `inventory_movements` read permissions for `authenticated` exist with same-brand SELECT RLS, so the Stock view migration does not need widened privileges to read movement records.
+
+### Deployment decision and pending checks
+
+- GitHub Audit Gate and Vercel Preview pass JavaScript, static SQL guard invariants, and app artifact build; **they do not execute PostgreSQL DDL**. A **real isolated PostgreSQL/Supabase test run** of both migrations, before/after balance parity, RLS Owner/Staff read, and reviewed vs unreviewed receipt fixtures remains mandatory.
+- 41 historic posted receipts with unknown source unit require physical evidence, unit factors and opname review before any reprocessing. 86 historical orphan source links remain unchanged.
+- A restorable business-data backup must be taken immediately before approved deployment. No paid branch or database clone was created.
