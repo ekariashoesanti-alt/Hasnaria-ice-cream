@@ -109,14 +109,21 @@ rollback;
 -- Master placeholder must never be interpreted as a unit.
 begin;
 update public.inventory_items set unit='purchase_unit'
- where id='00000000-0000-0000-0000-000000000102';
+ where id='00000000-0000-0000-0000-000000000101';
 do $placeholder$
-declare v record;
+declare v record; q jsonb;
 begin
  select * into v from private.purchase_unit_mapping_gate_v1
- where purchase_source_id='00000000-0000-0000-0000-000000000202';
+ where purchase_source_id='00000000-0000-0000-0000-000000000204';
  if v.unit_mapping_gate<>'BLOCK_MASTER_UNIT_PLACEHOLDER' then
   raise exception 'Placeholder stock master not blocked: %',to_jsonb(v);
+ end if;
+ q:=private.owner_purchase_unit_queue_v1(
+    date_trunc('month',current_date-interval '1 month')::date);
+ if (select count(*) from jsonb_array_elements(q->'items') item
+      where item->>'source_id'='00000000-0000-0000-0000-000000000204'
+        and item->>'status'='MASTER_UNIT_NEEDS_CORRECTION')<>1 then
+   raise exception 'Owner queue must explicitly block placeholder master unit: %',q;
  end if;
 end;
 $placeholder$;
