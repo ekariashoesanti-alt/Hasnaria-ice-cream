@@ -25,7 +25,8 @@ begin
   else
     v_source := new.id;
     -- Unchanged semantic content is safe; ordinary metadata edits remain possible.
-    if new.brand_id is not distinct from old.brand_id
+    if new.id is not distinct from old.id
+       and new.brand_id is not distinct from old.brand_id
        and new.source_period is not distinct from old.source_period
        and new.source_file is not distinct from old.source_file
        and new.row_no is not distinct from old.row_no
@@ -63,7 +64,7 @@ revoke all on function private.guard_linked_purchase_canonical_source_v1() from 
 drop trigger if exists guard_linked_purchase_canonical_source_v1 on public.offline_purchase_history;
 create trigger guard_linked_purchase_canonical_source_v1
 before delete or update of
-  brand_id, source_period, source_file, row_no, purchase_date, item_name,
+  id, brand_id, source_period, source_file, row_no, purchase_date, item_name,
   quantity_text, unit_text, unit_price, total_amount
 on public.offline_purchase_history
 for each row execute function private.guard_linked_purchase_canonical_source_v1();
