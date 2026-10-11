@@ -165,5 +165,20 @@ function boot(){
  new MutationObserver(schedule).observe(host,{childList:true,subtree:true});
  schedule();
 }
+// Hide sensitive documentary queue if authentication causes the app to be
+// hidden. This prevents orphaned body-level modals surviving Owner logout.
+function closeIfAppHidden(){
+ var app=document.getElementById('app');
+ if(!app)return;
+ if(app.classList.contains('hidden')&&opened)close();
+}
+function monitorAppVisibility(){
+ var app=document.getElementById('app');
+ if(!app)return;
+ new MutationObserver(closeIfAppHidden).observe(app,{
+  attributes:true,attributeFilter:['class']
+ });
+}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
+monitorAppVisibility();
 })();
