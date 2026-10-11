@@ -48,6 +48,29 @@ Backup dinyatakan **lulus** hanya jika restore pada lingkungan terpisah berhasil
 
 **Jangan** menggunakan database produksi untuk tes restore.
 
+### Rekomendasi khusus Hasnaria — Supabase Free
+
+Pemeriksaan konektor Supabase pada 11 Oktober 2026: organisasi `Hasnaria Ice Cream` memakai `plan=free`. Berdasarkan dokumentasi resmi Supabase (https://supabase.com/docs/guides/platform/backups), backup otomatis harian yang dapat dipulihkan tersedia pada paket Pro/Team/Enterprise; untuk Free, Supabase merekomendasikan **ekspor logis manual** menggunakan `supabase db dump`.
+
+Petunjuk resmi: https://supabase.com/docs/guides/platform/migrating-within-supabase/backup-restore
+
+Langkah administrator yang tidak mengubah database sumber:
+
+1. Gunakan PC/lingkungan pengelola yang dipercaya dengan Supabase CLI, PostgreSQL client, dan koneksi PostgreSQL yang sah. Ambil koneksi DB dari Dashboard Supabase; jangan tempel kata sandi di GitHub/PR/CI log.
+2. Simpan connection string dalam `HSN_SUPABASE_DB_URL` pada terminal lokal (jangan dipublikasikan). Buat direktori backup di drive pribadi terenkripsi, bukan di repository.
+3. Jalankan dump roles, schema, dan data ke tiga file yang berbeda. `-x` mengecualikan tabel internal vector-storage yang disebut dalam dokumentasi resmi, bukan data Hasnaria:
+   ```powershell
+   supabase db dump --db-url $env:HSN_SUPABASE_DB_URL -f .\roles.sql --role-only
+   supabase db dump --db-url $env:HSN_SUPABASE_DB_URL -f .\schema.sql
+   supabase db dump --db-url $env:HSN_SUPABASE_DB_URL -f .\data.sql --use-copy --data-only -x "storage.buckets_vectors" -x "storage.vector_indexes"
+   ```
+4. Pastikan dump file tidak kosong, catat checksum SHA-256, waktu dump, lokasi penyimpanan privat dan ukuran file, serta cek apakah skema `private` dan jurnal diikutkan.
+5. **Wajib latihan restore** ke database sementara TERPISAH, bukan produksi. Ikuti petunjuk resmi tentang pemulihan roles dan urutan schema/data, lalu cocokkan angka `p0_live_release_gate_read_only_20261011.sql`, 139/641 transaksi, 41 receipt kanonis, 86 orphan, dan fingerprint keuangan.
+6. Verifikasi ulang dokumen/binary file yang berada di Supabase Storage karena backup database hanya memuat metadata objek, bukan file Storage itu sendiri. Jika aplikasi mengandalkan foto nota/kemasan, ekspor objek terkait secara terpisah dari bucket sesuai izin.
+7. Bila backup atau restore tidak lengkap: **HOLD**, jangan jalankan migrasi atau merge sebagai rilis produksi.
+
+Catatan: tiga perintah di atas adalah prosedur administrator, **belum dijalankan** oleh konektor ChatGPT; tidak boleh diklaim sebagai backup yang sudah ada. Tidak ada upgrade berbayar yang dilakukan.
+
 ## 4. UAT Owner / Staff di lingkungan staging berisi data representatif
 
 **Belum dijalankan dengan akun nyata.** CI PostgreSQL hanya menggunakan fixture sintetis dan simulasi role.
