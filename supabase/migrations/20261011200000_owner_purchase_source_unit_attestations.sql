@@ -60,6 +60,9 @@ begin
      'approved_multiplier',a.multiplier,'approved_qty',a.stock_qty,
      'approved_at',a.reviewed_at,
      'status',case when a.id is not null then 'DOCUMENTED_NOT_POSTED'
+                   when nullif(btrim(coalesce(i.unit,'')),'') is null
+                     or lower(btrim(i.unit))='purchase_unit'
+                     then 'MASTER_UNIT_NEEDS_CORRECTION'
                    else 'NEEDS_UNIT_VERIFICATION' end
    ) order by b.purchase_date desc,b.total_amount desc,b.id),
    '[]'::jsonb) into v_result
@@ -86,6 +89,8 @@ create or replace function private.owner_purchase_unit_preview_v1(
 returns jsonb language plpgsql stable security definer set search_path=''
 as $pre$
 declare v_brand uuid; b record; i record; v_last_opname date; v_unit text; v_payload jsonb;
+ v_verified_count integer; v_verified_factor numeric; v_conflicts integer;
+ v_rule_snapshot jsonb;
 begin
  v_brand:=private.owner_stock_review_assert_v1();
  v_unit:=btrim(coalesce(p_source_unit,''));
@@ -114,6 +119,39 @@ begin
  if lower(v_unit)=lower(btrim(i.unit)) and p_multiplier<>1 then
    raise exception 'Satuan sama wajib menggunakan faktor 1';
  end if;
+ -- The master unit must represent the exact stock unit used by conversion
+ -- rules. 'pack -> pcs' cannot silently coexist with master unit='pack'.
+ -- A proposed factor cannot contradict a previously VERIFIED master-aligned
+ -- conversion, and two VERIFIED matches are an ambiguity, never a shortcut.
+ select count(*) into v_conflicts
+ from public.inventory_unit_conversions c
+ where c.brand_id=v_brand and c.inventory_item_id=i.id
+   and lower(btrim(c.sale_unit))<>lower(btrim(i.unit));
+ if v_conflicts>0 then
+   raise exception 'Satuan master SKU bertentangan dengan aturan konversi; benahi master dan aturan terlebih dahulu';
+ end if;
+ select count(*),max(c.units_per_purchase_unit)
+   into v_verified_count,v_verified_factor
+ from public.inventory_unit_conversions c
+ where c.brand_id=v_brand and c.inventory_item_id=i.id
+   and c.status='verified'
+   and lower(btrim(c.purchase_unit))=lower(v_unit)
+   and lower(btrim(c.sale_unit))=lower(btrim(i.unit));
+ if v_verified_count>1 then
+   raise exception 'Terdapat lebih dari satu aturan konversi terverifikasi; diperlukan review';
+ end if;
+ if v_verified_count=1 and
+    (coalesce(v_verified_factor,0)<=0 or p_multiplier<>v_verified_factor) then
+   raise exception 'Faktor yang diinput berbeda dari aturan konversi terverifikasi';
+ end if;
+ -- Bind preview token to the state of the source AND the conversion catalog:
+ -- changes to a factor, SKU unit, status or rule cardinality require re-preview.
+ select coalesce(jsonb_agg(jsonb_build_object(
+   'rule_id',c.id,'purchase_unit',c.purchase_unit,'stock_unit',c.sale_unit,
+   'factor',c.units_per_purchase_unit,'status',c.status)
+   order by c.id),'[]'::jsonb) into v_rule_snapshot
+ from public.inventory_unit_conversions c
+ where c.brand_id=v_brand and c.inventory_item_id=i.id;
  if b.quantity_numeric*p_multiplier>1000000000 then
    raise exception 'Hasil konversi tidak wajar, verifikasi kembali';
  end if;
@@ -137,6 +175,9 @@ begin
     'inventory_item_id',i.id,'stock_item',i.item_name,
     'stock_unit',i.unit,'source_unit',v_unit,
     'multiplier',p_multiplier,'stock_qty',b.quantity_numeric*p_multiplier,
+    'mapping_status',b.mapping_status,'bridge_qty_unverified',b.inventory_qty,
+    'verified_matching_rules',v_verified_count,
+    'rule_catalog_snapshot',v_rule_snapshot,
     'last_opname_date',v_last_opname,
     'baseline_effect',case when v_last_opname is null
         then 'NO_PHYSICAL_BASELINE'
