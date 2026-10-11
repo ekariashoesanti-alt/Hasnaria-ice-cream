@@ -21,7 +21,7 @@ create table public.offline_purchase_history (
  source_file text not null, row_no integer not null,
  purchase_date date, item_name text, quantity_text text, unit_text text,
  unit_price numeric, total_amount numeric,
- inventory_item_id uuid
+ inventory_item_id uuid, canonical_loaded_at timestamptz default now()
 );
 create table public.inventory_purchase_log (
  id uuid primary key default gen_random_uuid(),
@@ -98,22 +98,22 @@ insert into public.offline_purchase_history
   item_name,quantity_text,unit_text,unit_price,total_amount,inventory_item_id)
 values
  ('00000000-0000-0000-0000-000000000201','00000000-0000-0000-0000-000000000001',
-  current_date - interval '1 month','synthetic.xlsx',1,current_date - 5,
+  date_trunc('month',current_date - interval '1 month')::date,'synthetic.xlsx',1,current_date - 5,
   'PACK UNVERIFIED','2','pack',100,200,'00000000-0000-0000-0000-000000000101'),
  ('00000000-0000-0000-0000-000000000202','00000000-0000-0000-0000-000000000001',
-  current_date - interval '1 month','synthetic.xlsx',2,current_date - 5,
+  date_trunc('month',current_date - interval '1 month')::date,'synthetic.xlsx',2,current_date - 5,
   'SAME UNIT','3','pcs',100,300,'00000000-0000-0000-0000-000000000102'),
  ('00000000-0000-0000-0000-000000000203','00000000-0000-0000-0000-000000000001',
-  current_date - interval '1 month','synthetic.xlsx',3,current_date - 5,
+  date_trunc('month',current_date - interval '1 month')::date,'synthetic.xlsx',3,current_date - 5,
   'PACK VERIFIED','2','pack',100,200,'00000000-0000-0000-0000-000000000101'),
  ('00000000-0000-0000-0000-000000000204','00000000-0000-0000-0000-000000000001',
-  current_date - interval '1 month','synthetic.xlsx',4,current_date - 5,
+  date_trunc('month',current_date - interval '1 month')::date,'synthetic.xlsx',4,current_date - 5,
   'UNKNOWN UNIT','4',null,100,400,'00000000-0000-0000-0000-000000000101'),
  ('00000000-0000-0000-0000-000000000205','00000000-0000-0000-0000-000000000001',
-  current_date - interval '1 month','synthetic.xlsx',5,current_date - 5,
+  date_trunc('month',current_date - interval '1 month')::date,'synthetic.xlsx',5,current_date - 5,
   'REVIEWED MISSING UNIT','1',null,100,100,'00000000-0000-0000-0000-000000000101'),
  ('00000000-0000-0000-0000-000000000206','00000000-0000-0000-0000-000000000001',
-  current_date - interval '1 month','synthetic.xlsx',6,current_date - 5,
+  date_trunc('month',current_date - interval '1 month')::date,'synthetic.xlsx',6,current_date - 5,
   'ALREADY POSTED','1',null,100,100,'00000000-0000-0000-0000-000000000103');
 
 -- Historical pre-guard entry that must be preserved and never replayed.
@@ -130,7 +130,7 @@ values
 
 create or replace view public.purchase_inventory_bridge
 with (security_invoker=true) as
-select p.id,p.brand_id,p.purchase_date,p.item_name,p.source_file,p.row_no,
+select p.id,p.brand_id,p.source_period,p.canonical_loaded_at,p.purchase_date,p.item_name,p.source_file,p.row_no,
  p.unit_text,p.total_amount,p.inventory_item_id,p.quantity_text::numeric as quantity_numeric,
  coalesce(p.quantity_text::numeric*r.qty_multiplier,p.quantity_text::numeric) as inventory_qty,
  case when r.reviewed_by is not null then 'owner_review'::text else 'exact_name'::text end as mapping_status,
