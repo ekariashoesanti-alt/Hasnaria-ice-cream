@@ -17,10 +17,28 @@ declare
   v_factor numeric;
   v_conversion_count bigint;
 begin
+  -- A canonical Purchase receipt is a ledger-bearing accounting record.
+  -- Do not permit direct deletion: the existing AFTER DELETE trigger would
+  -- also remove its generated PURCHASE_RECEIPT inventory movement.
+  if tg_op = 'DELETE' then
+    if old.source_history_id is not null then
+      raise exception 'Penerimaan Stok dari Pembelian tidak boleh dihapus langsung; gunakan rekonsiliasi histori terotorisasi'
+        using errcode = '23503';
+    end if;
+    return old;
+  end if;
+
   if tg_op = 'UPDATE' then
+    if old.source_history_id is not null
+       and (new.source_history_id is distinct from old.source_history_id
+            or new.id is distinct from old.id) then
+      raise exception 'ID penerimaan Stok dan ID sumber Pembelian tidak boleh diubah tanpa rekonsiliasi'
+        using errcode = '23503';
+    end if;
     -- Preserve existing historical entries, including orphans, for metadata-only
     -- updates; every quantity/source/item/date/unit/value modification is checked.
-    if new.source_history_id is not distinct from old.source_history_id
+    if new.id is not distinct from old.id
+       and new.source_history_id is not distinct from old.source_history_id
        and new.brand_id is not distinct from old.brand_id
        and new.inventory_item_id is not distinct from old.inventory_item_id
        and new.purchase_date is not distinct from old.purchase_date
@@ -33,10 +51,6 @@ begin
       return new;
     end if;
 
-    if old.source_history_id is not null and new.source_history_id is null then
-      raise exception 'Sumber Pembelian terhubung Stok tidak boleh dihapus dari referensi tanpa rekonsiliasi'
-        using errcode = '23503';
-    end if;
   end if;
 
   -- Manual (non-canonical) Stock entries retain their existing workflow.
@@ -123,11 +137,17 @@ revoke all on function private.guard_purchase_receipt_unit_v1()
   from public, anon, authenticated;
 
 drop trigger if exists guard_purchase_receipt_unit_v1 on public.inventory_purchase_log;
+drop trigger if exists guard_purchase_receipt_delete_v1 on public.inventory_purchase_log;
 create trigger guard_purchase_receipt_unit_v1
 before insert or update of
-  source_history_id,brand_id,inventory_item_id,purchase_date,qty,unit,
+  id,source_history_id,brand_id,inventory_item_id,purchase_date,qty,unit,
   unit_cost,total_amount,source_file,source_row_no
 on public.inventory_purchase_log
+for each row execute function private.guard_purchase_receipt_unit_v1();
+
+-- Protect Stock movements from disappearing due to a manual receipt delete.
+create trigger guard_purchase_receipt_delete_v1
+before delete on public.inventory_purchase_log
 for each row execute function private.guard_purchase_receipt_unit_v1();
 
 -- Replace the original privileged posting function with a guarded version.
@@ -218,6 +238,11 @@ begin
     from qualified b
     where b.stock_qty>0
       and nullif(btrim(coalesce(b.stock_unit,'')),'') is not null
+      and not exists (
+        select 1
+        from public.inventory_purchase_log existing
+        where existing.source_history_id=b.id
+      )
     -- Idempotent append-only: never rewrite any existing receipt/movement.
     -- Source corrections must pass a separately reviewed Stock reconciliation.
     on conflict (source_history_id)
