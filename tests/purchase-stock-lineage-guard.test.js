@@ -261,3 +261,32 @@ test('Production release gate stays SELECT-only and checks Purchase, Sales, Stoc
   assert.match(readOnlyReleaseGateSql,/owner_unit_table_live/);
   assert.match(readOnlyReleaseGateSql,/orphan_receipt_count/);
 });
+
+
+const orphanActiveLedgerMigration=fs.readFileSync(path.join(
+ __dirname,'..','supabase','migrations',
+ '20261011210000_private_orphan_active_ledger_gate.sql'),'utf8');
+const stage0SnapshotSql=fs.readFileSync(path.join(
+ __dirname,'..','supabase','tests',
+ 'p0_stage0_baseline_checksum_read_only_20261011.sql'),'utf8');
+test('P0 #1 private orphan ledger gate is readonly and detects post-opname exposure',()=>{
+ const body=orphanActiveLedgerMigration.replace(/^--.*$/gm,'').trim();
+ assert.match(body,/view private\.orphan_receipt_active_ledger_gate_v1/i);
+ assert.match(body,/security_invoker\s*=\s*true/i);
+ assert.match(body,/revoke all on private\.orphan_receipt_active_ledger_gate_v1/i);
+ assert.match(body,/source_history_id is not null and p\.id is null/i);
+ assert.match(body,/movement_integrity_failed/i);
+ assert.match(body,/active_ledger_exposure/i);
+ assert.match(body,/BLOCK_RELEASE_ACTIVE_ORPHAN/);
+ assert.match(body,/BLOCK_RELEASE_RECEIPT_MOVEMENT_MISMATCH/);
+ assert.doesNotMatch(body,/\b(?:insert\s+into|delete\s+from|update\s+\w+|alter\s+table|truncate\s+table)\b/i);
+});
+test('Stage 0 fingerprint is read-only, deterministic and explicitly not a backup',()=>{
+ const body=stage0SnapshotSql.replace(/^--.*$/gm,'').trim();
+ assert.match(body,/^with report as/i);
+ assert.match(body,/string_agg\(row_to_json\(x\)::text,E'\\n' order by x\.id::text\)/i);
+ for(const table of ['offline_purchase_history','inventory_purchase_log','inventory_movements',
+                    'inventory_stock_opname','purchase_import_evidence','inventory_items'])
+   assert.match(body,new RegExp('public\\.'+table+'\\b','i'));
+ assert.doesNotMatch(body,/\b(?:insert\s+into|delete\s+from|update\s+\w+|alter\s+\w+|drop\s+\w+|grant\s+|revoke\s+|create\s+\w+)\b/i);
+});
