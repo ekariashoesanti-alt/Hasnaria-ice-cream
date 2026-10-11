@@ -467,7 +467,20 @@ test('Owner master-unit web view cannot directly post Stock or change BOM',()=>{
      'owner_master_unit_apply_v1','owner_master_unit_revoke_v1'])
    assert.match(ownerMasterUnitUI,new RegExp("db\\.rpc\\('"+rpc+"'"));
  assert.match(ownerMasterUnitUI,/sessionContext===window\.__HASNARIA_CONTEXT/);
+ assert.match(ownerMasterUnitUI,/monitorAppVisibility/);
+ assert.match(ownerOrphanUi,/monitorAppVisibility/);
  assert.match(ownerMasterUnitUI,/snapshot|pratinjau ulang/i);
  assert.doesNotMatch(ownerMasterUnitUI,
   /db\.(?:from\(['"](?:inventory_items|inventory_movements|inventory_purchase_log|inventory_recipe_components)|rpc\(['"]sync_purchase_quantity_stock_v1)/i);
+});
+
+
+const masterReviewPause=fs.readFileSync(path.join(__dirname,'..',
+ 'supabase','rollback','20261011233000_pause_owner_master_unit_reviews.sql'),'utf8');
+test('P0.2 master evidence emergency pause keeps read-only queue and old evidence',()=>{
+ assert.match(masterReviewPause,/create or replace function private\.owner_master_unit_apply_v1/i);
+ assert.match(masterReviewPause,/create or replace function private\.owner_master_unit_revoke_v1/i);
+ assert.match(masterReviewPause,/private\.owner_stock_review_assert_v1\(\)/);
+ assert.match(masterReviewPause,/P0\.2 PAUSED/);
+ assert.doesNotMatch(masterReviewPause,/\b(?:insert\s+into|delete\s+from|update\s+\w+|drop\s+table|truncate\s+table)\b/i);
 });
