@@ -1,6 +1,12 @@
 -- P0.1 genuine SQL integration test: disposable PostgreSQL 17 only.
 -- Exercises source snapshot freshness, Owner documentary approval, revoke,
 -- audit immutability and zero Stock/Finance source mutation.
+-- The existing legacy audit fixture intentionally seeded TWO matching invoices.
+-- Remove the duplicate only inside a rollback-only CI transaction to exercise
+-- unique documentary matching; leave ambiguous evidence intact afterward.
+begin;
+delete from public.purchase_import_evidence
+where source_record_key='majoo:fixture:duplicate';
 do $main$
 declare q jsonb; p jsonb; approved jsonb; src uuid; review_id uuid;
  receipt_before integer; movement_before integer; invoice_before integer;
@@ -83,3 +89,5 @@ begin
  raise notice 'HSN-P0 HISTORICAL OWNER REVIEW PASS: unique evidence, idempotency, revoke and no Stock/Finance/source change.';
 end;
 $main$;
+
+rollback;
