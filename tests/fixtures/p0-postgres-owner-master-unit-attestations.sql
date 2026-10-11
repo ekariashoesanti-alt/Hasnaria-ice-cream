@@ -66,7 +66,7 @@ $changed$;
 rollback;
 
 do $apply$
-declare pv jsonb; rec jsonb; id uuid; denied boolean:=false;
+declare pv jsonb; rec jsonb; v_review_id uuid; denied boolean:=false;
  v_receipts bigint;v_movements bigint;v_recipes bigint;
 begin
  select count(*) into v_receipts from public.inventory_purchase_log;
@@ -85,8 +85,8 @@ begin
    '00000000-0000-0000-0000-000000000104','DOCUMENT_UNIT','pcs',
    pv->>'token','Supplier invoice fixture number XX104',
    'Owner inspected an example pack and documented the pcs unit without posting Stock');
- id:=(rec->>'review_id')::uuid;
- if rec->>'status'<>'DOCUMENTED_NOT_APPLIED' or id is null then
+ v_review_id:=(rec->>'review_id')::uuid;
+ if rec->>'status'<>'DOCUMENTED_NOT_APPLIED' or v_review_id is null then
   raise exception 'Master documentary attestation not recorded: %',rec;
  end if;
  if (select unit from public.inventory_items
@@ -108,10 +108,10 @@ begin
    <>'DOCUMENTED_NOT_APPLIED' then
    raise exception 'Owner queue does not show documentary approval';
  end if;
- perform public.owner_master_unit_revoke_v1(id,
+ perform public.owner_master_unit_revoke_v1(v_review_id,
   'Owner found documentation that requires rechecking before the master is changed');
  if (select count(*) from private.inventory_master_unit_attestations_v1
-      where id=id and revoked_at is not null)<>1 then
+      where id=v_review_id and revoked_at is not null)<>1 then
    raise exception 'Master review revocation failed to preserve audit trail';
  end if;
  if (public.owner_master_unit_queue_v1(true)->'items'->0->>'status')
