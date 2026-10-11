@@ -46,6 +46,8 @@ Query READ-ONLY `supabase/tests/p03_p04_release_gate_read_only_20261011.sql` ran
 - Tabel `sales` sudah memiliki 641 transaksi September dan 641 jurnal Keuangan September. Failed batch September bukan bukti kegagalan impor Oktober; perlu audit historis tersendiri jika ingin menutup status batch.
 - Tidak ditemukan file Oktober yang relevan dalam pencarian Library/Google Drive yang tersedia saat audit. Ini tidak membuktikan file tidak ada di tempat lain.
 
+**Verifikasi tambahan:** dari dua batch Sales September yang dibuat Oktober, **batch completed terhubung ke 641 baris Penjualan** sedangkan **batch failed terhubung ke 0 baris**. Jadi data Penjualan September tidak tersangkut pada batch failed. `accounting_periods` belum berisi Oktober; namun kode `private.assert_accounting_period_open` menolak tanggal hanya bila periode berstatus `closed`, sehingga ketiadaan entri Oktober **bukan bukti penyebab upload gagal**. Periode Oktober tetap perlu dibuka/diadministrasikan sesuai prosedur Finance sebelum tutup periode.
+
 ### Kode P0.4
 
 - `private.owner_p04_import_readiness_v1(date)` menghitung SOURCE BUSINESS MONTH dari `sold_at/purchase_date`, serta membandingkan periode `import_jobs` dan `sales_import_batches` terhadap bulan yang dipilih. Tanggal `created_at` (misalnya 1 Oktober) **tidak** dipakai untuk menyimpulkan periode transaksi.
