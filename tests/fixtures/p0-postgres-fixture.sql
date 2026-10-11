@@ -3,10 +3,10 @@
 create schema private;
 create schema auth;
 create or replace function auth.uid() returns uuid language sql stable
-as $select '00000000-0000-0000-0000-000000009999'::uuid$;
+as $fixture$select '00000000-0000-0000-0000-000000009999'::uuid$fixture$;
 create or replace function private.owner_stock_review_assert_v1()
 returns uuid language sql stable
-as $select '00000000-0000-0000-0000-000000000001'::uuid$;
+as $fixture$select '00000000-0000-0000-0000-000000000001'::uuid$fixture$;
 create role anon nologin;
 create role authenticated nologin;
 create role service_role nologin;
