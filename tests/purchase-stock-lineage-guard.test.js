@@ -201,3 +201,41 @@ test('automatic Purchase sync skips instead of posting unknown units', () => {
   assert.match(purchaseUI,/Perlu verifikasi satuan/);
   assert.doesNotMatch(purchaseUI,/Siap sinkron/);
 });
+
+
+const ownerUnitApprovalMigration=fs.readFileSync(
+  path.join(__dirname,'..','supabase','migrations',
+    '20261011200000_owner_purchase_source_unit_attestations.sql'),'utf8');
+const ownerUnitUI=fs.readFileSync(
+  path.join(__dirname,'..','purchase-finance-alignment-v1.js'),'utf8');
+
+test('Owner unit approval is documentary only and private, never Stock or Finance DML',()=>{
+  assert.match(ownerUnitApprovalMigration,/create table if not exists private\.purchase_unit_attestations_v1/i);
+  assert.match(ownerUnitApprovalMigration,/enable row level security/i);
+  assert.match(ownerUnitApprovalMigration,/revoke all on private\.purchase_unit_attestations_v1 from public,anon,authenticated/i);
+  assert.match(ownerUnitApprovalMigration,/private\.owner_stock_review_assert_v1\(\)/i);
+  assert.match(ownerUnitApprovalMigration,/auth\.uid\(\)/i);
+  assert.match(ownerUnitApprovalMigration,/not exists\(select 1 from public\.inventory_purchase_log/i);
+  assert.match(ownerUnitApprovalMigration,/p_token is distinct from v_preview->>'token'/i);
+  assert.match(ownerUnitApprovalMigration,/will_post_stock',false/i);
+  assert.match(ownerUnitApprovalMigration,/will_change_finance',false/i);
+  assert.match(ownerUnitApprovalMigration,/unique index if not exists purchase_unit_attestations_one_active_source_v1/i);
+  assert.match(ownerUnitApprovalMigration,/to authenticated,service_role/i);
+  assert.doesNotMatch(ownerUnitApprovalMigration,/insert into public\.inventory_purchase_log/i);
+  assert.doesNotMatch(ownerUnitApprovalMigration,/insert into public\.inventory_movements/i);
+  assert.doesNotMatch(ownerUnitApprovalMigration,/insert into public\.finance_/i);
+});
+
+test('Owner verification UI requires preview before persistence and has no auto-post path',()=>{
+  assert.match(ownerUnitUI,/function ownerUnitRole\(\).*role==='owner'/);
+  assert.match(ownerUnitUI,/async function unitPreviewSelected\(/);
+  assert.match(ownerUnitUI,/owner_purchase_unit_preview_v1/);
+  assert.match(ownerUnitUI,/owner_purchase_unit_apply_v1/);
+  assert.match(ownerUnitUI,/owner_purchase_unit_revoke_v1/);
+  assert.match(ownerUnitUI,/unitPreview\.token/);
+  assert.match(ownerUnitUI,/unitVerificationMarkup\(\)\+/);
+  assert.match(ownerUnitUI,/Belum ada perubahan saldo Stok maupun jurnal Keuangan/);
+  const apply=ownerUnitUI.slice(ownerUnitUI.indexOf('async function unitApplySelected()'),ownerUnitUI.indexOf('async function unitRevokeSelected()'));
+  assert.doesNotMatch(apply,/syncStockForPeriod/);
+  assert.doesNotMatch(apply,/notify\('purchase-stock-synced'\)/);
+});
