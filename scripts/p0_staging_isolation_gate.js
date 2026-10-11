@@ -16,8 +16,9 @@ function inspect(html,files,ref,key){
  if(!/^[a-z0-9]{20}$/.test(ref||''))errors.push('Missing/invalid staging project ref');
  if(ref===PROD_REF)errors.push('Staging ref points to production');
  if(!/^sb_publishable_[a-zA-Z0-9_-]{8,}$/.test(key||''))errors.push('Expected a staging-only publishable key');
- const url=html.match(/window\.HASNARIA_SB\s*=\s*["']([^"']+)["']/);
- const api=html.match(/window\.HASNARIA_KEY\s*=\s*["']([^"']+)["']/);
+ const config=files['auth-bootstrap.js']||html;
+ const url=config.match(/window\.HASNARIA_SB\s*=\s*["']([^"']+)["']/);
+ const api=config.match(/window\.HASNARIA_KEY\s*=\s*["']([^"']+)["']/);
  if(!url||url[1]!=='https://'+ref+'.supabase.co')errors.push('HTML still points outside staging URL');
  if(!api||api[1]!==key)errors.push('HTML publishable key does not match staging');
  for(const [name,source] of Object.entries(files)){
@@ -40,6 +41,7 @@ function selfTest(){
  const ref='abcdefghijklmnopqrst',key='sb_publishable_STAGINGTEST123456';
  const good='<script>window.HASNARIA_SB="https://'+ref+'.supabase.co";window.HASNARIA_KEY="'+key+'";</script>';
  assert.deepEqual(inspect(good,{'index.html':good},ref,key),[]);
+ assert.deepEqual(inspect('<html></html>',{'index.html':'<html></html>','auth-bootstrap.js':good},ref,key),[]);
  assert.ok(inspect(good,{'index.html':good},PROD_REF,key).length);
  assert.ok(inspect(good,{'index.html':good},ref,'sb_secret_REJECTED').length);
  const bad=good.replace(ref,PROD_REF);
