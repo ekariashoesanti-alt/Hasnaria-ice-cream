@@ -129,6 +129,9 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
+      - name: Production schema-only export guard self-test (no network)
+        run: node scripts/export_hasnaria_staging_schema_only.js --self-test
+
       - name: Staging Singapore Preview isolation build
         shell: bash
         env:
