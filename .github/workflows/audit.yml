@@ -47,6 +47,9 @@ jobs:
       - name: Staff attendance location and saved history
         run: node --test tests/staff-clock-location.test.js tests/staff-clock-history.test.js
 
+      - name: Purchase-Stock lineage fail-closed regressions
+        run: node --test tests/purchase-stock-lineage-guard.test.js
+
       - name: Runtime source integrity
         shell: bash
         run: |
