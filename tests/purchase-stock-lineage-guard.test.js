@@ -320,7 +320,7 @@ test('P0 #2 live production audit is strictly SELECT only and checks all four mi
  }
  for(const text of ['inventory_items','inventory_unit_conversions',
                    'purchase_inventory_bridge','inventory_purchase_log',
-                   'inventory_stock_reconciliation','purchase_item'])
+                   'inventory_stock_reconciliation','mapping_status'])
   assert.match(unitMappingLiveAudit,new RegExp(text,'i'));
 });
 test('Owner unit preview never trusts a conflict with VERIFIED conversion or placeholder master unit',()=>{
