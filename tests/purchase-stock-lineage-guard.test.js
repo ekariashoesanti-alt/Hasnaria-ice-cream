@@ -128,3 +128,71 @@ test('recovery preview has no data-changing statements or action RPCs', () => {
   assert.match(stripped,/NEGATIVE_IS_VIRTUAL_RECIPE_USAGE/);
   assert.match(stripped,/finance_sales_sync_status_v1/);
 });
+
+
+const verifiedReceiptMigration = fs.readFileSync(
+  path.join(__dirname, '..', 'supabase', 'migrations',
+    '20261011190000_guard_purchase_receipt_verified_units.sql'), 'utf8');
+const pausedSyncRollback = fs.readFileSync(
+  path.join(__dirname, '..', 'supabase', 'rollback',
+    '20261011190000_pause_purchase_stock_sync.sql'), 'utf8');
+const purchaseUI = fs.readFileSync(
+  path.join(__dirname, '..', 'purchase-finance-alignment-v1.js'), 'utf8');
+
+// Independent business-rule fixtures; PostgreSQL trigger execution on a real
+// isolated database remains a separate release gate.
+function eligibilityFixture({sourceUnit, stockUnit, sourceQty=1, postedQty,
+                            conversionFactor=null, verified=false,
+                            ownerReviewed=false, reviewMultiplier=null}) {
+  const unit = String(sourceUnit||'').trim().toLowerCase();
+  const stock = String(stockUnit||'').trim().toLowerCase();
+  if (!stock || !(sourceQty>0)) return false;
+  let expected = null;
+  if (ownerReviewed && reviewMultiplier>0) expected=sourceQty*reviewMultiplier;
+  else if (unit && unit===stock) expected=sourceQty;
+  else if (unit && verified && conversionFactor>0) expected=sourceQty*conversionFactor;
+  return expected!=null && postedQty===expected;
+}
+test('no source unit or unverified pack conversion can inflate Stock', () => {
+  assert.equal(eligibilityFixture({sourceUnit:null,stockUnit:'pcs',sourceQty:3,postedQty:3}),false);
+  assert.equal(eligibilityFixture({sourceUnit:'pack',stockUnit:'pcs',sourceQty:1,postedQty:1}),false);
+  assert.equal(eligibilityFixture({sourceUnit:'pack',stockUnit:'pcs',sourceQty:1,postedQty:20,conversionFactor:20,verified:false}),false);
+  assert.equal(eligibilityFixture({sourceUnit:'pack',stockUnit:'pcs',sourceQty:1,postedQty:1,conversionFactor:20,verified:true}),false);
+  assert.equal(eligibilityFixture({sourceUnit:'pack',stockUnit:'pcs',sourceQty:1,postedQty:20,conversionFactor:20,verified:true}),true);
+  assert.equal(eligibilityFixture({sourceUnit:'pcs',stockUnit:'pcs',sourceQty:3,postedQty:3}),true);
+  assert.equal(eligibilityFixture({sourceUnit:null,stockUnit:'pcs',sourceQty:3,postedQty:30,ownerReviewed:true,reviewMultiplier:10}),true);
+  assert.equal(eligibilityFixture({sourceUnit:null,stockUnit:'pcs',sourceQty:3,postedQty:3,ownerReviewed:false,reviewMultiplier:10}),false);
+});
+
+test('new SQL receipt trigger defends direct writes and real unit conversions', () => {
+  assert.match(verifiedReceiptMigration,/create trigger guard_purchase_receipt_unit_v1/i);
+  assert.match(verifiedReceiptMigration,/before insert or update/i);
+  assert.match(verifiedReceiptMigration,/source_history_id/i);
+  assert.match(verifiedReceiptMigration,/public\.purchase_inventory_bridge/i);
+  assert.match(verifiedReceiptMigration,/inventory_unit_conversions/i);
+  assert.match(verifiedReceiptMigration,/status='verified'/i);
+  assert.match(verifiedReceiptMigration,/v_conversion_count=1/i);
+  assert.match(verifiedReceiptMigration,/b\.quantity_numeric\*v_factor/i);
+  assert.match(verifiedReceiptMigration,/old\.source_history_id is not null and new\.source_history_id is null/i);
+  assert.match(verifiedReceiptMigration,/pg_advisory_xact_lock/i);
+  assert.match(migration,/pg_advisory_xact_lock/i);
+  assert.match(verifiedReceiptMigration,/new\.qty is distinct from v_qty/i);
+  assert.match(verifiedReceiptMigration,/new\.unit_cost is not null/i);
+  assert.match(verifiedReceiptMigration,/on conflict \(source_history_id\)/i);
+});
+
+test('automatic Purchase sync skips instead of posting unknown units', () => {
+  assert.match(verifiedReceiptMigration,/create or replace function private\.sync_purchase_quantity_stock_v1/i);
+  assert.match(verifiedReceiptMigration,/qualified as materialized/i);
+  assert.match(verifiedReceiptMigration,/where b\.stock_qty>0/i);
+  assert.match(verifiedReceiptMigration,/blocked_for_unit_review/i);
+  assert.match(verifiedReceiptMigration,/new\.total_amount is distinct from b\.total_amount/i);
+  assert.match(verifiedReceiptMigration,/status='verified'/i);
+  assert.doesNotMatch(verifiedReceiptMigration,/drop table/i);
+  assert.doesNotMatch(verifiedReceiptMigration,/delete from public\.inventory_purchase_log/i);
+  assert.doesNotMatch(verifiedReceiptMigration,/update public\.inventory_purchase_log/i);
+  assert.match(pausedSyncRollback,/emergency_stock_sync_paused/i);
+  assert.doesNotMatch(pausedSyncRollback,/insert into public\.inventory_purchase_log/i);
+  assert.match(purchaseUI,/Perlu verifikasi satuan/);
+  assert.doesNotMatch(purchaseUI,/Siap sinkron/);
+});
