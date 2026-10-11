@@ -231,7 +231,10 @@ jobs:
           psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261011110000_guard_purchase_stock_source_lineage.sql
           psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261011180000_stock_reconciliation_ledger_parity.sql
           psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261011190000_guard_purchase_receipt_verified_units.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261011193000_owner_review_undo_guard_compat.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261011194500_private_orphan_receipt_evidence_triage.sql
           psql -v ON_ERROR_STOP=1 -f tests/fixtures/p0-postgres-assertions.sql
+          psql -v ON_ERROR_STOP=1 -f tests/fixtures/p0-postgres-owner-evidence.sql
           # Exercise manual rollback/re-apply against the same ephemeral fixtures.
           psql -v ON_ERROR_STOP=1 -f supabase/rollback/20261011180000_restore_stock_reconciliation.sql
           psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261011180000_stock_reconciliation_ledger_parity.sql
