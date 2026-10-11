@@ -53,6 +53,15 @@ if (process.env.VERCEL_ENV === 'preview' || process.env.HASNARIA_P0_STAGING_PREV
   source = source.replace(urlPattern, 'window.HASNARIA_SB = "https://' + ref + '.supabase.co"')
                  .replace(keyPattern, 'window.HASNARIA_KEY = "' + key + '"');
   fs.writeFileSync(file, source);
+  // Historical Hasnaria UI modules also embed the production URL/identity
+  // directly. Replace them only in compiled Preview assets, never in source.
+  // Keep the guard strict: a missed reference blocks all Preview releases.
+  const prodRef = 'bnnhmtkpdjlgehsvgoda';
+  const prodPublishableKey = 'sb_publishable_eXrgSxWTXoa9q-hVpLx-sQ_IaEiUbeO';
+  for (const [name, text] of Object.entries(collect(dir))) {
+    const rewritten = text.replaceAll(prodRef, ref).replaceAll(prodPublishableKey, key);
+    if (rewritten !== text) fs.writeFileSync(path.join(dir, name), rewritten);
+  }
   const files = collect(dir);
   const issues = inspect(files['index.html'] || '', files, ref, key);
   if (issues.length) throw Error('Preview BLOCKED: ' + issues.join('; '));
