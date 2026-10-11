@@ -83,7 +83,7 @@ end;
 $p03$;
 
 do $p04$
-declare j jsonb;v_period date:=date_trunc('month',current_date)::date;
+declare j jsonb;v_period date:=(date_trunc('month',current_date)+interval '1 month')::date;
 begin
  -- Even if last month's batch is created DURING this month it must never
  -- be interpreted as a new business-month transaction.
@@ -102,7 +102,7 @@ begin
     or j->>'purchase_status'<>'NO_SOURCE_UPLOAD_FOUND'
     or (j->>'sales_jobs_for_period')::integer<>0
     or (j->>'sales_batches_for_period')::integer<>0 then
-  raise exception 'October-created September imports falsely marked as October: %',j;
+  raise exception 'Import-created date misclassified business month: %',j;
  end if;
  insert into public.sales_import_batches(brand_id,source,status,period_from,period_to,row_count)
  values('00000000-0000-0000-0000-000000000001','majoo','failed',
@@ -110,7 +110,7 @@ begin
  j:=public.owner_p04_import_readiness_v1(v_period);
  if j->>'sales_status'<>'UPLOAD_ATTEMPT_NO_CANONICAL_DATA'
     or (j->>'failed_sales_batches_for_period')::integer<>1 then
-  raise exception 'Failed current month batch should surface action, not invented sales: %',j;
+  raise exception 'Failed target month batch should surface action, not invented sales: %',j;
  end if;
  insert into public.sales(id,brand_id,sold_at)
  values('00000000-0000-0000-0000-000000000881',
