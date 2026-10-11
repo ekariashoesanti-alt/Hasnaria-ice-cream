@@ -71,6 +71,34 @@ Langkah administrator yang tidak mengubah database sumber:
 
 Catatan: tiga perintah di atas adalah prosedur administrator, **belum dijalankan** oleh konektor ChatGPT; tidak boleh diklaim sebagai backup yang sudah ada. Tidak ada upgrade berbayar yang dilakukan.
 
+### Gate pemulihan Auth, histori migrasi, dan Storage — verifikasi 11 Oktober 2026
+
+**Hasil query SELECT-only pada sumber produksi (08:22 UTC / 15:22 WIB):**
+
+| Komponen | Jumlah | Implikasi |
+|---|---:|---|
+| Akun `auth.users` | **4** | Target restore HARUS mempertahankan data akun yang sah, lalu diuji login; jangan menganggap export `public` mencakup Auth |
+| Identitas `auth.identities` | **4** | Relasi identitas–akun harus konsisten setelah restore |
+| Catatan `supabase_migrations.schema_migrations` | **296** | Harus diekspor dan dipulihkan sebagai riwayat migrasi; jangan menghasilkan file kosong |
+| Supabase Storage buckets | **0** | Tidak ada bucket Storage milik Supabase untuk disalin pada snapshot ini |
+| Supabase Storage metadata objects | **0** | Tidak ada objek Storage pada snapshot; tetap cek apabila ada upload setelah checkpoint |
+| Receipt–movement | **703/703** | Tidak boleh berubah tanpa transaksi bisnis baru yang tercatat |
+| Pembelian/Jurnal September | **139/139**, Rp5.967.145 | Delta Rp0 |
+| Penjualan/Jurnal September | **641/641** | Sync tidak diperlukan |
+
+**Penting:** `supabase db dump` secara standar mengabaikan schema terkelola tertentu, termasuk `auth` dan `storage` (lihat [referensi CLI](https://supabase.com/docs/reference/cli/global-flags)). Dump peran/skema/data bukan jaminan dapat memulihkan 4 pengguna beserta login. Panduan khusus Auth: https://supabase.com/docs/guides/troubleshooting/migrating-auth-users-between-projects.
+
+Skrip privat `scripts/p0_backup_hsn_supabase_free.ps1` kini menambahkan `history_schema.sql` dan `history_data.sql`, mencatat SHA-256 dan menandai `auth_users_restored_and_login_tested=false` sampai bukti nyata tersedia. Jangan menaruh dump, token, hash password, atau akun nyata dalam PR/GitHub Actions/artifact publik.
+
+Langkah acceptance setelah administrator memiliki backup privat:
+1. Administrator mengikuti dokumentasi resmi untuk memulihkan **Auth users/identities dan skema terkait** ke **instans TERPISAH**, tanpa menimpa Auth produksi. Validasi akses sesuai otoritas; pengujian identitas tidak dilakukan menggunakan akun asli tanpa izin.
+2. Jalankan query `supabase/tests/p0_restore_acceptance_read_only_20261011.sql` pada sumber dan target hasil restore. Cocokkan seluruh metrik, angka keuangan, serta checksum di `supabase/tests/p0_stage0_baseline_checksum_read_only_20261011.sql`.
+3. Pastikan 296 riwayat migrasi kembali utuh, fungsi/trigger/RLS tetap tersedia, dan hasil uji login Owner/Staff pada staging berhasil.
+4. Periksa ulang Storage buckets/objects sesaat sebelum backup. Jika tidak lagi nol, salin objek berkas asli secara privat melalui workflow Storage terotorisasi dan lakukan uji download pada target. Database dump bukan salinan file fisik.
+5. **Tidak boleh mencentang `restore_verified` hanya karena berkas dump dapat dibuat.** Pemulihan end-to-end dan otorisasi login wajib dinyatakan PASS oleh administrator.
+
+**Status saat ini:** SQL audit telah dijalankan dan hasil cocok dengan baseline bisnis sebelumnya; **file dump aktual, pemulihan Auth dan restore belum dilaksanakan**. Gate tetap HOLD tanpa biaya langganan baru.
+
 ## 4. UAT Owner / Staff di lingkungan staging berisi data representatif
 
 **Belum dijalankan dengan akun nyata.** CI PostgreSQL hanya menggunakan fixture sintetis dan simulasi role.
@@ -97,7 +125,7 @@ Setiap kasus diberi bukti Owner, waktu, hasil `PASS/FAIL`, dan cap screenshot ha
 
 1. Bekukan jendela re-import Pembelian dan sinkronisasi Stock; ambil snapshot teruji dan baseline dari SQL preflight.
 2. Selesaikan konflik schema/migration dengan `main` terkini, dan konfirmasi semua CI + preview pada commit release.
-3. Terapkan migrasi sesuai urutan nama: `20261011110000` (source lineage), `20261011180000` (stock view), `20261011190000` (posting-unit guard), `20261011193000` (Owner Undo compatibility), `20261011194500` (private orphan triage), `20261011200000` (Owner unit documentary review).
+3. Terapkan migrasi **sesuai urutan timestamp** setelah backup dan test: `20261011110000` (source lineage), `20261011180000` (stock view), `20261011190000` (posting-unit guard), `20261011193000` (Owner Undo), `20261011194500` (orphan factuur triage), `20261011200000` (Owner unit review), `20261011210000` (orphan active-ledger gate), `20261011220000` (SKU unit triage), `20261011223000` (Owner verified-conversion no-BOM), `20261011230000` (Owner orphan documentary review). Jangan jalankan alur UI review sebelum SQL terkait terpasang dan role staging terbukti.
 4. Uji baca keuangan/stok langsung; pastikan `finance_purchase_reconciliation_monthly_v1` delta nol, stok dibandingkan ledger, dan 86 orphan tetap ada.
 5. Uji login Owner dan Staff; pastikan role enforcement Owner, formular bukti, token, revoke, serta semua modul tetap terbuka.
 6. Aktifkan client version hanya setelah RPC tersedia; monitor error posting, quantity conversion, permission, Finance delta.
@@ -108,6 +136,8 @@ Setiap kasus diberi bukti Owner, waktu, hasil `PASS/FAIL`, dan cap screenshot ha
 - `supabase/rollback/20261011180000_restore_stock_reconciliation.sql` memulihkan definisi view Stok lama (hanya setelah menilai apakah rumus lama justru menyesatkan).
 - `supabase/rollback/20261011190000_pause_purchase_stock_sync.sql` menghentikan posting sinkronisasi Stock baru tanpa menghidupkan implementasi lama yang tidak aman.
 - `supabase/rollback/20261011200000_pause_owner_unit_attestations.sql` menonaktifkan approval baru sambil mempertahankan bukti Owner dan antrean baca.
+- `supabase/rollback/20261011223000_pause_owner_conversion_no_bom.sql` menonaktifkan approval konversi baru tanpa mengaktifkan fungsi lama yang menulis BOM.
+- `supabase/rollback/20261011230000_pause_owner_orphan_receipt_reviews.sql` menonaktifkan review historis baru dan revoke, mempertahankan bukti serta antrean baca.
 - Guard lineage/receipt lebih aman tetap aktif daripada dihapus secara otomatis. Pembatalan guard hanya melalui review DBA dan rollback snapshot resmi bila memang diperlukan.
 
 **Keputusan rilis:** **HOLD** sampai backup+restore nyata, verifikasi fisik/satuan Owner, UAT terautentikasi, dan persetujuan pemilik proses. Tidak ada keputusan merge/deploy otomatis dari file ini.
