@@ -236,12 +236,12 @@ jobs:
           psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261011200000_owner_purchase_source_unit_attestations.sql
           psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261011210000_private_orphan_active_ledger_gate.sql
           psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261011220000_private_purchase_unit_mapping_triage.sql
-          psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261011223000_owner_conversion_no_recipe_bom.sql
           psql -v ON_ERROR_STOP=1 -f tests/fixtures/p0-postgres-assertions.sql
           psql -v ON_ERROR_STOP=1 -f tests/fixtures/p0-postgres-owner-evidence.sql
           psql -v ON_ERROR_STOP=1 -f tests/fixtures/p0-postgres-orphan-ledger-exposure.sql
           psql -v ON_ERROR_STOP=1 -f tests/fixtures/p0-postgres-owner-unit-attestations.sql
           psql -v ON_ERROR_STOP=1 -f tests/fixtures/p0-postgres-unit-mapping-triage.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261011223000_owner_conversion_no_recipe_bom.sql
           psql -v ON_ERROR_STOP=1 -f tests/fixtures/p0-postgres-owner-conversion-no-bom.sql
           psql -v ON_ERROR_STOP=1 -f tests/fixtures/p0-postgres-owner-unit-roles.sql
           # Exercise manual rollback/re-apply against the same ephemeral fixtures.
