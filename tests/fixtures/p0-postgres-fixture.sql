@@ -1,6 +1,12 @@
 -- Synthetic Hasnaria P0 fixture for a disposable PostgreSQL 17 CI service.
 -- Never run against the Hasnaria production database.
 create schema private;
+create schema auth;
+create or replace function auth.uid() returns uuid language sql stable
+as $select '00000000-0000-0000-0000-000000009999'::uuid$;
+create or replace function private.owner_stock_review_assert_v1()
+returns uuid language sql stable
+as $select '00000000-0000-0000-0000-000000000001'::uuid$;
 create role anon nologin;
 create role authenticated nologin;
 create role service_role nologin;
@@ -35,9 +41,20 @@ create table public.inventory_unit_conversions (
  units_per_purchase_unit numeric
 );
 create table private.purchase_stock_reviews (
+ id uuid primary key default gen_random_uuid(),
  brand_id uuid not null, source_history_id uuid not null,
  inventory_item_id uuid not null, qty_multiplier numeric,
- reviewed_by uuid, reviewed_at timestamptz, reverted_at timestamptz
+ source_snapshot jsonb, target_snapshot jsonb, log_snapshot jsonb,
+ reason text, reviewed_by uuid, reviewed_at timestamptz default now(),
+ reverted_at timestamptz, reverted_by uuid, revert_reason text
+);
+create table public.purchase_import_evidence (
+ id uuid primary key default gen_random_uuid(),
+ brand_id uuid not null, source_type text,
+ source_period date, source_file text,
+ source_record_key text, row_no integer,
+ purchase_date date, item_name text,
+ quantity numeric,unit_text text,total_amount numeric,source_status text
 );
 create table public.inventory_stock_opname (
  brand_id uuid not null, inventory_item_id uuid not null,
@@ -152,3 +169,46 @@ insert into public.inventory_movements
  (brand_id,inventory_item_id,movement_date,movement_type,qty_delta)
 values('00000000-0000-0000-0000-000000000001',
 '00000000-0000-0000-0000-000000000102',current_date - 5,'SALE_CONSUMPTION',-2);
+
+
+-- Read-only invoice evidence candidate. The original orphan source UUID must
+-- NOT be changed just because the factuur record matches it.
+insert into public.purchase_import_evidence
+(brand_id,source_type,source_period,source_file,source_record_key,row_no,
+ purchase_date,item_name,quantity,unit_text,total_amount,source_status)
+values('00000000-0000-0000-0000-000000000001','majoo',
+ date_trunc('month',current_date)::date,'factuur-fixture.xlsx',
+ 'majoo:fixture:old-source',99,current_date-9,'OLD RECEIPT',
+ 6,'pcs',99,'Selesai');
+
+-- Audited Owner review posting to exercise the narrow authorized reversal.
+-- It lies outside the regular 20-day auto-sync window.
+insert into public.offline_purchase_history
+(id,brand_id,source_period,source_file,row_no,purchase_date,
+ item_name,quantity_text,unit_text,unit_price,total_amount,inventory_item_id)
+values('00000000-0000-0000-0000-000000000207',
+       '00000000-0000-0000-0000-000000000001',
+       (current_date-50)::date,'owner-reviewed-fixture.xlsx',7,current_date-50,
+       'OWNER REVIEWED ITEM','1',null,100,100,
+       '00000000-0000-0000-0000-000000000101');
+
+insert into public.inventory_purchase_log
+(id,brand_id,inventory_item_id,purchase_date,qty,unit,unit_cost,total_amount,
+ source_history_id,source_file,source_row_no,mapping_method)
+values('00000000-0000-0000-0000-000000000304',
+       '00000000-0000-0000-0000-000000000001',
+       '00000000-0000-0000-0000-000000000101',current_date-50,
+       12,'pcs',null,100,'00000000-0000-0000-0000-000000000207',
+       'owner-reviewed-fixture.xlsx',7,'owner_source_review');
+
+insert into private.purchase_stock_reviews
+(id,brand_id,source_history_id,inventory_item_id,qty_multiplier,
+ reviewed_by,reviewed_at,log_snapshot,reason)
+values('00000000-0000-0000-0000-000000000404',
+       '00000000-0000-0000-0000-000000000001',
+       '00000000-0000-0000-0000-000000000207',
+       '00000000-0000-0000-0000-000000000101',
+       12,'00000000-0000-0000-0000-000000009999',now(),
+       jsonb_build_object('id','00000000-0000-0000-0000-000000000304',
+                          'source_history_id','00000000-0000-0000-0000-000000000207'),
+       'fixture owner review');
