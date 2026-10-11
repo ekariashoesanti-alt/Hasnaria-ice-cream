@@ -1,5 +1,7 @@
 -- Disposable PostgreSQL fixture: documentary Owner review for SKU master unit.
--- Records only private evidence. Each mutable negative case rolls back.
+-- Runs entirely in one disposable transaction, rolled back after assertions.
+-- Does not pollute later legacy RLS/rollback fixtures with extra SKU rows.
+begin;
 insert into public.inventory_items(
  id,brand_id,item_name,category,unit,opening_qty)
 values
@@ -50,7 +52,7 @@ begin
 end;
 $queue$;
 
-begin;
+savepoint stage11_changed_master;
 update public.inventory_items set unit='pack'
 where id='00000000-0000-0000-0000-000000000180';
 do $changed$
@@ -63,7 +65,7 @@ begin
  if not denied then raise exception 'Stale master unit was approved after changed source';end if;
 end;
 $changed$;
-rollback;
+rollback to savepoint stage11_changed_master;
 
 do $apply$
 declare pv jsonb; rec jsonb; v_review_id uuid; denied boolean:=false;
@@ -125,3 +127,5 @@ begin
  raise notice 'HSN P0.2 MASTER REVIEW PASS: approved and revoked, 0 Stock/BOM/Finance mutation';
 end;
 $apply$;
+
+rollback;
