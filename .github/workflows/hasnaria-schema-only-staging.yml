@@ -28,7 +28,7 @@ concurrency:
 jobs:
   schema-only:
     name: Protected schema-only check and optional Singapore restore
-    if: github.repository == 'ekariashoesanti-alt/Hasnaria-ice-cream' && github.ref == 'refs/heads/main'
+    if: github.repository == 'ekariashoesanti-alt/Hasnaria-ice-cream' && github.ref == 'refs/heads/main' && github.actor == 'ekariashoesanti-alt'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     environment:
