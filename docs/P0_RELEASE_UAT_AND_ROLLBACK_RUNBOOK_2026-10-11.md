@@ -138,11 +138,19 @@ Setiap kasus diberi bukti Owner, waktu, hasil `PASS/FAIL`, dan cap screenshot ha
 
 **Dokumen pelaksanaan:** `docs/P0_2_OWNER_MASTER_UNIT_STAGE11_2026-10-11.md`. Angka 14/80 adalah snapshot SELECT produksi 11 Oktober 2026; jangan hard-code angka ini sebagai syarat permanen jika transaksi atau master bertambah.
 
+### P0.3/P0.4 Owner Acceptance (sebelum merge)
+
+- **P0.3:** Antrean 32 siap-mapping tetapi belum posted: 18 sebelum/pada opname, 7 sesudah opname, 7 tidak punya baseline. Semua 32 masih membutuhkan unit sumber. **Jangan memposting 18/7 tanpa baseline hanya agar tabel tampak lengkap.**
+- **P0.3:** 33 baris dengan mapping `unmatched` atau `ambiguous_inventory_name` harus mendapat keputusan berbukti: 32 unmatched (Rp588.670), 1 ambigu ES BATU (Rp5.000). Keputusan Owner hanya disimpan dalam tabel private; implementasi rule mapping/stok atau pergeseran kategori Keuangan memerlukan rekonsiliasi terpisah.
+- **P0.4:** Oktober mempunyai 0 baris kanonis Penjualan, Pembelian, faktur dan 0 batch/job dengan periode bisnis Oktober. Import yang dibuat 1 Oktober justru membawa September. Pastikan berkas sumber Oktober asli tersedia dari Majoo/Pembelian, jangan menyalin September atau mengarang angka Oktober.
+- **UAT:** Owner membuka tombol `Periksa rekonsiliasi` di Pembelian, meninjau angka, keputusan, token, revoke, serta filter bulan. Staff/anon harus ditolak di RPC. Tidak boleh ada penambahan otomatis Stock, Purchase, jurnal Finance, atau BOM.
+- **Status:** P0.3/P0.4 teknik kandidat UAT setelah GitHub CI. Operasional tetap OPEN selama keputusan Owner dan dokumen Oktober belum tersedia. Pemeriksaan `supabase/tests/p03_p04_release_gate_read_only_20261011.sql`, rinci di `docs/P03_P04_PURCHASE_OCTOBER_ACCEPTANCE_2026-10-11.md`.
+
 ## 5. Release sequence (baru setelah semua gate)
 
 1. Bekukan jendela re-import Pembelian dan sinkronisasi Stock; ambil snapshot teruji dan baseline dari SQL preflight.
 2. Selesaikan konflik schema/migration dengan `main` terkini, dan konfirmasi semua CI + preview pada commit release.
-3. Terapkan migrasi **sesuai urutan timestamp** setelah backup dan test: `20261011110000` (source lineage), `20261011180000` (stock view), `20261011190000` (posting-unit guard), `20261011193000` (Owner Undo), `20261011194500` (orphan factuur triage), `20261011200000` (Owner unit review), `20261011210000` (orphan active-ledger gate), `20261011220000` (SKU unit triage), `20261011223000` (Owner verified-conversion no-BOM), `20261011230000` (Owner orphan documentary review), `20261011233000` (Owner master SKU documentary unit approval, no Stock updates). Jangan jalankan alur UI review sebelum SQL terkait terpasang dan role staging terbukti.
+3. Terapkan migrasi **sesuai urutan timestamp** setelah backup dan test: `20261011110000` (source lineage), `20261011180000` (stock view), `20261011190000` (posting-unit guard), `20261011193000` (Owner Undo), `20261011194500` (orphan factuur triage), `20261011200000` (Owner unit review), `20261011210000` (orphan active-ledger gate), `20261011220000` (SKU unit triage), `20261011223000` (Owner verified-conversion no-BOM), `20261011230000` (Owner orphan documentary review), `20261011233000` (Owner master SKU documentary unit approval, no Stock updates), `20261011234000` (Owner P0.3 unmatched/ambiguous documentary mapping review), `20261011235000` (Owner P0.3 pending unit & P0.4 business-month import readiness reports). Jangan jalankan alur UI review sebelum SQL terkait terpasang dan role staging terbukti.
 4. Uji baca keuangan/stok langsung; pastikan `finance_purchase_reconciliation_monthly_v1` delta nol, stok dibandingkan ledger, dan 86 orphan tetap ada.
 5. Uji login Owner dan Staff; pastikan role enforcement Owner, formular bukti, token, revoke, serta semua modul tetap terbuka.
 6. Aktifkan client version hanya setelah RPC tersedia; monitor error posting, quantity conversion, permission, Finance delta.
@@ -156,6 +164,7 @@ Setiap kasus diberi bukti Owner, waktu, hasil `PASS/FAIL`, dan cap screenshot ha
 - `supabase/rollback/20261011223000_pause_owner_conversion_no_bom.sql` menonaktifkan approval konversi baru tanpa mengaktifkan fungsi lama yang menulis BOM.
 - `supabase/rollback/20261011230000_pause_owner_orphan_receipt_reviews.sql` menonaktifkan review historis baru dan revoke, mempertahankan bukti serta antrean baca.
 - `supabase/rollback/20261011233000_pause_owner_master_unit_reviews.sql` menghentikan approval/revoke satuan master SKU sementara tanpa menyentuh historis, Stok, atau BOM.
+- `supabase/rollback/20261011234000_pause_p03_owner_mapping_reviews.sql` menahan review keputusan mapping P0.3 tanpa mengubah rule, receipt, jurnal atau histori review lama.
 - Guard lineage/receipt lebih aman tetap aktif daripada dihapus secara otomatis. Pembatalan guard hanya melalui review DBA dan rollback snapshot resmi bila memang diperlukan.
 
 **Keputusan rilis:** **HOLD** sampai backup+restore nyata, verifikasi fisik/satuan Owner, UAT terautentikasi, dan persetujuan pemilik proses. Tidak ada keputusan merge/deploy otomatis dari file ini.
