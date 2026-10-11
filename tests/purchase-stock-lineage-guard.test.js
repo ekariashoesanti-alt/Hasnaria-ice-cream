@@ -402,3 +402,40 @@ test('P0.1 historical UI is Owner-only and uses documentary-only RPCs',()=>{
  assert.match(ownerOrphanUi,/Tidak ada perubahan Stock, Finance atau source UUID/);
  assert.doesNotMatch(ownerOrphanUi,/db\.(?:from\(['"](?:inventory_movements|inventory_purchase_log|offline_purchase_history)|rpc\(['"]sync_purchase_quantity_stock_v1)/i);
 });
+
+
+const restoreAcceptanceAudit=fs.readFileSync(path.join(
+ __dirname,'..','supabase','tests','p0_restore_acceptance_read_only_20261011.sql'),'utf8');
+const backupOperatorScript=fs.readFileSync(path.join(
+ __dirname,'..','scripts','p0_backup_hsn_supabase_free.ps1'),'utf8');
+const releaseRecoveryRunbook=fs.readFileSync(path.join(
+ __dirname,'..','docs','P0_RELEASE_UAT_AND_ROLLBACK_RUNBOOK_2026-10-11.md'),'utf8');
+test('Hasnaria pre/post restore gate checks Auth, migration history, Storage, ledger and Finance read-only',()=>{
+ const statement=restoreAcceptanceAudit.replace(/^--.*$/gm,'').trim();
+ const stmts=statement.split(/;\s*(?=select f\.)/i);
+ assert.equal(stmts.length,2);
+ for(const part of stmts){
+  assert.match(part,/^(with|select)\b/i);
+  assert.doesNotMatch(part,/\b(?:insert\s+into|update\s+\w+|delete\s+from|drop\s+\w+|alter\s+\w+|grant\s+|revoke\s+|create\s+\w+)\b/i);
+ }
+ for(const name of ['auth.users','auth.identities','storage.buckets','storage.objects',
+                    'supabase_migrations.schema_migrations','inventory_purchase_log',
+                    'inventory_movements','inventory_unit_conversions',
+                    'finance_purchase_reconciliation_monthly_v1','finance_sales_sync_status_v1'])
+   assert.match(statement,new RegExp(name.replace(/\./g,'\\.'),'i'));
+ assert.match(statement,/NOT_A_FULL_BACKUP_OR_LIVE_AUTH_UAT/);
+ assert.match(statement,/BLOCK_AUTH_NOT_RESTORED/);
+});
+test('Supabase Free backup handoff captures migration history without claiming Auth or Storage backup',()=>{
+ assert.match(backupOperatorScript,/--role-only/);
+ assert.match(backupOperatorScript,/--use-copy --data-only/);
+ assert.match(backupOperatorScript,/--schema supabase_migrations/);
+ assert.match(backupOperatorScript,/Get-FileHash -LiteralPath \$_ -Algorithm SHA256/);
+ assert.match(backupOperatorScript,/auth_users_restored_and_login_tested = \$false/);
+ assert.match(backupOperatorScript,/physical_storage_objects_included = \$false/);
+ assert.match(backupOperatorScript,/restore_verified = \$false/);
+ assert.doesNotMatch(backupOperatorScript,/\b(?:supabase db reset|supabase db push|psql .*--file|drop database)\b/i);
+ assert.match(releaseRecoveryRunbook,/p0_restore_acceptance_read_only_20261011\.sql/);
+ assert.match(releaseRecoveryRunbook,/20261011230000/);
+ assert.match(releaseRecoveryRunbook,/4 akun/);
+});
