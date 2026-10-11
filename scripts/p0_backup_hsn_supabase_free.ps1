@@ -1,6 +1,8 @@
 # Hasnaria Supabase Free: read-only logical backup operator handoff.
 # Run LOCALLY from an authorized Windows administrator workstation.
 # Never run from CI or publish SQL dumps, passwords, or connection strings.
+# This only backs up CLI-accessible roles/schema/data and migration metadata.
+# Verify managed auth/storage coverage separately; this is NOT a full-project backup.
 # Prerequisites: Supabase CLI, Docker Desktop running, accessible database.
 # The source is READ ONLY; this script will NEVER restore/delete/replay data.
 # IMPORTANT: Store backups on an encrypted and owner-only drive.
@@ -33,8 +35,10 @@ $folder = Join-Path $PrivateBackupDirectory ('Hasnaria_P0_'+$timestamp)
 $roleFile = Join-Path $folder 'roles.sql'
 $schemaFile = Join-Path $folder 'schema.sql'
 $dataFile = Join-Path $folder 'data.sql'
+$historySchemaFile = Join-Path $folder 'history_schema.sql'
+$historyDataFile = Join-Path $folder 'history_data.sql'
 $manifest = Join-Path $folder 'backup_manifest.json'
-$files = @($roleFile,$schemaFile,$dataFile)
+$files = @($roleFile,$schemaFile,$dataFile,$historySchemaFile,$historyDataFile)
 
 Write-Host 'Memulai dump LOGIS Supabase ke folder pribadi. Jangan upload hasil ke GitHub.' -ForegroundColor Yellow
 # --db-url is read-only for db dump. Do NOT use db reset or db push.
@@ -42,8 +46,13 @@ Write-Host 'Memulai dump LOGIS Supabase ke folder pribadi. Jangan upload hasil k
 if ($LASTEXITCODE -ne 0) { throw 'Dump roles gagal. Jangan lanjut migrasi produksi.' }
 & supabase db dump --db-url $env:HSN_SUPABASE_DB_URL -f $schemaFile
 if ($LASTEXITCODE -ne 0) { throw 'Dump schema gagal. Jangan lanjut migrasi produksi.' }
-& supabase db dump --db-url $env:HSN_SUPABASE_DB_URL -f $dataFile --use-copy --data-only
+& supabase db dump --db-url $env:HSN_SUPABASE_DB_URL -f $dataFile --use-copy --data-only -x "storage.buckets_vectors" -x "storage.vector_indexes"
 if ($LASTEXITCODE -ne 0) { throw 'Dump data gagal. Jangan lanjut migrasi produksi.' }
+# Migration history is separately excluded from the default CLI-managed dump.
+& supabase db dump --db-url $env:HSN_SUPABASE_DB_URL -f $historySchemaFile --schema supabase_migrations
+if ($LASTEXITCODE -ne 0) { throw 'Dump skema histori migrasi gagal; backup belum memenuhi gate rilis.' }
+& supabase db dump --db-url $env:HSN_SUPABASE_DB_URL -f $historyDataFile --use-copy --data-only --schema supabase_migrations
+if ($LASTEXITCODE -ne 0) { throw 'Dump data histori migrasi gagal; backup belum memenuhi gate rilis.' }
 
 foreach($file in $files) {
   if(-not (Test-Path -LiteralPath $file -PathType Leaf)) {
@@ -63,6 +72,11 @@ $meta = @{
   source_mutated = $false
   restore_verified = $false
   physical_storage_objects_included = $false
+  auth_users_restored_and_login_tested = $false
+  auth_schema_data_scope = 'NOT VERIFIED: CLI-managed schema may be excluded; project has live Auth users'
+  migration_history_dumped = $true
+  roles_schema_data_dumped = $true
+  recovery_scope = 'PARTIAL: files, Auth login, custom managed-schema changes, and restore still require separate checks'
   restore_gate = 'HOLD until restored successfully into a separate database'
   files = @($files | ForEach-Object {
     $info=Get-Item -LiteralPath $_
@@ -72,5 +86,7 @@ $meta = @{
 }
 $meta | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $manifest -Encoding UTF8
 Write-Host ('File dump tersedia di: '+$folder) -ForegroundColor Green
+Write-Host 'PENTING: CLI standar dapat mengecualikan data Auth dan Storage managed schemas.' -ForegroundColor Yellow
+Write-Host 'Restore dan uji 4 akun Auth, aturan akses, migration history, dan semua objek pendukung di tempat terpisah sebelum rilis.' -ForegroundColor Yellow
 Write-Host 'Belum aman merge/migrasi: lakukan RESTORE TERPISAH dan verifikasi jumlah/checksum lebih dulu.' -ForegroundColor Yellow
 Write-Host 'Backup SQL memuat data privat; amankan di drive terenkripsi dan jangan bagikan ke publik.' -ForegroundColor Yellow
