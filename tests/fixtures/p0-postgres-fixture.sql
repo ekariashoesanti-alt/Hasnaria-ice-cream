@@ -150,7 +150,8 @@ select p.id,p.brand_id,p.source_period,p.canonical_loaded_at,p.purchase_date,p.i
  p.unit_text,p.total_amount,p.inventory_item_id,p.quantity_text::numeric as quantity_numeric,
  coalesce(p.quantity_text::numeric*r.qty_multiplier,p.quantity_text::numeric) as inventory_qty,
  case when r.reviewed_by is not null then 'owner_review'::text else 'exact_name'::text end as mapping_status,
- (p.purchase_date is not null and p.quantity_text::numeric>0) as ready_for_inventory
+ (p.purchase_date is not null and p.quantity_text::numeric>0) as ready_for_inventory,
+ null::text as rule_type
 from public.offline_purchase_history p
 left join private.purchase_stock_reviews r
   on r.source_history_id=p.id and r.brand_id=p.brand_id and r.reverted_at is null;
