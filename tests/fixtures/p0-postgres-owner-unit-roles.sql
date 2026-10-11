@@ -79,6 +79,34 @@ begin
     'Staff is not the authorized Owner of this supplier packaging proof');
  exception when others then denied:=true; end;
  if not denied then raise exception 'Staff can verify pack conversion and silently affect BOM'; end if;
+
+ denied:=false;
+ begin
+  perform public.owner_orphan_receipt_queue_v1(null);
+ exception when others then denied:=true; end;
+ if not denied then raise exception 'Staff can read Owner orphan receipt audit queue'; end if;
+ denied:=false;
+ begin
+  perform public.owner_orphan_receipt_preview_v1(
+    '00000000-0000-0000-0000-000000000302','REQUEST_ORIGINAL_SOURCE');
+ exception when others then denied:=true; end;
+ if not denied then raise exception 'Staff can preview historical Owner evidence'; end if;
+ denied:=false;
+ begin
+  perform public.owner_orphan_receipt_apply_v1(
+    '00000000-0000-0000-0000-000000000302',
+    'REQUEST_ORIGINAL_SOURCE','fake_token',
+    'Source record not found in original archive',
+    'Staff must never approve historical documentary evidence');
+ exception when others then denied:=true; end;
+ if not denied then raise exception 'Staff can approve historical Owner review'; end if;
+ denied:=false;
+ begin
+  perform public.owner_orphan_receipt_revoke_v1(
+    '00000000-0000-0000-0000-000000000404',
+    'Staff must never revoke an Owner historical receipt decision');
+ exception when others then denied:=true; end;
+ if not denied then raise exception 'Staff can revoke historical Owner review'; end if;
 end;
 $staff$;
 
@@ -93,6 +121,11 @@ begin
    date_trunc('month',current_date-interval '1 month')::date);
  exception when others then denied:=true; end;
  if not denied then raise exception 'Unsigned user can read the Owner queue'; end if;
+ denied:=false;
+ begin
+   perform public.owner_orphan_receipt_queue_v1(null);
+ exception when others then denied:=true; end;
+ if not denied then raise exception 'Unsigned actor can read historical Owner ledger'; end if;
 end;
 $unsigned$;
 reset role;
@@ -133,5 +166,11 @@ begin
  if has_function_privilege('anon','public.owner_purchase_unit_queue_v1(date)','EXECUTE')
     or has_function_privilege('anon','public.owner_purchase_unit_apply_v1(uuid,text,numeric,text,text,text)','EXECUTE')
  then raise exception 'Anonymous access unexpectedly granted to Owner unit RPC'; end if;
+ if has_function_privilege('anon','public.owner_orphan_receipt_queue_v1(date)','EXECUTE')
+   or has_function_privilege('anon','public.owner_orphan_receipt_apply_v1(uuid,text,text,text,text)','EXECUTE')
+ then raise exception 'Anonymous access unexpectedly granted to Owner historical RPC'; end if;
+ if has_table_privilege('authenticated','private.orphan_receipt_owner_reviews_v1','INSERT')
+    or has_table_privilege('authenticated','private.orphan_receipt_owner_reviews_v1','SELECT')
+ then raise exception 'Staff can directly access private historical approval records'; end if;
 end;
 $anon$;
