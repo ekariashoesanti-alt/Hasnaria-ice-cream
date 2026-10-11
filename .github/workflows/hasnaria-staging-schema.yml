@@ -19,6 +19,7 @@ concurrency:
 
 jobs:
   validate-only:
+    environment: hasnaria-staging-schema
     if: ${{ github.repository == 'ekariashoesanti-alt/Hasnaria-ice-cream' && github.ref == 'refs/heads/main' && inputs.confirmation == 'CHECK_STAGING_SCHEMA' }}
     runs-on: ubuntu-latest
     timeout-minutes: 25
