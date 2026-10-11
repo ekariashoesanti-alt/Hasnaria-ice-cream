@@ -363,3 +363,42 @@ test('Legacy conversion is fail closed and Owner ERP verification never rewrites
  assert.match(erpActionUi,/confirm_packaging/);
  assert.match(erpActionUi,/tidak.*mengubah resep\/BOM/);
 });
+
+
+const ownerOrphanEvidenceMigration=fs.readFileSync(
+ path.join(__dirname,'..','supabase','migrations',
+ '20261011230000_owner_orphan_receipt_evidence_reviews.sql'),'utf8');
+const ownerOrphanEvidencePause=fs.readFileSync(
+ path.join(__dirname,'..','supabase','rollback',
+ '20261011230000_pause_owner_orphan_receipt_reviews.sql'),'utf8');
+const ownerOrphanUi=fs.readFileSync(
+ path.join(__dirname,'..','owner-orphan-receipt-review-v1.js'),'utf8');
+const ownerOrphanIndex=fs.readFileSync(
+ path.join(__dirname,'..','index.html'),'utf8');
+test('P0.1 Owner historical review cannot rewrite Stock, Finance or historical source UUIDs',()=>{
+ assert.match(ownerOrphanEvidenceMigration,/create table if not exists private\.orphan_receipt_owner_reviews_v1/i);
+ assert.match(ownerOrphanEvidenceMigration,/enable row level security/i);
+ assert.match(ownerOrphanEvidenceMigration,/revoke all on private\.orphan_receipt_owner_reviews_v1/i);
+ assert.match(ownerOrphanEvidenceMigration,/private\.owner_stock_review_assert_v1\(\)/i);
+ assert.match(ownerOrphanEvidenceMigration,/private\.orphan_receipt_active_ledger_gate_v1/i);
+ assert.match(ownerOrphanEvidenceMigration,/private\.inventory_receipt_lineage_triage_v1/i);
+ assert.match(ownerOrphanEvidenceMigration,/source_snapshot jsonb not null/i);
+ assert.match(ownerOrphanEvidenceMigration,/p_token is distinct from v_preview->>'token'/i);
+ assert.match(ownerOrphanEvidenceMigration,/BLOCK_LEDGER_INTEGRITY_REPAIR/);
+ assert.match(ownerOrphanEvidenceMigration,/COMMENT ON TABLE/i);
+ assert.doesNotMatch(ownerOrphanEvidenceMigration,
+   /\b(?:insert\s+into|update|delete\s+from)\s+public\.(?:inventory_purchase_log|offline_purchase_history|inventory_movements|finance_\w+)/i);
+ assert.match(ownerOrphanEvidencePause,/P0\.1 PAUSED/);
+ assert.doesNotMatch(ownerOrphanEvidencePause,/\b(?:delete\s+from|truncate\s+table|drop\s+table)\b/i);
+});
+test('P0.1 historical UI is Owner-only and uses documentary-only RPCs',()=>{
+ assert.match(ownerOrphanIndex,/\/owner-orphan-receipt-review-v1\.js\?v=1/);
+ assert.match(ownerOrphanUi,/c&&c\.role==='owner'/);
+ for(const call of ['owner_orphan_receipt_queue_v1','owner_orphan_receipt_preview_v1',
+    'owner_orphan_receipt_apply_v1','owner_orphan_receipt_revoke_v1'])
+    assert.match(ownerOrphanUi,new RegExp("db\\.rpc\\('"+call+"'"));
+ assert.match(ownerOrphanUi,/preview=null/);
+ assert.match(ownerOrphanUi,/Keputusan berubah\. Pratinjau ulang/);
+ assert.match(ownerOrphanUi,/Tidak ada perubahan Stock, Finance atau source UUID/);
+ assert.doesNotMatch(ownerOrphanUi,/db\.(?:from\(['"](?:inventory_movements|inventory_purchase_log|offline_purchase_history)|rpc\(['"]sync_purchase_quantity_stock_v1)/i);
+});
