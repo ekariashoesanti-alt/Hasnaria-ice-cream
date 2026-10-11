@@ -62,6 +62,6 @@ Owner harus mendapatkan **file export Majoo Penjualan Oktober** dan **file Pembe
 
 ### Rilis P0.3/P0.4
 
-**Teknis (branch):** migration dan UI dibuat, PHPUnit? tidak — tes JavaScript/Node + PostgreSQL 17 synthetic; semuanya harus lulus pada HEAD terbaru sebelum rilis. Backup restorable dan staged authenticated UAT masih wajib.
+**Teknis (branch):** migration dan UI dibuat, pengujian Node.js dan PostgreSQL 17 sintetis; semuanya harus lulus pada HEAD terbaru sebelum rilis. Backup restorable dan staged authenticated UAT masih wajib.
 
 **Data nyata:** P0.3 belum bisa closed hingga 32 bukti satuan & keputusan 33 mapping ditandatangani Owner dan posting pasca-opname dilakukan dengan mekanisme transaksi terotorisasi yang tidak menggandakan saldo; P0.4 belum bisa closed hingga source October yang sesungguhnya diunggah, diverifikasi, dan direkonsiliasi.
