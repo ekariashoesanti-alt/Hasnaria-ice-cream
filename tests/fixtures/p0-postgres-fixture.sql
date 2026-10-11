@@ -29,7 +29,7 @@ create table public.inventory_purchase_log (
  purchase_date date not null, qty numeric not null,
  unit text, notes text, unit_cost numeric, total_amount numeric,
  source_history_id uuid, source_file text, source_row_no integer,
- mapping_method text
+ mapping_method text, created_at timestamptz default now()
 );
 create unique index inventory_purchase_log_source_history_uidx
  on public.inventory_purchase_log(source_history_id)
