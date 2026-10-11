@@ -100,6 +100,47 @@ begin
 end;
 $owner$;
 
+-- A malicious caller (even one with Stock table UPDATE privileges and
+-- a fake Owner claim) can set custom PostgreSQL GUCs directly.
+-- Verify that this NEVER grants the right to bypass the audited RPC.
+begin;
+grant select,insert,update on public.inventory_unit_conversions to authenticated;
+set role authenticated;
+select set_config('hasnaria.p0_owner_conversion_id',
+  '00000000-0000-0000-0000-000000000802',true);
+do $spoof$
+declare denied boolean:=false;
+begin
+ begin
+  update public.inventory_unit_conversions set units_per_purchase_unit=77
+  where id='00000000-0000-0000-0000-000000000802';
+ exception when others then
+  denied:=position('Direct conversion verification forbidden' in sqlerrm)>0;
+ end;
+ if not denied then
+  raise exception 'SECURITY BYPASS: authenticated user spoofed GUC to rewrite verified factor';
+ end if;
+ denied:=false;
+ begin
+  insert into public.inventory_unit_conversions
+  (id,brand_id,inventory_item_id,product_id,status,purchase_unit,sale_unit,units_per_purchase_unit)
+  values('00000000-0000-0000-0000-000000000804',
+         '00000000-0000-0000-0000-000000000001',
+         '00000000-0000-0000-0000-000000000102',
+         '00000000-0000-0000-0000-000000000901',
+         'verified','pack','pcs',77);
+ exception when others then
+  denied:=position('Direct conversion verification forbidden' in sqlerrm)>0;
+ end;
+ if not denied then
+  raise exception 'SECURITY BYPASS: authenticated user inserted verified rule using GUC';
+ end if;
+ raise notice 'HSN P0.2 GUC SPOOF PASS: direct authenticated updates/inserts denied with forged marker.';
+end;
+$spoof$;
+reset role;
+rollback;
+
 -- Cross-brand users and repeated active verified rules must be rejected.
 begin;
 insert into public.inventory_unit_conversions
