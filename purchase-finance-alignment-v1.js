@@ -7,7 +7,7 @@ var BRAND='a36d4b4f-3ccc-4a78-8aeb-b868f0407ea4';
 var CATS=['Beban Administrasi','Beban Pemeliharaan','Beban Bahan Baku','Beban Kepegawaian'];
 var CAT_LABEL={'Beban Administrasi':'6100 · Administrasi','Beban Pemeliharaan':'6110 · Pemeliharaan','Beban Bahan Baku':'6120 · Bahan Baku','Beban Kepegawaian':'6200 · Kepegawaian'};
 var MONTHS=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
-var db=null,rows=[],control={},overview=null,chartRows=[],periods=[],loading=false,error='',observer=null,timer=0,loadedAt=0,loadedPeriod='',syncingStock=false,lastStockSync='',category='all',modalOpen=false,requestSeq=0,syncing=false,unitOpen=false,unitBusy=false,unitError='',unitNotice='',unitQueue=[],unitSelected='',unitPreview=null,unitPeriod='',unitDraft={sourceUnit:'',factor:'',evidence:'',reason:''};
+var db=null,rows=[],control={},overview=null,chartRows=[],periods=[],loading=false,error='',observer=null,timer=0,loadedAt=0,loadedPeriod='',syncingStock=false,lastStockSync='',category='all',modalOpen=false,requestSeq=0,syncing=false,unitOpen=false,unitBusy=false,unitError='',unitNotice='',unitQueue=[],unitSelected='',unitPreview=null,unitPeriod='',unitDraft={sourceUnit:'',factor:'',evidence:'',reason:''},unitSession=null,unitSeq=0;
 
 function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function n(v){v=Number(v);return isFinite(v)?v:0}
@@ -74,6 +74,17 @@ function modalMarkup(){
 }
 
 function ownerUnitRole(){var c=window.__HASNARIA_CONTEXT;return!!(c&&c.role==='owner')}
+function unitAllowed(){
+ var app=document.getElementById('app'),panel=document.getElementById('pembelian');
+ return unitOpen&&ownerUnitRole()&&unitSession===window.__HASNARIA_CONTEXT&&
+  (!app||!app.classList.contains('hidden'))&&
+  (!panel||!panel.classList.contains('hidden'));
+}
+function closeUnitReview(){
+ unitSeq++;unitOpen=false;unitBusy=false;unitSession=null;
+ unitQueue=[];unitSelected='';unitPeriod='';unitPreview=null;unitError='';unitNotice='';
+ unitDraft={sourceUnit:'',factor:'',evidence:'',reason:''};
+}
 function activeUnitItem(){return unitQueue.find(function(x){return x.source_id===unitSelected})||null}
 function unitBaseline(v){return v==='PRE_OR_ON_OPNAME'?'Sebelum/pada opname terakhir':v==='POST_OPNAME'?'Sesudah opname terakhir':'Belum ada opname fisik'}
 function unitVerificationMarkup(){
@@ -101,17 +112,17 @@ function unitVerificationMarkup(){
   return button+'<div class="pfa-modal-backdrop" data-pfa-unit-close="1"><section class="pfa-modal pfa-unit-modal" role="dialog" aria-modal="true" aria-labelledby="pfaUnitTitle"><div class="pfa-modal-head"><div><div class="pfa-eyebrow">OWNER · PEMBELIAN</div><h3 id="pfaUnitTitle">Verifikasi satuan '+esc(monthLabel(periodValue()))+'</h3><p>Hanya dokumentasi satuan dan bukti · Stock dan Finance tidak berubah</p></div><button type="button" data-pfa-unit-close="1" class="pfa-close" aria-label="Tutup">×</button></div>'+(unitBusy?'<p>Memproses verifikasi…</p>':'')+(unitError?'<p role="alert" class="pfa-error">'+esc(unitError)+'</p>':'')+(unitNotice?'<p role="status" class="pfa-unit-success">'+esc(unitNotice)+'</p>':'')+(unitPeriod!==periodValue()?'':tableHtml)+formHtml+'</section></div>';
 }
 async function unitLoad(){
-  if(!ownerUnitRole()||!unitOpen)return;
-  var p=periodValue();if(!p||!db)return;
+  if(!unitAllowed())return;
+  var ctx=unitSession,call=++unitSeq,p=periodValue();if(!p||!db)return;
   unitBusy=true;unitError='';render();
   try{
     var res=await db.rpc('owner_purchase_unit_queue_v1',{p_period:p+'-01'});
     if(res.error)throw res.error;
-    if(!unitOpen||p!==periodValue())return;
+    if(!unitAllowed()||unitSession!==ctx||call!==unitSeq||p!==periodValue())return;
     unitPeriod=p;unitQueue=Array.isArray(res.data&&res.data.items)?res.data.items:[];
     if(unitSelected&&!unitQueue.some(function(x){return x.source_id===unitSelected})){unitSelected='';unitPreview=null}
-  }catch(e){unitError='Gagal memuat verifikasi satuan: '+(e&&e.message?e.message:String(e))}
-  finally{unitBusy=false;if(unitOpen&&p===periodValue())render()}
+   }catch(e){if(unitAllowed()&&call===unitSeq)unitError='Gagal memuat verifikasi satuan: '+(e&&e.message?e.message:String(e))}
+  finally{if(unitAllowed()&&call===unitSeq){unitBusy=false;render()}}
 }
 function unitFormValues(){
   var d=Object.assign({},unitDraft),valid=Number(d.factor);
@@ -119,18 +130,19 @@ function unitFormValues(){
   return{p_source_id:unitSelected,p_source_unit:d.sourceUnit.trim(),p_multiplier:valid};
 }
 async function unitPreviewSelected(){
-  if(!ownerUnitRole()||!activeUnitItem()||unitBusy)return;
+  if(!unitAllowed()||!activeUnitItem()||unitBusy)return;
+  var ctx=unitSession,call=++unitSeq,source=unitSelected,snapshot=JSON.stringify(unitDraft);
   unitBusy=true;unitError='';unitNotice='';unitPreview=null;
   try{
     var args=unitFormValues(),q=await db.rpc('owner_purchase_unit_preview_v1',args);
     if(q.error)throw q.error;
-    if(!unitOpen||!activeUnitItem())return;
+    if(!unitAllowed()||unitSession!==ctx||call!==unitSeq||source!==unitSelected||snapshot!==JSON.stringify(unitDraft)||!activeUnitItem())return;
     unitPreview=q.data;
   }catch(e){unitError=e&&e.message?e.message:String(e)}
   finally{unitBusy=false;render()}
 }
 async function unitApplySelected(){
-  if(!ownerUnitRole()||!unitPreview||unitBusy)return;
+  if(!unitAllowed()||!unitPreview||unitBusy)return;
   unitBusy=true;unitError='';
   try{
     var args=unitFormValues();
@@ -151,7 +163,7 @@ async function unitApplySelected(){
 }
 async function unitRevokeSelected(){
   var a=activeUnitItem();
-  if(!ownerUnitRole()||!a||!a.approval_id||unitBusy)return;
+  if(!unitAllowed()||!a||!a.approval_id||unitBusy)return;
   unitBusy=true;unitError='';
   try{
     var q=await db.rpc('owner_purchase_unit_revoke_v1',{
@@ -168,6 +180,7 @@ async function unitRevokeSelected(){
 }
 
 function render(){
+  if(unitOpen&&!unitAllowed())closeUnitReview();
   var root=document.getElementById('paRoot');if(!root)return;patchCore(root);syncPeriodOptions();
   var target=root.querySelector('.pa-controls');if(!target)return;
   var wrap=document.getElementById('purchaseFinanceAlignment');
@@ -241,7 +254,7 @@ async function syncReport(){
 }
 function registerSync(){var s=window.__HASNARIA_DATA_SYNC;if(s)s.register('owner-purchase-report',syncReport)}
 registerSync();window.addEventListener('hasnaria:data-sync-ready',registerSync);
-function resetData(){rows=[];control={};overview=null;chartRows=[];loadedAt=0;loadedPeriod='';category='all';modalOpen=false;unitSelected='';unitPreview=null;unitOpen=false;unitQueue=[];unitPeriod='';unitNotice='';unitError=''}
+function resetData(){rows=[];control={};overview=null;chartRows=[];loadedAt=0;loadedPeriod='';category='all';modalOpen=false;closeUnitReview()}
 function schedule(){clearTimeout(timer);timer=setTimeout(function(){if(!document.getElementById('paRoot'))return;render();if(!loading&&(!rows.length||loadedPeriod!==periodValue()))load(false)},80)}
 window.__HASNARIA_PURCHASE_FINANCE_REFRESH=syncReport;
 function boot(){
@@ -251,11 +264,11 @@ function boot(){
     document.addEventListener('change',function(e){if(!e.target)return;if(e.target.id==='paPeriod'){resetData();lastStockSync='';load(true);return}if(e.target.id==='pfaCategory'){category=e.target.value;render()}},true);
     document.addEventListener('click',function(e){
       var unitOpenBtn=e.target&&e.target.closest?e.target.closest('[data-pfa-unit-open]'):null;
-      if(unitOpenBtn&&ownerUnitRole()){unitOpen=true;modalOpen=false;unitError='';unitNotice='';unitSelected='';unitPreview=null;unitLoad();return}
+      if(unitOpenBtn&&ownerUnitRole()){closeUnitReview();unitSession=window.__HASNARIA_CONTEXT;unitOpen=true;modalOpen=false;unitLoad();return}
       var unitCloseBtn=e.target&&e.target.closest?e.target.closest('[data-pfa-unit-close]'):null;
-      if(unitCloseBtn&&e.target===unitCloseBtn){unitOpen=false;unitSelected='';unitPreview=null;render();return}
+      if(unitCloseBtn&&e.target===unitCloseBtn){closeUnitReview();render();return}
       var unitSelectBtn=e.target&&e.target.closest?e.target.closest('[data-pfa-unit-select]'):null;
-      if(unitSelectBtn&&unitOpen){unitSelected=unitSelectBtn.getAttribute('data-pfa-unit-select');unitDraft={sourceUnit:'',factor:'',evidence:'',reason:''};unitPreview=null;unitError='';unitNotice='';render();return}
+      if(unitSelectBtn&&unitAllowed()&&!unitBusy){unitSelected=unitSelectBtn.getAttribute('data-pfa-unit-select');unitDraft={sourceUnit:'',factor:'',evidence:'',reason:''};unitPreview=null;unitError='';unitNotice='';render();return}
       if(e.target&&e.target.closest&&e.target.closest('[data-pfa-unit-preview]')){unitPreviewSelected();return}
       if(e.target&&e.target.closest&&e.target.closest('[data-pfa-unit-apply]')){unitApplySelected();return}
       if(e.target&&e.target.closest&&e.target.closest('[data-pfa-unit-revoke]')){unitRevokeSelected();return}
@@ -265,7 +278,7 @@ function boot(){
       if(b.matches('#paUpload,#purchaseExcelBtn,#purchaseMajooBtn'))setTimeout(function(){resetData();lastStockSync='';loadPeriods().then(function(){load(true)})},350);else setTimeout(schedule,120)
     },true);
     document.addEventListener('input',function(e){var key=e.target&&e.target.getAttribute&&e.target.getAttribute('data-pfa-unit-field');if(key&&Object.prototype.hasOwnProperty.call(unitDraft,key)){unitDraft[key]=e.target.value;unitPreview=null;var save=document.querySelector('[data-pfa-unit-apply]');if(save)save.disabled=true;var p=document.querySelector('.pfa-unit-preview');if(p)p.textContent='Input berubah. Jalankan pratinjau ulang sebelum menyimpan.'}},true);
-    document.addEventListener('keydown',function(e){if(e.key==='Escape'){if(unitOpen){unitOpen=false;unitPreview=null;render()}else if(modalOpen){modalOpen=false;render()}}},true);
+    document.addEventListener('keydown',function(e){if(e.key==='Escape'){if(unitOpen){closeUnitReview();render()}else if(modalOpen){modalOpen=false;render()}}},true);
     document.addEventListener('hasnaria:purchase-imported',function(){lastStockSync='';syncStockForPeriod().then(function(){resetData();return loadPeriods()}).then(function(){load(true)})},true);
     loadPeriods().then(function(){load(true)});return
   }if(tries++<150)setTimeout(wait,100)})()
