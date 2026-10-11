@@ -97,6 +97,8 @@ test('database guard is enforced before delete and semantic updates', () => {
   assert.match(migration,/before delete or update of/i);
   assert.match(migration,/inventory_purchase_log/i);
   assert.match(migration,/source_history_id\s*=\s*v_source/i);
+  assert.match(migration,/before delete or update of\s+id, brand_id/i);
+  assert.match(migration,/new\.id is not distinct from old\.id/i);
   assert.match(migration,/raise exception using/i);
   assert.doesNotMatch(migration,/^\s*delete\s+from\s+public\./im);
   assert.doesNotMatch(migration,/^\s*update\s+public\./im);
