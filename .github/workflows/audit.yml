@@ -19,6 +19,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Staging schema workflow safety self-test
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check scripts/hasnaria_schema_only_actions.js
+          node scripts/hasnaria_schema_only_actions.js --self-test
+
       - name: JavaScript syntax
         shell: bash
         run: |
