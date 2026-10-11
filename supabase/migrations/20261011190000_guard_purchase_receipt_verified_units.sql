@@ -4,6 +4,7 @@
 -- A trusted owner review may supply an explicit qty_multiplier; otherwise an
 -- identical source/master unit or exactly one VERIFIED conversion is required.
 -- Unverified unit conversions and absent purchase units remain unposted.
+-- Existing source-linked receipts are NEVER rewritten by background sync.
 -- No change to the separate Purchase -> Finance accounting pipeline.
 
 create or replace function private.guard_purchase_receipt_unit_v1()
@@ -217,26 +218,11 @@ begin
     from qualified b
     where b.stock_qty>0
       and nullif(btrim(coalesce(b.stock_unit,'')),'') is not null
+    -- Idempotent append-only: never rewrite any existing receipt/movement.
+    -- Source corrections must pass a separately reviewed Stock reconciliation.
     on conflict (source_history_id)
       where source_history_id is not null
-    do update set
-      inventory_item_id=excluded.inventory_item_id,
-      purchase_date=excluded.purchase_date,
-      qty=excluded.qty,unit=excluded.unit,
-      notes=excluded.notes,unit_cost=null,
-      total_amount=excluded.total_amount,
-      source_file=excluded.source_file,
-      source_row_no=excluded.source_row_no,
-      mapping_method=excluded.mapping_method
-    where (
-      inventory_purchase_log.inventory_item_id,inventory_purchase_log.purchase_date,
-      inventory_purchase_log.qty,inventory_purchase_log.unit,
-      inventory_purchase_log.total_amount,inventory_purchase_log.source_file,
-      inventory_purchase_log.source_row_no
-    ) is distinct from (
-      excluded.inventory_item_id,excluded.purchase_date,excluded.qty,excluded.unit,
-      excluded.total_amount,excluded.source_file,excluded.source_row_no
-    )
+    do nothing
     returning id
   )
   select (select count(*) from candidates),
