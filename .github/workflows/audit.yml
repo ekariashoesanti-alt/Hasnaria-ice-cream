@@ -190,3 +190,45 @@ jobs:
           grep -q 'daily_metrics_read_same_brand' supabase/migrations/20260907021205_align_rls_with_runtime_role_matrix.sql
           grep -q 'private.ignore_retired_legacy_user_registry_write' supabase/migrations/20260907023723_ignore_retired_legacy_user_registry_writes.sql
           grep -qi 'revoke execute on function private.guard_profile_authority' supabase/migrations/20260907071242_revoke_profile_authority_trigger_execute.sql
+
+
+  # Real DDL + runtime assertions run in a disposable Postgres service.
+  # This never connects to Hasnaria Supabase production (or to a paid branch).
+  p0-postgres-integration:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: hasnaria_p0_fixture
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d hasnaria_p0_fixture"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Execute isolated Hasnaria P0 migrations and behavioral regression
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: "5432"
+          PGUSER: postgres
+          PGPASSWORD: postgres
+          PGDATABASE: hasnaria_p0_fixture
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! command -v psql >/dev/null 2>&1; then
+            sudo apt-get update -qq
+            sudo apt-get install -y postgresql-client
+          fi
+          psql -v ON_ERROR_STOP=1 -f tests/fixtures/p0-postgres-fixture.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261011110000_guard_purchase_stock_source_lineage.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261011180000_stock_reconciliation_ledger_parity.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261011190000_guard_purchase_receipt_verified_units.sql
+          psql -v ON_ERROR_STOP=1 -f tests/fixtures/p0-postgres-assertions.sql
