@@ -6,7 +6,11 @@
 -- Legacy direct conversion RPC stays callable but fails closed (clear error),
 -- while the ERP Action Center's resolve_inventory_conversion API is preserved.
 create or replace function private.guard_verified_inventory_conversion_v1()
-returns trigger language plpgsql security definer set search_path=''
+-- SECURITY INVOKER is critical. A SECURITY DEFINER trigger would erase
+-- the execution-role boundary and let a client spoof the transaction GUC.
+-- Here CURRENT_USER stays 'authenticated' for direct table writes but becomes
+-- the audited RPC's trusted function owner during its definer execution.
+returns trigger language plpgsql security invoker set search_path=''
 as $guard$
 declare v_brand uuid;
 begin
@@ -28,6 +32,17 @@ begin
             or new.brand_id is distinct from old.brand_id
             or new.product_id is distinct from old.product_id))
     then
+    -- An authenticated Owner can call SET_CONFIG directly. Therefore the
+    -- transaction marker is NOT an authorization credential by itself.
+    -- The trigger must also run inside the trusted SECURITY DEFINER RPC,
+    -- whose execution role is its PostgreSQL owner (not 'authenticated').
+    if current_user is distinct from (
+         select pg_get_userbyid(p.proowner)
+         from pg_proc p
+         where p.oid='private.resolve_inventory_conversion_ui(uuid,numeric,text)'::regprocedure
+       ) then
+       raise exception 'Direct conversion verification forbidden: use audited Owner RPC';
+    end if;
     if coalesce(current_setting('hasnaria.p0_owner_conversion_id',true),'')<>new.id::text
        or auth.uid() is null then
       raise exception 'Aturan verified hanya boleh dibuat atau diubah lewat review Owner terotorisasi';
@@ -128,8 +143,9 @@ begin
   raise exception 'SKU masih memiliki aturan verified lain; periksa dan konfirmasi tidak konflik';
  end if;
 
- -- Guard marker exists only inside this transaction. The security-definer
- -- guard rechecks authenticated Owner and tenant to block direct Staff writes.
+ -- A transaction-local marker binds this row to the reviewed RPC call.
+ -- The SECURITY INVOKER trigger additionally checks the actual execution
+ -- role, so setting the marker alone is never enough for direct SQL writes.
  perform set_config('hasnaria.p0_owner_conversion_id',v_before.id::text,true);
  update public.inventory_unit_conversions
  set status='verified',units_per_purchase_unit=p_units_per_purchase_unit,
