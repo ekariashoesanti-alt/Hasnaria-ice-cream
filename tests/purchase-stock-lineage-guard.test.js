@@ -105,3 +105,26 @@ test('database guard is enforced before delete and semantic updates', () => {
   assert.doesNotMatch(migration,/^\s*update\s+public\./im);
   assert.doesNotMatch(migration,/^\s*insert\s+into\s+public\./im);
 });
+
+
+const parityMigration = fs.readFileSync(path.join(__dirname, '..', 'supabase', 'migrations', '20261011180000_stock_reconciliation_ledger_parity.sql'), 'utf8');
+const recoveryPreview = fs.readFileSync(path.join(__dirname, '..', 'supabase', 'tests', 'purchase_stock_recovery_preflight_v1.sql'), 'utf8');
+
+test('Stock screen reads only posted verified movements, not proposed draft BOM', () => {
+  assert.match(parityMigration,/create or replace view public\.inventory_stock_reconciliation/i);
+  assert.match(parityMigration,/security_invoker\s*=\s*true/i);
+  assert.match(parityMigration,/LEFT JOIN inventory_movements m/i);
+  assert.match(parityMigration,/m\.movement_type = 'SALE_CONSUMPTION'/i);
+  assert.match(parityMigration,/m\.movement_date > b_1\.baseline_date/i);
+  assert.match(parityMigration,/m\.movement_date <= CURRENT_DATE/i);
+  assert.doesNotMatch(parityMigration,/JOIN inventory_recipe_components/i);
+  assert.doesNotMatch(parityMigration,/JOIN sale_items\s+si/i);
+});
+
+test('recovery preview has no data-changing statements or action RPCs', () => {
+  const stripped = recoveryPreview.replace(/--[^\n]*/g, '');
+  assert.doesNotMatch(stripped,/\b(insert\s+into|update\s+\w|delete\s+from|truncate\s+|drop\s+table|alter\s+table|call\s+)\b/i);
+  assert.match(stripped,/BLOCK_SOURCE_UNIT_MISSING/);
+  assert.match(stripped,/NEGATIVE_IS_VIRTUAL_RECIPE_USAGE/);
+  assert.match(stripped,/finance_sales_sync_status_v1/);
+});
