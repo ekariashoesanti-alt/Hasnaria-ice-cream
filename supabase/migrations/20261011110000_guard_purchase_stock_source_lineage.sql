@@ -23,7 +23,8 @@ begin
   if tg_op = 'DELETE' then
     v_source := old.id;
   else
-    v_source := new.id;
+    -- Always inspect the OLD UUID; updates to id must not orphan existing receipts.
+    v_source := old.id;
     -- Unchanged semantic content is safe; ordinary metadata edits remain possible.
     if new.id is not distinct from old.id
        and new.brand_id is not distinct from old.brand_id
