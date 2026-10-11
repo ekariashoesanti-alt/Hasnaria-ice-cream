@@ -32,13 +32,13 @@ revoke all on private.purchase_unmapped_owner_decisions_v1 from public,anon,auth
 create or replace function private.owner_purchase_unmapped_snapshot_v1(p_source uuid)
 returns jsonb language plpgsql stable security definer set search_path=''
 as $snap$
-declare v_brand uuid;b record;
+declare v_brand uuid;v_row record;
 begin
  v_brand:=private.owner_stock_review_assert_v1();
  select b.id,b.brand_id,b.source_period,b.source_file,b.row_no,b.purchase_date,
  b.item_name,b.quantity_text,b.unit_text,b.total_amount,b.quantity_numeric,
  b.mapping_status,b.inventory_match_count,b.inventory_item_id,b.rule_type,b.ready_for_inventory
- into b from public.purchase_inventory_bridge b
+ into v_row from public.purchase_inventory_bridge b
  where b.brand_id=v_brand and b.id=p_source
   and b.mapping_status in ('unmatched','ambiguous_inventory_name');
  if not found then raise exception 'Sumber tidak ada, sudah diklasifikasikan, atau bukan milik merek';end if;
@@ -47,13 +47,13 @@ begin
    raise exception 'Pembelian sudah ada receipt Stok; dilarang mengubah histori mapping';
  end if;
  return jsonb_build_object(
-  'brand_id',v_brand,'source_id',b.id,'period',b.source_period,
-  'purchase_date',b.purchase_date,'source_file',b.source_file,'row_no',b.row_no,
-  'item_name',b.item_name,'quantity_text',b.quantity_text,'source_unit',b.unit_text,
-  'amount',b.total_amount,'quantity_numeric',b.quantity_numeric,
-  'mapping_status',b.mapping_status,'inventory_match_count',b.inventory_match_count,
-  'inventory_item_id',b.inventory_item_id,'rule_type',b.rule_type,
-  'ready_for_inventory',b.ready_for_inventory);
+  'brand_id',v_brand,'source_id',v_row.id,'period',v_row.source_period,
+  'purchase_date',v_row.purchase_date,'source_file',v_row.source_file,'row_no',v_row.row_no,
+  'item_name',v_row.item_name,'quantity_text',v_row.quantity_text,'source_unit',v_row.unit_text,
+  'amount',v_row.total_amount,'quantity_numeric',v_row.quantity_numeric,
+  'mapping_status',v_row.mapping_status,'inventory_match_count',v_row.inventory_match_count,
+  'inventory_item_id',v_row.inventory_item_id,'rule_type',v_row.rule_type,
+  'ready_for_inventory',v_row.ready_for_inventory);
 end;
 $snap$;
 
