@@ -278,6 +278,27 @@ function harness(file, handlerName, options = {}) {
   cachedAdmin.control.clockOffset = 31000;
   await cachedAdmin.window.__HASNARIA_ADMIN_V1.mount({ force: true, navigation: true });
   assert.equal(cachedAdmin.calls.length, expiredReads + 3, 'Administration navigation cache expires after 30 seconds');
+  const switchedOwner = harness('administration-v1.js', 'owner-administration-report');
+  await switchedOwner.start();
+  const oldSessionGate = deferred();
+  switchedOwner.control.gate = oldSessionGate;
+  const oldSessionLoad = switchedOwner.window.__HASNARIA_ADMIN_V1.mount({ force: true });
+  await flush(); await flush();
+  const oldSessionRequestCount = switchedOwner.calls.length;
+  switchedOwner.window.__HASNARIA_CONTEXT = { role: 'owner' };
+  switchedOwner.data.ui_administration_overview_v1[0].admin_amount = 55;
+  switchedOwner.data.ui_administration_category_chart_v1[0].amount = 55;
+  const newSessionLoad = switchedOwner.window.__HASNARIA_ADMIN_V1.mount({ force: true, navigation: true });
+  await flush(); await flush();
+  assert.equal(switchedOwner.calls.length, oldSessionRequestCount + 3,
+    'new Owner session starts a fresh request even when old session is loading');
+  assert.doesNotMatch(switchedOwner.rendered, /Rp10\b/,
+    'new session never shows cached amount from previous Owner while fetching');
+  oldSessionGate.resolve();
+  await Promise.all([oldSessionLoad, newSessionLoad]); await switchedOwner.settle();
+  assert.match(switchedOwner.rendered, /Rp55\b/,
+    'new Owner report uses its own read after stale response is rejected');
+
   const quickMonth = harness('administration-v1.js', 'owner-administration-report');
   quickMonth.data.ui_period_catalog_v1.push({ period_start: '2026-09-01', period_key: '2026-09' });
   await quickMonth.start();
