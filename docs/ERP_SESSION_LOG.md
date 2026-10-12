@@ -236,6 +236,40 @@ Validasi: 23 berkas tes lulus, syntax 117 JS + Sales multipart lulus, full `node
 
 HSN-011 → REVIEW; belum DONE karena alur akun Owner/Staff asli dan angka produksi belum direkonsiliasi. Berikutnya: CI/preview PR dan rekonsiliasi akun uji pada target sebelum landing/produksi.
 
+## 2026-10-08 — HSN-614 catatan absensi staf dan GPS baru
+
+Task dipilih eksplisit oleh pengguna setelah melihat layar HP Staff. Catatan Riwayat Hari Ini hanya muncul dari waktu absensi tersimpan: Clock In hijau; Clock Out merah di bawahnya. Setiap tap memperoleh GPS baru, memeriksa radius50m dan melanjutkan melalui enforcement RPC yang sudah ada. Timestamp mutasi tetap tampil bila read laporan berikutnya gagal; gagal mutasi tidak membuat timestamp semu. Header geolocation diubah ke self agar GPS first-party dapat diminta.
+
+Validasi:25 berkas tes lulus, termasuk10 kasus lokasi/mutasi dan6 kasus kartu; fullVercel build lulus. Shared DOM fixture diekstrak agar tes sinkronisasi dan absensi memakai harness yang sama. Kedua entrypoint Staff tetap identik, dengan cache runtime/mobile shell diperbarui.
+
+Tidak ada perubahan SQL/schema/data produksi atau login. HSN-614 → REVIEW menunggu acceptance GPS dan akun Staff asli di target. Detail: `docs/STAFF_CLOCK_HISTORY_2026-10-08.md`.
+
+## 2026-10-08 — HSN-615 Team Portal pada header dan logo
+
+Permintaan eksplisit pengguna: Staff Portal menjadi Team Portal, dengan Hasnaria Team pada header mobile, boot screen, judul aplikasi/metadata, manifest dan bantuan pemasangan. Dua logo SVG aplikasi mengganti tulisan STAFF menjadi TEAM tanpa mengubah geometri, warna atau font. Logo utama HASNARIA/TERRACE serta PNG tidak diubah. CSS/layout, nama pegawai, role, token/session key, jalur /staff/, RPC dan semua logic tetap identik.
+
+Versi aset runtime/mobile shell/boot/PWA dan manifest diperbarui; cache service worker menjadi v4 dengan prefix cleanup serta scope yang sama. Kedua entrypoint tetap byte-identical. Tiga berkas tes Staff existing, full Vercel build dan review independen lulus. HSN-615 → REVIEW saat commit; publikasi dan verifikasi tampilan/versi produksi dilanjutkan melalui PR.
+
+## 2026-10-10 — HSN-617 nama Arum menjadi Tari, kredensial tetap
+
+Nama mengikuti instruksi terbaru pengguna: Tari. Akun yang dipilih adalah satu employee bernama Arum pada brand Hasnaria, dikonfirmasi juga dari directory login publik. Kode pegawai pada data live tidak cocok dengan nama seed historis, sehingga target dipilih dari identitas akun yang dibaca, bukan menebak employee_no.
+
+UPDATE hanya menyentuh full_name dan updated_at pada employees. Lock/snapshot dan assertion dalam transaksi memverifikasi seluruh staff_access, sessions (selain last_seen_at), employee ID, outlet/status dan field pegawai lain identik. PIN, modules, active flag dan sesi tidak diubah; Owner save yang mencabut sesi tidak dipanggil. Verifikasi sesudah perubahan melalui public.staff_login_directory mengembalikan Tari pada ID yang sama. HSN-617 → DONE. Tidak ada perubahan schema/Auth. Bukti: docs/TEAM_EMPLOYEE_RENAME_2026-10-10.md.
+
+## 2026-10-10 — HSN-616 perbaikan GPS awal dan retry absensi
+
+Pengguna melaporkan jarak >50m padahal berada di toko. GPS awal sebelumnya menerima satu hasil/cache sampai30detik, lalu tombol dan doClock dapat terkunci oleh state outside lama. GPS awal dan percobaan Clock sekarang mengambil fix baru (maximumAge0), menunggu sampling dengan accuracy<=50m maksimal12detik, dan membersihkan watch/timer ketika selesai, konteks berubah, atau halaman disembunyikan. State outside/error lama dapat dicoba ulang; write tetap wajib koordinat baru di radius50m. Akurasi tidak ditambahkan ke radius.
+
+SQL produksi diverifikasi: check-in/out menolak v_distance>50, titik pusat berjarak0m dan offset51m dihitung51m. Ada satu outlet Hasnaria aktif pada data yang diaudit, sehingga mismatch roster/outlet bukan bukti penyebab laporan ini. Titik toko tersimpan tidak dipindah tanpa angka GPS/koordinat fisik pembanding. Tidak ada perubahan CSS, schema, Auth atau data absensi. Versi kedua entrypoint runtime menjadi v8 dan tetap byte-identical.
+
+Validasi:21 kasus lokasi,25 berkas tes existing dan full Vercel build lulus; review independen tidak menemukan blocker. HSN-616 → REVIEW menunggu acceptance GPS perangkat asli; verifikasi browser sintetis dan versi deployment dilanjutkan melalui PR. Detail: docs/TEAM_ATTENDANCE_GPS_2026-10-10.md.
+
+## 2026-10-10 — HSN-618 GPS Android
+
+Audit mereproduksi fix pertama di luar toko meski accuracy<=50m yang menghentikan watcher terlalu cepat, timestamp lokasi lama yang masih diterima, serta prompt izin yang menghabiskan deadline. Watch kini menunggu actual fresh qualified inside fix atau mengembalikan outside untuk penolakan pada deadline; age/future timestamp divalidasi. Permission query advisory, budget setelah grant/callback, cleanup lengkap. Visible/pageshow menyegarkan preview pada konteks Clock aktif tanpa otomatis menulis absensi. Petunjuk GPS Android memakai pesan existing. Cache runtime entrypoint v9; layout/CSS, radius50m, titik toko, SQL, credential dan sesi tetap.
+
+Validasi:30 kasus GPS (9 tambahan),25 berkas tes/full build, review independen dan Chromium profil Pixel7 mobile/touch pada browser serta simulasi standalone lulus.51m tetap ditolak, prompt16s simulasi tidak timeout sebelumgrant, stale/coarse/denied tidak menulis; record hijau/merah,360/390px dan cleanup terverifikasi. Tidak ada absensi produksi uji. HSN-618 → REVIEW karena GPS HP Android fisik/titik toko belum direkonsiliasi. HSN-616 PR86 sebelumnya telah merged dan aset canonical produksi v8 cocok dengan build. Rilis baru dan verifikasi bytecanonical dilanjutkan melalui PR; artifact hsn618-production-report.json di scratch. Detail: docs/TEAM_ANDROID_GPS_2026-10-10.md.
+
 ## 2026-10-08 — HSN-1002: Administration/Finance loading (P1 frontend)
 
 - User selected performance work before merging Administration into Operations. Based on main 287fda8, including PR #81/#82 guarded synchronization.

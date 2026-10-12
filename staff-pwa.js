@@ -25,7 +25,7 @@
     btn.type='button';
     btn.id='hasnariaPwaInstall';
     var needsSafari=isIOS&&!isIOSSafari;
-    btn.setAttribute('aria-label',needsSafari?'Buka di Safari untuk memasang Hasnaria Staff':'Pasang Hasnaria Staff ke layar utama');
+    btn.setAttribute('aria-label',needsSafari?'Buka di Safari untuk memasang Hasnaria Team':'Pasang Hasnaria Team ke layar utama');
     btn.innerHTML=icon()+'<span>'+(needsSafari?'Buka di Safari untuk Pasang':'Pasang aplikasi')+'</span>';
     btn.addEventListener('click',installOrExplain);
     document.body.appendChild(btn);
@@ -35,7 +35,7 @@
     var old=document.getElementById('hasnariaPwaSheet');if(old)old.remove();
     var back=document.createElement('div');
     back.id='hasnariaPwaSheet';back.className='hasnaria-pwa-backdrop';
-    back.innerHTML='<section class="hasnaria-pwa-sheet" role="dialog" aria-modal="true" aria-label="Pasang Hasnaria Staff">'
+    back.innerHTML='<section class="hasnaria-pwa-sheet" role="dialog" aria-modal="true" aria-label="Pasang Hasnaria Team">'
       +'<h2>'+title+'</h2><p>'+body+'</p><div class="hasnaria-pwa-steps">'
       +steps.map(function(s,i){return '<div class="hasnaria-pwa-step"><b>'+(i+1)+'</b><span>'+s+'</span></div>';}).join('')
       +'</div><div class="hasnaria-pwa-actions"><button type="button" class="hasnaria-pwa-close">Mengerti</button></div></section>';
@@ -44,7 +44,7 @@
   }
 
   function explainIOSInApp(){
-    showSheet('Buka di Safari untuk memasang','Di iPhone, halaman dari browser di dalam aplikasi seperti ChatGPT tidak dapat memasang Hasnaria Staff langsung. Gunakan Safari sekali untuk menambahkannya ke Home Screen.',[
+    showSheet('Buka di Safari untuk memasang','Di iPhone, halaman dari browser di dalam aplikasi seperti ChatGPT tidak dapat memasang Hasnaria Team langsung. Gunakan Safari sekali untuk menambahkannya ke Home Screen.',[
       'Tekan Share pada halaman ini lalu pilih “Open in Safari / Buka di Safari”.',
       'Setelah terbuka di Safari, tekan Share lagi.',
       'Pilih “Add to Home Screen / Tambahkan ke Layar Utama”, lalu tekan Add.'
@@ -52,25 +52,25 @@
   }
 
   function explainIOS(){
-    showSheet('Pasang Hasnaria Staff','Pemasangan iPhone dilakukan dari Safari. Setelah menekan Add, iOS tidak membuka aplikasi otomatis; kembali ke Home Screen lalu tap icon Hasnaria Staff.',[
+    showSheet('Pasang Hasnaria Team','Pemasangan iPhone dilakukan dari Safari. Setelah menekan Add, iOS tidak membuka aplikasi otomatis; kembali ke Home Screen lalu tap icon Hasnaria Team.',[
       'Tekan Share (kotak dengan panah ke atas).',
       'Pilih “Add to Home Screen / Tambahkan ke Layar Utama”.',
-      'Tekan Add. Setelah icon muncul di Home Screen, buka Hasnaria Staff dari icon tersebut.'
+      'Tekan Add. Setelah icon muncul di Home Screen, buka Hasnaria Team dari icon tersebut.'
     ]);
   }
 
   function explainAndroid(){
-    showSheet('Pasang Hasnaria Staff','Sesudah dipasang, portal dibuka dari icon Hasnaria dalam tampilan standalone tanpa address bar browser. Browser tidak selalu membuka PWA otomatis setelah instalasi.',[
+    showSheet('Pasang Hasnaria Team','Sesudah dipasang, portal dibuka dari icon Hasnaria dalam tampilan standalone tanpa address bar browser. Browser tidak selalu membuka PWA otomatis setelah instalasi.',[
       'Buka menu browser (⋮) bila prompt pemasangan belum muncul.',
       'Pilih “Install app” atau “Add to Home screen”.',
-      'Konfirmasi, lalu kembali ke Home Screen dan buka Hasnaria Staff dari iconnya.'
+      'Konfirmasi, lalu kembali ke Home Screen dan buka Hasnaria Team dari iconnya.'
     ]);
   }
 
   function showInstalledHint(){
-    showSheet('Hasnaria Staff sudah dipasang','Pemasangan selesai. Sistem browser tidak selalu membuka aplikasi otomatis setelah instalasi.',[
+    showSheet('Hasnaria Team sudah dipasang','Pemasangan selesai. Sistem browser tidak selalu membuka aplikasi otomatis setelah instalasi.',[
       'Kembali ke Home Screen HP.',
-      'Cari icon “Hasnaria Staff”.',
+      'Cari icon “Hasnaria Team”.',
       'Tap icon tersebut untuk membuka portal dalam mode aplikasi.'
     ]);
   }
@@ -95,7 +95,7 @@
 
   if('serviceWorker' in navigator){
     window.addEventListener('load',function(){
-      navigator.serviceWorker.register('/staff-sw.js',{scope:'/staff/'}).catch(function(err){console.warn('Hasnaria Staff SW gagal:',err);});
+      navigator.serviceWorker.register('/staff-sw.js',{scope:'/staff/'}).catch(function(err){console.warn('Hasnaria Team SW gagal:',err);});
     });
   }
 

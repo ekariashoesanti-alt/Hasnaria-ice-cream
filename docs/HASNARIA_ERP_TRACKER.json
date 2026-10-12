@@ -79,12 +79,73 @@
   ],
   "tasks": [
     {
+      "id": "HSN-616",
+      "milestone": "M6",
+      "priority": "P0",
+      "status": "REVIEW",
+      "title": "GPS absensi akurat dan pemeriksaan ulang lokasi toko",
+      "dependencies": [
+        "HSN-602",
+        "HSN-614"
+      ],
+      "acceptance": "GPS awal yang kasar/stale tidak mengunci clock; setiap percobaan memperoleh GPS baru dan akurat; hanya jarak <=50m dapat disimpan; sesi dan tampilan tetap.",
+      "owner": "Codex/ChatGPT",
+      "updated_at": "2026-10-10",
+      "notes": "GPS awal/clock mengambil fresh precise fix dengan sampling maksimum 12 detik dan accuracy<=50m; pembacaan outside lama dapat dicoba ulang. Radius pusat tetap50m dan SQL produksi tetap menolak outside.21 kasus lokasi serta25 berkas tes/full build lulus; review independen tanpa blocker. Titik toko tidak diganti tanpa bukti koordinat fisik. Acceptance GPS HP asli masih diperlukan. Bukti: docs/TEAM_ATTENDANCE_GPS_2026-10-10.md."
+    },
+    {
+      "id": "HSN-617",
+      "milestone": "M6",
+      "priority": "P1",
+      "status": "DONE",
+      "title": "Ubah nama Arum menjadi Tari dengan kredensial yang sama",
+      "dependencies": [
+        "HSN-600"
+      ],
+      "acceptance": "Employee Arum tampil sebagai Tari dengan employee ID, PIN, akses modul, outlet, dan sesi yang sama; tidak reset kredensial.",
+      "owner": "Codex/ChatGPT",
+      "updated_at": "2026-10-10",
+      "notes": "Nama Arum menjadi Tari pada employees.full_name produksi, dengan guard satu akun yang cocok. Snapshot dan assertion transaksi membuktikan PIN/access/sessions/ID dan field pegawai lain tetap; public.staff_login_directory sesudah perubahan mengembalikan Tari. Tidak memakai Owner save/reset PIN. Bukti: docs/TEAM_EMPLOYEE_RENAME_2026-10-10.md."
+    },
+    {
+      "id": "HSN-615",
+      "milestone": "M6",
+      "priority": "P1",
+      "status": "REVIEW",
+      "title": "Team Portal branding pada header dan logo HP",
+      "dependencies": [
+        "HSN-011"
+      ],
+      "acceptance": "Header memakai Team Portal/Hasnaria Team dan logo aplikasi bertuliskan TEAM; layout, jalur portal, identitas sesi, dan akses tetap.",
+      "owner": "Codex/ChatGPT",
+      "updated_at": "2026-10-08",
+      "notes": "Staff Portal menjadi Team Portal; Hasnaria Team pada header, boot screen, metadata dan bantuan instalasi; SVG logo TEAM. Layout/CSS, nama pegawai, jalur, role, session key dan RPC tetap. Versi aset/manifest serta cache PWA diperbarui. Tiga berkas tes Staff existing, full build dan review independen lulus; acceptance versi target produksi masih pending saat commit."
+    },
+    {
+      "id": "HSN-614",
+      "milestone": "M6",
+      "priority": "P0",
+      "status": "REVIEW",
+      "title": "Catatan Clock In/Out staf di lokasi toko",
+      "dependencies": [
+        "HSN-602",
+        "HSN-011"
+      ],
+      "acceptance": "Clock In/Out mengambil GPS baru dan hanya disimpan di radius toko; kartu Clock In hijau muncul dari waktu tersimpan, Clock Out merah di bawahnya; gagal simpan tidak membuat catatan; sesi dan sinkronisasi tetap aman.",
+      "owner": "Codex/ChatGPT",
+      "updated_at": "2026-10-08",
+      "notes": "Catatan masuk hijau dan pulang merah dari waktu tersimpan; GPS baru setiap klik, fallback respons mutasi, dan header GPS first-party.25 berkas tes serta full build lulus; acceptance akun Staff/GPS asli di produksi belum dilakukan. Bukti: docs/STAFF_CLOCK_HISTORY_2026-10-08.md."
+    },
+    {
       "id": "HSN-011",
       "milestone": "M0",
       "priority": "P0",
       "status": "REVIEW",
       "title": "Sinkronisasi data HP Owner/Staff dengan web tanpa perubahan UI/UX",
-      "dependencies": ["HSN-004", "HSN-602"],
+      "dependencies": [
+        "HSN-004",
+        "HSN-602"
+      ],
       "acceptance": "HP Owner, HP Staff, dan web membaca authority Supabase yang sama; perubahan eksternal disegarkan tanpa mereset form, header, navigasi, atau tampilan; mutasi dan sesi tetap dilindungi database; regression dan build lulus.",
       "owner": "Codex/ChatGPT",
       "updated_at": "2026-10-06",
@@ -2134,6 +2195,20 @@
       "acceptance": "P0 selesai, reconciliation sign-off, no unresolved critical defects.",
       "owner": "Codex/ChatGPT",
       "updated_at": "2026-09-18"
+    },
+    {
+      "id": "HSN-618",
+      "milestone": "M6",
+      "priority": "P0",
+      "status": "REVIEW",
+      "title": "GPS Android: pulih dari fix awal meleset dan izin lokasi",
+      "dependencies": [
+        "HSN-616"
+      ],
+      "acceptance": "GPS fresh yang masih outside tetap disampling; timestamp stale/future ditolak; kembali dari background/izin memperbarui preview tanpa menulis absensi otomatis; radius50m, UI dan credential tetap.",
+      "owner": "Codex/ChatGPT",
+      "updated_at": "2026-10-10",
+      "notes": "Fresh precise outside tetap disampling sampai posisi dalamradius/deadline; timestamp max5s lama/1s future; budget setelahizin/callback; resume preview tanpa autowrite.30 kasus GPS,25 berkas tes/full build, dua mode Chromium Android dan review independen lulus. Tidak ada perubahan radius50m, titik toko, UI/auth/DB. RealAndroid physicalGPS acceptance masih diperlukan. Bukti: docs/TEAM_ANDROID_GPS_2026-10-10.md."
     }
   ]
 }

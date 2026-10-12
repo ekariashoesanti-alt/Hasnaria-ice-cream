@@ -245,6 +245,11 @@ Rule-driven approvals, immutable audit, self-approval prevention, exception mode
 | HSN-514 | M5 | P0 | DONE | Financial close checklist | HSN-114, HSN-510, HSN-511 |
 | HSN-515 | M5 | P0 | REVIEW | Finance reconciliation test pack | HSN-508, HSN-510, HSN-511 |
 | HSN-600 | M6 | P0 | DONE | Employee master | HSN-101 |
+| HSN-614 | M6 | P0 | REVIEW | Catatan Clock In/Out staf di lokasi toko | HSN-602, HSN-011 |
+| HSN-615 | M6 | P1 | REVIEW | Team Portal branding pada header dan logo HP | HSN-011 |
+| HSN-616 | M6 | P0 | REVIEW | GPS absensi akurat dan pemeriksaan ulang lokasi toko | HSN-602, HSN-614 |
+| HSN-617 | M6 | P1 | DONE | Ubah nama Arum menjadi Tari dengan kredensial yang sama | HSN-600 |
+| HSN-618 | M6 | P0 | REVIEW | GPS Android: pulih dari fix awal meleset dan izin lokasi | HSN-616 |
 | HSN-601 | M6 | P0 | DONE | Shift template and roster | HSN-600, HSN-102 |
 | HSN-602 | M6 | P0 | DONE | Attendance check-in/out | HSN-601 |
 | HSN-603 | M6 | P1 | REVIEW | Late/absence rules | HSN-602 |

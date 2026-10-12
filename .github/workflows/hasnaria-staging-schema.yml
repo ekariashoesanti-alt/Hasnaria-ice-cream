@@ -1,0 +1,73 @@
+name: Hasnaria Staging Schema Preflight
+
+# Deliberately manual and validation-only. This does NOT upload SQL artifacts
+# to this public repository or commit/migrate the production database.
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: "Type CHECK_STAGING_SCHEMA to start a schema-only trial"
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hasnaria-staging-schema-preflight
+  cancel-in-progress: false
+
+jobs:
+  validate-only:
+    environment: hasnaria-staging-schema
+    if: ${{ github.repository == 'ekariashoesanti-alt/Hasnaria-ice-cream' && github.ref == 'refs/heads/main' && inputs.confirmation == 'CHECK_STAGING_SCHEMA' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout approved main branch
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Install PostgreSQL client
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client
+          psql --version >/dev/null
+          docker info --format '{{.ServerVersion}}' >/dev/null
+          supabase --version >/dev/null
+
+      - name: Run source, project and SQL guard unit tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check scripts/hasnaria_schema_only_actions.js
+          node scripts/hasnaria_schema_only_actions.js --self-test
+
+      - name: Export schema and trial restore with rollback on Singapore staging
+        shell: bash
+        env:
+          HSN_PROD_READONLY_DB_URL: ${{ secrets.HSN_PROD_READONLY_DB_URL }}
+          HSN_STAGING_DB_URL: ${{ secrets.HSN_STAGING_DB_URL }}
+          HSN_SCHEMA_OPERATION: validate-only
+        run: |
+          set -euo pipefail
+          if [[ -z "${HSN_PROD_READONLY_DB_URL}" || -z "${HSN_STAGING_DB_URL}" ]]; then
+            echo 'BLOCK: add the two database URL repository Actions secrets before running'
+            exit 1
+          fi
+          node scripts/hasnaria_schema_only_actions.js
+
+# SECURITY:
+# - Production connection must be a dedicated READ-ONLY PostgreSQL role.
+# - Production and Singapore staging project refs are enforced in the script.
+# - SQL only lives in an ephemeral GitHub runner temp folder and is deleted.
+# - No upload-artifact, cache, PR/comment, git commit or logging of SQL/password.
+# - A separate reviewed change is required to enable a real staging restore.

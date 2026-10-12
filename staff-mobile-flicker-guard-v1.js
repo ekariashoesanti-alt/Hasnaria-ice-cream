@@ -43,7 +43,7 @@ function installBootCover(){
   img.alt='Hasnaria';
   var title=document.createElement('strong');
   title.className='hfg-boot-title';
-  title.textContent='Hasnaria Staff';
+  title.textContent='Hasnaria Team';
   var note=document.createElement('span');
   note.className='hfg-boot-note';
   note.textContent='Memuat sesi…';

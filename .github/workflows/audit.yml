@@ -19,6 +19,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Staging schema workflow safety self-test
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check scripts/hasnaria_schema_only_actions.js
+          node scripts/hasnaria_schema_only_actions.js --self-test
+
       - name: JavaScript syntax
         shell: bash
         run: |
@@ -35,6 +42,9 @@ jobs:
           cat sales-board.part0.js sales-board.part1.js sales-board.part2.js sales-board.part3.js sales-board.part4.js > /tmp/hasnaria-sales-board-assembled.js
           node --check /tmp/hasnaria-sales-board-assembled.js
 
+      - name: Schema-only GitHub Actions safeguards (without credentials)
+        run: node scripts/hasnaria_schema_only_actions.js --self-test
+
       - name: Majoo importer smoke test
         run: node tests/majoo-import-v2.test.js
 
@@ -43,6 +53,9 @@ jobs:
 
       - name: Mobile and web data synchronization regressions
         run: node --test tests/*sync.test.js
+
+      - name: Staff attendance location and saved history
+        run: node --test tests/staff-clock-location.test.js tests/staff-clock-history.test.js
 
       - name: Runtime source integrity
         shell: bash
