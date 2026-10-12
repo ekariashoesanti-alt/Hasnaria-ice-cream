@@ -290,12 +290,14 @@ function harness(file, handlerName, options = {}) {
   switchedOwner.data.ui_administration_category_chart_v1[0].amount = 55;
   const newSessionLoad = switchedOwner.window.__HASNARIA_ADMIN_V1.mount({ force: true, navigation: true });
   await flush(); await flush();
-  assert.equal(switchedOwner.calls.length, oldSessionRequestCount + 3,
-    'new Owner session starts a fresh request even when old session is loading');
+  assert.equal(switchedOwner.calls.length, oldSessionRequestCount + 1,
+    'new Owner session starts a fresh catalog request even when old session is loading');
   assert.doesNotMatch(switchedOwner.rendered, /Rp10\b/,
     'new session never shows cached amount from previous Owner while fetching');
   oldSessionGate.resolve();
   await Promise.all([oldSessionLoad, newSessionLoad]); await switchedOwner.settle();
+  assert.equal(switchedOwner.calls.length, oldSessionRequestCount + 3,
+    'replacement Owner session completes all three report reads');
   assert.match(switchedOwner.rendered, /Rp55\b/,
     'new Owner report uses its own read after stale response is rejected');
 
