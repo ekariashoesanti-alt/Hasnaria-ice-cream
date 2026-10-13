@@ -57,6 +57,11 @@ jobs:
       - name: Staff attendance location and saved history
         run: node --test tests/staff-clock-location.test.js tests/staff-clock-history.test.js
 
+      - name: Purchase-Stock lineage fail-closed regressions
+        run: node --test tests/purchase-stock-lineage-guard.test.js
+      - name: P0.1/P0.2 mock frontend UAT (no business writes)
+        run: node --test tests/frontend-p01-p02-owner-mock-uat.test.js
+
       - name: Runtime source integrity
         shell: bash
         run: |
@@ -134,6 +139,22 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
+      - name: P0 private backup script fail-closed contract (no network)
+        run: node --test tests/p0-backup-operator-safety.test.js
+
+      - name: Production schema-only export guard self-test (no network)
+        run: node scripts/export_hasnaria_staging_schema_only.js --self-test
+
+      - name: Staging Singapore Preview isolation build
+        shell: bash
+        env:
+          HASNARIA_P0_STAGING_PREVIEW: '1'
+        run: |
+          set -euo pipefail
+          node scripts/vercel-build.js
+          test -s dist/auth-bootstrap.js
+          node scripts/p0_staging_isolation_gate.js --self-test
+
       - name: Required normalized-sales files
         shell: bash
         run: |
@@ -197,3 +218,80 @@ jobs:
           grep -q 'daily_metrics_read_same_brand' supabase/migrations/20260907021205_align_rls_with_runtime_role_matrix.sql
           grep -q 'private.ignore_retired_legacy_user_registry_write' supabase/migrations/20260907023723_ignore_retired_legacy_user_registry_writes.sql
           grep -qi 'revoke execute on function private.guard_profile_authority' supabase/migrations/20260907071242_revoke_profile_authority_trigger_execute.sql
+
+
+  # Real DDL + runtime assertions run in a disposable Postgres service.
+  # This never connects to Hasnaria Supabase production (or to a paid branch).
+  p0-postgres-integration:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: hasnaria_p0_fixture
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d hasnaria_p0_fixture"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Execute isolated Hasnaria P0 migrations and behavioral regression
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: "5432"
+          PGUSER: postgres
+          PGPASSWORD: postgres
+          PGDATABASE: hasnaria_p0_fixture
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! command -v psql >/dev/null 2>&1; then
+            sudo apt-get update -qq
+            sudo apt-get install -y postgresql-client
+          fi
+          psql -v ON_ERROR_STOP=1 -f tests/fixtures/p0-postgres-fixture.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261011110000_guard_purchase_stock_source_lineage.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261011180000_stock_reconciliation_ledger_parity.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261011190000_guard_purchase_receipt_verified_units.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261011193000_owner_review_undo_guard_compat.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261011194500_private_orphan_receipt_evidence_triage.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261011200000_owner_purchase_source_unit_attestations.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261011210000_private_orphan_active_ledger_gate.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261011220000_private_purchase_unit_mapping_triage.sql
+          psql -v ON_ERROR_STOP=1 -f tests/fixtures/p0-postgres-assertions.sql
+          psql -v ON_ERROR_STOP=1 -f tests/fixtures/p0-postgres-owner-evidence.sql
+          psql -v ON_ERROR_STOP=1 -f tests/fixtures/p0-postgres-orphan-ledger-exposure.sql
+          psql -v ON_ERROR_STOP=1 -f tests/fixtures/p0-postgres-owner-unit-attestations.sql
+          psql -v ON_ERROR_STOP=1 -f tests/fixtures/p0-postgres-unit-mapping-triage.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261011223000_owner_conversion_no_recipe_bom.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261011230000_owner_orphan_receipt_evidence_reviews.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261011233000_owner_master_unit_evidence_review.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261011234000_p03_owner_purchase_mapping_decisions.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261011235000_p03_p04_owner_readiness_reports.sql
+          psql -v ON_ERROR_STOP=1 -f tests/fixtures/p0-postgres-owner-orphan-evidence-approve.sql
+          psql -v ON_ERROR_STOP=1 -f tests/fixtures/p0-postgres-owner-orphan-ambiguous.sql
+          psql -v ON_ERROR_STOP=1 -f tests/fixtures/p0-postgres-owner-master-unit-attestations.sql
+          psql -v ON_ERROR_STOP=1 -f tests/fixtures/p0-postgres-p03-p04-readiness.sql
+          psql -v ON_ERROR_STOP=1 -f tests/fixtures/p0-postgres-owner-conversion-no-bom.sql
+          psql -v ON_ERROR_STOP=1 -f tests/fixtures/p0-postgres-owner-unit-roles.sql
+          # Exercise manual rollback/re-apply against the same ephemeral fixtures.
+          psql -v ON_ERROR_STOP=1 -f supabase/rollback/20261011180000_restore_stock_reconciliation.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261011180000_stock_reconciliation_ledger_parity.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/rollback/20261011190000_pause_purchase_stock_sync.sql
+          psql -v ON_ERROR_STOP=1 -f tests/fixtures/p0-postgres-rollback-rls.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/rollback/20261011200000_pause_owner_unit_attestations.sql
+          psql -v ON_ERROR_STOP=1 -f tests/fixtures/p0-postgres-owner-unit-rollback.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/rollback/20261011223000_pause_owner_conversion_no_bom.sql
+          psql -v ON_ERROR_STOP=1 -f tests/fixtures/p0-postgres-conversion-emergency-pause.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/rollback/20261011230000_pause_owner_orphan_receipt_reviews.sql
+          psql -v ON_ERROR_STOP=1 -f tests/fixtures/p0-postgres-owner-orphan-review-pause.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/rollback/20261011233000_pause_owner_master_unit_reviews.sql
+          psql -v ON_ERROR_STOP=1 -f tests/fixtures/p0-postgres-owner-master-pause.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/rollback/20261011234000_pause_p03_owner_mapping_reviews.sql
+          psql -v ON_ERROR_STOP=1 -f tests/fixtures/p0-postgres-p03-emergency-pause.sql

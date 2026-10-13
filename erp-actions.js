@@ -106,7 +106,14 @@
     }
     if(type==='pack_conversion'){
       if(!meta.conversion_id) throw new Error('Conversion ID tidak tersedia.');
-      return {rpc:'resolve_inventory_conversion',params:{p_conversion_id:meta.conversion_id,p_units_per_purchase_unit:positive(values.units_per_purchase_unit,'Isi per pack'),p_reason:reason(values.reason)}};
+      const evidence=String(values.source_reference||'').trim();
+      if(evidence.length<8) throw new Error('Referensi bukti kemasan/nota minimal 8 karakter.');
+      if(values.confirm_packaging!=='on') throw new Error('Owner wajib menyatakan sudah memeriksa bukti fisik satuan kemasan.');
+      const explanation=reason(values.reason);
+      if(explanation.length<20) throw new Error('Alasan keputusan minimal 20 karakter.');
+      const auditReason='Bukti: '+evidence+' | Verifikasi Owner: '+explanation;
+      if(auditReason.length>1000) throw new Error('Catatan bukti maksimal 1000 karakter.');
+      return {rpc:'resolve_inventory_conversion',params:{p_conversion_id:meta.conversion_id,p_units_per_purchase_unit:positive(values.units_per_purchase_unit,'Isi per pack'),p_reason:auditReason}};
     }
     if(type==='recipe_verification'){
       if(!meta.product_id) throw new Error('Product ID tidak tersedia.');
@@ -219,7 +226,7 @@
   function formHtml(action){
     const meta=action.metadata||{},type=action.action_type;let body='',submitLabel='Simpan keputusan';
     if(type==='pack_conversion'){
-      body='<p class="erp-note warn">Isi per pack harus berasal dari kemasan/supplier yang benar. Jangan menebak.</p><label>Isi per pack<input name="units_per_purchase_unit" type="number" min="0.000001" step="any" required placeholder="Contoh: 50"></label>';submitLabel='Verifikasi konversi';
+      body='<p class="erp-note warn"><b>Pengaman P0:</b> verifikasi isi kemasan Pembelian <b>tidak</b> mengubah resep/BOM, pemakaian per porsi, penerimaan Stok, ataupun jurnal. Periksa unit SKU dan angka pada kemasan/nota asli. Jika satuan master masih purchase_unit atau tidak cocok, verifikasi akan ditolak.</p><label>Isi per kemasan dalam satuan SKU<input name="units_per_purchase_unit" type="number" min="0.000001" step="any" required placeholder="Masukkan dari bukti, bukan perkiraan"></label><label class="erp-wide">Referensi bukti kemasan / nota<input name="source_reference" required minlength="8" maxlength="300" placeholder="Contoh: Foto kemasan 11/10/2026 atau Invoice SUP-123"></label><label class="erp-wide erp-check"><input name="confirm_packaging" type="checkbox" required> Saya sebagai Owner sudah memeriksa satuan master dan isi kemasan secara fisik atau dari dokumen supplier</label>';submitLabel='Setujui konversi satuan saja';
     }else if(type==='recipe_verification'){
       body='<p class="erp-note warn">Verifikasi hanya jika BOM, komponen, dan qty per penjualan sudah lengkap. HPP dan konsumsi stok hanya berlaku untuk transaksi pada/ setelah tanggal yang dipilih.</p><div class="erp-wide erp-note"><b>Ringkasan resep</b><br>'+esc(meta.recipe_summary||'Belum tersedia')+'<br><small>Komponen aktif: '+number(meta.active_components)+'</small></div><label>Tanggal mulai berlaku<input name="effective_from" type="date" max="'+todayJakarta()+'" required></label>';submitLabel='Verifikasi resep';
     }else if(type==='missing_component_cost'){
