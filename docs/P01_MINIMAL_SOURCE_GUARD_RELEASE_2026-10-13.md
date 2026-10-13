@@ -17,3 +17,12 @@
 5. After approved apply, verify trigger installed **exactly once**, source receipt ledger and financial baseline unchanged, and audit logs show no unauthorized re-import.
 
 **CURRENT STATE: DRAFT. Production backup+restore and authentic UAT not yet verified. DO NOT DEPLOY or merge solely due to CI.**
+
+## Emergency rollback rehearsal (isolated CI, not deployment)
+
+A separate manual-only rollback file exists at `supabase/rollback/20261011110000_source_guard_emergency.sql`:
+- Defaults to **DENY**, unless an authorized SQL operator deliberately sets the acknowledgement within the **same** database transaction.
+- Removes **only** the `offline_purchase_history` source-lineage trigger, preserving function definition and all Purchase/Stock data.
+- Disabling this guard **reintroduces the original re-import corruption risk**. Pause Purchase imports and obtain explicit Owner/DBA emergency approval *before* any exceptional rollback; prefer pausing import writers while preserving the guard.
+- PostgreSQL 17 CI checks a rollback without acknowledgement is denied; rehearses approved disable **within a disposable transaction** and rolls it back; confirms the original guard remains enabled and business rows are intact.
+- CI rollback rehearsal is **not** a substitute for a restorable production backup, authenticated app UAT or a production restoration exercise. No rollback must run automatically as part of deployment.

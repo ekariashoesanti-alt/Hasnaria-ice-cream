@@ -6,6 +6,7 @@ on:
       - 'supabase/migrations/20261011110000_guard_purchase_stock_source_lineage.sql'
       - 'tests/fixtures/p01-standalone-*'
       - '.github/workflows/p01-standalone-guard.yml'
+      - 'supabase/rollback/20261011110000_source_guard_emergency.sql'
   workflow_dispatch:
 
 permissions:
@@ -43,3 +44,18 @@ jobs:
           psql --set ON_ERROR_STOP=1 --file tests/fixtures/p01-standalone-fixture.sql
           psql --set ON_ERROR_STOP=1 --file supabase/migrations/20261011110000_guard_purchase_stock_source_lineage.sql
           psql --set ON_ERROR_STOP=1 --file tests/fixtures/p01-standalone-assertions.sql
+          # Absent explicit change approval, emergency rollback must fail closed.
+          if psql --set ON_ERROR_STOP=1 --file supabase/rollback/20261011110000_source_guard_emergency.sql >/dev/null 2>&1; then
+            echo 'Unsafe: unapproved emergency rollback unexpectedly succeeded' >&2
+            exit 1
+          fi
+          psql --set ON_ERROR_STOP=1 --file tests/fixtures/p01-rollback-survival.sql
+          # Exercise the approved rollback inside a disposable transaction, then undo it.
+          psql --set ON_ERROR_STOP=1 \
+            --command 'BEGIN' \
+            --command "SET LOCAL hasnaria.p01_emergency_approval = 'OWNER_DBA_CONFIRMED_STOP_IMPORTS'" \
+            --file supabase/rollback/20261011110000_source_guard_emergency.sql \
+            --file tests/fixtures/p01-rollback-disabled.sql \
+            --command 'ROLLBACK'
+          psql --set ON_ERROR_STOP=1 --file tests/fixtures/p01-rollback-survival.sql
+
