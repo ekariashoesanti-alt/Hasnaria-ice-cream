@@ -1,5 +1,7 @@
 -- ISOLATED POSTGRES TEST FIXTURE. Never run on Hasnaria production.
 CREATE SCHEMA private;
+CREATE ROLE anon NOLOGIN;
+CREATE ROLE authenticated NOLOGIN;
 CREATE TABLE public.offline_purchase_history (
  id uuid PRIMARY KEY, brand_id uuid NOT NULL, source_period date,
  source_file text, row_no integer, purchase_date date, item_name text,
