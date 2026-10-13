@@ -323,6 +323,21 @@ function harness(file, handlerName, options = {}) {
   assert.doesNotMatch(oldDetailMonth.rendered, /Old October Private Detail/,
     'stale detail query cannot overwrite modal rows after month changes');
 
+  const reopenedDetail = harness('administration-v1.js', 'owner-administration-report');
+  await reopenedDetail.start();
+  const heldClosedDetail = deferred();
+  reopenedDetail.data.ui_administration_detail_v1 = [{ item_name: 'Closed Dialog Old Rows' }];
+  reopenedDetail.control.gates = { ui_administration_detail_v1: heldClosedDetail };
+  reopenedDetail.openModal(); await flush();
+  reopenedDetail.closeModal();
+  reopenedDetail.data.ui_administration_detail_v1 = [{ item_name: 'Reopened Dialog New Rows' }];
+  reopenedDetail.control.gates = {};
+  reopenedDetail.openModal(); await reopenedDetail.settle();
+  assert.match(reopenedDetail.rendered, /Reopened Dialog New Rows/);
+  heldClosedDetail.resolve(); await reopenedDetail.settle();
+  assert.doesNotMatch(reopenedDetail.rendered, /Closed Dialog Old Rows/,
+    'closing and reopening the detail dialog invalidates its old pending query');
+
   const oldDetailSession = harness('administration-v1.js', 'owner-administration-report');
   await oldDetailSession.start();
   const heldSessionDetail = deferred();
