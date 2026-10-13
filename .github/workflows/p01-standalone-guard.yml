@@ -59,3 +59,21 @@ jobs:
             --command 'ROLLBACK'
           psql --set ON_ERROR_STOP=1 --file tests/fixtures/p01-rollback-survival.sql
 
+  preview-database-isolation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Production and Preview backend separation build
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Production build must retain its established Tokyo backend.
+          env -u VERCEL_ENV -u HASNARIA_P0_STAGING_PREVIEW node scripts/vercel-build.js
+          test -f dist/auth-bootstrap.js
+          grep -q 'bnnhmtkpdjlgehsvgoda.supabase.co' dist/auth-bootstrap.js
+          # Preview build MUST rewrite all runtime references to Singapore.
+          HASNARIA_P0_STAGING_PREVIEW=1 node scripts/vercel-build.js
+          HASNARIA_STAGING_PROJECT_REF=rynnpndtzjwpekbiwiif \
+            HASNARIA_STAGING_PUBLISHABLE_KEY=sb_publishable_aPnlp0dEfAuFxLrjX5RoUA_70BQjAZ8 \
+            node scripts/p0_staging_isolation_gate.js dist
+          node scripts/p0_staging_isolation_gate.js --self-test

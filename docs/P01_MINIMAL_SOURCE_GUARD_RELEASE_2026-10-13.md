@@ -26,3 +26,11 @@ A separate manual-only rollback file exists at `supabase/rollback/20261011110000
 - Disabling this guard **reintroduces the original re-import corruption risk**. Pause Purchase imports and obtain explicit Owner/DBA emergency approval *before* any exceptional rollback; prefer pausing import writers while preserving the guard.
 - PostgreSQL 17 CI checks a rollback without acknowledgement is denied; rehearses approved disable **within a disposable transaction** and rolls it back; confirms the original guard remains enabled and business rows are intact.
 - CI rollback rehearsal is **not** a substitute for a restorable production backup, authenticated app UAT or a production restoration exercise. No rollback must run automatically as part of deployment.
+
+## Preview database isolation (October 14 follow-up)
+
+**Important:** the initial P0.1 PR #90 Preview compiled from main connected directly to the Tokyo production Supabase. Its successful deployment was NOT safe evidence for Owner/Staff UAT. Do not use that older Preview URL for business changes.
+
+This release candidate now imports the Preview-only, fail-closed Singapore rewrite used in PR #88 (build script and runtime isolation validator) plus the minimal CSP staging connection allowance. Vercel **Production** build keeps Tokyo backend; **Preview** build rewrites all emitted text runtime project references to Singapore and blocks deploy if any Tokyo ref is found. Dedicated CI verifies both outputs.
+
+**Caution:** Singapore staging currently contains no business public tables. This protects production from Preview activity, but genuine Owner/Staff UAT remains **BLOCKED** until schema-only staging setup and synthetic users/data are ready; a successful isolated Preview build is not functional UAT. No production business or Auth data should be copied.
