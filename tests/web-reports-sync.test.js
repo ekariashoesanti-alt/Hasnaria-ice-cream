@@ -301,6 +301,47 @@ function harness(file, handlerName, options = {}) {
   assert.match(switchedOwner.rendered, /Rp55\b/,
     'new Owner report uses its own read after stale response is rejected');
 
+  const oldDetailMonth = harness('administration-v1.js', 'owner-administration-report');
+  oldDetailMonth.data.ui_period_catalog_v1.push({ period_start: '2026-09-01', period_key: '2026-09' });
+  await oldDetailMonth.start();
+  const heldDetail = deferred();
+  oldDetailMonth.data.ui_administration_detail_v1 = [{ item_name: 'Old October Private Detail' }];
+  oldDetailMonth.control.gates = { ui_administration_detail_v1: heldDetail };
+  oldDetailMonth.openModal();
+  await flush();
+  oldDetailMonth.data.ui_administration_detail_v1 = [{ item_name: 'New September Detail' }];
+  oldDetailMonth.changePeriod('2026-09');
+  oldDetailMonth.control.gates = {};
+  await oldDetailMonth.settle();
+  oldDetailMonth.openModal();
+  await oldDetailMonth.settle();
+  assert.match(oldDetailMonth.rendered, /New September Detail/,
+    'new month modal loads its own rows without waiting for the prior month');
+  heldDetail.resolve();
+  await oldDetailMonth.settle();
+  assert.match(oldDetailMonth.rendered, /New September Detail/);
+  assert.doesNotMatch(oldDetailMonth.rendered, /Old October Private Detail/,
+    'stale detail query cannot overwrite modal rows after month changes');
+
+  const oldDetailSession = harness('administration-v1.js', 'owner-administration-report');
+  await oldDetailSession.start();
+  const heldSessionDetail = deferred();
+  oldDetailSession.data.ui_administration_detail_v1 = [{ item_name: 'Previous Owner Detail' }];
+  oldDetailSession.control.gates = { ui_administration_detail_v1: heldSessionDetail };
+  oldDetailSession.openModal();
+  await flush();
+  oldDetailSession.window.__HASNARIA_CONTEXT = { role: 'owner' };
+  oldDetailSession.data.ui_administration_detail_v1 = [{ item_name: 'Current Owner Detail' }];
+  oldDetailSession.control.gates = {};
+  await oldDetailSession.window.__HASNARIA_ADMIN_V1.mount({ force: true, navigation: true });
+  await oldDetailSession.settle();
+  oldDetailSession.openModal();
+  await oldDetailSession.settle();
+  assert.match(oldDetailSession.rendered, /Current Owner Detail/);
+  heldSessionDetail.resolve();
+  await oldDetailSession.settle();
+  assert.doesNotMatch(oldDetailSession.rendered, /Previous Owner Detail/,
+    'prior Owner detail must not leak into the replacement session');
   const quickMonth = harness('administration-v1.js', 'owner-administration-report');
   quickMonth.data.ui_period_catalog_v1.push({ period_start: '2026-09-01', period_key: '2026-09' });
   await quickMonth.start();

@@ -4,12 +4,12 @@ if(window.__HASNARIA_ADMIN_V2&&typeof window.__HASNARIA_ADMIN_V2.mount==='functi
 
 var BRAND='a36d4b4f-3ccc-4a78-8aeb-b868f0407ea4';
 var MONTHS=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
-var S={periods:[],period:'',overview:null,chart:[],detail:[],loading:false,error:'',detailOpen:false,detailLoading:false,detailError:'',seq:0,loadedAt:0,dataContext:null,syncing:false};
+var S={periods:[],period:'',overview:null,chart:[],detail:[],loading:false,error:'',detailOpen:false,detailLoading:false,detailError:'',detailSeq:0,seq:0,loadedAt:0,dataContext:null,syncing:false};
 
 function resetIfSessionChanged(){
  var current=window.__HASNARIA_CONTEXT;
  if(!((S.dataContext&&S.dataContext!==current)||(S.loading&&S.requestContext!==current)))return;
- ++S.seq;S.loading=false;S.loadedAt=0;S.dataContext=null;S.requestContext=null;
+ ++S.seq;++S.detailSeq;S.loading=false;S.loadedAt=0;S.dataContext=null;S.requestContext=null;
  S.periods=[];S.period='';S.overview=null;S.chart=[];S.detail=[];S.detailOpen=false;S.detailLoading=false;S.detailError='';S.error='';
 }
 function db(){return window.__HASNARIA_DB}
@@ -85,22 +85,26 @@ async function loadSummary(force){
  finally{if(seq===S.seq){if(context!==window.__HASNARIA_CONTEXT){resetIfSessionChanged()}else{S.loading=false;render()}}}
 }
 async function loadDetail(){
- if(!S.period||S.detailLoading)return;S.detailLoading=true;S.detailError='';S.detail=[];render();
+ if(!S.period||S.detailLoading)return;
+ var seq=++S.detailSeq,period=S.period,context=window.__HASNARIA_CONTEXT;
+ S.detailLoading=true;S.detailError='';S.detail=[];render();
+ function current(){return seq===S.detailSeq&&period===S.period&&context===window.__HASNARIA_CONTEXT&&context&&context.role==='owner'&&S.detailOpen}
  try{
-   var q=await db().from('ui_administration_detail_v1').select('*').eq('brand_id',BRAND).eq('period_month',S.period+'-01').order('purchase_date',{ascending:false});
+   var q=await db().from('ui_administration_detail_v1').select('*').eq('brand_id',BRAND).eq('period_month',period+'-01').order('purchase_date',{ascending:false});
+   if(!current())return;
    if(q.error)throw q.error;S.detail=q.data||[];
- }catch(e){S.detailError=e&&e.message?e.message:String(e)}
- finally{S.detailLoading=false;render()}
+ }catch(e){if(current())S.detailError=e&&e.message?e.message:String(e)}
+ finally{if(seq===S.detailSeq){S.detailLoading=false;if(current())render()}}
 }
 function bind(h){
  h.onclick=function(e){
    var close=e.target&&e.target.closest?e.target.closest('[data-ad5-close]'):null;
-   if(close&&(e.target===close||close.classList.contains('ad5-close'))){S.detailOpen=false;render();return}
+   if(close&&(e.target===close||close.classList.contains('ad5-close'))){++S.detailSeq;S.detailLoading=false;S.detailOpen=false;S.detail=[];render();return}
    var detail=e.target&&e.target.closest?e.target.closest('[data-ad5-detail]'):null;
    if(detail){S.detailOpen=true;loadDetail();return}
  };
  h.onchange=function(e){
-   if(e.target&&e.target.id==='ad5Period'){S.period=key(e.target.value);S.loadedAt=0;S.overview=null;S.chart=[];S.detail=[];S.detailOpen=false;loadSummary(false)}
+   if(e.target&&e.target.id==='ad5Period'){S.period=key(e.target.value);++S.detailSeq;S.detailLoading=false;S.loadedAt=0;S.overview=null;S.chart=[];S.detail=[];S.detailOpen=false;loadSummary(false)}
  };
  h.onkeydown=function(e){if(e.key==='Escape'&&S.detailOpen){S.detailOpen=false;render()}};
 }
