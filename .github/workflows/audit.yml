@@ -57,6 +57,9 @@ jobs:
       - name: Staff attendance location and saved history
         run: node --test tests/staff-clock-location.test.js tests/staff-clock-history.test.js
 
+      - name: P0.3 P0.4 Owner reconciliation mock UAT
+        run: node --test tests/p03-p04-owner-ui.test.js
+
       - name: Runtime source integrity
         shell: bash
         run: |
