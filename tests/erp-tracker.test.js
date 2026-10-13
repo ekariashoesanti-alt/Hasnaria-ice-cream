@@ -182,9 +182,9 @@ assert(purchaseFinanceSource.includes('finance_link_status') && purchaseFinanceS
 assert(purchaseFinanceSource.includes('id="pfaCategory"'), 'Purchase canonical expense filter must be owned by the canonical panel');
 assert(purchaseFinanceSource.includes("legacyScope.closest('label').style.display='none'"), 'legacy analytics scope must be hidden instead of repurposed');
 assert(!purchaseFinanceSource.includes("e.target.id==='paScope'"), 'canonical category filter must not race the legacy Purchase renderer');
-assert(purchaseFinanceSource.includes("sync_purchase_quantity_stock_v1"), 'Purchase screen must sync eligible quantities into Stock');
+assert(!purchaseFinanceSource.includes("sync_purchase_quantity_stock_v1"), 'Purchase screen must never auto-post unverified quantity into Stock');
 assert(!purchaseFinanceSource.includes('if(n(control.stock_ready_rows)>0)'), 'opening/rendering Purchase must not trigger Stock synchronization');
-assert(purchaseFinanceSource.includes("addEventListener('hasnaria:purchase-imported'"), 'Stock synchronization must be triggered by a successful Purchase import event');
+assert(purchaseFinanceSource.includes("addEventListener('hasnaria:purchase-imported'"), 'Successful Purchase import must refresh reports without automatically posting Stock');
 assert(purchaseFinanceSource.includes('6100 · Administrasi') && purchaseFinanceSource.includes('6110 · Pemeliharaan') && purchaseFinanceSource.includes('6120 · Bahan Baku') && purchaseFinanceSource.includes('6200 · Kepegawaian'), 'Purchase screen must expose the four expense account codes');
 assert(!purchaseFinanceSource.includes('Persediaan · 1300'), 'Purchase screen must not present inventory value as the management expense model');
 assert(purchasePeriodRpcFastPath.includes('security definer'), 'legacy selected-period fast path must remain protected by one authenticated brand check');
