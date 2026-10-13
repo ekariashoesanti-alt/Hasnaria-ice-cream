@@ -34,3 +34,12 @@ A separate manual-only rollback file exists at `supabase/rollback/20261011110000
 This release candidate now imports the Preview-only, fail-closed Singapore rewrite used in PR #88 (build script and runtime isolation validator) plus the minimal CSP staging connection allowance. Vercel **Production** build keeps Tokyo backend; **Preview** build rewrites all emitted text runtime project references to Singapore and blocks deploy if any Tokyo ref is found. Dedicated CI verifies both outputs.
 
 **Caution:** Singapore staging currently contains no business public tables. This protects production from Preview activity, but genuine Owner/Staff UAT remains **BLOCKED** until schema-only staging setup and synthetic users/data are ready; a successful isolated Preview build is not functional UAT. No production business or Auth data should be copied.
+
+## Production P0.2 Owner documentary review — activated 14 Oct 2026
+
+- Applied `20261011233000_owner_master_unit_evidence_review.sql` directly to Tokyo Supabase using migration name `hsn_p02_owner_documentary_master_unit_review_v1`. SQL source in this PR is identical to the audited draft in PR #88, not a second deployment instruction. **Do not automatically replay this SQL** as if unapplied; reconcile the migration history first.
+- Verified private RLS is enabled; no `anon` SELECT to the private table, no direct `authenticated` INSERT, and no `anon` EXECUTE on public Owner queue. Table initially empty.
+- Read-only production baseline after DDL: 198 SKUs, 1,059 Purchase history rows, 703 receipts and 703 generated movements; no Stock, recipe, Finance, or master SKU value changed by this migration.
+- Frontend Owner-only modal included; staff must never see or call queue; Owner decisions only document physical evidence, not execute inventory balance or quantity conversion changes.
+- **Production frontend remains to be verified separately** after controlled Vercel release. Do not call the documentary feature complete without Owner authenticated smoke UAT and the real physical evidence.
+- Complete restore-proven database backup is still outstanding; this DDL does not provide recovery for historical data. Stop at documentary review: do NOT deploy posting/mass unit conversion or change historical SKU stock values.
