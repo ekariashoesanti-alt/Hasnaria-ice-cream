@@ -7,6 +7,10 @@ on:
       - 'tests/fixtures/p01-standalone-*'
       - '.github/workflows/p01-standalone-guard.yml'
       - 'supabase/rollback/20261011110000_source_guard_emergency.sql'
+      - 'owner-master-unit-review-v1.js'
+      - 'purchase-finance-alignment-v1.css'
+      - 'index.html'
+      - 'tests/p02-owner-documentary-ui.test.js'
   workflow_dispatch:
 
 permissions:
@@ -63,6 +67,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: P0.2 Owner documentary review mock UI isolation
+        run: node --test tests/p02-owner-documentary-ui.test.js
       - name: Production and Preview backend separation build
         shell: bash
         run: |
