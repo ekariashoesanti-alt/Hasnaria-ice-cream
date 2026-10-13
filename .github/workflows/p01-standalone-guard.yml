@@ -1,0 +1,45 @@
+name: Hasnaria P0.1 Standalone Guard
+
+on:
+  pull_request:
+    paths:
+      - 'supabase/migrations/20261011110000_guard_purchase_stock_source_lineage.sql'
+      - 'tests/fixtures/p01-standalone-*'
+      - '.github/workflows/p01-standalone-guard.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  isolated-source-guard:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: hasnaria_p01_fixture
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d hasnaria_p01_fixture"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Isolated fixture and fail-closed behavior tests
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: "5432"
+          PGUSER: postgres
+          PGPASSWORD: postgres
+          PGDATABASE: hasnaria_p01_fixture
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql --set ON_ERROR_STOP=1 --file tests/fixtures/p01-standalone-fixture.sql
+          psql --set ON_ERROR_STOP=1 --file supabase/migrations/20261011110000_guard_purchase_stock_source_lineage.sql
+          psql --set ON_ERROR_STOP=1 --file tests/fixtures/p01-standalone-assertions.sql
