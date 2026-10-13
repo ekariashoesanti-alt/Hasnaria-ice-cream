@@ -1,0 +1,85 @@
+name: Hasnaria P0.1 Standalone Guard
+
+on:
+  pull_request:
+    paths:
+      - 'supabase/migrations/20261011110000_guard_purchase_stock_source_lineage.sql'
+      - 'tests/fixtures/p01-standalone-*'
+      - '.github/workflows/p01-standalone-guard.yml'
+      - 'supabase/rollback/20261011110000_source_guard_emergency.sql'
+      - 'owner-master-unit-review-v1.js'
+      - 'purchase-finance-alignment-v1.css'
+      - 'index.html'
+      - 'tests/p02-owner-documentary-ui.test.js'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  isolated-source-guard:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: hasnaria_p01_fixture
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d hasnaria_p01_fixture"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Isolated fixture and fail-closed behavior tests
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: "5432"
+          PGUSER: postgres
+          PGPASSWORD: postgres
+          PGDATABASE: hasnaria_p01_fixture
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql --set ON_ERROR_STOP=1 --file tests/fixtures/p01-standalone-fixture.sql
+          psql --set ON_ERROR_STOP=1 --file supabase/migrations/20261011110000_guard_purchase_stock_source_lineage.sql
+          psql --set ON_ERROR_STOP=1 --file tests/fixtures/p01-standalone-assertions.sql
+          # Absent explicit change approval, emergency rollback must fail closed.
+          if psql --set ON_ERROR_STOP=1 --file supabase/rollback/20261011110000_source_guard_emergency.sql >/dev/null 2>&1; then
+            echo 'Unsafe: unapproved emergency rollback unexpectedly succeeded' >&2
+            exit 1
+          fi
+          psql --set ON_ERROR_STOP=1 --file tests/fixtures/p01-rollback-survival.sql
+          # Exercise the approved rollback inside a disposable transaction, then undo it.
+          psql --set ON_ERROR_STOP=1 \
+            --command 'BEGIN' \
+            --command "SET LOCAL hasnaria.p01_emergency_approval = 'OWNER_DBA_CONFIRMED_STOP_IMPORTS'" \
+            --file supabase/rollback/20261011110000_source_guard_emergency.sql \
+            --file tests/fixtures/p01-rollback-disabled.sql \
+            --command 'ROLLBACK'
+          psql --set ON_ERROR_STOP=1 --file tests/fixtures/p01-rollback-survival.sql
+
+  preview-database-isolation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: P0.2 Owner documentary review mock UI isolation
+        run: node --test tests/p02-owner-documentary-ui.test.js
+      - name: Production and Preview backend separation build
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Production build must retain its established Tokyo backend.
+          env -u VERCEL_ENV -u HASNARIA_P0_STAGING_PREVIEW node scripts/vercel-build.js
+          test -f dist/auth-bootstrap.js
+          grep -q 'bnnhmtkpdjlgehsvgoda.supabase.co' dist/auth-bootstrap.js
+          # Preview build MUST rewrite all runtime references to Singapore.
+          HASNARIA_P0_STAGING_PREVIEW=1 node scripts/vercel-build.js
+          HASNARIA_STAGING_PROJECT_REF=rynnpndtzjwpekbiwiif \
+            HASNARIA_STAGING_PUBLISHABLE_KEY=sb_publishable_aPnlp0dEfAuFxLrjX5RoUA_70BQjAZ8 \
+            node scripts/p0_staging_isolation_gate.js dist
+          node scripts/p0_staging_isolation_gate.js --self-test

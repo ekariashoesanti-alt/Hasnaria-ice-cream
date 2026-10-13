@@ -28,3 +28,39 @@ html body #app #pembelian .pa-root:has(>#purchaseFinanceAlignment)>.pa-controls{
 }
 @media(max-width:900px){.pfa-cards{grid-template-columns:repeat(2,minmax(0,1fr))}.pfa-main-grid{grid-template-columns:1fr}}
 @media(max-width:560px){.pfa-wrap{padding:12px}.pfa-cards{grid-template-columns:1fr 1fr}.pfa-card strong{font-size:14px}.pfa-head p{font-size:10.5px}.pfa-detail-cta button{width:100%}.pfa-modal-backdrop{padding:8px}.pfa-modal{width:100%;max-height:94vh;padding:11px}.pfa-modal-tools{justify-content:stretch}.pfa-modal-filter,.pfa-modal-filter select{width:100%}}
+
+
+/* Owner Purchase -> Stock unit verification (documentation only, no auto post). */
+.pfa-unit-entry{margin-top:12px;border-top:1px solid #e3ede7;padding-top:14px}
+.pfa-unit-entry button,.pfa-unit-controls button,.pfa-unit-table button,.pfa-unit-form>button{
+  cursor:pointer;border:1px solid #c9ddd3;border-radius:9px;background:#f5fbf8;color:#176b55;
+  font:inherit;font-size:12px;font-weight:650;padding:8px 12px;min-height:34px;white-space:nowrap
+}
+.pfa-unit-entry button:hover,.pfa-unit-controls button:hover,.pfa-unit-table button:hover{background:#eaf6ef}
+.pfa-unit-modal{width:min(1040px,calc(100vw - 26px));max-height:min(86vh,900px);overflow-y:auto}
+.pfa-unit-table{max-height:290px;overflow:auto;border:1px solid #dbe8e0;border-radius:10px;margin:12px 0}
+.pfa-unit-table table{width:100%;min-width:650px}
+.pfa-unit-active{background:#edf8f1}
+.pfa-unit-table small{display:block;font-size:11px;color:#6b776f}
+.pfa-unit-form{margin-top:15px;padding:14px;border:1px solid #cfe4d8;border-radius:12px;background:#f8fbfa}
+.pfa-unit-form h4{font-size:15px;color:#174835;margin:0 0 4px}
+.pfa-unit-form p{font-size:12px;color:#354b3f;margin:5px 0}
+.pfa-unit-form .pfa-unit-hint{color:#7d5c16}
+.pfa-unit-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:12px}
+.pfa-unit-fields label,.pfa-unit-form>label{font-size:12px;font-weight:650;color:#274638;display:flex;flex-direction:column;gap:5px}
+.pfa-unit-fields input,.pfa-unit-fields textarea,.pfa-unit-form>label textarea{
+  width:100%;box-sizing:border-box;font:inherit;font-size:13px;color:#263d32;
+  padding:9px 11px;border:1px solid #c9d9cf;border-radius:9px;background:#fff;min-width:0
+}
+.pfa-unit-fields textarea{resize:vertical}
+.pfa-unit-controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px}
+.pfa-unit-controls .primary{background:#176b55;color:#fff}
+.pfa-unit-preview{margin-top:12px;padding:10px 12px;background:#ebf7ef;color:#164b33;border:1px solid #cae3d2;border-radius:8px;font-size:12px}
+.pfa-unit-success{margin-top:12px;padding:10px 12px;border-radius:8px;color:#176b55;background:#eef9f2;font-size:13px}
+@media(max-width:640px){
+  .pfa-unit-fields{grid-template-columns:1fr}
+  .pfa-unit-modal{padding:14px;width:calc(100vw - 16px)}
+  .pfa-unit-table{max-height:250px}
+  .pfa-unit-entry{align-items:stretch}
+  .pfa-unit-entry button{width:100%}
+}
