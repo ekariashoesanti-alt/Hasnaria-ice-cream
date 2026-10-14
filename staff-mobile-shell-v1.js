@@ -177,7 +177,13 @@
     var b=hiddenStaffButton(mod)||q('[data-mod="'+mod+'"]');
     if(!b||b.disabled)return;
     b.click();
-    if(sub)setTimeout(function(){var s=q('[data-sub="'+sub+'"]');if(s)s.click();},80);
+    // Navigation menu is rendered synchronously; never rely on an 80 ms race
+    // against network or CPU load to open Clock In/Out on older Android.
+    if(sub){
+      var target=q('[data-sub="'+sub+'"]');
+      if(target)target.click();
+      else setTimeout(function(){var delayed=q('[data-sub="'+sub+'"]');if(delayed)delayed.click();},120);
+    }
   }
   function routeOwner(tab){removeOverlay();var b=q('.owner-mobile-nav [data-otab="'+tab+'"]')||q('[data-otab="'+tab+'"]');if(b)b.click();}
 
