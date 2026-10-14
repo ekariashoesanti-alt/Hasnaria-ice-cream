@@ -22,7 +22,7 @@ function fixture() {
     assert.ok(timer, 'scheduled timer with delay ' + delay);
     f.timers.delete(timer[0]); f.now += delay; timer[1].callback();
   };
-  const api = f.run('staff-v5.js', 'state,render,gps,doClock,applyClockResult');
+  const api = f.run('staff-v5.js', 'state,render,gps,doClock,applyClockResult,openAbs,start');
   f.api = api;
   Object.assign(api.state, {
     view: 'staff', token: 'session-a', staff: { employeeId: 'staff-a', fullName: 'Staff A', modules: ['absensi'] },
@@ -101,7 +101,7 @@ test('Clock In and Clock Out can recheck fresh GPS after a previous outside read
 });
 test('initial location waits past a coarse outside sample for a fresh precise store fix', async () => {
   const f = watchFixture(), locating = f.api.gps();
-  assert.equal(f.root.querySelector('[data-clock="in"]').disabled, true);
+  assert.equal(f.root.querySelector('[data-clock="in"]').disabled, false, 'Clock In remains available while preview GPS is running');
   f.watchSuccess({ coords: { ...outside.coords, accuracy: 800 } });
   assert.equal(f.api.state.geo.loading, true);
   assert.equal(f.clearedWatches.length, 0);
@@ -466,4 +466,132 @@ test('iPhone denied geolocation shows exact location permission guidance without
   assert.equal(writes(f).length, 0);
   assert.match(f.api.state.msg, /Layanan Lokasi.*Lokasi Tepat/);
   assert.deepEqual(f.clearedWatches, [42]);
+});
+
+test('Clock menu is instant and Clock view reads only today on slow legacy Android', async () => {
+  const f=fixture();
+  f.context.navigator.userAgent='Mozilla/5.0 (Linux; Android 8.1; Moto G) AppleWebKit/537.36 Chrome/70.0.0.0 Mobile Safari/537.36';
+  const today=f.api.state.today;
+  f.handlers.set('staff_attendance_today',()=>[today]);
+  f.api.state.sub='';
+  f.calls.length=0;
+  await f.api.openAbs('');
+  assert.ok(f.root.querySelector('[data-sub="clock"]'));
+  assert.equal(f.calls.length,0,'attendance menu does not wait for network');
+  await f.api.openAbs('clock');
+  assert.deepEqual(f.calls.map(c=>c.name),['staff_attendance_today']);
+  assert.equal(f.gpsOptions.length,0,'older Android does not preemptively block with GPS');
+  assert.equal(f.root.querySelector('[data-clock="in"]').disabled,false);
+  assert.match(f.root.textContent,/Tekan Clock In atau Clock Out untuk memeriksa GPS/);
+});
+test('Clock In can replace a pending preview with a fresh capture without duplicate attendance', async () => {
+  const f=watchFixture();
+  const preview=f.api.gps();
+  f.watchSuccess(f.position({coords:{...outside.coords,accuracy:650}}));
+  assert.equal(f.root.querySelector('[data-clock="in"]').disabled,false);
+  f.handlers.set('staff_attendance_check_in',()=>[{attendance_date:date,check_in_at:date+'T00:51:00Z'}]);
+  const saving=f.api.doClock('in');
+  await preview;
+  assert.equal(f.gpsOptions.length,2,'Clock click starts a new GPS request');
+  f.watchSuccess(f.position(inside));
+  await saving;
+  assert.equal(writes(f).length,1);
+  assert.deepEqual(f.clearedWatches,[42,42]);
+  assert.equal(f.timers.size,0);
+});
+test('older Android uses fresh GPS fallback when watchPosition remains silent',async()=>{
+  const f=watchFixture();
+  f.context.navigator.userAgent='Mozilla/5.0 (Linux; Android 7.1; Redmi) Chrome/64.0 Mobile';
+  let fallbackCalls=0;
+  f.context.navigator.geolocation.getCurrentPosition=(success,error,options)=>{
+    fallbackCalls++;
+    f.gpsOptions.push(options);
+    success(f.position(inside));
+  };
+  f.handlers.set('staff_attendance_check_in',()=>[{attendance_date:date,check_in_at:date+'T00:51:00Z'}]);
+  const saving=f.api.doClock('in');
+  assert.equal(writes(f).length,0);
+  f.runTimer(5000);
+  await saving;
+  assert.equal(fallbackCalls,1);
+  assert.equal(f.gpsOptions[1].maximumAge,0);
+  assert.equal(f.gpsOptions[1].enableHighAccuracy,true);
+  assert.equal(writes(f).length,1);
+  assert.equal(f.timers.size,0);
+  assert.deepEqual(f.clearedWatches,[42]);
+});
+test('older Android silent GPS never leaves Clock buttons permanently disabled',async()=>{
+  const f=watchFixture();
+  f.context.navigator.userAgent='Mozilla/5.0 (Linux; Android 8; Device) Chrome/75.0 Mobile';
+  const saving=f.api.doClock('in');
+  f.runTimer(45000);
+  await saving;
+  assert.equal(writes(f).length,0);
+  assert.equal(f.root.querySelector('[data-clock="in"]').disabled,false);
+  assert.equal(f.timers.size,0);
+  assert.deepEqual(f.clearedWatches,[42]);
+});
+test('older Android permission denial must not make an attendance record',async()=>{
+  const f=watchFixture();
+  f.context.navigator.userAgent='Mozilla/5.0 (Linux; Android 7; Device) Chrome/67.0 Mobile';
+  const saving=f.api.doClock('in');
+  f.watchFailure({code:1,message:'Permission denied'});
+  await saving;
+  assert.equal(writes(f).length,0);
+  assert.equal(f.timers.size,0);
+  assert.deepEqual(f.clearedWatches,[42]);
+});
+test('staff entrypoints defer SDK scripts in dependency order and ship old Android shims',()=>{
+  const a=fs.readFileSync(path.join(__dirname,'..','staff.html'),'utf8');
+  const b=fs.readFileSync(path.join(__dirname,'..','staff','index.html'),'utf8');
+  assert.equal(a,b);
+  const scripts=Array.from(a.matchAll(/<script\s+defer\s+src="([^"]+)"/g),m=>m[1]);
+  assert.ok(scripts.length>=13);
+  assert.equal(scripts[0],'/staff-compat-v1.js?v=1');
+  assert.match(scripts[1],/@supabase\/supabase-js@2\.115\.0/);
+  assert.ok(scripts.indexOf('/staff-v5.js?v=11')>scripts.indexOf('/data-sync.js?v=2'));
+  assert.match(a,/rel="preconnect" href="https:\/\/cdn\.jsdelivr\.net"/);
+  const shim=fs.readFileSync(path.join(__dirname,'..','staff-compat-v1.js'),'utf8');
+  assert.match(shim,/Promise\.prototype\.finally/);
+  assert.match(shim,/String\.prototype\.padStart/);
+});
+
+test('returning staff resumes without re-downloading employee directory',async()=>{
+  const f=fixture();
+  f.api.state.view='login';
+  f.api.state.token='';
+  f.api.state.module='home';
+  f.api.state.sub='';
+  f.handlers.set('staff_session_info',()=>[{employee_id:'staff-a',full_name:'Staff A',modules:['absensi']}]);
+  f.handlers.set('staff_login_directory',()=>{throw Error('Directory should not load');});
+  f.calls.length=0;
+  await f.api.start();
+  assert.equal(f.api.state.view,'staff');
+  assert.deepEqual(f.calls.map(c=>c.name),['staff_session_info']);
+});
+test('older Android watch timeout falls back to a fresh one-shot GPS fix',async()=>{
+  const f=watchFixture();
+  f.context.navigator.userAgent='Mozilla/5.0 (Linux; Android 8.1) Chrome/70.0 Mobile';
+  let tries=0;
+  f.context.navigator.geolocation.getCurrentPosition=(success,fail,options)=>{tries++;success(f.position(inside));};
+  f.handlers.set('staff_attendance_check_in',()=>[{attendance_date:date,check_in_at:date+'T00:51:00Z'}]);
+  const saving=f.api.doClock('in');
+  f.watchFailure({code:3,message:'Position timeout'});
+  await saving;
+  assert.equal(tries,1);
+  assert.equal(writes(f).length,1);
+  assert.equal(f.timers.size,0);
+  assert.deepEqual(f.clearedWatches,[42]);
+});
+test('older Android watch permission-denied must not attempt GPS fallback',async()=>{
+  const f=watchFixture();
+  f.context.navigator.userAgent='Mozilla/5.0 (Linux; Android 8.1) Chrome/70.0 Mobile';
+  let tries=0;
+  f.context.navigator.geolocation.getCurrentPosition=()=>{tries++};
+  const saving=f.api.doClock('in');
+  f.watchFailure({code:1,message:'Permission denied'});
+  await saving;
+  assert.equal(tries,0);
+  assert.equal(writes(f).length,0);
+  assert.equal(f.timers.size,0);
 });
