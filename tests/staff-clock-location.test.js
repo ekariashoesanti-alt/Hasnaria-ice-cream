@@ -166,7 +166,7 @@ test('a fresh inside fix can recover after a stale inside callback', async () =>
   assert.equal(writes(f).length, 1);
   assert.equal(f.timers.size, 0);
 });
-test('fresh precise coordinates just beyond 50 meters are rejected without any accuracy allowance', async () => {
+test('fresh precise coordinates just beyond 200 meters are rejected without any accuracy allowance', async () => {
   const f = watchFixture(), saving = f.api.doClock('in');
   f.watchSuccess({ coords: { latitude: -7.533 + 201 / 111195, longitude: 110.598, accuracy: 20 } });
   f.runTimer(18000); await saving;
