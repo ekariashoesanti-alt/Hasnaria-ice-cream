@@ -78,10 +78,10 @@ test('a clock click obtains fresh store coordinates before persisting the server
 test('cached inside location cannot permit a write after staff moves outside', async () => {
   const f = fixture();
   f.context.navigator.geolocation.getCurrentPosition = success => success(outside);
-  const saving = f.api.doClock('in'); f.runTimer(12000); await saving;
+  const saving = f.api.doClock('in'); f.runTimer(18000); await saving;
   assert.equal(writes(f).length, 0);
   assert.equal(f.api.state.today.check_in_at, null);
-  assert.match(f.api.state.msg, /radius 50 m/);
+  assert.match(f.api.state.msg, /radius 200 m/);
   assert.equal(f.root.querySelector('[data-clock="in"]').disabled, false);
 });
 test('Clock In and Clock Out can recheck fresh GPS after a previous outside reading', async () => {
@@ -133,7 +133,7 @@ test('Android precise outside first fixes cannot discard a later inside fix with
     if (kind === 'out') f.api.state.today.check_in_at = date + 'T00:51:00Z';
     f.handlers.set('staff_attendance_check_' + kind, () => [{ attendance_date: date, [kind === 'in' ? 'check_in_at' : 'check_out_at']: date + 'T09:30:00Z' }]);
     const saving = f.api.doClock(kind);
-    f.watchSuccess(f.position({ coords: { latitude: -7.533 + 100 / 111195, longitude: 110.598, accuracy: 5 } })); await tick();
+    f.watchSuccess(f.position({ coords: { latitude: -7.533 + 250 / 111195, longitude: 110.598, accuracy: 5 } })); await tick();
     assert.equal(writes(f).length, 0);
     assert.equal(f.clearedWatches.length, 0);
     f.watchSuccess(f.position({ coords: { ...inside.coords, accuracy: 30 } })); await saving;
@@ -149,11 +149,11 @@ test('stale, future, and invalid-timestamp inside fixes never authorize attendan
     const f = watchFixture(), saving = f.api.doClock('in');
     f.watchSuccess({ ...f.position(inside), timestamp: timestamp(f.now) }); await tick();
     assert.equal(writes(f).length, 0);
-    f.watchSuccess(f.position({ coords: { latitude: -7.533 + 51 / 111195, longitude: 110.598, accuracy: 8 } }));
-    f.runTimer(12000); await saving;
+    f.watchSuccess(f.position({ coords: { latitude: -7.533 + 201 / 111195, longitude: 110.598, accuracy: 8 } }));
+    f.runTimer(18000); await saving;
     assert.equal(writes(f).length, 0);
     assert.equal(f.api.state.today.check_in_at, null);
-    assert.match(f.api.state.msg, /radius 50 m/);
+    assert.match(f.api.state.msg, /radius 200 m/);
     assert.equal(f.timers.size, 0);
   }
 });
@@ -168,12 +168,12 @@ test('a fresh inside fix can recover after a stale inside callback', async () =>
 });
 test('fresh precise coordinates just beyond 50 meters are rejected without any accuracy allowance', async () => {
   const f = watchFixture(), saving = f.api.doClock('in');
-  f.watchSuccess({ coords: { latitude: -7.533 + 51 / 111195, longitude: 110.598, accuracy: 20 } });
-  f.runTimer(12000); await saving;
-  assert.ok(f.api.state.geo.distance > 50 && f.api.state.geo.distance < 52);
+  f.watchSuccess({ coords: { latitude: -7.533 + 201 / 111195, longitude: 110.598, accuracy: 20 } });
+  f.runTimer(18000); await saving;
+  assert.ok(f.api.state.geo.distance > 200 && f.api.state.geo.distance < 202);
   assert.equal(writes(f).length, 0);
   assert.equal(f.api.state.today.check_in_at, null);
-  assert.match(f.api.state.msg, /radius 50 m/);
+  assert.match(f.api.state.msg, /radius 200 m/);
   assert.deepEqual(f.clearedWatches, [42]);
   assert.equal(f.timers.size, 0);
 });
@@ -182,7 +182,7 @@ test('coarse-only GPS stops at the deadline and reports the best accuracy withou
   f.watchSuccess({ coords: { ...inside.coords, accuracy: 500 } });
   f.watchSuccess({ coords: { ...inside.coords, accuracy: 120 } });
   f.watchSuccess({ coords: { ...inside.coords, accuracy: 700 } });
-  f.runTimer(12000); await saving;
+  f.runTimer(18000); await saving;
   assert.equal(writes(f).length, 0);
   assert.equal(f.api.state.today.check_in_at, null);
   assert.match(f.api.state.msg, /belum cukup akurat.*120 m/);
@@ -240,7 +240,7 @@ test('denied permission and native Android timeout give localized guidance and c
     const saving = f.api.doClock('in'); await tick();
     if (kind === 'permission') f.changePermission('denied');
     else if (kind === 'native timeout') { f.now += 20000; f.watchFailure({ code: 3, message: 'Timeout expired' }); }
-    else { f.watchFailure({ code: 2, message: 'Position unavailable' }); f.runTimer(12000); }
+    else { f.watchFailure({ code: 2, message: 'Position unavailable' }); f.runTimer(18000); }
     await saving;
     assert.equal(writes(f).length, 0);
     assert.match(f.api.state.msg, kind === 'permission' ? /Izin lokasi ditolak.*lokasi presisi/ : /Akurasi Lokasi Google/);
@@ -430,4 +430,40 @@ test('a new-day server record clears previous-day timestamps and empty responses
   f.api.applyClockResult('out', null);
   f.api.applyClockResult('out', { attendance_date: '2026-10-09', check_out_at: 'invalid' });
   assert.equal(f.api.state.today.check_out_at, null);
+});
+
+test('accurate GPS fixes within 200 meters can Clock In on Android and iPhone', async () => {
+  for (const ua of ['Mozilla/5.0 (Linux; Android 14) Chrome/130 Mobile', 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Version/18 Mobile Safari/604.1']) {
+    const f = watchFixture();
+    f.context.navigator.userAgent = ua;
+    f.handlers.set('staff_attendance_check_in', () => [{ attendance_date: date, check_in_at: date + 'T00:51:00Z' }]);
+    const saving = f.api.doClock('in');
+    f.watchSuccess(f.position({ coords: { latitude: -7.533 + 199 / 111195, longitude: 110.598, accuracy: 25 } }));
+    await saving;
+    assert.equal(writes(f).length, 1);
+    assert.ok(f.api.state.geo.distance <= 200);
+    assert.match(f.root.textContent, /Akurasi GPS/);
+    assert.deepEqual(f.clearedWatches, [42]);
+  }
+});
+test('iPhone approximate location is not accepted even when the coordinates appear inside 200 meters', async () => {
+  const f = watchFixture();
+  f.context.navigator.userAgent = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Version/18 Mobile Safari/604.1';
+  const saving = f.api.doClock('in');
+  f.watchSuccess(f.position({ coords: { latitude: -7.533, longitude: 110.598, accuracy: 900 } }));
+  f.runTimer(18000);
+  await saving;
+  assert.equal(writes(f).length, 0);
+  assert.match(f.api.state.msg, /Lokasi Tepat/);
+  assert.equal(f.timers.size, 0);
+});
+test('iPhone denied geolocation shows exact location permission guidance without storing attendance', async () => {
+  const f = watchFixture();
+  f.context.navigator.userAgent = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Version/18 Mobile Safari/604.1';
+  const saving = f.api.doClock('in');
+  f.watchFailure({ code: 1, message: 'Permission denied' });
+  await saving;
+  assert.equal(writes(f).length, 0);
+  assert.match(f.api.state.msg, /Layanan Lokasi.*Lokasi Tepat/);
+  assert.deepEqual(f.clearedWatches, [42]);
 });
