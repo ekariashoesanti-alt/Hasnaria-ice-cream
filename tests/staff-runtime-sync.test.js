@@ -33,11 +33,11 @@ function staffFixture() {
 }
 
 async function staffCases() {
-  const bootstrap = browserFixture(), directory = deferred(), session = deferred();
+  const bootstrap = browserFixture(), directory = deferred(), bootstrapSession = deferred();
   bootstrap.run('data-sync.js', 'canRefresh');
   const bootstrapApi = bootstrap.run('staff-v5.js', 'state,start,ownerOpen');
   bootstrap.handlers.set('staff_login_directory', () => directory.promise);
-  bootstrap.handlers.set('staff_session_info', () => session.promise);
+  bootstrap.handlers.set('staff_session_info', () => bootstrapSession.promise);
   bootstrap.window.supabase.createClient().auth.getSession = async () => ({ data: { session: null }, error: null });
   const starting = bootstrapApi.start();
   await tick();
@@ -48,7 +48,7 @@ async function staffCases() {
   password.value = 'unsaved login input';
   const loginWrites = bootstrap.root.writes;
   directory.resolve([{ employee_id: 'employee-a', full_name: 'Staff A' }]);
-  session.resolve([{ employee_id: 'employee-a', full_name: 'Staff A', modules: ['absensi'] }]);
+  bootstrapSession.resolve([{ employee_id: 'employee-a', full_name: 'Staff A', modules: ['absensi'] }]);
   await starting;
   assert.equal(bootstrapApi.state.view, 'owner-login', 'late staff directory cannot leave the Owner login');
   assert.equal(bootstrap.root.writes, loginWrites, 'bootstrap does not replace an active Owner login form');
