@@ -84,7 +84,7 @@ assert(accountManagerSource.includes('hamAccountSummary') && accountManagerSourc
 assert(accountManagerSource.includes("account_manager_list_v1") && accountManagerSource.includes("account_manager_upsert_v1") && accountManagerSource.includes("generate-account-link"), 'UI-7 account settings must preserve canonical account actions');
 assert(accountManagerCss.includes('.ham-summary') && accountManagerCss.includes('.ham-modal-backdrop'), 'UI-7 account summary/modal styles must be present');
 assert(staffV5Source.includes('PEGAWAI · DATA PER') && staffV5Source.includes("staff-detail-open"), 'UI-7 Staff portal must show employee snapshot and explicit detail overlay');
-assert(staffV5Source.includes("if(sameContext(c))resumed=await resumeStaff()") && staffV5Source.includes("if(sameContext(c)||resumed)render()"), 'Staff bootstrap must not rerender and wipe an active Owner login form');
+assert(staffV5Source.includes("if(!resumed&&state.view==='login')await loadDirectory(requestContext())") && staffV5Source.includes("if(state.view==='staff'||state.view==='login')render()") && staffV5Source.includes("if(!sameContext(c)||storedToken()!==t)return false"), 'Staff bootstrap must preserve Owner login and reject late staff-session responses');
 assert(staffV5Source.includes("staff_pin_login") && staffV5Source.includes("staff_owner_save"), 'UI-7 Staff portal must preserve PIN login and owner save flows');
 assert(staffOwnerStableSource.includes('hso-ui7-summary') && staffOwnerStableSource.includes("data-hso-action=\"staff-detail\""), 'UI-7 Owner Mobile must use employee snapshot and isolated detail overlay');
 assert(!appSource.includes("load('/finance-purchase-basis-v1.js"), 'Finance management runtime must be lazy-owned by the Owner Finance shell');
