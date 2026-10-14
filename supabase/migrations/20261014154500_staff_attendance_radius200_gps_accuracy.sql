@@ -60,7 +60,7 @@ begin
     raise exception 'Lokasi perangkat wajib diaktifkan untuk absensi';
   end if;
 
-  if p_accuracy_m is null or not isfinite(p_accuracy_m) or p_accuracy_m<0 or p_accuracy_m>50 then
+  if p_accuracy_m is null or p_accuracy_m<0 or p_accuracy_m>50 then
     raise exception 'Akurasi GPS belum memadai (maksimal 50 m). Aktifkan lokasi presisi lalu perbarui lokasi';
   end if;
   v_distance:=private.staff_attendance_distance_m(p_lat,p_lng,v_outlet.attendance_lat,v_outlet.attendance_lng);
@@ -153,7 +153,7 @@ begin
     raise exception 'Lokasi perangkat wajib diaktifkan untuk absensi';
   end if;
 
-  if p_accuracy_m is null or not isfinite(p_accuracy_m) or p_accuracy_m<0 or p_accuracy_m>50 then
+  if p_accuracy_m is null or p_accuracy_m<0 or p_accuracy_m>50 then
     raise exception 'Akurasi GPS belum memadai (maksimal 50 m). Aktifkan lokasi presisi lalu perbarui lokasi';
   end if;
   v_distance:=private.staff_attendance_distance_m(p_lat,p_lng,v_outlet.attendance_lat,v_outlet.attendance_lng);
