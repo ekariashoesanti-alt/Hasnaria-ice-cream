@@ -252,6 +252,16 @@ document.addEventListener('visibilitychange',function(){if(document.visibilitySt
 window.addEventListener('pagehide',cancelPosition);
 window.addEventListener('pageshow',resumeClockPreview);
 window.addEventListener('storage',function(e){if(e.key!==TOKEN_KEY||(state.view!=='staff'&&state.view!=='login'))return;if(state.token!==storedToken()){clearStaffState();render();}syncRefresh();});
-async function start(){render();var c=requestContext(),resumed=false;try{client();await loadDirectory(c);if(sameContext(c))resumed=await resumeStaff();}catch(e){if(sameContext(c))state.msg=errText(e);}if(sameContext(c)||resumed)render();var s=syncCoordinator();if(s)s.register('staff-runtime',syncRefresh);}
+async function start(){
+  render();
+  try{
+    client();
+    // Returning staff only need session validation, not a directory fetch.
+    var resumed=storedToken()?await resumeStaff():false;
+    if(!resumed&&state.view==='login')await loadDirectory(requestContext());
+  }catch(e){if(state.view==='login')state.msg=errText(e);}
+  if(state.view==='staff'||state.view==='login')render();
+  var s=syncCoordinator();if(s)s.register('staff-runtime',syncRefresh);
+}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
 })();
