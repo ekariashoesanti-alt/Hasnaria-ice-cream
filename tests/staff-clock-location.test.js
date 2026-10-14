@@ -471,6 +471,8 @@ test('iPhone denied geolocation shows exact location permission guidance without
 test('Clock menu is instant and Clock view reads only today on slow legacy Android', async () => {
   const f=fixture();
   f.context.navigator.userAgent='Mozilla/5.0 (Linux; Android 8.1; Moto G) AppleWebKit/537.36 Chrome/70.0.0.0 Mobile Safari/537.36';
+  const today=f.api.state.today;
+  f.handlers.set('staff_attendance_today',()=>[today]);
   f.api.state.sub='';
   f.calls.length=0;
   await f.api.openAbs('');
