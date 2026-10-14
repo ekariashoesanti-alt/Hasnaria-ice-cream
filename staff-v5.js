@@ -203,7 +203,14 @@ function clockPosition(c){
     if(olderBrowser)watchdogTimer=setTimeout(function(){if(current())expire();},45000);
     if(watching){
       try{
-        watchId=geo.watchPosition(function(p){watchResponded=true;accept(p);},function(e){watchResponded=true;fail(e);},{enableHighAccuracy:true,timeout:GPS_WAIT_MS,maximumAge:0});
+        watchId=geo.watchPosition(function(p){watchResponded=true;accept(p);},function(e){
+          watchResponded=true;
+          // Some old WebViews time out the watcher despite a working one-shot GPS.
+          if(olderBrowser&&e&&(e.code===2||e.code===3)&&typeof geo.getCurrentPosition==='function'&&!fallbackMode){
+            if(fallbackTimer!==null){clearTimeout(fallbackTimer);fallbackTimer=null;}
+            fallbackMode=true;read();
+          }else fail(e);
+        },{enableHighAccuracy:true,timeout:GPS_WAIT_MS,maximumAge:0});
         if(settled&&watchId!==null){geo.clearWatch(watchId);watchId=null;}
         if(!settled)scheduleFallback();
       }
