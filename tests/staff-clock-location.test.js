@@ -22,7 +22,7 @@ function fixture() {
     assert.ok(timer, 'scheduled timer with delay ' + delay);
     f.timers.delete(timer[0]); f.now += delay; timer[1].callback();
   };
-  const api = f.run('staff-v5.js', 'state,render,gps,doClock,applyClockResult,openAbs');
+  const api = f.run('staff-v5.js', 'state,render,gps,doClock,applyClockResult,openAbs,start');
   f.api = api;
   Object.assign(api.state, {
     view: 'staff', token: 'session-a', staff: { employeeId: 'staff-a', fullName: 'Staff A', modules: ['absensi'] },
@@ -554,4 +554,44 @@ test('staff entrypoints defer SDK scripts in dependency order and ship old Andro
   const shim=fs.readFileSync(path.join(__dirname,'..','staff-compat-v1.js'),'utf8');
   assert.match(shim,/Promise\.prototype\.finally/);
   assert.match(shim,/String\.prototype\.padStart/);
+});
+
+test('returning staff resumes without re-downloading employee directory',async()=>{
+  const f=fixture();
+  f.api.state.view='login';
+  f.api.state.token='';
+  f.api.state.module='home';
+  f.api.state.sub='';
+  f.handlers.set('staff_session_info',()=>[{employee_id:'staff-a',full_name:'Staff A',modules:['absensi']}]);
+  f.handlers.set('staff_login_directory',()=>{throw Error('Directory should not load');});
+  f.calls.length=0;
+  await f.api.start();
+  assert.equal(f.api.state.view,'staff');
+  assert.deepEqual(f.calls.map(c=>c.name),['staff_session_info']);
+});
+test('older Android watch timeout falls back to a fresh one-shot GPS fix',async()=>{
+  const f=watchFixture();
+  f.context.navigator.userAgent='Mozilla/5.0 (Linux; Android 8.1) Chrome/70.0 Mobile';
+  let tries=0;
+  f.context.navigator.geolocation.getCurrentPosition=(success,fail,options)=>{tries++;success(f.position(inside));};
+  f.handlers.set('staff_attendance_check_in',()=>[{attendance_date:date,check_in_at:date+'T00:51:00Z'}]);
+  const saving=f.api.doClock('in');
+  f.watchFailure({code:3,message:'Position timeout'});
+  await saving;
+  assert.equal(tries,1);
+  assert.equal(writes(f).length,1);
+  assert.equal(f.timers.size,0);
+  assert.deepEqual(f.clearedWatches,[42]);
+});
+test('older Android watch permission-denied must not attempt GPS fallback',async()=>{
+  const f=watchFixture();
+  f.context.navigator.userAgent='Mozilla/5.0 (Linux; Android 8.1) Chrome/70.0 Mobile';
+  let tries=0;
+  f.context.navigator.geolocation.getCurrentPosition=()=>{tries++};
+  const saving=f.api.doClock('in');
+  f.watchFailure({code:1,message:'Permission denied'});
+  await saving;
+  assert.equal(tries,0);
+  assert.equal(writes(f).length,0);
+  assert.equal(f.timers.size,0);
 });
