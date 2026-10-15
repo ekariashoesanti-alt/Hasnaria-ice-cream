@@ -17,7 +17,7 @@ self.addEventListener('fetch',event=>{
   if(url.origin!==self.location.origin)return;
   // The hashed version query changes automatically whenever the build changes.
   // Cache only immutable UI bundles, NEVER the Supabase API or dynamic pages.
-  if((url.pathname==='/staff-runtime.bundle.js'||url.pathname==='/staff-styles.bundle.css')&&url.searchParams.has('v')){
+  if((url.pathname==='/staff-runtime.'+'bundle.js'||url.pathname==='/staff-styles.'+'bundle.css')&&url.searchParams.has('v')){
     event.respondWith(caches.open(STATIC_CACHE).then(async cache=>{
       const hit=await cache.match(request);
       if(hit)return hit;
