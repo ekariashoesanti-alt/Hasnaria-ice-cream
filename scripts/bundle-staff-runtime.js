@@ -22,14 +22,16 @@ function pack(html){
   for(const item of html.matchAll(jsRE))scripts.push(item[1]);
   ensure(styles.length===8,'expected 8 Staff CSS files; got '+styles.length);
   ensure(scripts.length===12,'expected 12 local Staff JS files; got '+scripts.length);
+  ensure(scripts[0]==='staff-compat-v1.js','legacy Android shim must load before SDK');
   ensure(new Set(styles).size===styles.length&&new Set(scripts).size===scripts.length,'duplicate assets');
   ensure(html.includes('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.115.0'),'pinned SDK script missing');
   const css=styles.map(f=>localAsset(f)).join('\n/* next stylesheet */\n');
-  const js=scripts.map(f=>localAsset(f)).join('\n;\n/* next module */\n');
+  // Compatibility shim must stay before the vendor SDK on older Android.
+  const js=scripts.slice(1).map(f=>localAsset(f)).join('\n;\n/* next module */\n');
   const jsFile='staff-runtime.bundle.js',cssFile='staff-styles.bundle.css';
   const cssUrl='/'+cssFile+'?v='+digest(css),jsUrl='/'+jsFile+'?v='+digest(js);
   ensure(!html.includes(jsFile)&&!html.includes(cssFile),'double bundle');
-  let next=html.replace(cssRE,'').replace(jsRE,'');
+  let next=html.replace(cssRE,'').replace(jsRE,(tag,name)=>name==='staff-compat-v1.js'?tag:'');
   ensure(next.includes('</head>')&&next.includes('</body>'),'missing document boundaries');
   next=next.replace('</head>','  <link rel="stylesheet" href="'+cssUrl+'">\n</head>');
   next=next.replace('</body>','  <script defer src="'+jsUrl+'"></script>\n</body>');
@@ -45,5 +47,5 @@ ensure(!checked.error&&checked.status===0,'assembled JS syntax failed');
 for(const file of paths)fs.writeFileSync(path.join(dist,file),result.html);
 ensure(!/<script\b(?![^>]*\bsrc\s*=)[^>]*>/i.test(result.html),'inline script disallowed');
 ensure(result.html.includes(result.cssUrl)&&result.html.includes(result.jsUrl),'bundle URLs missing');
-ensure((result.html.match(/<script\s+defer\s+src=/g)||[]).length===2,'expected one vendor and one local bundle');
-console.log('Staff low-bandwidth build: PASS; '+result.styles.length+' CSS => 1, '+result.scripts.length+' local JS => 1, raw JS '+result.js.length+' B; versioned by content hash.');
+ensure((result.html.match(/<script\s+defer\s+src=/g)||[]).length===3,'expected shim, vendor and local bundle');
+console.log('Staff low-bandwidth build: PASS; '+result.styles.length+' CSS => 1, '+(result.scripts.length-1)+' feature JS => 1 plus Android shim, raw JS +result.js.length+' B; versioned by content hash.');
