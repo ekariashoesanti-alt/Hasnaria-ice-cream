@@ -57,6 +57,6 @@ assert.ok(mobileShell.includes('function stableOwnerHandoff()'), 'Mobile shell m
 assert.ok(mobileShell.includes('if(stableOwnerHandoff())'), 'Mobile enhancer must stand down once stable Owner handoff begins');
 assert.match(manifest, /"start_url"\s*:\s*"\/staff\/\?source=pwa"/, 'PWA must continue to enter through /staff/');
 assert.match(manifest, /"scope"\s*:\s*"\/staff\/"/, 'PWA scope must stay on /staff/');
-assert.ok(serviceWorker.includes("const CACHE_NAME='hasnaria-staff-pwa-v4'"), 'PWA cache must rotate after Team branding update');
+assert.ok(serviceWorker.includes("const CACHE_NAME='hasnaria-staff-pwa-v5'"), 'PWA cache must rotate after low-bandwidth update');
 
 console.log('Owner Mobile persistent single-renderer gate: PASS for staff.html and /staff/');
