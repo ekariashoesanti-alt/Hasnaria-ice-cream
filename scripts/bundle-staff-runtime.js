@@ -48,4 +48,4 @@ for(const file of paths)fs.writeFileSync(path.join(dist,file),result.html);
 ensure(!/<script\b(?![^>]*\bsrc\s*=)[^>]*>/i.test(result.html),'inline script disallowed');
 ensure(result.html.includes(result.cssUrl)&&result.html.includes(result.jsUrl),'bundle URLs missing');
 ensure((result.html.match(/<script\s+defer\s+src=/g)||[]).length===3,'expected shim, vendor and local bundle');
-console.log('Staff low-bandwidth build: PASS; '+result.styles.length+' CSS => 1, '+(result.scripts.length-1)+' feature JS => 1 plus Android shim, raw JS +result.js.length+' B; versioned by content hash.');
+console.log('Staff low-bandwidth build: PASS; '+result.styles.length+' CSS => 1, '+(result.scripts.length-1)+' feature JS => 1 plus Android shim, raw JS '+result.js.length+' B; versioned by content hash.');
