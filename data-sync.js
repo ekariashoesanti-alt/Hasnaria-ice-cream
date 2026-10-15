@@ -114,5 +114,14 @@
     })}
   };
   window.dispatchEvent(new CustomEvent('hasnaria:data-sync-ready'));
-  setInterval(function(){request('interval')},30000);
+  // Staff pages can be left open for hours on a weak mobile connection.
+  // Keep instant cross-tab/write notifications and online/focus refresh,
+  // but avoid costly PostgREST polling every 30 seconds on slow networks.
+  function staffRefreshDelay(){
+    if(!document.getElementById||!document.getElementById('staffRoot'))return 30000;
+    var network=navigator.connection||navigator.mozConnection||navigator.webkitConnection;
+    var constrained=network&&(network.saveData||/^(slow-2g|2g|3g)$/i.test(network.effectiveType||''));
+    return constrained?240000:120000;
+  }
+  setInterval(function(){request('interval')},staffRefreshDelay());
 })();

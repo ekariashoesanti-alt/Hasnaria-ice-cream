@@ -10,7 +10,8 @@ const steps = [
   'patch-owner-executive-p6.js',
   'patch-owner-executive-p9.js',
   'patch-owner-executive-p8.js',
-  'patch-p0-desktop-stability.js'
+  'patch-p0-desktop-stability.js',
+  'bundle-staff-runtime.js'
 ];
 
 for (const step of steps) {
