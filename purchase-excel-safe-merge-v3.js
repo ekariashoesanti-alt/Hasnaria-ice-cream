@@ -228,8 +228,7 @@
         }}));
       if(typeof window.CustomEvent==='function'&&window.dispatchEvent&&result.finance_synced)
         window.dispatchEvent(new window.CustomEvent('hasnaria:finance-rebuilt',{detail:{period:period}}));
-      if(window.__HASNARIA_OWNER_NOTIFICATIONS&&window.__HASNARIA_OWNER_NOTIFICATIONS.refresh)
-        window.__HASNARIA_OWNER_NOTIFICATIONS.refresh();
+
     }finally{processing=false;busy(false)}
   }
 
