@@ -29,7 +29,7 @@
     if(document.getElementById('hasnaria-purchase-dual-source-v2-js'))return;
     var d=document.createElement('script');
     d.id='hasnaria-purchase-dual-source-v2-js';
-    d.src='/purchase-dual-source-v2.js?v=3';
+    d.src='/purchase-dual-source-v2.js?v=4';
     d.async=true;
     document.head.appendChild(d);
   }
