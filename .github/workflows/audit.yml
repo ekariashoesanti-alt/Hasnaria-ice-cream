@@ -72,6 +72,9 @@ jobs:
       - name: BELANJA funding and journal truth regressions
         run: node --test tests/purchase-funding-belanja-v1.test.js
 
+      - name: Cross-month workbook safe upload regressions
+        run: node --test tests/purchase-template-monthly-v1.test.js
+
       - name: Runtime source integrity
         shell: bash
         run: |
