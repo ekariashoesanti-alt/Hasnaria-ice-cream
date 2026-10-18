@@ -28,7 +28,7 @@ assert.doesNotMatch(analytics,/select\('id,source_period,source_file,row_no,purc
 
 assert.match(preload,/purchase-finance-alignment-v1\.js\?v=12/,
   'optimized canonical Purchase runtime must be cache-busted');
-assert.match(lazy,/purchase-analytics\.js\?v=4/,
+assert.match(lazy,/purchase-analytics\.js\?v=5/,
   'optimized Purchase analytics runtime must be cache-busted');
 assert.match(app,/xlsx-preload\.js\?v=8/,
   'Purchase preload entry runtime must be cache-busted');
