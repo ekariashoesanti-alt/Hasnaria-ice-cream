@@ -7,6 +7,7 @@ var BRAND='a36d4b4f-3ccc-4a78-8aeb-b868f0407ea4';
 var CATS=['Beban Administrasi','Beban Pemeliharaan','Beban Bahan Baku','Beban Kepegawaian'];
 var CAT_LABEL={'Beban Administrasi':'6100 · Administrasi','Beban Pemeliharaan':'6110 · Pemeliharaan','Beban Bahan Baku':'6120 · Bahan Baku','Beban Kepegawaian':'6200 · Kepegawaian'};
 var MONTHS=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+var infographicMode='value';
 var db=null,rows=[],control={},overview=null,chartRows=[],periods=[],loading=false,error='',observer=null,timer=0,loadedAt=0,loadedPeriod='',syncingStock=false,lastStockSync='',category='all',modalOpen=false,requestSeq=0,syncing=false,unitOpen=false,unitBusy=false,unitError='',unitNotice='',unitQueue=[],unitSelected='',unitPreview=null,unitPeriod='',unitDraft={sourceUnit:'',factor:'',evidence:'',reason:''},unitSession=null,unitSeq=0;
 
 function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
@@ -34,7 +35,7 @@ function syncPeriodOptions(){
   var sel=document.getElementById('paPeriod');if(!sel||!periods.length)return;
   var current=periodValue(),html=periods.map(function(x){var k=periodKey(x.period_start||x.period_key);return'<option value="'+esc(k)+'">'+esc(monthLabel(k))+'</option>'}).join('');
   if(!html)return;
-  sel.innerHTML=html;
+  if(sel.innerHTML!==html)sel.innerHTML=html;
   var available=periods.some(function(x){return periodKey(x.period_start||x.period_key)===current});
   sel.value=available?current:periodKey(periods[0].period_start||periods[0].period_key);
 }
@@ -179,6 +180,43 @@ async function unitRevokeSelected(){
   finally{unitBusy=false;render()}
 }
 
+
+function purchaseDailyMarkup(){
+ var daily={};rows.forEach(function(r){var d=String(r.purchase_date||'').slice(0,10);if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(d))return;
+  if(!daily[d])daily[d]={date:d,count:0,amount:0};daily[d].count++;daily[d].amount+=n(r.total_amount)
+ });
+ var series=Object.keys(daily).sort().map(function(k){return daily[k]});
+ if(!series.length)return'<div class="pfa-empty">Tidak ada tanggal transaksi terverifikasi untuk grafik harian.</div>';
+ var highest=Math.max.apply(null,series.map(function(r){return infographicMode==='value'?r.amount:r.count}).concat([1]));
+ return'<div class="pfa-mode"><button type="button" data-pfa-mode="value" class="'+(infographicMode==='value'?'on':'')+'">Nilai</button><button type="button" data-pfa-mode="count" class="'+(infographicMode==='count'?'on':'')+'">Transaksi</button></div>'+
+ '<div class="pfa-day-chart" role="img" aria-label="Grafik Pembelian per hari dari transaksi kanonis">'+series.map(function(r){var v=infographicMode==='value'?r.amount:r.count;var h=Math.max(2,Math.round(v/highest*112));
+ return'<div class="pfa-day" title="'+esc(dateLabel(r.date)+' · '+r.count+' transaksi · '+money(r.amount))+'"><b>'+esc(infographicMode==='value'?money(r.amount):String(r.count))+'</b><i style="height:'+h+'px"></i><small>'+esc(r.date.slice(8,10)+'/'+r.date.slice(5,7))+'</small></div>'
+ }).join('')+'</div><div class="pfa-note-banner">Distribusi harian dihitung dari transaksi Pembelian kanonis. Angka nol tidak dibuat untuk hari tanpa sumber.</div>'
+}
+function purchaseTopMarkup(){
+ var g={};rows.forEach(function(r){var label=String(r.item_name||r.source_name||r.purchase_item_name||'').trim();if(!label)return;var k=label.toUpperCase();if(!g[k])g[k]={label:label,amount:0,count:0};g[k].amount+=n(r.total_amount);g[k].count++});
+ var list=Object.keys(g).map(function(k){return g[k]}).sort(function(a,b){return b.amount-a.amount}).slice(0,5);
+ if(!list.length)return'<div class="pfa-empty">Nama item tidak tersedia dari pack kanonis.</div>';
+ var max=Math.max.apply(null,list.map(function(r){return r.amount}).concat([1]));
+ return list.map(function(r,i){return'<div class="pfa-share-row"><div><span>'+(i+1)+'. '+esc(r.label)+'</span><b>'+esc(money(r.amount))+'</b></div><progress max="100" value="'+Math.max(1,r.amount/max*100).toFixed(1)+'"></progress><small>'+r.count+' baris pembelian</small></div>'}).join('');
+}
+function purchasePaymentMarkup(){
+ var g={};rows.forEach(function(r){var k=String(r.payment_method||r.payment_label||'Belum dipetakan').trim()||'Belum dipetakan';g[k]=(g[k]||0)+n(r.total_amount)});
+ var labels=Object.keys(g).sort(function(a,b){return g[b]-g[a]});
+ if(!labels.length)return'<div class="pfa-empty">Metode pembayaran tidak tersedia.</div>';
+ var value=total(rows)||1;return labels.slice(0,6).map(function(k){return'<div class="pfa-share-row"><div><span>'+esc(k)+'</span><b>'+esc(money(g[k]))+'</b></div><progress max="100" value="'+Math.max(0,g[k]/value*100).toFixed(1)+'"></progress></div>'}).join('')+
+ '<div class="pfa-note-banner">Metode pembayaran, sumber dana dan kategori beban adalah konsep berbeda; jangan membuat jurnal duplikat.</div>';
+}
+function infographicMarkup(){
+ return'<div class="pfa-insights-grid"><article class="pfa-insight-panel"><h3>Tren Pembelian Harian</h3><p>Nilai dan frekuensi transaksi periode terpilih</p>'+purchaseDailyMarkup()+'</article>'+
+ '<article class="pfa-insight-panel"><h3>Status Sinkronisasi</h3><p>Perbandingan Pembelian → Keuangan dan Stok</p>'+syncMarkup()+'<div class="pfa-note-banner">Mapping cocok belum berarti quantity aman ditambahkan ke Stok. Satuan dan opname harus diverifikasi.</div></article></div>'+
+ '<div class="pfa-insight-two"><article class="pfa-insight-panel"><h3>Komposisi Pembelian</h3><p>Nilai per akun Beban untuk '+esc(cutLabel())+'</p>'+chartMarkup()+'</article>'+
+ '<article class="pfa-insight-panel"><h3>Top 5 Item Pembelian</h3><p>Urutan berdasarkan total nilai sumber</p>'+purchaseTopMarkup()+'</article></div>'+
+ '<div class="pfa-insight-two"><article class="pfa-insight-panel"><h3>Komposisi Pembayaran</h3><p>Sumber pembiayaan dari transaksi kanonis</p>'+purchasePaymentMarkup()+'</article>'+
+ '<article class="pfa-insight-panel"><h3>Kontrol Data Berkualitas</h3><p>Review dan bukti Owner dipisah dari posting</p>'+
+ '<div class="pfa-note-banner"><b>'+esc(String(n(control.stock_review_rows)+n(control.provisional_journal_rows)))+' kandidat perlu perhatian</b>. Pemeriksaan bukti Owner dilakukan melalui tombol review di bawah; mengunggah Excel tidak otomatis memposting Stok.</div>'+
+ '<button type="button" class="primary" data-pfa-notifications>Periksa di Notifikasi →</button></article></div>';
+}
 function render(){
   if(unitOpen&&!unitAllowed())closeUnitReview();
   var root=document.getElementById('paRoot');if(!root)return;patchCore(root);syncPeriodOptions();
@@ -195,7 +233,7 @@ function render(){
       card('Operasional',money(v.operating_amount),n(v.operating_rows).toLocaleString('id-ID')+' transaksi','expense')+
       card('Review',money(v.review_amount),n(v.review_rows).toLocaleString('id-ID')+' transaksi','review')+
     '</div>'+
-    '<div class="pfa-main-grid"><article class="pfa-panel"><div class="pfa-panel-head"><div><h3>Komposisi Pembelian</h3><p>Nilai per kategori untuk cut '+esc(cutLabel())+'.</p></div></div>'+chartMarkup()+'</article><article class="pfa-panel"><div class="pfa-panel-head"><div><h3>Status Sinkronisasi</h3><p>Pembelian tercatat di Keuangan; penerimaan Stok memerlukan verifikasi satuan.</p></div></div>'+syncMarkup()+'<div class="pfa-note">Nilai rupiah masuk Keuangan satu kali. Penerimaan Stok hanya dibukukan setelah satuan dan bukti diperiksa; tidak ada jurnal nilai ganda.</div></article></div>'+
+    infographicMarkup()+
     '<div class="pfa-detail-cta"><div><b>'+n(v.purchase_rows).toLocaleString('id-ID')+' transaksi pada '+esc(monthLabel(periodValue()))+'</b><span>Tabel lengkap tidak ditampilkan di halaman utama.</span></div><button type="button" class="primary" data-pfa-detail-open="1">Lihat Detail Pembelian</button></div>'+
     unitVerificationMarkup()+
     modalMarkup();
@@ -258,6 +296,10 @@ function boot(){
     observer=new MutationObserver(schedule);observer.observe(host,{childList:true,subtree:false});
     document.addEventListener('change',function(e){if(!e.target)return;if(e.target.id==='paPeriod'){resetData();lastStockSync='';load(true);return}if(e.target.id==='pfaCategory'){category=e.target.value;render()}},true);
     document.addEventListener('click',function(e){
+      var mode=e.target&&e.target.closest?e.target.closest('[data-pfa-mode]'):null;
+      if(mode){infographicMode=mode.getAttribute('data-pfa-mode')==='count'?'count':'value';render();return}
+      var notice=e.target&&e.target.closest?e.target.closest('[data-pfa-notifications]'):null;
+      if(notice&&window.__HASNARIA_OWNER_SHELL){window.__HASNARIA_OWNER_SHELL.navigate('notifikasi');return}
       var unitOpenBtn=e.target&&e.target.closest?e.target.closest('[data-pfa-unit-open]'):null;
       if(unitOpenBtn&&ownerUnitRole()){closeUnitReview();unitSession=window.__HASNARIA_CONTEXT;unitOpen=true;modalOpen=false;unitLoad();return}
       var unitCloseBtn=e.target&&e.target.closest?e.target.closest('[data-pfa-unit-close]'):null;
