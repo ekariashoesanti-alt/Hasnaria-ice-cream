@@ -1,0 +1,34 @@
+name: Hasnaria Recovery Safety Unit
+on:
+  pull_request:
+    paths:
+      - 'scripts/hasnaria_owner_staging_gate.js'
+      - 'scripts/hasnaria_schema_only_actions.js'
+      - '.github/workflows/hasnaria-recovery-proof.yml'
+      - '.github/workflows/hasnaria-owner-staging-uat.yml'
+      - '.github/workflows/hasnaria-safety-unit.yml'
+permissions:
+  contents: read
+jobs:
+  negative-guards:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
+      - name: No-secrets, no-database guard tests
+        run: |
+          set -euo pipefail
+          node --check scripts/hasnaria_owner_staging_gate.js
+          node scripts/hasnaria_owner_staging_gate.js --self-test
+          node scripts/hasnaria_schema_only_actions.js --self-test
+          node - <<'NODE'
+          const fs=require('node:fs');
+          for(const p of ['.github/workflows/hasnaria-recovery-proof.yml','.github/workflows/hasnaria-owner-staging-uat.yml']){
+            const s=fs.readFileSync(p,'utf8');
+            if(!/^on:\s*\n\s+workflow_dispatch:/m.test(s))throw Error(p+': unexpected nonmanual trigger');
+            if(/\b(push|pull_request|schedule)\s*:/m.test(s))throw Error(p+': unsafe automatic execution');
+            if(!s.includes("github.ref == 'refs/heads/main'"))throw Error(p+': main branch gate missing');
+          }
+          console.log('PASS: manual-only protected workflows and negative project isolation fixtures');
+          NODE
