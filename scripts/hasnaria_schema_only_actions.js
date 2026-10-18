@@ -128,8 +128,16 @@ function main(){
     ]);
     const stat=fs.statSync(dump);
     if(stat.size<3000||stat.size>50*1024*1024)throw Error('Unexpected schema export size');
-    const sql=fs.readFileSync(dump,'utf8');
+    let sql=fs.readFileSync(dump,'utf8');
     quoteCheck(sql);
+    // Supabase creates the public schema on every new project. A plain pg_dump
+    // would fail with SQLSTATE 42P06 when restoring Tokyo's public schema to
+    // an otherwise empty Singapore project. Never drop the staging public schema.
+    const publicCreate=/^CREATE SCHEMA public;\r?$/gm;
+    const publicCreateCount=(sql.match(publicCreate)||[]).length;
+    if(publicCreateCount!==1)throw Error('BLOCK: expected exactly one public schema definition in export');
+    sql=sql.replace(publicCreate,'CREATE SCHEMA IF NOT EXISTS public;');
+    fs.writeFileSync(dump,sql,{encoding:'utf8',mode:0o600});
     const sha=crypto.createHash('sha256').update(sql).digest('hex');
     // The dump may contain PostgreSQL 17 psql meta-commands such as \\restrict.
     // Use the same major-version client for trial and restore (Ubuntu's psql may be 16).
