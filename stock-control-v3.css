@@ -275,3 +275,12 @@
 #stok .sc4-correction-footnote{font-size:11px;color:#73867d;line-height:1.5;margin-top:12px}
 #stok .sc4-correction-note{border:1px solid #b7dbcb;background:#f0faf4;color:#196044;border-radius:9px;padding:11px 14px;font-size:12px;margin:12px 0}
 @media(max-width:640px){#stok .sc4-correction-panel{padding:14px;max-height:94vh}#stok .sc4-correction-fields{grid-template-columns:1fr;gap:8px}#stok .sc4-correction-actions{flex-direction:column;align-items:stretch}#stok .sc4-correction-actions button{width:100%}}
+
+/* HSN-402: compact authenticated source-of-truth parity signal; no invented quantities. */
+#stok .sc4-backend-integrity{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:6px 0 10px;padding:8px 11px;border:1px solid #d7e8dd;border-radius:10px;background:#f9fcfa}
+#stok .sc4-backend-integrity>b,#stok .sc4-backend-integrity>div>b{display:block;font-size:11px;color:#1e5c49}
+#stok .sc4-backend-integrity span{display:block;font-size:10px;color:#586e64;line-height:1.5}
+#stok .sc4-backend-integrity.warn{border-color:#e8c98e;background:#fffaf0}
+#stok .sc4-backend-integrity.warn b{color:#895c11}
+#stok .sc4-backend-integrity button{flex:none;padding:7px 10px;background:#fff;border:1px solid #dec695;border-radius:7px;color:#735118;font-size:10px;font-weight:800;cursor:pointer}
+@media(max-width:650px){#stok .sc4-backend-integrity{flex-direction:column;align-items:stretch}#stok .sc4-backend-integrity button{width:100%}}
