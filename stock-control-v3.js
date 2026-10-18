@@ -496,8 +496,22 @@
         S.baseLoading = false;
         render();
         if (S.baseLoaded) scheduleAux(seq);
+        schedulePendingCommittedRefresh();
       }
     }
+  }
+
+  // Data-change events may arrive while initial Stock reads are in-flight.
+  // Replay one deferred refresh once BOTH base and period reads are idle.
+  function schedulePendingCommittedRefresh(){
+    if(!S.pendingStockRefresh||S.verifiedRefreshing||S.baseLoading||S.periodLoading||S.ledgerLoading)return;
+    setTimeout(function(){
+      if(S.pendingStockRefresh && !S.verifiedRefreshing && !S.baseLoading &&
+         !S.periodLoading && !S.ledgerLoading && active() && !S.correction &&
+         !(window.__HASNARIA_STOCK_UPLOAD_V1&&window.__HASNARIA_STOCK_UPLOAD_V1.active())){
+        refreshCommittedData();
+      }
+    },0);
   }
 
   async function loadPeriodData(force) {
@@ -541,6 +555,7 @@
       if (seq === S.periodSeq) {
         S.periodLoading = false;
         render();
+        schedulePendingCommittedRefresh();
       }
     }
   }
@@ -618,7 +633,9 @@
       // Recheck audited upload drafts on every cross-tab/data-change notification.
       // Append this read LAST to preserve the existing detail/overview indices.
       var pendingIndex=reads.length;
-      reads.push(isOwner()?readPendingUploads():Promise.resolve(S.pendingUploadRuns));
+      // The upload-status panel is OPTIONAL. Failure to read operational_runs must
+      // never prevent the authoritative Stock and infographic snapshots refreshing.
+      reads.push(isOwner()?readPendingUploads().catch(function(){return null}):Promise.resolve(S.pendingUploadRuns));
       var result = await Promise.all(reads);
       if (seq !== S.syncSeq || context !== syncContext() || !canSync()) return;
       var raw = result[0] || [], audit = await loadVerifiedAudit(raw);
@@ -648,6 +665,7 @@
         periods = periods.concat([selected || { period_start: period + '-01' }]);
       }
       var pendingUploads=result[pendingIndex];
+      if(pendingUploads===null)pendingUploads=S.pendingUploadRuns; // Keep last verified status when optional read fails.
       var next = [raw, items, periods, overview, activity, ledger, audit, pendingUploads, true, '', '', '', modal === 'ledger' ? '' : S.ledgerError];
       var current = [S.raw, S.items, S.periods, S.overview, S.activity, S.ledger, S.ledgerAudit, S.pendingUploadRuns, S.auxLoaded, S.error, S.auxError, S.periodError, S.ledgerError];
       if (JSON.stringify(next) === JSON.stringify(current)) return;
