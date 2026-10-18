@@ -84,10 +84,22 @@ function main(){
   verifyUrl(src,PROD,true);verifyUrl(dest,STAGE,false);
   if(query(src,roleSql)!=='OK')throw Error('BLOCK: source database role has write privileges');
   if(query(dest,stageSql)!=='OK')throw Error('BLOCK: target is not empty Singapore staging with valid identity');
+  if(query(dest,"SELECT case when exists(SELECT 1 FROM pg_roles WHERE rolname='hsn_schema_reader' AND NOT rolcanlogin) then 'OK' else 'DENY' end")!=='OK')
+    throw Error('BLOCK: staging is missing the safe NOLOGIN ACL placeholder role');
   const temp=fs.mkdtempSync(path.join(os.tmpdir(),'hasnaria-schema-'));
   try{
     const dump=path.join(temp,'schema-only.sql');
-    invoke('supabase',['db','dump','--db-url',src,'--schema','public,private','-f',dump]);
+    // Supabase CLI db dump attempts to SET ROLE postgres and fails with a
+    // strictly read-only custom login. Use PostgreSQL 17's pg_dump directly.
+    // --schema-only never copies business rows, passwords, or customer data.
+    // Retain ACLs/policies, and omit ownership rewrites of staging-managed roles.
+    invoke('docker',[
+      'run','--rm','--network','host',
+      '--volume',temp+':/schema',
+      '--env','HSN_PROD_READONLY_DB_URL',
+      'postgres:17','sh','-ec',
+      'exec pg_dump --no-password --schema-only --no-owner --schema=public --schema=private --dbname="$HSN_PROD_READONLY_DB_URL" --file=/schema/schema-only.sql'
+    ]);
     const stat=fs.statSync(dump);
     if(stat.size<3000||stat.size>50*1024*1024)throw Error('Unexpected schema export size');
     const sql=fs.readFileSync(dump,'utf8');
