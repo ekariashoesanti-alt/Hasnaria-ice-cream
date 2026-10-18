@@ -72,6 +72,8 @@
   }
 
   function selectedPeriod(data) {
+    var stockPeriod = document.getElementById('sc4Period');
+    if(stockPeriod && /^\d{4}-\d{2}$/.test(String(stockPeriod.value||'')))return stockPeriod.value;
     var purchasePeriod = document.getElementById('paPeriod');
     if (purchasePeriod && /^\d{4}-\d{2}$/.test(String(purchasePeriod.value || ''))) return purchasePeriod.value;
     var ps = availablePeriods(data.rows);
@@ -129,7 +131,7 @@
 
   function render(status, period) {
     var host = document.getElementById('stok');
-    var shell = host && host.querySelector('.sr-shell');
+    var shell = host && host.querySelector('.sc3-shell,.sr-shell');
     if (!shell) return false;
     var sig = signature(status, period);
     var panel = document.getElementById('srPurchaseStatus');
@@ -188,7 +190,9 @@
           if (!tab) return;
           setTimeout(function () { refresh(tab.getAttribute('data-tab') === 'stok'); }, 120);
         }, true);
-        document.addEventListener('change', function (e) { if (e.target && e.target.id === 'paPeriod') refresh(false); }, true);
+        document.addEventListener('change', function (e) { if (e.target && (e.target.id === 'paPeriod'||e.target.id === 'sc4Period')) refresh(false); }, true);
+        document.addEventListener('hasnaria:purchase-imported',function(){cache=null;refresh(true)},true);
+        document.addEventListener('hasnaria:stock-posted',function(){cache=null;refresh(true)},true);
         refresh(true);
         return;
       }
