@@ -14,7 +14,7 @@
     if(!tabs)return;
     Array.prototype.forEach.call(tabs.querySelectorAll('.tab'),function(b){
       var id=b.getAttribute('data-tab'),label=LABELS[id];
-      if(label){b.textContent=label;b.setAttribute('aria-label',label);b.style.display=''}
+      if(label){if(b.textContent!==label)b.textContent=label;if(b.getAttribute('aria-label')!==label)b.setAttribute('aria-label',label);if(b.style.display!=='')b.style.display=''}
       else if(b.id!=='userSettingsTab')b.style.display='none'
     });
   }
