@@ -226,8 +226,7 @@
         document.dispatchEvent(new window.CustomEvent('hasnaria:purchase-imported',{detail:{
           period:period,rows:payload.length,finance_synced:!!result.finance_synced
         }}));
-      if(typeof window.CustomEvent==='function'&&window.dispatchEvent&&result.finance_synced)
-        window.dispatchEvent(new window.CustomEvent('hasnaria:finance-rebuilt',{detail:{period:period}}));
+
 
     }finally{processing=false;busy(false)}
   }
