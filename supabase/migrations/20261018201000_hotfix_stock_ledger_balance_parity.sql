@@ -3,7 +3,7 @@
 -- draft/active BOM consumption is NOT itself a posted stock movement.
 -- Breakdown purchase_qty/sales_usage_qty is informative; other future movement
 -- types (e.g. WASTE) may affect system_qty without appearing in those two fields.
--- Rollback: supabase/rollback/20261018201000_restore_pre_hotfix_stock_reconciliation.sql
+-- Rollback: supabase/rollback/20261018201000_restore_pre_hotfix_inventory_stock_reconciliation.sql
 create or replace view public.inventory_stock_reconciliation
 with (security_invoker = true)
 as
