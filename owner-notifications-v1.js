@@ -89,14 +89,18 @@ async function load(force){
  finally{if(id===seq){loading=false;if(active())draw()}}
 }
 function mount(){if(!active())return;var s=window.__HASNARIA_CONTEXT;if(ctx!==s){ctx=s;data=null;period=current();filter='backlog';selected='';}
- draw();if(!data&&!loading)load(false)}
+ draw();
+ if(window.__HASNARIA_STOCK_NOTIFICATION_REFRESH_NEEDED){window.__HASNARIA_STOCK_NOTIFICATION_REFRESH_NEEDED=false;load(true)}
+ else if(!data&&!loading)load(false)}
 document.addEventListener('click',function(e){if(!active())return;var t=e.target&&e.target.closest?e.target.closest('[data-hqn-refresh],[data-hqn-filter],[data-hqn-item],[data-hqn-purchase],[data-hqn-stock]'):null;if(!t)return;
  if(t.hasAttribute('data-hqn-refresh')){load(true);return}
  if(t.hasAttribute('data-hqn-filter')){filter=t.getAttribute('data-hqn-filter');selected='';draw();return}
  if(t.hasAttribute('data-hqn-item')){selected=t.getAttribute('data-hqn-item');draw();return}
  if(t.hasAttribute('data-hqn-stock')&&window.__HASNARIA_OWNER_SHELL){
   window.__HASNARIA_STOCK_CORRECTION_PENDING={inventoryItemId:t.getAttribute('data-hqn-stock')};
-  window.__HASNARIA_OWNER_SHELL.navigate('stok');return;
+  window.__HASNARIA_OWNER_SHELL.navigate('stok');
+  if(window.__HASNARIA_STOCK_REVIEW)window.__HASNARIA_STOCK_REVIEW.openPending();
+  return;
  }
  if(t.hasAttribute('data-hqn-purchase')&&window.__HASNARIA_OWNER_SHELL)window.__HASNARIA_OWNER_SHELL.navigate('pembelian');
 },true);
