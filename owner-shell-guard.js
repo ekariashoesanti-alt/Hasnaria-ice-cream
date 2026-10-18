@@ -207,7 +207,7 @@
     if(window.__HASNARIA_OWNER_NOTIFICATIONS){window.__HASNARIA_OWNER_NOTIFICATIONS.mount();return}
     if(state.notificationsLoad)return;
     state.notificationsLoad=new Promise(function(resolve){
-      var script=document.createElement('script');script.id='hasnaria-owner-notifications-js';script.src='/owner-notifications-v1.js?v=1';script.async=true;
+      var script=document.createElement('script');script.id='hasnaria-owner-notifications-js';script.src='/owner-notifications-v1.js?v=2';script.async=true;
       script.onload=resolve;script.onerror=function(){state.notificationsLoad=null;var h=section('notifikasi');if(h)h.textContent='Notifikasi gagal dimuat. Silakan refresh.';resolve()};document.head.appendChild(script)
     }).then(function(){if(isOwner()&&state.active==='notifikasi'&&window.__HASNARIA_OWNER_NOTIFICATIONS)window.__HASNARIA_OWNER_NOTIFICATIONS.mount()});
   }
