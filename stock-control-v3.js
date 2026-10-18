@@ -47,7 +47,11 @@
     accessToken: '',
     tokenAt: 0,
     correction: null,
-    correctionNotice: ''
+    correctionNotice: '',
+    ledgerAudit: {state:'loading',items:[],count:0},
+    lastVerifiedAt: '',
+    pendingStockRefresh: false,
+    verifiedRefreshing: false
   };
 
   function esc(value) {
@@ -366,6 +370,64 @@
     }
   }
 
+
+  // Compare two authenticated, read-only server views. Never alter ledger or guess units.
+  function auditLedgerPositions(rows, ledgerRows) {
+    var byId = new Map();
+    (ledgerRows || []).forEach(function(r){byId.set(r.inventory_item_id,r)});
+    var items=[],tracked=0;
+    (rows || []).forEach(function(row){
+      if(!row.tracking_active)return;
+      tracked++;
+      var ledger=byId.get(row.inventory_item_id);
+      if(!ledger || ledger.ledger_qty == null){
+        items.push({id:row.inventory_item_id,name:row.item_name,category:row.category,
+          unit:row.unit,reason:'missing-ledger',reconcile:row.system_qty,ledger:null});return;
+      }
+      var a=Number(row.system_qty),b=Number(ledger.ledger_qty);
+      if(!Number.isFinite(a)||!Number.isFinite(b)||Math.abs(a-b)>0.00001){
+        items.push({id:row.inventory_item_id,name:row.item_name,category:row.category,
+          unit:row.unit,reason:'mismatch',reconcile:row.system_qty,ledger:ledger.ledger_qty});
+      }
+    });
+    return {state:'checked',count:items.length,tracked:tracked,items:items};
+  }
+
+  function loadVerifiedAudit(rows) {
+    return request('inventory_ledger_balance?' + qs({
+      brand_id:'eq.'+BRAND,select:'inventory_item_id,ledger_qty,tracking_active',order:'inventory_item_id.asc'
+    })).then(function(ledger){return auditLedgerPositions(rows,ledger)})
+      .catch(function(){return {state:'unavailable',count:0,tracked:0,items:[]};});
+  }
+
+  function renderLedgerAudit() {
+    var a=S.ledgerAudit || {};
+    if(a.state==='loading')return '';
+    if(a.state==='unavailable')return '<div class="sc4-backend-integrity warn" role="status"><b>Audit kesesuaian saldo belum dapat dibaca</b><span>Infografis berasal dari server, tetapi keselarasan view rekonsiliasi dengan ledger belum diverifikasi. Coba Refresh.</span></div>';
+    if(!a.count)return '<div class="sc4-backend-integrity ok" role="status"><b>Saldo dua sumber server cocok</b><span>'+fmt(a.tracked)+' SKU dengan opname telah dibandingkan dengan ledger. Pemeriksaan '+esc(S.lastVerifiedAt||'')+'.</span></div>';
+    var examples=a.items.slice(0,3).map(function(x){return esc(x.name)+' ('+esc(fmt(x.reconcile))+' / '+esc(x.ledger==null?'belum ada':fmt(x.ledger))+' '+esc(x.unit||'unit')+')'}).join(' · ');
+    return '<div class="sc4-backend-integrity warn" role="alert"><div><b>'+fmt(a.count)+' SKU tidak sama antara rekonsiliasi dan ledger</b><span>Angka pertama = view rekonsiliasi, angka kedua = ledger. Contoh: '+examples+'. Tidak ada saldo yang diubah otomatis.</span></div><button type="button" data-sc4-audit="open">Periksa SKU →</button></div>';
+  }
+
+  async function refreshCommittedData(){
+    if(!active()){S.pendingStockRefresh=true;return}
+    if(S.verifiedRefreshing || S.baseLoading || S.periodLoading || S.ledgerLoading){
+      S.pendingStockRefresh=true;return;
+    }
+    var h=document.getElementById('stok'),sync=window.__HASNARIA_DATA_SYNC;
+    if(sync && !sync.canRefresh(h,'#sc4Period,#sc3Search,#sc3Category,#sc3Status')){
+      S.pendingStockRefresh=true;return;
+    }
+    S.verifiedRefreshing=true;S.pendingStockRefresh=false;
+    try{
+      await Promise.all([loadBase(),loadPeriodData(true)]);
+      if(S.modal==='ledger')await loadLedger();
+    }finally{
+      S.verifiedRefreshing=false;
+      // Defer the next attempt to a user navigation if an active edit remains.
+    }
+  }
+
   async function loadBase() {
     if (S.baseLoading) return;
     var seq = ++S.loadSeq;
@@ -383,8 +445,11 @@
         order: 'category.asc,item_name.asc'
       });
       var rows = await request('inventory_stock_reconciliation?' + baseQuery);
+      var audit = await loadVerifiedAudit(rows);
       if (seq !== S.loadSeq) return;
       S.raw = rows || [];
+      S.ledgerAudit = audit;
+      S.lastVerifiedAt = new Date().toLocaleString('id-ID');
       S.items = S.raw.map(baseItem);
       S.baseLoaded = true;
     } catch (e) {
@@ -514,7 +579,9 @@
       if (modal === 'ledger' && period) reads.push(readLedger(period));
       var result = await Promise.all(reads);
       if (seq !== S.syncSeq || context !== syncContext() || !canSync()) return;
-      var raw = result[0] || [], trackedIds = raw.filter(function (x) { return !!x.tracking_active; }).map(function (x) { return x.inventory_item_id; });
+      var raw = result[0] || [], audit = await loadVerifiedAudit(raw);
+      if (seq !== S.syncSeq || context !== syncContext() || !canSync()) return;
+      var trackedIds = raw.filter(function (x) { return !!x.tracking_active; }).map(function (x) { return x.inventory_item_id; });
       var recipes = [], poRows = [], receipts = [];
       if (trackedIds.length) {
         var trackedSet = {};
@@ -538,10 +605,12 @@
         var selected = S.periods.find(function (x) { return monthKey(x.period_start || x.period_key) === period; });
         periods = periods.concat([selected || { period_start: period + '-01' }]);
       }
-      var next = [raw, items, periods, overview, activity, ledger, true, '', '', '', modal === 'ledger' ? '' : S.ledgerError];
-      var current = [S.raw, S.items, S.periods, S.overview, S.activity, S.ledger, S.auxLoaded, S.error, S.auxError, S.periodError, S.ledgerError];
+      var next = [raw, items, periods, overview, activity, ledger, audit, true, '', '', '', modal === 'ledger' ? '' : S.ledgerError];
+      var current = [S.raw, S.items, S.periods, S.overview, S.activity, S.ledger, S.ledgerAudit, S.auxLoaded, S.error, S.auxError, S.periodError, S.ledgerError];
       if (JSON.stringify(next) === JSON.stringify(current)) return;
       S.raw = raw; S.items = items; S.periods = periods;
+      S.ledgerAudit = audit;
+      S.lastVerifiedAt = new Date().toLocaleString('id-ID');
       S.overview = overview; S.activity = activity; S.ledger = ledger;
       S.auxLoaded = true; S.error = ''; S.auxError = ''; S.periodError = '';
       if (modal === 'ledger') S.ledgerError = '';
@@ -590,7 +659,9 @@
     var q = S.search.trim().toLowerCase();
     var rows = S.items.filter(function (x) {
       if (S.category && String(x.category || 'Lainnya') !== S.category) return false;
-      if (S.status === 'diff') {
+      if (S.status === 'ledger-diff') {
+        if(!(S.ledgerAudit&&S.ledgerAudit.items.some(function(i){return i.id===x.inventory_item_id;})))return false;
+      } else if (S.status === 'diff') {
         if (!(x.last_variance !== null && x.last_variance !== undefined && Math.abs(num(x.last_variance)) > 0.00001)) return false;
       } else if (S.status && x.ui_status !== S.status) return false;
       if (q && (String(x.item_name || '') + ' ' + String(x.category || '')).toLowerCase().indexOf(q) < 0) return false;
@@ -738,6 +809,7 @@
         '<option value="untracked"' + (S.status === 'untracked' ? ' selected' : '') + '>Perlu Opname Awal</option>' +
         '<option value="ok"' + (S.status === 'ok' ? ' selected' : '') + '>Aman</option>' +
         '<option value="diff"' + (S.status === 'diff' ? ' selected' : '') + '>Ada Selisih Opname</option>' +
+        '<option value="ledger-diff"' + (S.status === 'ledger-diff' ? ' selected' : '') + '>Beda Saldo Ledger</option>' +
       '</select>' +
       '<div class="sc3-filter-links"><button type="button" data-sc3-jump="pembelian">Buka Pembelian →</button><button type="button" data-sc3-jump="sales">Buka Penjualan →</button></div>' +
     '</div>';
@@ -946,7 +1018,7 @@
     var alert = S.error ? '<div class="sc3-alert">' + esc(S.error) + '</div>' : '';
     var pAlert = S.periodError ? '<div class="sc3-alert">' + esc(S.periodError) + '</div>' : '';
     var loading = S.baseLoading && !S.baseLoaded ? '<div class="sc3-loading">Memuat posisi SKU terkini…</div>' : '';
-    shell.innerHTML = renderHeader() + renderCorrectionPanel() + pAlert + overviewKpis() + alert + loading +
+    shell.innerHTML = renderHeader() + renderCorrectionPanel() + renderLedgerAudit() + pAlert + overviewKpis() + alert + loading +
       '<div class="sc4-infographic-main"><article class="sc4-panel"><div class="sc4-panel-head"><div><h3>Tren Aktivitas Stok</h3><p>Jumlah movement per jenis dalam periode; bukan quantity gabungan.</p></div></div>' + renderActivity() + '</article>'+
       '<div class="sc4-side-stack"><article class="sc4-panel"><div class="sc4-panel-head"><div><h3>Komposisi Posisi Stok</h3><p>Distribusi SKU menurut saldo akhir periode.</p></div></div>' + compositionInfographic() + '</article>'+
       '<article class="sc4-panel"><div class="sc4-panel-head"><div><h3>Kontrol Periode</h3><p>' + esc(cutLabel()) + '</p></div></div>' + renderPeriodControl() + '<div class="sc4-info">Saldo negatif historis hanya informasional. Periksa transaksi setelah cutoff opname untuk error aktif.</div></article></div></div>'+
@@ -960,6 +1032,8 @@
 
   function bind(host) {
     host.onclick = function (e) {
+      var auditButton = e.target && e.target.closest ? e.target.closest('[data-sc4-audit]') : null;
+      if(auditButton){S.modal='position';S.status='ledger-diff';S.page=1;render();return;}
       var correction = e.target && e.target.closest ? e.target.closest('[data-sc4-correction]') : null;
       if (correction && S.correction) {
         if (correction.getAttribute('data-sc4-correction') === 'cancel') { S.correction = null; render(); }
@@ -1118,6 +1192,12 @@
   }, true);
 
   window.__HASNARIA_STOCK_REVIEW = { openPending: function(){takeCorrectionRequest();if(active()){render();if(!S.baseLoaded&&!S.baseLoading)loadBase();}} };
+  window.__HASNARIA_STOCK_REFRESH_VERIFIED = refreshCommittedData;
+  document.addEventListener('hasnaria:stock-posted',function(){refreshCommittedData()},true);
+  document.addEventListener('hasnaria:purchase-imported',function(){refreshCommittedData()},true);
+  document.addEventListener('hasnaria:owner-shell-navigate',function(e){
+    if(e.detail&&e.detail.tab==='stok')refreshCommittedData();
+  },true);
   ensureCss();
   registerSync();
   document.addEventListener('hasnaria:data-sync-ready', registerSync);
