@@ -108,7 +108,7 @@ function fixture(file, exports, tab) {
 }
 
 function stockFixture() {
-  const f = fixture('stock-control-v3.js', 'S,syncRefresh,supplementalItems,auditLedgerPositions,render,loadLedger', 'stok');
+  const f = fixture('stock-control-v3.js', 'S,syncRefresh,supplementalItems,auditLedgerPositions,render,loadLedger,saveCorrection', 'stok');
   const raw = Array.from({ length: 40 }, (_, i) => ({ inventory_item_id: 'sku-' + i, item_name: 'Material ' + i,
     category: 'Bahan', unit: 'kg', min_qty: 2, order_qty: 4, system_qty: 10, purchase_qty: 4,
     sales_usage_qty: 1, last_opname_date: '2026-10-01', last_physical_qty: 7, tracking_active: true }));
@@ -135,7 +135,7 @@ function stockFixture() {
 }
 
 function operationsFixture() {
-  const f = fixture('operational-v1.js', 'state,syncRefresh,render,loadItemPage,saveItem', 'operasional');
+  const f = fixture('operational-v1.js', 'state,syncRefresh,render,loadItemPage,saveItem,approveRun', 'operasional');
   const run = { id: 'run-a', run_type: 'stock_opname', title: 'Opname', scheduled_date: '2026-10-01', status: 'in_progress', updated_at: 'old' };
   const items = [{ id: 'item-26', label: 'Susu', item_type: 'stock_count', numeric_value: 10, notes: '', expected_qty: 9 }];
   const data = { runs: [run], selected: run, items, total: 80 };
@@ -271,6 +271,25 @@ async function main() {
   await page.api.loadItemPage('run-b', 1);
   stale.resolve({ data: [{ id: 'stale-item' }], count: 1 }); await oldPage;
   assert.equal(page.api.state.items[0].id, 'run-b-item'); assert.equal(page.api.state.itemLoading, false);
+  // Preview on a production backend must not post real operational stock.
+  const opPreview = operationsFixture();
+  opPreview.window.location = {hostname:'hasnaria-business-analyzer-test123.vercel.app'};
+  opPreview.window.HASNARIA_SB='https://bnnhmtkpdjlgehsvgoda.supabase.co';
+  opPreview.api.state.activeRun.status='submitted';
+  const opCalls=opPreview.queries.length;
+  await opPreview.api.approveRun();
+  assert.equal(opPreview.queries.length,opCalls,'preview approval must not call production RPC');
+  assert.match(opPreview.api.state.actionError,/preview/i);
+
+  const stockPreview=stockFixture();
+  stockPreview.window.location={hostname:'hasnaria-business-analyzer-test123.vercel.app'};
+  stockPreview.window.HASNARIA_SB='https://bnnhmtkpdjlgehsvgoda.supabase.co';
+  stockPreview.api.S.correction={id:'sku-0',physical:'7',reason:'Hitung fisik ulang sesuai bon toko',busy:false,error:''};
+  const stockCalls=stockPreview.queries.length;
+  await stockPreview.api.saveCorrection();
+  assert.equal(stockPreview.queries.length,stockCalls,'preview correction must not query or post production ledger');
+  assert.match(stockPreview.api.S.correction.error,/produksi/i);
+
   console.log('stock/operations synchronization: PASS');
 }
 
