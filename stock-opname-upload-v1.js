@@ -11,7 +11,7 @@ function today(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()
 function norm(x){return String(x||'').trim().toUpperCase().replace(/[^A-Z0-9]+/g,'')}
 function owner(){var c=window.__HASNARIA_CONTEXT;return !!(c&&c.role==='owner')}
 function getDb(){db=window.__HASNARIA_DB||null;if(!db)throw Error('Database Hasnaria belum siap. Masuk kembali dan ulangi.');return db}
-function close(){if(st.busy)return;st.open=false;st.file=null;st.rows=null;st.error='';st.notice='';if(dialog){dialog.remove();dialog=null}}
+function close(){if(st.busy)return;st.open=false;st.file=null;st.rows=null;st.error='';st.notice='';if(dialog){dialog.remove();dialog=null}if(window.__HASNARIA_STOCK_REFRESH_VERIFIED)window.__HASNARIA_STOCK_REFRESH_VERIFIED()}
 function template(){
  return master.map(function(x){return [x.id,x.item_name,x.unit,''].map(function(v){var z=String(v==null?'':v);return '"'+z.replace(/"/g,'""')+'"'}).join(',')}).join('\r\n')
 }
