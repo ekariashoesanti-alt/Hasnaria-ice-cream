@@ -15,6 +15,33 @@ test('Owner navigation has one section and lazy Notifications below Stock',()=>{
  assert.match(s,/state\.active==='notifikasi'\)ensureNotifications\(\)/);
  assert.match(s,/hasnaria-owner-insight-css/);
 });
+test('Notifications tab stays visible after legacy navigation and does not trigger observer loops',()=>{
+ const nav=read('nav-patch.js'),shell=read('owner-shell-guard.js'),html=read('index.html');
+ assert.match(nav,/notifikasi: 'Notifikasi'/);
+ assert.match(nav,/if\(b\.textContent!==label\)b\.textContent=label/);
+ assert.match(shell,/if\(x\.textContent!==labels\[id\]\)x\.textContent=labels\[id\]/);
+ assert.match(html,/\/nav-patch\.js\?v=16/);
+});
+test('Notifications in-flight fetch unlocks after leaving tab',async()=>{
+ const source=read('owner-notifications-v1.js'),deferred=[];
+ let visible=true,queries=0;
+ const host={innerHTML:'',classList:{contains(cls){return cls==='hidden'&&!visible}}};
+ const context={role:'owner',brandId:'brand'};
+ const db={rpc(name){queries++;return new Promise(resolve=>deferred.push({name,resolve}))}};
+ const document={getElementById(id){return id==='notifikasi'||id==='app'?host:null},addEventListener(){}};
+ const win={__HASNARIA_CONTEXT:context,__HASNARIA_DB:db};
+ vm.runInNewContext(source,{window:win,document,Promise,Date,Number,String,Array,Object,JSON,Math,console});
+ win.__HASNARIA_OWNER_NOTIFICATIONS.mount();
+ assert.equal(queries,2);
+ visible=false;
+ deferred.splice(0).forEach(d=>d.resolve({data:d.name==='get_purchase_control_period_v1'?{rows:[],control:{}}:{pending_rules:0}}));
+ for(let i=0;i<18;i++)await Promise.resolve();
+ visible=true;
+ win.__HASNARIA_OWNER_NOTIFICATIONS.mount();
+ assert.equal(queries,4,'returning to tab must be able to retry query after hidden completion');
+ deferred.splice(0).forEach(d=>d.resolve({data:d.name==='get_purchase_control_period_v1'?{rows:[],control:{}}:{pending_rules:0}}));
+ for(let i=0;i<18;i++)await Promise.resolve();
+});
 test('Owner Purchase reuses a single canonical panel and does not call legacy destructive upload',()=>{
  const a=read('purchase-analytics.js'),p=read('purchase-finance-alignment-v1.js');
  assert.match(a,/if\(ownerCompact\(\)\)\{renderOwnerShell\(host\);return\}/);
