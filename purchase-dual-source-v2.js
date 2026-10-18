@@ -134,6 +134,7 @@ function parseTemplate(wb,f){
 function parseExcel(wb,f){
   var t=parseTemplate(wb,f);if(t!==null){if(!t.length)throw Error('Template Excel tidak berisi transaksi valid.');return{rows:t,ignored:0,invalid:0,label:'Excel Pembelian'}}
   var sn=wb.SheetNames.find(function(s){return c(s).toUpperCase()==='BELANJA'});if(!sn)throw Error('Sheet BELANJA atau UPLOAD_PEMBELIAN tidak ditemukan.');
+  throw Error('Workbook BELANJA hanya boleh melalui safe merge v3. Impor legacy yang menjadikan B OPERASIONAL transaksi kedua dinonaktifkan. Muat ulang halaman Pembelian dan coba lagi.');
   var a=matrix(wb.Sheets[sn]),hi=-1;
   for(var i=0;i<Math.min(a.length,30);i++){var rr=a[i]||[];if(idx(rr,/^tgl$|tanggal|date/i)>=0&&idx(rr,/nama.*bahan|nama.*barang|^bahan$|^item$|^produk$|^nama$/i)>=0){hi=i;break}}
   if(hi<0)throw Error('Header BELANJA tidak dikenali.');
