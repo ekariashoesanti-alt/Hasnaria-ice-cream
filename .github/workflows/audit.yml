@@ -63,6 +63,9 @@ jobs:
       - name: P0.2 Owner source unit safe import regression
         run: node --test tests/p02-owner-unit-no-autopost.test.js
 
+      - name: Owner conversion triage safety regression
+        run: node --test tests/p02-owner-conversion-triage.test.js
+
       - name: Runtime source integrity
         shell: bash
         run: |
