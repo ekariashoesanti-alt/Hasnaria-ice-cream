@@ -61,7 +61,7 @@
 
   function ensureFinanceWorkbenches(){
     if(!document.getElementById('hasnaria-finance-purchase-basis-v1-js')){
-      var pb=document.createElement('script');pb.id='hasnaria-finance-purchase-basis-v1-js';pb.src='/finance-purchase-basis-v1.js?v=6';pb.async=true;document.head.appendChild(pb);
+      var pb=document.createElement('script');pb.id='hasnaria-finance-purchase-basis-v1-js';pb.src='/finance-purchase-basis-v1.js?v=7';pb.async=true;document.head.appendChild(pb);
     }
     var stale=document.querySelector('[data-fin-hpp-p3-open]');if(stale)stale.remove();
     var staleModal=document.getElementById('finHppP3Modal');if(staleModal)staleModal.remove();

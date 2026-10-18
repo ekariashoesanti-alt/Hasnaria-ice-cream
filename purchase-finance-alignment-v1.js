@@ -325,7 +325,7 @@ function boot(){
     },true);
     document.addEventListener('input',function(e){var key=e.target&&e.target.getAttribute&&e.target.getAttribute('data-pfa-unit-field');if(key&&Object.prototype.hasOwnProperty.call(unitDraft,key)){unitDraft[key]=e.target.value;unitPreview=null;var save=document.querySelector('[data-pfa-unit-apply]');if(save)save.disabled=true;var p=document.querySelector('.pfa-unit-preview');if(p)p.textContent='Input berubah. Jalankan pratinjau ulang sebelum menyimpan.'}},true);
     document.addEventListener('keydown',function(e){if(e.key==='Escape'){if(unitOpen){closeUnitReview();render()}else if(modalOpen){modalOpen=false;render()}}},true);
-    document.addEventListener('hasnaria:purchase-imported',function(){resetData();loadPeriods().then(function(){load(true)})},true);
+    document.addEventListener('hasnaria:purchase-imported',function(e){resetData();loadPeriods().then(function(){var p=e&&e.detail&&String(e.detail.period||'').slice(0,7),sel=document.getElementById('paPeriod');if(sel&&p&&Array.from(sel.options).some(function(o){return o.value===p}))sel.value=p;load(true)})},true);
     loadPeriods().then(function(){load(true)});return
   }if(tries++<150)setTimeout(wait,100)})()
 }

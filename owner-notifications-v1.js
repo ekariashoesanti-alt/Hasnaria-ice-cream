@@ -106,5 +106,6 @@ document.addEventListener('click',function(e){if(!active())return;var t=e.target
  if(t.hasAttribute('data-hqn-purchase')&&window.__HASNARIA_OWNER_SHELL)window.__HASNARIA_OWNER_SHELL.navigate('pembelian');
 },true);
 document.addEventListener('change',function(e){if(e.target&&e.target.id==='hqnPeriod'&&active()){var p=e.target.value;if(/^\d{4}-(0[1-9]|1[0-2])$/.test(p)){period=p;data=null;selected='';load(true)}}},true);
+document.addEventListener('hasnaria:purchase-imported',function(e){if(!owner())return;data=null;var p=e&&e.detail&&String(e.detail.period||'').slice(0,7);if(p)period=p;if(active())load(true)},true);
 window.__HASNARIA_OWNER_NOTIFICATIONS={mount:mount,refresh:function(){if(active())load(true)}};
 })();

@@ -78,6 +78,9 @@ jobs:
       - name: Cross-month workbook safe upload regressions
         run: node --test tests/purchase-template-monthly-v1.test.js
 
+      - name: Canonical Purchase and Finance atomic import regression
+        run: node --test tests/purchase-upload-canonical-finance-v1.test.js
+
       - name: Runtime source integrity
         shell: bash
         run: |
