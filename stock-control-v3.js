@@ -51,7 +51,8 @@
     ledgerAudit: {state:'loading',items:[],count:0},
     lastVerifiedAt: '',
     pendingStockRefresh: false,
-    verifiedRefreshing: false
+    verifiedRefreshing: false,
+    pendingUploadRuns: null
   };
 
   function esc(value) {
@@ -400,6 +401,29 @@
       .catch(function(){return {state:'unavailable',count:0,tracked:0,items:[]};});
   }
 
+
+  function renderUploadStatus(){
+    if(!isOwner())return '';
+    if(S.pendingUploadRuns===null)return '';
+    var all=S.pendingUploadRuns||[],draft=all.filter(function(x){return x.status==='draft'||x.status==='in_progress'}).length,
+        submitted=all.filter(function(x){return x.status==='submitted'}).length;
+    return '<div class="sc4-upload-state" role="status"><span><b>Upload Opname</b> · '+fmt(all.length)+' batch menunggu tindak lanjut</span>'+
+      '<span>'+fmt(draft)+' draft / belum lengkap · '+fmt(submitted)+' menunggu persetujuan</span>'+
+      (all.length?'<button type="button" data-sc4-action="open-operasional">Lanjutkan di Operasional →</button>':'')+'</div>';
+  }
+
+  async function loadPendingUploads(seq){
+    if(!isOwner())return;
+    try{
+      var rows=await request('operational_runs?' + qs({
+        brand_id:'eq.'+BRAND,run_type:'eq.stock_opname',status:'in.(draft,in_progress,submitted)',
+        select:'id,title,status,scheduled_date',order:'scheduled_date.desc',limit:'250'
+      }));
+      if(seq!==S.periodSeq)return;
+      S.pendingUploadRuns=(rows||[]).filter(function(x){return String(x.title||'').indexOf('[UPLOAD_OPNAME]')===0});
+    }catch(_){if(seq===S.periodSeq)S.pendingUploadRuns=null}
+  }
+
   function renderLedgerAudit() {
     var a=S.ledgerAudit || {};
     if(a.state==='loading')return '';
@@ -483,6 +507,7 @@
         }
       }
       if (!S.period) {
+        await loadPendingUploads(seq);
         S.overview = null;
         S.activity = [];
         return;
@@ -492,7 +517,8 @@
       var aq = qs({ brand_id: 'eq.' + BRAND, period_month: 'eq.' + month, select: 'movement_type,movement_rows,sku_count', order: 'movement_rows.desc' });
       var pair = await Promise.all([
         request('ui_stock_overview_v1?' + oq),
-        request('ui_stock_activity_chart_v1?' + aq)
+        request('ui_stock_activity_chart_v1?' + aq),
+        loadPendingUploads(seq)
       ]);
       if (seq !== S.periodSeq) return;
       S.overview = pair[0] && pair[0][0] ? pair[0][0] : null;
@@ -1021,7 +1047,7 @@
     var alert = S.error ? '<div class="sc3-alert">' + esc(S.error) + '</div>' : '';
     var pAlert = S.periodError ? '<div class="sc3-alert">' + esc(S.periodError) + '</div>' : '';
     var loading = S.baseLoading && !S.baseLoaded ? '<div class="sc3-loading">Memuat posisi SKU terkini…</div>' : '';
-    shell.innerHTML = renderHeader() + renderCorrectionPanel() + renderLedgerAudit() + pAlert + overviewKpis() + alert + loading +
+    shell.innerHTML = renderHeader() + renderCorrectionPanel() + renderLedgerAudit() + renderUploadStatus() + pAlert + overviewKpis() + alert + loading +
       '<div class="sc4-infographic-main"><article class="sc4-panel"><div class="sc4-panel-head"><div><h3>Tren Aktivitas Stok</h3><p>Jumlah movement per jenis dalam periode; bukan quantity gabungan.</p></div></div>' + renderActivity() + '</article>'+
       '<div class="sc4-side-stack"><article class="sc4-panel"><div class="sc4-panel-head"><div><h3>Komposisi Posisi Stok</h3><p>Distribusi SKU menurut saldo akhir periode.</p></div></div>' + compositionInfographic() + '</article>'+
       '<article class="sc4-panel"><div class="sc4-panel-head"><div><h3>Kontrol Periode</h3><p>' + esc(cutLabel()) + '</p></div></div>' + renderPeriodControl() + '<div class="sc4-info">Saldo negatif historis hanya informasional. Periksa transaksi setelah cutoff opname untuk error aktif.</div></article></div></div>'+
@@ -1069,6 +1095,10 @@
       var mode = e.target && e.target.closest ? e.target.closest('[data-sc4-top-mode]') : null;
       if (mode) { topSkuMode=mode.getAttribute('data-sc4-top-mode')==='out'?'out':'in'; render(); return; }
       var ui4 = e.target && e.target.closest ? e.target.closest('[data-sc4-action]') : null;
+      if (ui4 && ui4.getAttribute('data-sc4-action') === 'open-operasional') {
+        if(window.__HASNARIA_OWNER_SHELL)window.__HASNARIA_OWNER_SHELL.navigate('operasional');
+        return;
+      }
       if (ui4 && ui4.getAttribute('data-sc4-action') === 'upload-opname') {
         if(window.__HASNARIA_STOCK_UPLOAD_V1)window.__HASNARIA_STOCK_UPLOAD_V1.open();
         else window.alert('Form upload sedang dimuat. Coba sekali lagi setelah halaman siap.');
@@ -1206,6 +1236,9 @@
   window.__HASNARIA_STOCK_REVIEW = { openPending: function(){takeCorrectionRequest();if(active()){render();if(!S.baseLoaded&&!S.baseLoading)loadBase();}} };
   window.__HASNARIA_STOCK_REFRESH_VERIFIED = refreshCommittedData;
   document.addEventListener('hasnaria:stock-posted',function(){refreshCommittedData()},true);
+  document.addEventListener('hasnaria:write-complete',function(e){
+    if(e&&e.detail&&e.detail.module==='stok')refreshCommittedData();
+  },true);
   document.addEventListener('hasnaria:purchase-imported',function(){refreshCommittedData()},true);
   document.addEventListener('hasnaria:owner-shell-navigate',function(e){
     if(e.detail&&e.detail.tab==='stok')refreshCommittedData();
