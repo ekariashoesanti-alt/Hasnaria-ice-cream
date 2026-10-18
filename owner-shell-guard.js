@@ -49,7 +49,7 @@
     var ab=tabs&&tabs.querySelector('.tab[data-tab="administrasi"]');if(tabs&&!ab){ab=document.createElement('button');ab.type='button';ab.className='tab';ab.setAttribute('data-tab','administrasi');ab.textContent='Administrasi';ab.setAttribute('aria-label','Administrasi');var finance3=tabs.querySelector('.tab[data-tab="ops"]');tabs.insertBefore(ab,finance3||null)}
     if(ab){ab.textContent='Administrasi';ab.setAttribute('aria-label','Administrasi');ab.style.display=''}
     var labels={dashboard:'Ringkasan CEO',sales:'Penjualan',pembelian:'Pembelian',operasional:'Operasional',administrasi:'Administrasi',ops:'Keuangan',stok:'Stok',notifikasi:'Notifikasi'};
-    Object.keys(labels).forEach(function(id){var x=tabs&&tabs.querySelector('.tab[data-tab="'+id+'"]');if(x){x.textContent=labels[id];x.style.display=''}});
+    Object.keys(labels).forEach(function(id){var x=tabs&&tabs.querySelector('.tab[data-tab="'+id+'"]');if(x){if(x.textContent!==labels[id])x.textContent=labels[id];if(x.style.display!=='')x.style.display=''}});
     return h;
   }
 
