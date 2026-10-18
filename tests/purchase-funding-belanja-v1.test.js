@@ -41,7 +41,7 @@ test('C x D always drives purchase, Jas Hujan loan gets own source and audit met
   assert.match(safe,/auto_cash_adjustment:funding\.additional_cash/);
   assert.match(safe,/source_sheet:sn/);
   assert.match(safe,/hasOps:/);
-  assert.match(safe,/B OPERASIONAL tidak diposting sebagai transaksi/);
+  assert.match(safe,/Sheet B OPERASIONAL hanya untuk kontrol; tidak membentuk transaksi baru/);
   assert.match(legacy,/Workbook BELANJA hanya boleh melalui safe merge v3/);
 });
 test('dashboard cannot call a finance row posted when no journal exists',()=>{
