@@ -188,10 +188,16 @@ async function main() {
   await stock.api.syncRefresh();
   assert.equal(stock.api.S.pendingUploadRuns.length,0,'approval removes pending draft notice without manual reload');
 
+  // Optional upload-status REST failure cannot stop independently verified
+  // inventory reconciliation and infographic updates.
+  const lastUploadStatus = clone(stock.api.S.pendingUploadRuns);
+  stock.handlers.set('operational_runs', () => { throw new Error('temporary operational-status outage'); });
   stock.data.raw[0].system_qty = 5;
   stock.data.overview.movement_rows = 4;
   await stock.api.syncRefresh();
   assert.equal(stock.api.S.items[0].balance_qty, 5);
+  assert.deepEqual(clone(stock.api.S.pendingUploadRuns),lastUploadStatus,'optional status failure retains prior status');
+  stock.handlers.set('operational_runs', () => clone(stock.data.pendingUploads));
   assert.equal(stock.api.S.period, '2026-10', 'newest catalog entry does not select a different period');
   assert.equal(stock.api.S.category, 'Bahan'); assert.equal(stock.api.S.page, 2); assert.equal(stock.api.S.modal, 'position');
   assert.ok(stock.queries.every(query => query.method === 'GET' || query.rpc === 'get_ui_period_catalog_fast_v1'), 'background stock refresh only performs GET reads and the authorized read-only period RPC');
