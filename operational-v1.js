@@ -20,6 +20,13 @@
   function active(){var h=host();return!!(h&&!h.classList.contains('hidden'))}
   function context(){return window.__HASNARIA_CONTEXT||{}}
   function isOwner(){return context().role==='owner'}
+  function previewUsesProductionDatabase(){
+    var host=window.location&&window.location.hostname;
+    if(!host)return false;
+    if(String(window.HASNARIA_SB||'').indexOf('bnnhmtkpdjlgehsvgoda.supabase.co')<0)return false;
+    return host!=='hasnaria-business-analyzer.vercel.app'&&
+      host!=='hasnaria-business-analyzer-ekariashoesanti-9951s-projects.vercel.app';
+  }
   function today(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
   var MONTHS=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
   function fmtDate(v){if(!v)return'—';var p=String(v).slice(0,10).split('-');return p.length===3?Number(p[2])+'/'+Number(p[1])+'/'+p[0]:v}
@@ -176,6 +183,7 @@
   }
 
   async function createRun(){
+    if(previewUsesProductionDatabase()){state.actionError='Mode preview masih memakai database produksi: perubahan Operasional diblokir sampai staging siap.';render();return;}
     var title=document.getElementById('opCreateTitle'),date=document.getElementById('opCreateDate'),assignee=document.getElementById('opCreateAssignee');
     if(!title||!date||!assignee||!assignee.value){state.actionError='Judul, tanggal, dan pelaksana wajib diisi.';render();return}
     state.busy=true;clearAction();render();
@@ -187,6 +195,7 @@
 
   function itemById(id){return state.items.find(function(x){return x.id===id})}
   async function saveItem(id,button){
+    if(previewUsesProductionDatabase()){state.actionError='Mode preview masih memakai database produksi: perubahan Operasional diblokir sampai staging siap.';render();return;}
     var item=itemById(id);if(!item||!editable(state.activeRun)||state.busy)return;
     var run=state.activeRun;
     var valueEl=host().querySelector('[data-op-value="'+id+'"]'),boolEl=host().querySelector('[data-op-bool="'+id+'"]'),textEl=host().querySelector('[data-op-text="'+id+'"]'),noteEl=host().querySelector('[data-op-note="'+id+'"]');
@@ -213,6 +222,7 @@
   }
 
   async function submitRun(){
+    if(previewUsesProductionDatabase()){state.actionError='Mode preview masih memakai database produksi: perubahan Operasional diblokir sampai staging siap.';render();return;}
     if(!state.activeRun||!editable(state.activeRun)||state.busy)return;
     if(!window.confirm('Kirim Stock Opname ini untuk review? Setelah dikirim, hitungan tidak bisa diedit sampai dikembalikan reviewer.'))return;
     state.busy=true;clearAction();render();var id=state.activeRun.id;
@@ -221,6 +231,7 @@
 
   function reviewNotes(){var el=document.getElementById('opReviewNotes');return el?el.value.trim():''}
   async function approveRun(){
+    if(previewUsesProductionDatabase()){state.actionError='Mode preview masih memakai database produksi: perubahan Operasional diblokir sampai staging siap.';render();return;}
     if(!reviewable(state.activeRun)||state.busy)return;
     if(!window.confirm('Approve Stock Opname dan posting hasil hitung ke saldo stok? Proses ini akan membuat checkpoint opname final untuk seluruh item.'))return;
     var id=state.activeRun.id,notes=reviewNotes();state.busy=true;clearAction();render();
@@ -228,6 +239,7 @@
   }
 
   async function rejectRun(){
+    if(previewUsesProductionDatabase()){state.actionError='Mode preview masih memakai database produksi: perubahan Operasional diblokir sampai staging siap.';render();return;}
     if(!reviewable(state.activeRun)||state.busy)return;var notes=reviewNotes();if(!notes){state.actionError='Catatan koreksi wajib diisi sebelum mengembalikan pekerjaan.';render();return}
     if(!window.confirm('Kembalikan Stock Opname ini untuk dikoreksi?'))return;
     var id=state.activeRun.id;state.busy=true;clearAction();render();
