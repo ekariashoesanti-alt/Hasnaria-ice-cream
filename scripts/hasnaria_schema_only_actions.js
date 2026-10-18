@@ -121,6 +121,9 @@ function main(){
     // Retain ACLs/policies, and omit ownership rewrites of staging-managed roles.
     invoke('docker',[
       'run','--rm','--network','host',
+      // Match the host runner UID/GID so the ephemeral pg_dump file can be
+      // read and removed without loosening its 0600 permissions.
+      '--user',String(process.getuid())+':'+String(process.getgid()),
       '--volume',temp+':/schema',
       '--env','HSN_PROD_READONLY_DB_URL',
       'postgres:17','sh','-ec',
