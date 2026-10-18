@@ -108,21 +108,22 @@ function fixture(file, exports, tab) {
 }
 
 function stockFixture() {
-  const f = fixture('stock-control-v3.js', 'S,syncRefresh,supplementalItems,render,loadLedger', 'stok');
+  const f = fixture('stock-control-v3.js', 'S,syncRefresh,supplementalItems,auditLedgerPositions,render,loadLedger', 'stok');
   const raw = Array.from({ length: 40 }, (_, i) => ({ inventory_item_id: 'sku-' + i, item_name: 'Material ' + i,
     category: 'Bahan', unit: 'kg', min_qty: 2, order_qty: 4, system_qty: 10, purchase_qty: 4,
     sales_usage_qty: 1, last_opname_date: '2026-10-01', last_physical_qty: 7, tracking_active: true }));
   const recipes = raw.map(row => ({ inventory_item_id: row.inventory_item_id }));
+  const ledgers = raw.map(row => ({inventory_item_id:row.inventory_item_id,ledger_qty:row.system_qty,tracking_active:true}));
   const periods = [{ period_start: '2026-11-01' }, { period_start: '2026-10-01' }];
   const overview = { sku_count: 40, movement_rows: 3 };
   const activity = [{ movement_type: 'PURCHASE', movement_rows: 3, sku_count: 2 }];
   const ledger = Array.from({ length: 80 }, (_, i) => ({ movement_id: i, movement_date: '2026-10-01', qty_delta: 1 }));
-  const data = { raw, recipes, periods, overview, activity, ledger };
+  const data = { raw, recipes, periods, overview, activity, ledger, ledgers };
   Object.assign(f.api.S, { raw: clone(raw), items: f.api.supplementalItems(clone(raw), recipes, [], []), baseLoaded: true,
-    auxLoaded: true, periods: clone(periods), period: '2026-10', overview: clone(overview), activity: clone(activity),
+    auxLoaded: true, ledgerAudit:f.api.auditLedgerPositions(raw,ledgers), periods: clone(periods), period: '2026-10', overview: clone(overview), activity: clone(activity),
     modal: 'position', category: 'Bahan', page: 2 });
   for (const [table, value] of [
-    ['inventory_stock_reconciliation', 'raw'], ['ui_period_catalog_v1', 'periods'],
+    ['inventory_stock_reconciliation', 'raw'], ['inventory_ledger_balance','ledgers'], ['ui_period_catalog_v1', 'periods'],
     ['inventory_recipe_components', 'recipes'], ['ui_stock_activity_chart_v1', 'activity'], ['ui_stock_detail_v1', 'ledger']
   ]) f.handlers.set(table, () => clone(data[value]));
   f.handlers.set('ui_stock_overview_v1', () => [clone(data.overview)]);
@@ -147,6 +148,9 @@ function operationsFixture() {
 async function main() {
   const stock = stockFixture(), operations = operationsFixture();
   assert.equal(stock.registered.get('stock-control-v3'), stock.api.syncRefresh);
+  assert.equal(stock.api.auditLedgerPositions(stock.data.raw,stock.data.ledgers).count,0,'matching sources have no fake variance alert');
+  const conflict=clone(stock.data.ledgers);conflict[0].ledger_qty=1;
+  assert.equal(stock.api.auditLedgerPositions(stock.data.raw,conflict).count,1,'source discrepancy is detected without writing Stock');
   assert.equal(operations.registered.get('operational-v1'), operations.api.syncRefresh);
   for (const f of [stock, operations]) {
     const display = f === stock ? f.shell : f.host;
