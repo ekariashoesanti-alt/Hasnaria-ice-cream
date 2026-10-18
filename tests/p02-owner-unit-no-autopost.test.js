@@ -10,7 +10,10 @@ test('P0.2 source-unit verification is accessible only to Owner',()=>{
 test('Post-import notification NEVER writes Stock without physical unit review',()=>{
  assert.doesNotMatch(js,/\.rpc\(\s*['"]sync_purchase_quantity_stock_v1['"]/);
  assert.doesNotMatch(js,/syncStockForPeriod\s*\(/);
- assert.match(js,/addEventListener\(['"]hasnaria:purchase-imported['"],function\(\)\{resetData\(\);loadPeriods\(\)\.then\(function\(\)\{load\(true\)\}\)\},true\)/);
+ assert.match(js,/addEventListener\(['"]hasnaria:purchase-imported['"]/);
+ assert.match(js,/resetData\(\);loadPeriods\(\)\.then/);
+ assert.match(js,/sel\.value=p;load\(true\)/);
+ assert.doesNotMatch(js,/hasnaria:purchase-imported[^;]+sync_purchase_quantity_stock_v1/);
  assert.match(js,/Penerimaan Stok hanya dibukukan setelah satuan dan bukti diperiksa/);
 });
 test('Unit-approval RPC never writes receipt, movement or accounting directly',()=>{
