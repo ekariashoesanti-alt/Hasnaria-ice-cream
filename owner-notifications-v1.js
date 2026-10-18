@@ -72,7 +72,7 @@ async function load(force){
   else failure.push('Konversi: '+(result[1].status==='rejected'?String(result[1].reason):result[1].value.error.message));
   data=next;error=failure.join(' · ');
  }catch(e){if(id===seq)error=e&&e.message?e.message:String(e)}
- finally{if(id===seq&&active()){loading=false;draw()}}
+ finally{if(id===seq){loading=false;if(active())draw()}}
 }
 function mount(){if(!active())return;var s=window.__HASNARIA_CONTEXT;if(ctx!==s){ctx=s;data=null;period=current();filter='backlog';selected='';}
  draw();if(!data&&!loading)load(false)}
