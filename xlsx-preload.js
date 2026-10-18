@@ -37,7 +37,7 @@
   if(!document.getElementById('hasnaria-purchase-excel-safe-merge-v3-js')){
     var sm=document.createElement('script');
     sm.id='hasnaria-purchase-excel-safe-merge-v3-js';
-    sm.src='/purchase-excel-safe-merge-v3.js?v=5';
+    sm.src='/purchase-excel-safe-merge-v3.js?v=6';
     sm.async=true;
     sm.onload=loadDualSourceV2;
     sm.onerror=function(){console.error('Safe merge Pembelian gagal dimuat; memuat fallback dual-source.');loadDualSourceV2();};
