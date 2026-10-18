@@ -133,7 +133,7 @@ function main(){
     // Supabase creates the public schema on every new project. A plain pg_dump
     // would fail with SQLSTATE 42P06 when restoring Tokyo's public schema to
     // an otherwise empty Singapore project. Never drop the staging public schema.
-    const publicCreate=/^CREATE SCHEMA public;\\r?$/gm;
+    const publicCreate=/^CREATE SCHEMA public;\r?$/gm;
     const publicCreateCount=(sql.match(publicCreate)||[]).length;
     if(publicCreateCount!==1)throw Error('BLOCK: expected exactly one public schema definition in export');
     sql=sql.replace(publicCreate,'CREATE SCHEMA IF NOT EXISTS public;');
