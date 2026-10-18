@@ -105,8 +105,7 @@
       return {rpc:'resolve_purchase_quantity_override',params:{p_source_history_id:sourceHistoryId,p_effective_qty:positive(values.effective_qty,'Quantity efektif'),p_reason:reason(values.reason)}};
     }
     if(type==='pack_conversion'){
-      if(!meta.conversion_id) throw new Error('Conversion ID tidak tersedia.');
-      return {rpc:'resolve_inventory_conversion',params:{p_conversion_id:meta.conversion_id,p_units_per_purchase_unit:positive(values.units_per_purchase_unit,'Isi per pack'),p_reason:reason(values.reason)}};
+      throw new Error('P0.2: verifikasi konversi lama dinonaktifkan sampai persetujuan berbukti tersedia. Buka Pembelian > Periksa konversi.');
     }
     if(type==='recipe_verification'){
       if(!meta.product_id) throw new Error('Product ID tidak tersedia.');
@@ -219,7 +218,7 @@
   function formHtml(action){
     const meta=action.metadata||{},type=action.action_type;let body='',submitLabel='Simpan keputusan';
     if(type==='pack_conversion'){
-      body='<p class="erp-note warn">Isi per pack harus berasal dari kemasan/supplier yang benar. Jangan menebak.</p><label>Isi per pack<input name="units_per_purchase_unit" type="number" min="0.000001" step="any" required placeholder="Contoh: 50"></label>';submitLabel='Verifikasi konversi';
+      body='<p class="erp-note warn"><b>P0.2: verifikasi konversi sementara dinonaktifkan.</b> Nilai draft masih estimasi dan belum terbukti dari kemasan. Persetujuan lama dapat mengubah BOM. Gunakan Pembelian → Periksa konversi untuk pemeriksaan; jangan mengesahkan faktor sebelum tersedia bukti.</p>';submitLabel='Tidak tersedia';
     }else if(type==='recipe_verification'){
       body='<p class="erp-note warn">Verifikasi hanya jika BOM, komponen, dan qty per penjualan sudah lengkap. HPP dan konsumsi stok hanya berlaku untuk transaksi pada/ setelah tanggal yang dipilih.</p><div class="erp-wide erp-note"><b>Ringkasan resep</b><br>'+esc(meta.recipe_summary||'Belum tersedia')+'<br><small>Komponen aktif: '+number(meta.active_components)+'</small></div><label>Tanggal mulai berlaku<input name="effective_from" type="date" max="'+todayJakarta()+'" required></label>';submitLabel='Verifikasi resep';
     }else if(type==='missing_component_cost'){
@@ -242,7 +241,7 @@
     }else if(type==='financing_payment_review'){
       body='<p class="erp-note warn">Pilih cash_paid hanya jika uang benar-benar keluar dari kas/bank pada tanggal yang diisi.</p><div class="erp-wide erp-note"><b>Tanggal sumber:</b> '+esc(meta.purchase_date||'Belum tersedia')+'<br><b>Nilai kandidat:</b> '+money(meta.amount)+'<br><b>Metode sumber:</b> '+esc(meta.payment_method||'Belum tersedia')+'</div><label>Keputusan<select name="resolution" required><option value="">Pilih…</option><option value="cash_paid">Cash paid</option><option value="liability_only">Liability only</option><option value="exclude">Exclude</option></select></label><fieldset id="erp-cash-fields" class="erp-wide" hidden><div class="erp-form"><label>Tanggal pembayaran<input name="cash_date" type="date"></label><label>Nominal dibayar<input name="cash_amount" type="number" min="0.01" step="any"></label></div></fieldset>';submitLabel='Simpan keputusan pembiayaan';
     }
-    const canSubmit=!(type==='sale_item_mapping'&&!meta.suggested_product_id);
+    const canSubmit=type!=='pack_conversion'&&!(type==='sale_item_mapping'&&!meta.suggested_product_id);
     return commonHeader(action)+'<form id="erp-action-form" class="erp-form">'+body+'<label class="erp-wide">Alasan / catatan audit<textarea name="reason" rows="3" required placeholder="Tuliskan dasar keputusan"></textarea></label><p id="erp-action-message" class="erp-wide erp-message" role="status"></p><div class="erp-form-actions erp-wide"><button type="button" data-erp-action-close>Tutup</button>'+(canSubmit?'<button class="primary" type="submit">'+esc(submitLabel)+'</button>':'')+'</div></form>';
   }
 
