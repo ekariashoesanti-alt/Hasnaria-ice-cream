@@ -7,7 +7,8 @@
 create or replace view public.inventory_stock_reconciliation
 with (security_invoker = true)
 as
-with latest_opname as (
+with ledger as materialized (select * from public.inventory_ledger_balance),
+latest_opname as (
   select distinct on (o.brand_id,o.inventory_item_id)
     o.brand_id,o.inventory_item_id,o.opname_date,o.system_qty as opname_system_qty,
     o.physical_qty,o.variance
@@ -18,7 +19,7 @@ with latest_opname as (
   select l.brand_id,l.inventory_item_id,
     coalesce(sum(m.qty_delta) filter(where m.movement_type='PURCHASE_RECEIPT'),0::numeric) as purchase_qty,
     coalesce(sum(-m.qty_delta) filter(where m.movement_type='SALE_CONSUMPTION'),0::numeric) as sales_usage_qty
-  from public.inventory_ledger_balance l
+  from ledger l
   left join public.inventory_movements m
     on m.brand_id=l.brand_id and m.inventory_item_id=l.inventory_item_id
    and l.tracking_active
@@ -38,7 +39,7 @@ select
   o.variance as last_variance,
   l.tracking_active,
   l.status
-from public.inventory_ledger_balance l
+from ledger l
 left join latest_opname o
   on o.brand_id=l.brand_id and o.inventory_item_id=l.inventory_item_id
 left join posted_breakdown pb
