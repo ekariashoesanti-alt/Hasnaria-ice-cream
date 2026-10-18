@@ -18,7 +18,13 @@ const files = {
 for (const [tab, source] of Object.entries(files)) {
   const marker = 'data-month-filter="' + tab + '"';
   assert.ok(source.includes(marker), tab + ' must expose exactly one monthly filter marker');
-  assert.equal(source.split(marker).length - 1, 1, tab + ' must not duplicate the monthly filter');
+  if (tab === 'pembelian') {
+    assert.equal(source.split(marker).length - 1, 2, 'separate Owner and Staff branches each declare one month filter');
+    assert.ok(source.includes('if(ownerCompact()){renderOwnerShell(host);return}'), 'Owner render must exit before legacy Staff renderer');
+    assert.ok(source.includes('function renderOwnerShell(host)'), 'Owner has one compact month selector');
+  } else {
+    assert.equal(source.split(marker).length - 1, 1, tab + ' must not duplicate the monthly filter');
+  }
 }
 
 assert.ok(files.sales.includes('id="sbMonth"'), 'Sales keeps the month selector');
