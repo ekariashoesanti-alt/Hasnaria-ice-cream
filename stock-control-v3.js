@@ -189,7 +189,7 @@
     var l = document.createElement('link');
     l.id = 'stock-control-v3-css';
     l.rel = 'stylesheet';
-    l.href = '/stock-control-v3.css?v=3';
+    l.href = '/stock-control-v3.css?v=4';
     document.head.appendChild(l);
   }
 
@@ -640,7 +640,7 @@
     var valid = Number.isFinite(number) && number >= 0;
     var preview = found && valid ? '<strong>Selisih jika disimpan: ' + esc(signed(number - num(item.system_qty))) +
       ' ' + esc(item.unit || 'unit') + '</strong>' : 'Masukkan jumlah fisik terbaru untuk melihat selisih.';
-    return '<section class="sc4-correction-panel" aria-labelledby="sc4CorrectionTitle">' +
+    return '<div class="sc4-modal-backdrop"><section class="sc4-correction-panel" role="dialog" aria-modal="true" aria-labelledby="sc4CorrectionTitle">' +
       '<div class="sc4-correction-title"><div><small>REKONSILIASI · VERIFIKASI OWNER</small><h3 id="sc4CorrectionTitle">Entry Koreksi Stok</h3>' +
       '<p>Selisih historis perlu ditelusuri dahulu. Entri ini menyimpan hasil hitung fisik TERBARU, bukan menimpa saldo bulan sebelumnya.</p></div>' +
       '<button type="button" data-sc4-correction="cancel">Tutup</button></div>' +
@@ -658,7 +658,7 @@
       '<div class="sc4-correction-actions"><span id="sc4CorrectionPreview">' + preview + '</span>' +
       '<button type="button" data-sc4-correction="save" ' + (!found || c.busy ? 'disabled' : '') + '>' +
       (c.busy ? 'Menyimpan…' : 'Konfirmasi & Simpan Opname Baru') + '</button></div>' +
-      '<p class="sc4-correction-footnote">Tanggal otomatis hari ini. Entri baru memiliki audit trail. Jika ingin mengoreksi arsip September/Oktober, verifikasi dokumen sumber terlebih dahulu; jangan gunakan angka historis sebagai hasil hitung fisik hari ini.</p></section>';
+      '<p class="sc4-correction-footnote">Tanggal otomatis hari ini. Entri baru memiliki audit trail. Jika ingin mengoreksi arsip September/Oktober, verifikasi dokumen sumber terlebih dahulu; jangan gunakan angka historis sebagai hasil hitung fisik hari ini.</p></section></div>';
   }
 
   async function saveCorrection() {
