@@ -153,7 +153,7 @@ function main(){
     // Retain staging's identical managed admin defaults; they cannot be
     // changed by the unprivileged staging postgres role (SQLSTATE 42501).
     // Only remove full-line commands for this exact managed owner.
-    const managedDefaults=/^ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin IN SCHEMA (?:public|private) (?:GRANT|REVOKE) [^;\\r\\n]*;\\r?$/gm;
+    const managedDefaults=/^ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin IN SCHEMA (?:public|private) (?:GRANT|REVOKE) [^;\r\n]*;\r?$/gm;
     const managedDefaultCount=(sql.match(managedDefaults)||[]).length;
     if(managedDefaultCount<1||managedDefaultCount>30)
       throw Error('BLOCK: unexpected Supabase-admin default grants export');
