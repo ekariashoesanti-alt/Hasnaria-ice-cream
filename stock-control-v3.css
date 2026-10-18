@@ -252,3 +252,26 @@
 }
 @media(max-width:900px){#stok .sc4-main-grid{grid-template-columns:1fr}#stok .sc4-control-grid{grid-template-columns:1fr 1fr}}
 @media(max-width:600px){#stok .sc4-head-tools{width:100%;justify-content:stretch}#stok .sc4-head-tools label{width:100%}#stok .sc4-head-tools select{width:100%}#stok .sc4-control-grid{grid-template-columns:1fr}#stok .sc4-actions-row>div:last-child{width:100%}#stok .sc4-actions-row button{flex:1}#stok .sc4-modal-backdrop{padding:7px}#stok .sc4-modal{width:100%;max-height:95vh;border-radius:12px}}
+
+
+/* HSN-413 — read-first stock variance correction; overlay preserves one-view dashboard. */
+#stok .sc4-correction-panel{width:min(780px,96vw);max-height:min(88vh,760px);overflow:auto;border-radius:16px;border:1px solid #d6e4df;background:#fff;padding:18px 22px;box-shadow:0 18px 55px rgba(10,57,39,.16);color:#193e33}
+#stok .sc4-correction-title{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}
+#stok .sc4-correction-title small{font-size:10px;letter-spacing:.09em;font-weight:800;color:#167b5d}
+#stok .sc4-correction-title h3{margin:4px 0 8px;font-size:20px;line-height:1.2}
+#stok .sc4-correction-title p{font-size:12px;line-height:1.5;color:#61756c;max-width:580px}
+#stok .sc4-correction-title>button{flex:none;min-height:32px;padding:5px 13px;border:1px solid #dae6e0;border-radius:8px;background:#f7faf8;color:#415a50;cursor:pointer}
+#stok .sc4-correction-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:18px 0}
+#stok .sc4-correction-fields>div,#stok .sc4-correction-fields>label{border:1px solid #e2ebe7;border-radius:10px;padding:12px;min-width:0;display:flex;flex-direction:column;gap:6px}
+#stok .sc4-correction-fields label{font-size:12px;font-weight:700;color:#536b60}
+#stok .sc4-correction-fields strong{font-size:17px;color:#174e3e}
+#stok .sc4-correction-fields small{font-size:11px;color:#698075}
+#stok .sc4-correction-fields input,#stok .sc4-correction-fields textarea{font:inherit;font-size:13px;width:100%;border:1px solid #ccdcd4;border-radius:8px;padding:9px;color:#183e32;background:#fff}
+#stok .sc4-correction-fields textarea{min-height:76px;resize:vertical}
+#stok .sc4-correction-actions{display:flex;align-items:center;justify-content:space-between;gap:12px;border-top:1px solid #e5ece9;padding-top:12px}
+#stok .sc4-correction-actions span{font-size:12px;font-weight:700;color:#435e53}
+#stok .sc4-correction-actions button{background:#176b55;color:white;border:0;border-radius:9px;padding:10px 14px;cursor:pointer;font-weight:750}
+#stok .sc4-correction-actions button:disabled{opacity:.5;cursor:not-allowed}
+#stok .sc4-correction-footnote{font-size:11px;color:#73867d;line-height:1.5;margin-top:12px}
+#stok .sc4-correction-note{border:1px solid #b7dbcb;background:#f0faf4;color:#196044;border-radius:9px;padding:11px 14px;font-size:12px;margin:12px 0}
+@media(max-width:640px){#stok .sc4-correction-panel{padding:14px;max-height:94vh}#stok .sc4-correction-fields{grid-template-columns:1fr;gap:8px}#stok .sc4-correction-actions{flex-direction:column;align-items:stretch}#stok .sc4-correction-actions button{width:100%}}
