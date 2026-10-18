@@ -46,7 +46,7 @@ function stockCell(r){
   if(r.stock_status==='stock_review_required')return statusPill('Perlu mapping','warn')+'<small class="pfa-action">'+esc(r.stock_mapping_status||'mapping stok')+'</small>';
   return statusPill('Non-stok','');
 }
-function financeStatus(r){if(n(control.journal_rows)===0)return statusPill('Belum dijurnal','warn');return r.category_status==='provisional'?statusPill('Sumber bayar belum lengkap','warn'):statusPill('Terjurnal','ok')}
+function financeStatus(r){if(control.finance_link_status!=='MATCH'||n(control.journal_rows)<n(control.purchase_rows))return statusPill('Jurnal belum lengkap','warn');return r.category_status==='provisional'?statusPill('Jurnal provisi · review','warn'):statusPill('Terjurnal','ok')}
 function table(a){
   var show=a.slice().sort(function(x,y){return String(y.effective_date||'').localeCompare(String(x.effective_date||''))||n(y.total_amount)-n(x.total_amount)}).slice(0,220);
   if(!show.length)return'<div class="pfa-empty">Tidak ada transaksi Pembelian untuk kategori/periode ini.</div>';
@@ -182,7 +182,7 @@ async function unitRevokeSelected(){
 
 
 function purchaseDailyMarkup(){
- var daily={};rows.forEach(function(r){var d=String(r.purchase_date||'').slice(0,10);if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(d))return;
+ var daily={};rows.forEach(function(r){var d=String(r.effective_date||r.purchase_date||'').slice(0,10);if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(d))return;
   if(!daily[d])daily[d]={date:d,count:0,amount:0};daily[d].count++;daily[d].amount+=n(r.total_amount)
  });
  var series=Object.keys(daily).sort().map(function(k){return daily[k]});
@@ -205,7 +205,15 @@ function purchasePaymentMarkup(){
  var labels=Object.keys(g).sort(function(a,b){return g[b]-g[a]});
  if(!labels.length)return'<div class="pfa-empty">Metode pembayaran tidak tersedia.</div>';
  var value=total(rows)||1;return labels.slice(0,6).map(function(k){return'<div class="pfa-share-row"><div><span>'+esc(k)+'</span><b>'+esc(money(g[k]))+'</b></div><progress max="100" value="'+Math.max(0,g[k]/value*100).toFixed(1)+'"></progress></div>'}).join('')+
- '<div class="pfa-note-banner">Metode pembayaran, sumber dana dan kategori beban adalah konsep berbeda; jangan membuat jurnal duplikat.</div>';
+ '<div class="pfa-note-banner">Metode kanonis belum dapat menguraikan transaksi dengan beberapa sumber dana E–H tanpa breakdown yang sudah tersimpan. BELUM_DIPETAKAN bukan otomatis Tunai.</div>';
+}
+function purchaseJournalReconciliation(){
+ var canonical=n(control.purchase_rows),journal=n(control.journal_rows),gap=n(control.purchase_journal_delta);
+ var okay=control.finance_link_status==='MATCH'&&journal>=canonical&&Math.abs(gap)<0.01;
+ return'<div class="pfa-note-banner" role="status"><b>'+(okay?'Jurnal cocok dengan Pembelian kanonis':'Jurnal Pembelian masih perlu rekonsiliasi')+
+ '</b> · '+canonical+' transaksi sumber · '+journal+' entri jurnal · Selisih '+esc(money(Math.abs(gap)))+
+ (n(control.provisional_journal_rows)>0?' · '+n(control.provisional_journal_rows)+' entri provisi perlu review':'')+
+ '. B OPERASIONAL bukan Pembelian kedua.</div>';
 }
 function infographicMarkup(){
  return'<div class="pfa-insights-grid"><article class="pfa-insight-panel"><h3>Tren Pembelian Harian</h3><p>Nilai dan frekuensi transaksi periode terpilih</p>'+purchaseDailyMarkup()+'</article>'+
@@ -233,6 +241,7 @@ function render(){
       card('Operasional',money(v.operating_amount),n(v.operating_rows).toLocaleString('id-ID')+' transaksi','expense')+
       card('Review',money(v.review_amount),n(v.review_rows).toLocaleString('id-ID')+' transaksi','review')+
     '</div>'+
+    purchaseJournalReconciliation()+
     infographicMarkup()+
     '<div class="pfa-detail-cta"><div><b>'+n(v.purchase_rows).toLocaleString('id-ID')+' transaksi pada '+esc(monthLabel(periodValue()))+'</b><span>Tabel lengkap tidak ditampilkan di halaman utama.</span></div><button type="button" class="primary" data-pfa-detail-open="1">Lihat Detail Pembelian</button></div>'+
     unitVerificationMarkup()+
