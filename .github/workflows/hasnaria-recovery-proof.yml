@@ -33,7 +33,7 @@ jobs:
       - name: Export encrypted archive and verify remote ciphertext (no public artifacts)
         shell: bash
         env:
-          HSN_PROD_READONLY_DB_URL: ${{ secrets.HSN_PROD_READONLY_DB_URL }}
+          HSN_PROD_BACKUP_READONLY_DB_URL: ${{ secrets.HSN_PROD_BACKUP_READONLY_DB_URL }}
           HSN_BACKUP_AGE_RECIPIENT: ${{ vars.HSN_BACKUP_AGE_RECIPIENT }}
           HSN_BACKUP_S3_BUCKET: ${{ vars.HSN_BACKUP_S3_BUCKET }}
           AWS_DEFAULT_REGION: ${{ vars.AWS_DEFAULT_REGION }}
@@ -44,20 +44,24 @@ jobs:
           umask 077
           tmp="$(mktemp -d)"
           trap 'rm -rf "$tmp"' EXIT
-          for required in HSN_PROD_READONLY_DB_URL HSN_BACKUP_AGE_RECIPIENT HSN_BACKUP_S3_BUCKET AWS_DEFAULT_REGION AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY; do
+          for required in HSN_PROD_BACKUP_READONLY_DB_URL HSN_BACKUP_AGE_RECIPIENT HSN_BACKUP_S3_BUCKET AWS_DEFAULT_REGION AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY; do
             [[ -n "${!required:-}" ]] || { echo "BLOCK: missing required backup secret/variable"; exit 1; }
           done
           # Read-only source role cannot change production even if a dump command is compromised.
-          node -e "require('./scripts/hasnaria_schema_only_actions.js').verifyUrl(process.env.HSN_PROD_READONLY_DB_URL,'bnnhmtkpdjlgehsvgoda',true)"
+          node -e "require('./scripts/hasnaria_schema_only_actions.js').verifyUrl(process.env.HSN_PROD_BACKUP_READONLY_DB_URL,'bnnhmtkpdjlgehsvgoda',true)"
           sudo apt-get update -qq
           sudo apt-get install -y -qq age awscli
           docker pull postgres:17 >/dev/null
-          db() { docker run --rm --network host -e HSN_PROD_READONLY_DB_URL postgres:17 psql -X -qAt -v ON_ERROR_STOP=1 -d "$HSN_PROD_READONLY_DB_URL" -c "$1"; }
+          db() { docker run --rm --network host -e HSN_PROD_BACKUP_READONLY_DB_URL postgres:17 psql -X -qAt -v ON_ERROR_STOP=1 -d "$HSN_PROD_BACKUP_READONLY_DB_URL" -c "$1"; }
           role_guard="select case when coalesce((select rolsuper or rolcreaterole or rolcreatedb or rolreplication or rolbypassrls from pg_roles where rolname=current_user),true) or has_database_privilege(current_user,current_database(),'CREATE') or exists(select 1 from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname in ('public','private','auth','storage','supabase_migrations') and c.relkind in ('r','p') and has_table_privilege(current_user,c.oid,'INSERT,UPDATE,DELETE,TRUNCATE')) then 'DENY' else 'OK' end"
           [[ "$(db "$role_guard")" == 'OK' ]] || { echo "BLOCK: production connection is not strictly read-only"; exit 1; }
+          # The schema-only hsn_schema_reader cannot read Auth, Storage or migration history.
+          # Fail BEFORE archive creation rather than claiming a partial dump is recoverable.
+          full_read_guard="select case when exists(select 1 from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname in ('public','private','auth','storage','supabase_migrations') and c.relkind in ('r','p') and not has_table_privilege(current_user,c.oid,'SELECT')) then 'DENY' else 'OK' end"
+          [[ "$(db "$full_read_guard")" == 'OK' ]] || { echo "BLOCK: dedicated full-backup READ-ONLY role cannot read Auth/Storage/migration metadata; no partial archive published"; exit 1; }
           # Supabase Storage object bytes are external to SQL dump. Never claim complete backup if present.
           [[ "$(db 'select count(*) from storage.objects')" == '0' ]] || { echo "BLOCK: Storage blob backup procedure is separately required"; exit 1; }
-          docker run --rm --network host -e HSN_PROD_READONLY_DB_URL -v "$tmp:/out" postgres:17 sh -c 'pg_dump --format=custom --no-owner --no-privileges --schema=public --schema=private --schema=auth --schema=storage --schema=supabase_migrations --file=/out/hasnaria.dump "$HSN_PROD_READONLY_DB_URL"' >/dev/null 2>&1 || { echo "BLOCK: PostgreSQL 17 scoped dump failed; source permissions or managed schema need DBA review"; exit 1; }
+          docker run --rm --network host -e HSN_PROD_BACKUP_READONLY_DB_URL -v "$tmp:/out" postgres:17 sh -c 'pg_dump --format=custom --no-owner --no-privileges --schema=public --schema=private --schema=auth --schema=storage --schema=supabase_migrations --file=/out/hasnaria.dump "$HSN_PROD_BACKUP_READONLY_DB_URL"' >/dev/null 2>&1 || { echo "BLOCK: PostgreSQL 17 scoped dump failed; source permissions or managed schema need DBA review"; exit 1; }
           test -s "$tmp/hasnaria.dump"
           docker run --rm -v "$tmp:/out:ro" postgres:17 pg_restore --list /out/hasnaria.dump > "$tmp/toc.txt"
           for required in 'TABLE DATA public products' 'TABLE DATA public offline_purchase_history' 'TABLE DATA auth users' 'TABLE DATA supabase_migrations schema_migrations'; do
