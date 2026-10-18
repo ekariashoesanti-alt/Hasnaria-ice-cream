@@ -69,6 +69,9 @@ jobs:
       - name: Owner Purchase, Stock and Notifications UX regression
         run: node --test tests/owner-insights-ui.test.js
 
+      - name: Stock Opname upload strict validation and draft-only workflow
+        run: node --test tests/stock-opname-upload-v1.test.js
+
       - name: BELANJA funding and journal truth regressions
         run: node --test tests/purchase-funding-belanja-v1.test.js
 
