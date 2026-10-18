@@ -55,6 +55,8 @@ function assertActionContracts() {
   }
   const request = (action, values) => JSON.parse(JSON.stringify(api._buildRequest(action, values)));
   assert.throws(()=>api._buildRequest({action_type:'pack_conversion',metadata:{conversion_id:'c1'}},{units_per_purchase_unit:'50',reason:'Kemasan supplier'}),/P0.2.*dinonaktifkan/);
+  assert.ok(!actionSource.includes("rpc:'resolve_inventory_conversion'"), 'no legacy mutation RPC remains in ERP action code');
+  assert.ok(actionSource.includes("const canSubmit=type!=='pack_conversion'"), 'ERP pack conversion modal must not show a submit button');
   assert.deepEqual(request({action_type:'recipe_verification',metadata:{product_id:'p1'}},{effective_from:'2026-09-18',reason:'BOM diperiksa'}), {rpc:'resolve_product_recipe_verification_v2',params:{p_product_id:'p1',p_verified:true,p_effective_from:'2026-09-18',p_reason:'BOM diperiksa'}});
   assert.deepEqual(request({action_type:'missing_recipe',metadata:{product_id:'p0'}},{components:[{inventory_item_id:'i10',qty_per_sale:'1'},{inventory_item_id:'i11',qty_per_sale:'0.25'}],reason:'Resep aktual owner'}), {rpc:'save_product_recipe_draft',params:{p_product_id:'p0',p_components:[{inventory_item_id:'i10',qty_per_sale:1},{inventory_item_id:'i11',qty_per_sale:0.25}],p_reason:'Resep aktual owner'}});
   assert.deepEqual(request({action_type:'missing_component_cost',metadata:{inventory_item_id:'i20'}},{unit_cost:'825',effective_from:'2026-09-18',source_reference:'Nota supplier 18/09',reason:'Harga per porsi diverifikasi'}), {rpc:'resolve_inventory_item_cost_verification',params:{p_inventory_item_id:'i20',p_unit_cost:825,p_effective_from:'2026-09-18',p_source_reference:'Nota supplier 18/09',p_reason:'Harga per porsi diverifikasi'}});
