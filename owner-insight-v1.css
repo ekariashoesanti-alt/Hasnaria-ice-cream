@@ -87,3 +87,9 @@
 #stok .sc4-blank-insight{display:grid;place-items:center;min-height:140px;text-align:center;font-size:11px;color:#71857a}
 @media(max-width:940px){#notifikasi .hqn-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}#notifikasi .hqn-two,#pembelian .pfa-insights-grid,#pembelian .pfa-insight-two,#stok .sc4-infographic-main,#stok .sc4-infographic-bottom{grid-template-columns:1fr}}
 @media(max-width:600px){#notifikasi .hqn-kpis{grid-template-columns:1fr 1fr}#notifikasi .hqn-two{grid-template-columns:1fr}#notifikasi .hqn-panel{padding:11px}#stok .sc4-donut-wrap{flex-wrap:wrap}}
+
+
+#stok .sc4-sku-toggle{display:flex;gap:4px;justify-content:flex-end;margin:8px 0}
+#stok .sc4-sku-toggle button{border:1px solid #dce9e2;border-radius:8px;background:#f2f6f3;color:#547367;font:inherit;font-size:10px;font-weight:800;padding:7px 11px;cursor:pointer}
+#stok .sc4-sku-toggle button.on{background:#176b55;border-color:#176b55;color:#fff}
+#stok .sc4-anomaly>div span{text-align:right;max-width:62%}
