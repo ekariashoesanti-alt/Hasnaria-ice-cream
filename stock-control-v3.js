@@ -13,6 +13,13 @@
   var SB = window.HASNARIA_SB;
   var KEY = window.HASNARIA_KEY;
   var BRAND = 'a36d4b4f-3ccc-4a78-8aeb-b868f0407ea4';
+  function previewUsesProductionDatabase(){
+    var host=window.location&&window.location.hostname;
+    if(!host)return false;
+    if(String(window.HASNARIA_SB||'').indexOf('bnnhmtkpdjlgehsvgoda.supabase.co')<0)return false;
+    return host!=='hasnaria-business-analyzer.vercel.app'&&
+      host!=='hasnaria-business-analyzer-ekariashoesanti-9951s-projects.vercel.app';
+  }
   var PAGE_SIZE = 18;
   var AUX_CHUNK = 40;
   var S = {
@@ -805,6 +812,7 @@
       c.error = 'Masukkan hasil hitung fisik yang valid (minimal 0).'; render(); return;
     }
     if (reason.length < 12) { c.error = 'Tuliskan alasan dan bukti koreksi minimal 12 karakter.'; render(); return; }
+    if(previewUsesProductionDatabase()){c.error='Preview memakai database produksi. Koreksi fisik diblokir sampai staging terisolasi siap.';render();return;}
     c.busy = true; c.error = ''; render();
     try {
       // RPC posts from the canonical inventory ledger, so the visible snapshot must agree first.
