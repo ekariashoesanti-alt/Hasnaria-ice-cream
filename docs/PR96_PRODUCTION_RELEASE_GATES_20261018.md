@@ -43,3 +43,25 @@ Tidak ada perubahan ke saldo fisik, transaksi Pembelian atau jurnal produksi seb
 ### Lingkup di luar PR #96
 
 PR #88 mencakup migration ledger/unit/lineage dengan gate backup yang belum terpenuhi; PR #83 mencakup penyederhanaan load Finance/Admin. Keduanya belum merged dan bercabang dari kode lama. Jangan merge tanpa rebase dan pengujian khusus.
+
+
+## Staging Singapore: pelaksanaan nomor 1 (18 Okt 2026, pukul ~19.55 WIB)
+
+**Dilaksanakan langsung di Singapore `rynnpndtzjwpekbiwiif`:**
+- `pg_cron` diaktifkan sesuai ekstensi produksi. Verifikasi: extension installed = 1, scheduled_jobs = 0.
+- `staging_guard.schema_catalog_parity_v1` diperbarui agar ekspektasi fungsi publik = **179** dan trigger publik = **63**; target tetap 87 tabel, 176 view, 216 policy, dan 87 tabel RLS. Verifikasi identity = 1; enam metrik objek bisnis masih 0 dan belum paritas.
+- Tokyo produksi tetap read-only. Tidak ada copy `auth.users`, akun pelanggan, pembelian, penjualan, saldo atau jurnal.
+
+**Workflow baru disiapkan di PR #96:**
+- `scripts/hasnaria_schema_only_actions.js` mendukung `validate-only` dan `restore-staging` yang hanya berjalan dari `main` dengan `workflow_dispatch`, persetujuan khusus dan project-ref eksplisit.
+- `.github/workflows/hasnaria-staging-schema.yml` menerima persetujuan `CHECK_STAGING_SCHEMA` untuk trial rollback dan `RESTORE_SCHEMA_ONLY_SINGAPORE` untuk pemulihan schema-only setelah trial. Kedua koneksi melalui GitHub secrets, tanpa mencetak SQL/password atau mengirim artifact.
+- Dua secrets yang perlu dipasang oleh operator di protected GitHub Actions environment `hasnaria-staging-schema`: `HSN_PROD_READONLY_DB_URL` (role PostgreSQL benar-benar read-only di Tokyo) dan `HSN_STAGING_DB_URL` (koneksi khusus Singapore). **Jangan pernah menempel password atau connection string ke chat**.
+- Sebelum memakai mode restore, review source dan hasil trial pada protected environment, karena schema-only juga dapat memuat hard-coded constants dan ketergantungan ekstensi.
+- Perubahan workflow masih berada dalam PR #96 Draft, bukan `main`; GitHub Audit Gate lulus. Workflow ini **BELUM dieksekusi** dengan secrets dan belum berhasil membuat tabel Stok/Pembelian/Operasional permanen. Jangan klaim staging siap E2E sampai DB catalog benar-benar sesuai.
+
+**Langkah aktivasi operator saat koneksi dan review tersedia:**
+1. Di GitHub repository pilih Settings → Secrets and variables → Actions; simpan URL koneksi masing-masing sebagai secret di environment terlindungi; wajib beda project ref. Aktifkan approval reviewer lingkungan tersebut.
+2. Review lalu bawa hanya workflow restore yang telah diuji ke `main`; jangan merge sisa PR #96 demi mengaktifkan workflow.
+3. GitHub Actions → **Hasnaria Singapore Schema Restore** → Run workflow pada `main`; lakukan `CHECK_STAGING_SCHEMA` terlebih dahulu. Jangan lanjutkan bila trial gagal.
+4. Setelah trial berhasil dan persetujuan lingkungan, jalankan `RESTORE_SCHEMA_ONLY_SINGAPORE`. Pastikan check staging_guard menunjukkan seluruh objek utama sesuai dan tabel data usaha masih kosong.
+5. Baru buat brand/Owner/Staff serta 2+ SKU **sintetis** di staging. Verifikasi RLS dan deny untuk anon/Staff, lalu jalankan UAT approval.
