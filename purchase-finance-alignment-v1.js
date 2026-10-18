@@ -46,7 +46,7 @@ function stockCell(r){
   if(r.stock_status==='stock_review_required')return statusPill('Perlu mapping','warn')+'<small class="pfa-action">'+esc(r.stock_mapping_status||'mapping stok')+'</small>';
   return statusPill('Non-stok','');
 }
-function financeStatus(r){return r.category_status==='provisional'?statusPill('Sumber bayar belum lengkap','warn'):statusPill('Terjurnal','ok')}
+function financeStatus(r){if(n(control.journal_rows)===0)return statusPill('Belum dijurnal','warn');return r.category_status==='provisional'?statusPill('Sumber bayar belum lengkap','warn'):statusPill('Terjurnal','ok')}
 function table(a){
   var show=a.slice().sort(function(x,y){return String(y.effective_date||'').localeCompare(String(x.effective_date||''))||n(y.total_amount)-n(x.total_amount)}).slice(0,220);
   if(!show.length)return'<div class="pfa-empty">Tidak ada transaksi Pembelian untuk kategori/periode ini.</div>';
