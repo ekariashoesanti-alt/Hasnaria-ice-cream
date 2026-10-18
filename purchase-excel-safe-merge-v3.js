@@ -87,12 +87,13 @@
       var label=c(h[i]),norm=payNorm(label);
       if(norm||/tunai|cash|paylater|pay later|utang|hutang|qris|rek.*mandiri|transfer|bank|pinjam|jas\s*hujan/i.test(label))payCols.push({i:i,label:label,norm:norm});
     }
-    var out=[],last=null,invalid=0,unmapped=0,occ={};
+    var out=[],last=null,invalid=0,invalidRows=[],unmapped=0,occ={};
     for(i=hi+1;i<a.length;i++){
       var r=a[i]||[],d=D>=0?iso(r[D]):null;if(d)last=d;
-      var item=N>=0?c(r[N]):'';if(!item||/^TOTAL$/i.test(item)||!last)continue;
+      var item=N>=0?c(r[N]):'';if(!item||/^TOTAL$/i.test(item))continue;
+      if(!last){invalid++;invalidRows.push({row:i+1,item:item,reason:'Tanggal transaksi kosong'});continue}
       var q=Q>=0?num(r[Q]):0,pr=P>=0?num(r[P]):0;
-      if(!(q>0)||!(pr>0)){invalid++;continue}
+      if(!(q>0)||!(pr>0)){invalid++;invalidRows.push({row:i+1,item:item,reason:'Jumlah atau harga satuan kosong/tidak positif',quantity:q,unit_price:pr});continue}
       var amount=Math.round(q*pr*100)/100,parts={cash:0,bank_mandiri:0,paylater:0,related_party_loan_jas_hujan:0},labels=[];
       payCols.forEach(function(pc){
         var v=num(r[pc.i]);if(!v)return;
@@ -122,8 +123,33 @@
       });
     }
     if(!out.length)throw Error('Tidak ditemukan transaksi pembelian valid pada BELANJA.');
-    return{rows:out,invalid:invalid,unmapped:unmapped,hasOps:!!wb.SheetNames.find(function(s){return c(s).toUpperCase()==='B OPERASIONAL'})};
+    return{rows:out,invalid:invalid,invalidRows:invalidRows,unmapped:unmapped,operations:opsReference(wb),hasOps:!!wb.SheetNames.find(function(s){return c(s).toUpperCase()==='B OPERASIONAL'})};
   }
+
+  function opsReference(wb){
+    var title=wb.SheetNames.find(function(k){return c(k).toUpperCase()==='B OPERASIONAL'});
+    if(!title)return {found:false,amount:null,valid:false};
+    var cells=matrix(wb.Sheets[title]);
+    for(var i=0;i<cells.length;i++){
+      var label=c((cells[i]||[])[1]).toUpperCase();
+      if(/^(BELANJA BAHAN|BELANJA MATERIAL|BELANJA PEMBELIAN)$/.test(label)){
+        var value=(cells[i]||[])[2],valid=typeof value==='number'&&isFinite(value);
+        return {found:true,amount:valid?value:null,valid:valid,row:i+1,raw_value:value};
+      }
+    }
+    return {found:true,amount:null,valid:false,row:null};
+  }
+  function fundingOverview(parsed){
+    var base={cash:0,bank_mandiri:0,paylater:0,related_party_loan_jas_hujan:0},topup=0;
+    parsed.rows.forEach(function(r){var z=raw(r),f=z.funding_breakdown||{};
+      Object.keys(base).forEach(function(k){base[k]+=Number(f[k]||0)});
+      topup+=Number(z.auto_cash_adjustment||0);
+    });
+    var amount=parsed.rows.reduce(function(n,r){return n+Number(r.total_amount||0)},0);
+    var sum=Object.keys(base).reduce(function(n,k){return n+base[k]},0);
+    return {purchase:amount,credits:base,credit_total:sum,delta:Math.round((amount-sum)*100)/100,auto_cash:topup};
+  }
+  window.__HASNARIA_PURCHASE_FUNDING_V1.fundingOverview=fundingOverview;
 
   async function fetchEvidence(db,period){var q=await db.from(EVID).select('*').eq('brand_id',BRAND).eq('source_period',period).order('row_no',{ascending:true}).limit(10000);if(q.error)throw q.error;return q.data||[]}
   async function mergeEvidence(db,period,candidates){
@@ -179,25 +205,73 @@
     return{canonical:rows.length,unresolved:unresolved.length,unresolvedAmount:unresolved.reduce(function(s,r){return s+(+r.total_amount||0)},0)};
   }
 
+  /* A single source file must never overwrite a period containing unrelated
+     canonical/Stock-linked history. Only a totally new, complete, single-counter
+     period may use the existing atomic RPC. Mixed/loan funding awaits a tested
+     multi-credit journal backend; no evidence staging occurs before validation. */
   async function process(file,input){
     var db=window.__HASNARIA_DB;if(!db)throw Error('Database Pembelian belum siap.');
-    if(!window.XLSX&&window.__HASNARIA_XLSX_READY)await window.__HASNARIA_XLSX_READY;if(!window.XLSX)throw Error('Parser Excel belum siap.');
-    var wb=XLSX.read(await file.arrayBuffer(),{type:'array',cellDates:true});wb.SheetNames.forEach(function(s){expandRef(wb.Sheets[s])});
-    var p=parseLegacy(wb,file),periods={};p.rows.forEach(function(r){(periods[r.source_period]||(periods[r.source_period]=[])).push(r)});
-    var ps=Object.keys(periods);if(!ps.length)throw Error('Periode transaksi tidak ditemukan.');
-    var total=p.rows.reduce(function(s,r){return s+(+r.total_amount||0)},0),known=p.rows.filter(function(r){return!!payNorm(r.payment_method)}).reduce(function(s,r){return s+(+r.total_amount||0)},0);
-    var preview='Excel Pembelian aman\n'+p.rows.length+' transaksi · '+money(total)+'\n'+money(known)+' sudah punya akun pembayaran.';
-    if(p.unmapped)preview+='\n'+p.unmapped+' transaksi belum punya akun pembayaran; tetap masuk sebagai BELUM_DIPETAKAN dan muncul di antrean Kasir Staff.';
-    if(p.hasOps)preview+='\nRingkasan B OPERASIONAL tidak diposting sebagai transaksi agar tidak double count.';
-    if(!confirm(preview+'\n\nLanjutkan safe merge?'))return;
-    busy(true);toast('Safe merge Pembelian: mengganti transaksi yang persis dan menambah transaksi baru…','info',0);
-    var ins=0,rep=0,canon=0,unres=0,unresAmt=0;
-    for(var i=0;i<ps.length;i++){
-      var m=await mergeEvidence(db,ps[i],periods[ps[i]]);ins+=m.inserted;rep+=m.replaced;
-      var mat=await materialize(db,ps[i]);canon+=mat.canonical;unres+=mat.unresolved;unresAmt+=mat.unresolvedAmount;
+    if(!window.XLSX&&window.__HASNARIA_XLSX_READY)await window.__HASNARIA_XLSX_READY;
+    if(!window.XLSX)throw Error('Parser Excel belum siap.');
+    var wb=XLSX.read(await file.arrayBuffer(),{type:'array',cellDates:true});
+    wb.SheetNames.forEach(function(k){expandRef(wb.Sheets[k])});
+    var p=parseLegacy(wb,file),periods={};
+    p.rows.forEach(function(row){(periods[row.source_period]||(periods[row.source_period]=[])).push(row)});
+    var ps=Object.keys(periods);
+    if(!ps.length)throw Error('Periode transaksi BELANJA tidak ditemukan.');
+    var summary=fundingOverview(p),ref=p.operations||{},reviewNote='';
+    if(ref.found&&ref.valid&&Math.abs(summary.purchase-ref.amount)>0.01)
+      reviewNote='\\nRekap BELANJA BAHAN di B OPERASIONAL = '+money(ref.amount)+'; selisih '+money(summary.purchase-ref.amount)+'. Ini hanya referensi (bukan transaksi kedua).';
+    else if(ref.found&&!ref.valid)
+      reviewNote='\\nB OPERASIONAL tidak memiliki rekap BELANJA BAHAN numerik yang dapat diaudit. Tidak menambah jurnal.';
+    var preview='PEMERIKSAAN BELANJA · '+file.name+'\\n'+p.rows.length+' baris valid · '+money(summary.purchase)+' dari C × D'+
+      '\\nTunai '+money(summary.credits.cash)+' · Mandiri '+money(summary.credits.bank_mandiri)+
+      '\\nPayLater '+money(summary.credits.paylater)+' · Utang Jas Hujan '+money(summary.credits.related_party_loan_jas_hujan)+
+      '\\nSelisih debit-kredit '+money(summary.delta)+' · Tambahan Tunai '+money(summary.auto_cash)+
+      '\\nBaris tidak lengkap '+p.invalid+' · Pembiayaan perlu review '+p.unmapped+reviewNote;
+    if(p.hasOps)preview+='\\nSheet B OPERASIONAL hanya untuk kontrol; tidak membentuk transaksi baru.';
+    if(p.invalid){
+      var examples=p.invalidRows.slice(0,5).map(function(z){return'baris '+z.row+' ('+z.item+'): '+z.reason}).join('; ');
+      toast('Upload ditahan: '+p.invalid+' baris BELANJA perlu dilengkapi. '+examples,'error',11000);
+      return;
     }
-    toast('Selesai: '+rep+' transaksi lama persis diperbarui · '+ins+' transaksi baru ditambah · '+canon+' canonical.'+(unres?' '+unres+' transaksi ('+money(unresAmt)+') ditandai BELUM_DIPETAKAN untuk Kasir Staff.':''),'success',0);
-    setTimeout(function(){location.reload()},1800);
+    if(Math.abs(summary.delta)>0.01)throw Error('Total debit-kredit sumber pendanaan tidak seimbang.');
+    if(ps.length!==1)throw Error('Satu file berisi lebih dari satu bulan transaksi. Pisahkan per periode sebelum upload.');
+    if(p.unmapped){
+      toast('Upload ditahan: '+p.unmapped+' baris memakai pembiayaan campuran/pinjaman yang butuh jurnal multi-akun. Pratinjau tetap dapat dipakai, tetapi jangan paksa sebagai Tunai/Utang pemasok.','error',12000);
+      console.info(preview);
+      return;
+    }
+    var period=ps[0];
+    var check=await db.from('offline_purchase_history').select('id',{count:'exact',head:true})
+      .eq('brand_id',BRAND).eq('source_period',period);
+    if(check.error)throw check.error;
+    if(!Number.isInteger(check.count))throw Error('Jumlah transaksi kanonis periode tidak dapat diverifikasi; upload ditahan.');
+    if(check.count!==0){
+      toast('Upload ditahan: '+check.count+' transaksi Pembelian sudah ada untuk '+period+
+        '. Tidak ada penggantian seluruh periode. Perlu mekanisme merge berbukti tanpa menimpa transaksi/Stock lama.','error',12000);
+      console.info(preview);
+      return;
+    }
+    // No staged evidence mutation. One transactional canonical RPC for an empty
+    // period; the server will enforce permission and payment method validity.
+    if(!confirm(preview+'\\n\\nPeriode ini belum memiliki transaksi kanonis. Import '+p.rows.length+
+      ' baris sekaligus? Pembukuan keuangan hanya mengikuti periode/akun yang telah tersedia.'))return;
+    var payload=p.rows.map(function(z,i){return {
+      source_file:file.name,row_no:z.row_no,purchase_date:z.purchase_date,item_name:z.item_name,
+      quantity_text:z.quantity==null?'':String(z.quantity),unit_text:z.unit_text||'',
+      unit_price:z.unit_price,total_amount:z.total_amount,payment_method:z.payment_method,
+      notes:'BELANJA · '+(raw(z).analytics_group||'Operasi')+' · '+(raw(z).analytics_category||''),
+      raw_data:Object.assign({},raw(z),{canonical_source_record_key:z.source_record_key,
+        import_scope:'BELANJA_ONLY',ledger_policy:'CXD_FUNDING_EFGH'})
+    }});
+    busy(true);
+    try{
+      var out=await db.rpc('replace_purchase_canonical_period_v1',{p_source_period:period,p_rows:payload});
+      if(out.error)throw out.error;
+      toast('Berhasil: '+payload.length+' transaksi Pembelian '+period+' tercatat tanpa sumber ganda. Status jurnal mengikuti hasil rekonsiliasi server.','success',0);
+      setTimeout(function(){location.reload()},1800);
+    }finally{busy(false)}
   }
 
   document.addEventListener('change',function(e){
