@@ -34,7 +34,7 @@
     if (actionModulePromise) return actionModulePromise;
     actionModulePromise = new Promise((resolve,reject) => {
       const script=document.createElement('script');
-      script.src='/erp-actions.js?v=1';script.async=false;
+      script.src='/erp-actions.js?v=2';script.async=false;
       script.onload=()=>window.HasnariaERPActions?resolve(window.HasnariaERPActions):reject(new Error('Modul aksi ERP tidak tersedia.'));
       script.onerror=()=>reject(new Error('Modul aksi ERP gagal dimuat.'));
       document.head.appendChild(script);
