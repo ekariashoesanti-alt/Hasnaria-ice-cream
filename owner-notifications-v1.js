@@ -74,7 +74,7 @@ async function load(force){
   var result=await Promise.allSettled([
    db.rpc('get_purchase_control_period_v1',{p_brand:sess.brandId,p_period:month+'-01'}),
    db.rpc('owner_conversion_review_queue_v1'),
-   db.from('inventory_stock_reconciliation').select('inventory_item_id,item_name,category,unit,last_opname_date,last_variance,tracking_active').eq('brand_id',sess.brandId).neq('last_variance',0).not('last_variance','is',null).order('item_name',{ascending:true}).limit(100)
+   typeof db.from==='function' ? db.from('inventory_stock_reconciliation').select('inventory_item_id,item_name,category,unit,last_opname_date,last_variance,tracking_active').eq('brand_id',sess.brandId).neq('last_variance',0).not('last_variance','is',null).order('item_name',{ascending:true}).limit(100) : Promise.resolve({data:[],error:null})
   ]);
   if(id!==seq||!active()||window.__HASNARIA_CONTEXT!==sess||period!==month)return;
   var failure=[],next={};
