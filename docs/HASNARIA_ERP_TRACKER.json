@@ -939,7 +939,8 @@
       ],
       "acceptance": "System stock = baseline + purchase - usage dengan latest opname baseline.",
       "owner": "Codex/ChatGPT",
-      "updated_at": "2026-09-18"
+      "updated_at": "2026-10-18",
+      "notes": "Perbaikan di PR #96: upload STOCK_OPNAME eksplisit diverifikasi terhadap master SKU/satuan, disimpan sebagai draft operational_runs + operational_run_items (file hash dan row provenance), posting hanya setelah owner approval. Import Pembelian sukses diverifikasi count canonical dan memicu refetch backend tanpa reload. Stok menampilkan mismatch 23 dari 41 tracked SKU view vs ledger (maks 1.098 unit) tanpa auto adjustment; Okt 2026 produk BOM verified 0/54, seluruhnya draft, perlu verifikasi recipe terpisah. Auto refresh, pending upload indicator, test mock + Audit Gate lulus. Tidak ada mutasi saldo live; E2E Owner + Vercel deployment tetap memerlukan verifikasi."
     },
     {
       "id": "HSN-403",
