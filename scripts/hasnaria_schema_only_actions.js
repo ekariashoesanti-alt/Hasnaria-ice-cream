@@ -116,7 +116,7 @@ function main(){
   // databases. PostgreSQL rightly forbids ordinary postgres login from
   // changing defaults FOR ROLE supabase_admin; never elevate that account.
   const adminDefaultsSql=[
-    "SELECT coalesce(string_agg(n.nspname||':'||d.defaclobjtype||':'||d.defaclacl::text,'|' ORDER BY n.nspname,d.defaclobjtype),'')",
+    "SELECT coalesce(string_agg(n.nspname||':'||d.defaclobjtype::text||':'||d.defaclacl::text,'|' ORDER BY n.nspname,d.defaclobjtype),'')",
     "FROM pg_default_acl d JOIN pg_namespace n ON n.oid=d.defaclnamespace",
     "WHERE pg_get_userbyid(d.defaclrole)='supabase_admin' AND n.nspname IN ('public','private')"
   ].join(' ');
