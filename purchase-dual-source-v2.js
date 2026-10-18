@@ -135,34 +135,6 @@ function parseExcel(wb,f){
   var t=parseTemplate(wb,f);if(t!==null){if(!t.length)throw Error('Template Excel tidak berisi transaksi valid.');return{rows:t,ignored:0,invalid:0,label:'Excel Pembelian'}}
   var sn=wb.SheetNames.find(function(s){return c(s).toUpperCase()==='BELANJA'});if(!sn)throw Error('Sheet BELANJA atau UPLOAD_PEMBELIAN tidak ditemukan.');
   throw Error('Workbook BELANJA hanya boleh melalui safe merge v3. Impor legacy yang menjadikan B OPERASIONAL transaksi kedua dinonaktifkan. Muat ulang halaman Pembelian dan coba lagi.');
-  var a=matrix(wb.Sheets[sn]),hi=-1;
-  for(var i=0;i<Math.min(a.length,30);i++){var rr=a[i]||[];if(idx(rr,/^tgl$|tanggal|date/i)>=0&&idx(rr,/nama.*bahan|nama.*barang|^bahan$|^item$|^produk$|^nama$/i)>=0){hi=i;break}}
-  if(hi<0)throw Error('Header BELANJA tidak dikenali.');
-  var h=a[hi],D=idx(h,/^tgl$|tanggal|date/i),N=idx(h,/nama.*bahan|nama.*barang|^bahan$|^item$|^produk$|^nama$/i),Q=idx(h,/^jumlah$|qty|quantity/i),P=idx(h,/harga.*satuan|unit price|^harga$/i),T=idx(h,/^total$|amount/i),pay=[];
-  for(i=0;i<h.length;i++)if(/tunai|cash|paylater|utang|qris|rek.*mandiri|transfer/i.test(c(h[i])))pay.push(i);
-  var tmp=[],dates=[],last=null;
-  for(i=hi+1;i<a.length;i++){
-    var r=a[i]||[],d=D>=0?iso(r[D]):null;if(d){last=d;dates.push(d)}
-    var item=N>=0?c(r[N]):'';if(!item||/^TOTAL$/i.test(item)||!last)continue;
-    var q=Q>=0?num(r[Q]):0,pr=P>=0?num(r[P]):0,amount=T>=0?num(r[T]):0,names=[];
-    pay.forEach(function(pi){var v=num(r[pi]);if(v){if(T<0)amount+=v;names.push(c(h[pi]))}});
-    if(!(amount>0)&&q&&pr)amount=q*pr;if(!(amount>0))continue;
-    tmp.push({row:i+1,date:last,item:item,qty:q,price:pr,amount:amount,payment:names.join(' + ')});
-  }
-  var period=filePeriod(f.name,dates);if(!period)throw Error('Periode Excel tidak dapat dikenali.');
-  var out=tmp.map(function(x){var category=cat(x.item,'');return ev('excel',period,f.name,x.row,'excel:'+x.row+':'+n(x.date)+':'+n(x.item)+':'+n(x.amount),x.date,x.item,x.qty,'',x.price,x.amount,x.payment,category,'purchase_item',{status:'VALID',raw:{format:'legacy_belanja',source_sheet:sn,source_row:x.row}})});
-  var os=wb.SheetNames.find(function(s){return c(s).toUpperCase()==='B OPERASIONAL'});
-  if(os){
-    var b=matrix(wb.Sheets[os]),oh=-1;
-    for(i=0;i<20&&i<b.length;i++)if(/^NO$/i.test(c((b[i]||[])[0]))&&/^JENIS$/i.test(c((b[i]||[])[1]))){oh=i;break}
-    if(oh>=0)for(i=oh+1;i<b.length;i++){
-      item=c((b[i]||[])[1]);if(!item)continue;if(/^TOTAL$/i.test(item))break;if(/^(BELANJA BAHAN|BELANJA KEMASAN)$/i.test(item))continue;
-      amount=num((b[i]||[])[2]);if(!(amount>0))continue;var category=cat(item,'');
-      out.push(ev('excel',period,f.name,10000+i,'excel:ops:'+i+':'+n(item)+':'+n(amount),null,item,0,'',0,amount,'Ringkasan biaya',category,'cost_component',{status:'VALID',raw:{format:'legacy_ops',source_sheet:os,source_row:i+1}}));
-    }
-  }
-  if(!out.length)throw Error('Tidak ditemukan transaksi pembelian valid pada Excel.');
-  return{rows:out,ignored:0,invalid:0,label:'Excel Pembelian'};
 }
 async function workbook(type,f){
   if(!window.XLSX&&window.__HASNARIA_XLSX_READY)await window.__HASNARIA_XLSX_READY;
@@ -177,14 +149,6 @@ function legacy(r){
   return ev('excel_legacy',r.source_period,r.source_file||'legacy',r.row_no||1,'legacy:'+(r.id||r.row_no),r.purchase_date,r.item_name,num(r.quantity_text),r.unit_text,num(r.unit_price),num(r.total_amount),r.payment_method,category,kind,{status:'LEGACY',raw:Object.assign({},z,{legacy_offline_id:r.id||null})});
 }
 async function evidence(period){var q=await db.from(EVID).select('*').eq('brand_id',BRAND).eq('source_period',period).order('row_no',{ascending:true}).limit(10000);if(q.error)throw q.error;return q.data||[]}
-async function seed(period){
-  var x=await evidence(period);if(x.length)return x;
-  var q=await db.from('offline_purchase_history').select('*').eq('brand_id',BRAND).eq('source_period',period).order('row_no',{ascending:true}).limit(10000);if(q.error)throw q.error;
-  var rows=(q.data||[]).filter(function(r){return raw(r).unified_source_v1!==true}).map(legacy);
-  for(var i=0;i<rows.length;i+=150){var ins=await db.from(EVID).insert(rows.slice(i,i+150));if(ins.error)throw ins.error}
-  return rows;
-}
-
 function days(a,b){if(!a||!b)return 999;return Math.abs(Math.round((new Date(a+'T00:00:00')-new Date(b+'T00:00:00'))/86400000))}
 function near(a,b,pct,min){var x=Math.abs((+a||0)-(+b||0)),m=Math.max(Math.abs(+a||0),Math.abs(+b||0),1);return x<=Math.max(min,m*pct)}
 function kind(r){return raw(r).analytics_kind||'purchase_item'}
@@ -262,41 +226,12 @@ function canon(rows){
   return{selected:sel,exact:dups,fuzzy:fuzzy,possible:poss};
 }
 
-async function rebuild(period){
-  var e=await evidence(period),x=canon(e);
-  var rows=x.selected.map(function(s,i){
-    var r=s.row,z=raw(r),category=z.analytics_category||cat(r.item_name,r.sku),group=z.analytics_group||grp(r.item_name,category);
-    return{
-      brand_id:BRAND,source_period:period,source_file:'HASNARIA_PURCHASE_UNIFIED_'+period.slice(0,7)+'.xlsx',row_no:i+1,
-      purchase_date:r.purchase_date,item_name:r.item_name,quantity_text:r.quantity==null?'':String(r.quantity),unit_text:r.unit_text||'',unit_price:r.unit_price,total_amount:r.total_amount,payment_method:r.payment_method||'',
-      notes:group+' · '+category+' · UNIFIED',
-      raw_data:Object.assign({},z,{unified_source_v1:true,dedup_version:'v2_fuzzy',canonical_source_type:r.source_type,canonical_source_file:r.source_file,canonical_source_record_key:r.source_record_key,matched_sources:s.matches,possible_duplicate:s.possibleMatches.length>0,possible_duplicate_matches:s.possibleMatches,analytics_group:group,analytics_category:category,analytics_kind:kind(r),sku:r.sku||null,invoice_no:r.invoice_no||null,supplier_name:r.supplier_name||null})
-    };
-  });
-  var d=await db.from('offline_purchase_history').delete().eq('brand_id',BRAND).eq('source_period',period);if(d.error)throw d.error;
-  for(var i=0;i<rows.length;i+=150){var ins=await db.from('offline_purchase_history').insert(rows.slice(i,i+150));if(ins.error)throw ins.error}
-  return{rows:rows.length,exact:x.exact,fuzzy:x.fuzzy,possible:x.possible};
-}
 async function preview(period,type,candidate){
   var e=await evidence(period);
   if(!e.length){var q=await db.from('offline_purchase_history').select('*').eq('brand_id',BRAND).eq('source_period',period).limit(10000);if(q.error)throw q.error;e=(q.data||[]).filter(function(r){return raw(r).unified_source_v1!==true}).map(legacy)}
   e=e.filter(function(r){return type==='excel'?(r.source_type!=='excel'&&r.source_type!=='excel_legacy'):r.source_type!==type});
   return canon(e.concat(candidate));
 }
-async function save(type,p){
-  var by={};p.rows.forEach(function(r){(by[r.source_period]||(by[r.source_period]=[])).push(r)});
-  var periods=Object.keys(by).sort(),sum=[];
-  for(var k=0;k<periods.length;k++){
-    var period=periods[k];await seed(period);
-    var del=db.from(EVID).delete().eq('brand_id',BRAND).eq('source_period',period);
-    del=type==='excel'?del.in('source_type',['excel','excel_legacy']):del.eq('source_type',type);
-    var d=await del;if(d.error)throw d.error;
-    var rows=by[period];for(var i=0;i<rows.length;i+=150){var ins=await db.from(EVID).insert(rows.slice(i,i+150));if(ins.error)throw ins.error}
-    sum.push(await rebuild(period));
-  }
-  return sum;
-}
-
 function toast(msg,type,ttl){var old=document.getElementById('purchaseDualToast');if(old)old.remove();var x=document.createElement('div');x.id='purchaseDualToast';x.className='purchase-dual-toast '+(type||'info');x.textContent=msg;document.body.appendChild(x);if(ttl!==0)setTimeout(function(){if(x.isConnected)x.remove()},ttl||4500)}
 function busy(on){['purchaseExcelBtn','purchaseMajooBtn'].forEach(function(id){var b=document.getElementById(id);if(b)b.disabled=!!on})}
 async function handle(type,f){
@@ -312,18 +247,18 @@ async function handle(type,f){
     if(poss)msg+='\n'+poss+' possible duplicate tetap dihitung dan ditandai untuk audit';
     if(p.ignored)msg+='\n'+p.ignored+' transaksi Void/non-Selesai diabaikan';
     if(p.invalid)msg+='\n'+p.invalid+' baris tidak valid diabaikan';
-    if(!confirm(msg+'\n\nSimpan ke backend Pembelian?')){busy(false);return toast('Upload dibatalkan.','info')}
-    toast('Menyimpan evidence dan membangun transaksi canonical…','info',0);
-    var s=await save(type,p),r=s.reduce(function(a,x){a.rows+=x.rows;a.exact+=x.exact;a.fuzzy+=x.fuzzy;a.possible+=x.possible;return a},{rows:0,exact:0,fuzzy:0,possible:0});
-    toast('Selesai: '+r.rows+' transaksi canonical · '+r.exact+' duplikat digabung'+(r.fuzzy?' ('+r.fuzzy+' fuzzy)':'')+(r.possible?' · '+r.possible+' possible duplicate':'')+'.','success',0);
-    setTimeout(function(){location.reload()},1200);
+    // Existing importer must not modify Purchase nor source evidence until
+    // a reviewable per-source idempotent import exists.
+    if(window.alert)window.alert(msg+'\n\nPRATINJAU SAJA. Data belum disimpan. '+
+      'Faktur Majoo memerlukan merge sumber dan verifikasi satuan/akun sebelum jurnal dibukukan.');
+    toast('Review selesai; belum menyimpan faktur ke backend.','info',11000);
   }catch(e){console.error(e);toast('Upload gagal: '+(e.message||e),'error',7000);busy(false)}
 }
 function patch(){
   var w=document.querySelector('#pembelian .pa-upload-wrap');if(!w)return;
   if(w.classList.contains('purchase-dual-upload-v2'))return;
   w.classList.remove('purchase-dual-upload');w.classList.add('purchase-dual-upload-v2','purchase-dual-upload');
-  w.innerHTML='<input id="purchaseExcelFile" type="file" accept=".xlsx,.xls" hidden><input id="purchaseMajooFile" type="file" accept=".xlsx,.xls" hidden><div class="purchase-dual-buttons"><button id="purchaseExcelBtn" class="purchase-source-btn excel" type="button">Upload Excel</button><button id="purchaseMajooBtn" class="purchase-source-btn majoo" type="button">Upload Faktur Majoo</button></div><small class="purchase-source-hint">2 sumber · fuzzy dedup v2 aktif</small>';
+  w.innerHTML='<input id="purchaseExcelFile" type="file" accept=".xlsx,.xls" hidden><input id="purchaseMajooFile" type="file" accept=".xlsx,.xls" hidden><div class="purchase-dual-buttons"><button id="purchaseExcelBtn" class="purchase-source-btn excel" type="button">Upload Excel</button><button id="purchaseMajooBtn" class="purchase-source-btn majoo" type="button">Review Faktur Majoo</button></div><small class="purchase-source-hint">2 sumber · fuzzy dedup v2 aktif</small>';
   var eb=document.getElementById('purchaseExcelBtn'),mb=document.getElementById('purchaseMajooBtn'),ef=document.getElementById('purchaseExcelFile'),mf=document.getElementById('purchaseMajooFile');
   eb.onclick=function(){ef.click()};mb.onclick=function(){mf.click()};
   ef.onchange=function(){if(this.files[0])handle('excel',this.files[0]);this.value=''};
