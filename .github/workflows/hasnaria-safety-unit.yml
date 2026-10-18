@@ -4,8 +4,10 @@ on:
     paths:
       - 'scripts/hasnaria_owner_staging_gate.js'
       - 'scripts/hasnaria_schema_only_actions.js'
+      - 'scripts/hasnaria_staging_schema_restore.js'
       - '.github/workflows/hasnaria-recovery-proof.yml'
-      - '.github/workflows/hasnaria-owner-staging-uat.yml'
+      - '.github/workflows/hasnaria-owner-staging-uat.yml','.github/workflows/hasnaria-staging-schema-restore.yml'
+      - '.github/workflows/hasnaria-staging-schema-restore.yml'
       - '.github/workflows/hasnaria-safety-unit.yml'
 permissions:
   contents: read
@@ -22,6 +24,8 @@ jobs:
           node --check scripts/hasnaria_owner_staging_gate.js
           node scripts/hasnaria_owner_staging_gate.js --self-test
           node scripts/hasnaria_schema_only_actions.js --self-test
+          node --check scripts/hasnaria_staging_schema_restore.js
+          node scripts/hasnaria_staging_schema_restore.js --self-test
           node - <<'NODE'
           const fs=require('node:fs');
           for(const p of ['.github/workflows/hasnaria-recovery-proof.yml','.github/workflows/hasnaria-owner-staging-uat.yml']){
