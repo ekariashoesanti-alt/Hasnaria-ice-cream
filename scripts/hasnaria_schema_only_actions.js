@@ -40,7 +40,17 @@ function quoteCheck(sql){
     throw Error('BLOCK: schema contains project URLs; manual offline review required');
 }
 function query(db,sql){
-  return invoke('psql',['-X','-q','-A','-t','--set=ON_ERROR_STOP=1','--dbname',db,'--command',sql]);
+  // The hosted runner has no system psql; use PostgreSQL 17 in Docker.
+  // Connections are passed only as masked environment variables.
+  const key=db===process.env.HSN_PROD_READONLY_DB_URL?'HSN_PROD_READONLY_DB_URL':
+    db===process.env.HSN_STAGING_DB_URL?'HSN_STAGING_DB_URL':null;
+  if(!key)throw Error('BLOCK: unknown SQL connection');
+  return invoke('docker',[
+    'run','--rm','--network','host','--env',key,
+    'postgres:17','sh','-ec',
+    'exec psql -X -q -A -t --no-password --set=ON_ERROR_STOP=1 --dbname="$'+key+'" --command="$1"',
+    'hsn-sql',sql
+  ]);
 }
 const roleSql=[
 'select case when',
