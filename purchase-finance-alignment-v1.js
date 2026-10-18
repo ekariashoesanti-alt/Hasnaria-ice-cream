@@ -209,7 +209,7 @@ function purchasePaymentMarkup(){
 }
 function infographicMarkup(){
  return'<div class="pfa-insights-grid"><article class="pfa-insight-panel"><h3>Tren Pembelian Harian</h3><p>Nilai dan frekuensi transaksi periode terpilih</p>'+purchaseDailyMarkup()+'</article>'+
- '<article class="pfa-insight-panel"><h3>Status Sinkronisasi</h3><p>Perbandingan Pembelian → Keuangan dan Stok</p>'+syncMarkup()+'<div class="pfa-note-banner">Mapping cocok belum berarti quantity aman ditambahkan ke Stok. Satuan dan opname harus diverifikasi.</div></article></div>'+
+ '<article class="pfa-insight-panel"><h3>Status Sinkronisasi</h3><p>Perbandingan Pembelian → Keuangan dan Stok</p>'+syncMarkup()+'<div class="pfa-note-banner">Penerimaan Stok hanya dibukukan setelah satuan dan bukti diperiksa. Mapping cocok belum berarti quantity aman ditambahkan ke Stok; opname tetap harus diperiksa.</div></article></div>'+
  '<div class="pfa-insight-two"><article class="pfa-insight-panel"><h3>Komposisi Pembelian</h3><p>Nilai per akun Beban untuk '+esc(cutLabel())+'</p>'+chartMarkup()+'</article>'+
  '<article class="pfa-insight-panel"><h3>Top 5 Item Pembelian</h3><p>Urutan berdasarkan total nilai sumber</p>'+purchaseTopMarkup()+'</article></div>'+
  '<div class="pfa-insight-two"><article class="pfa-insight-panel"><h3>Komposisi Pembayaran</h3><p>Sumber pembiayaan dari transaksi kanonis</p>'+purchasePaymentMarkup()+'</article>'+
