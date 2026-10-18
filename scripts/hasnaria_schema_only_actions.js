@@ -28,7 +28,7 @@ function verifyUrl(raw,ref,source){
   return true;
 }
 function invoke(command,args){
-  const r=spawnSync(command,args,{encoding:'utf8',stdio:['ignore','pipe','pipe'],timeout:14*60*1000,maxBuffer:4*1024*1024});
+  const r=spawnSync(command,args,{encoding:'utf8',stdio:['ignore','pipe','pipe'],timeout:20*60*1000,maxBuffer:4*1024*1024});
   if(r.error||r.status!==0){
     const error=String(r.stderr||'').toLowerCase();
     // Never print STDERR; PostgreSQL messages may contain hostnames and SQL.
@@ -112,6 +112,16 @@ function main(){
   if(query(dest,stageSql)!=='OK')throw Error('BLOCK: target is not empty Singapore staging with valid identity');
   if(query(dest,"SELECT case when exists(SELECT 1 FROM pg_roles WHERE rolname='hsn_schema_reader' AND NOT rolcanlogin) then 'OK' else 'DENY' end")!=='OK')
     throw Error('BLOCK: staging is missing the safe NOLOGIN ACL placeholder role');
+  // Supabase provisions matching supabase_admin default privileges in both
+  // databases. PostgreSQL rightly forbids ordinary postgres login from
+  // changing defaults FOR ROLE supabase_admin; never elevate that account.
+  const adminDefaultsSql=[
+    "SELECT coalesce(string_agg(n.nspname||':'||d.defaclobjtype||':'||d.defaclacl::text,'|' ORDER BY n.nspname,d.defaclobjtype),'')",
+    "FROM pg_default_acl d JOIN pg_namespace n ON n.oid=d.defaclnamespace",
+    "WHERE pg_get_userbyid(d.defaclrole)='supabase_admin' AND n.nspname IN ('public','private')"
+  ].join(' ');
+  if(query(src,adminDefaultsSql)!==query(dest,adminDefaultsSql))
+    throw Error('BLOCK: Supabase-admin default grants differ between Tokyo and Singapore');
   const temp=fs.mkdtempSync(path.join(os.tmpdir(),'hasnaria-schema-'));
   try{
     const dump=path.join(temp,'schema-only.sql');
@@ -140,6 +150,14 @@ function main(){
     const publicCreateCount=(sql.match(publicCreate)||[]).length;
     if(publicCreateCount!==1)throw Error('BLOCK: expected exactly one public schema definition in export');
     sql=sql.replace(publicCreate,'CREATE SCHEMA IF NOT EXISTS public;');
+    // Retain staging's identical managed admin defaults; they cannot be
+    // changed by the unprivileged staging postgres role (SQLSTATE 42501).
+    // Only remove full-line commands for this exact managed owner.
+    const managedDefaults=/^ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin IN SCHEMA (?:public|private) (?:GRANT|REVOKE) [^;\r\n]*;\r?$/gm;
+    const managedDefaultCount=(sql.match(managedDefaults)||[]).length;
+    if(managedDefaultCount<1||managedDefaultCount>30)
+      throw Error('BLOCK: unexpected Supabase-admin default grants export');
+    sql=sql.replace(managedDefaults,'-- Managed Supabase-admin default ACL already equivalent on Singapore');
     fs.writeFileSync(dump,sql,{encoding:'utf8',mode:0o600});
     const sha=crypto.createHash('sha256').update(sql).digest('hex');
     // The dump may contain PostgreSQL 17 psql meta-commands such as \\restrict.
