@@ -33,6 +33,7 @@ async function parseFile(file){
  var hash=Array.from(new Uint8Array(digest)).map(function(x){return x.toString(16).padStart(2,'0')}).join('');
  var wb=window.XLSX.read(bytes,{type:'array',cellDates:false});
  var sn=wb.SheetNames.find(function(x){return norm(x)==='STOCKOPNAME'});
+ if(!sn&&/\.csv$/i.test(file.name)&&norm(file.name.replace(/\.csv$/i,''))==='STOCKOPNAME')sn=wb.SheetNames[0];
  if(!sn)throw Error('File Rencana Belanja kategori hanya untuk rekonsiliasi historis. Untuk koreksi stok fisik gunakan sheet STOCK_OPNAME dengan template dari halaman ini; tidak ada saldo yang berubah.');
  var data=window.XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,defval:'',raw:true});
  var head=-1,idx=null;
