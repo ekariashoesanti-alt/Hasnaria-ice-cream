@@ -213,8 +213,17 @@
     try{
       var out=await db.rpc('replace_purchase_canonical_period_v1',{p_source_period:period,p_rows:payload});
       if(out.error)throw out.error;
-      toast('Berhasil: '+payload.length+' transaksi Pembelian '+period+' tercatat tanpa sumber ganda. Status jurnal mengikuti hasil rekonsiliasi server.','success',0);
-      setTimeout(function(){location.reload()},1800);
+      // Verify persisted source, then notify every backend-driven view without hard reload.
+      var verified=await db.from('offline_purchase_history').select('id',{count:'exact',head:true})
+        .eq('brand_id',BRAND).eq('source_period',period);
+      if(verified.error)throw verified.error;
+      if(verified.count!==payload.length)throw Error('RPC selesai tetapi jumlah data tersimpan belum cocok ('+String(verified.count)+'/'+payload.length+'). Jangan upload ulang sebelum rekonsiliasi backend.');
+      toast('Tersimpan: '+verified.count+' transaksi Pembelian '+period+'. Saldo Stok baru berubah setelah verifikasi satuan dan penerimaan diposting.','success',0);
+      try{document.dispatchEvent(new CustomEvent('hasnaria:purchase-imported',{
+        detail:{period:period,rows:verified.count,source:'belanja-safe-merge',stockPosted:false}
+      }));}catch(e){console.warn('Gagal memberi sinyal pembaruan tampilan:',e);}
+      if(window.__HASNARIA_PURCHASE_FINANCE_REFRESH)
+        Promise.resolve(window.__HASNARIA_PURCHASE_FINANCE_REFRESH()).catch(function(e){console.warn('Refresh Pembelian:',e)});
     }finally{busy(false)}
   }
 
