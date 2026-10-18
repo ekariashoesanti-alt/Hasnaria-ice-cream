@@ -69,8 +69,8 @@ test('all Owner reporting areas refresh on canonical Purchase import, with hones
 });
 
 test('preview that still targets production Supabase cannot import BELANJA',async()=>{
- const result=await runUpload(0,{preview:true}).process();
- assert.equal(result.writes.length,0,'preview must not invoke even the create-only canonical RPC');
- assert.equal(result.events.length,0);
- assert.ok(result.alerts.some(x=>/PRODUKSI/.test(x)) || !result.writes.length);
+ const f=runUpload(0,{preview:true});
+ await assert.rejects(()=>f.process(),/PRODUKSI/);
+ assert.equal(f.writes.length,0,'preview must not invoke even the create-only canonical RPC');
+ assert.equal(f.events.length,0);
 });
