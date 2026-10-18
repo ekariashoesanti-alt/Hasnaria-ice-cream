@@ -4,7 +4,7 @@ const safe=fs.readFileSync('purchase-excel-safe-merge-v3.js','utf8');
 const majoo=fs.readFileSync('purchase-dual-source-v2.js','utf8');
 const pfa=fs.readFileSync('purchase-finance-alignment-v1.js','utf8');
 const sql=fs.readFileSync('supabase/migrations/20261018170000_purchase_empty_period_create_only.sql','utf8');
-function runUpload(existing){
+function runUpload(existing,opts={}){
  const writes=[],events=[],alerts=[],timeouts=[];
  const workbook={SheetNames:['BELANJA','B OPERASIONAL'],Sheets:{
   BELANJA:{grid:[['TGL','NAMA BAHAN','JUMLAH','HARGA SATUAN','TUNAI','REK MANDIRI','PAYLATER','KET'],['2026-11-01','GULA',2,500,1000,0,0,'']]},
@@ -16,7 +16,10 @@ function runUpload(existing){
   }},rpc(name,args){writes.push({name,args});return Promise.resolve({data:{inserted_rows:args.p_rows.length,replaced_rows:0,finance_synced:false},error:null})}};
  const dom={addEventListener(){},dispatchEvent(e){events.push(e)},getElementById(){return null},
   createElement(){return {isConnected:false,remove(){},textContent:''}},body:{appendChild(){}}};
- const w={XLSX,__HASNARIA_DB:db,CustomEvent:function(name,options){return {type:name,detail:options.detail}},
+ const w={XLSX,__HASNARIA_DB:db,
+  location:{hostname:opts.preview?'hasnaria-business-analyzer-test123.vercel.app':'hasnaria-business-analyzer.vercel.app'},
+  HASNARIA_SB:'https://bnnhmtkpdjlgehsvgoda.supabase.co',
+  CustomEvent:function(name,options){return {type:name,detail:options.detail}},
   alert(msg){alerts.push(msg)}};
  const source=safe.replace(/\}\)\(\);\s*$/,"window.__RUN_PURCHASE__=process;})();");
  assert.notEqual(source,safe);
@@ -63,4 +66,11 @@ test('all Owner reporting areas refresh on canonical Purchase import, with hones
  assert.match(pfa,/Jurnal Pembelian masih perlu rekonsiliasi/);
  for(const file of ['finance-purchase-basis-v1.js','finance-purchase-expense-v1.js','owner-notifications-v1.js'])
   assert.match(fs.readFileSync(file,'utf8'),/document\.addEventListener\('hasnaria:purchase-imported'/,file);
+});
+
+test('preview that still targets production Supabase cannot import BELANJA',async()=>{
+ const result=await runUpload(0,{preview:true}).process();
+ assert.equal(result.writes.length,0,'preview must not invoke even the create-only canonical RPC');
+ assert.equal(result.events.length,0);
+ assert.ok(result.alerts.some(x=>/PRODUKSI/.test(x)) || !result.writes.length);
 });
