@@ -29,7 +29,20 @@ function verifyUrl(raw,ref,source){
 }
 function invoke(command,args){
   const r=spawnSync(command,args,{encoding:'utf8',stdio:['ignore','pipe','pipe'],timeout:14*60*1000,maxBuffer:4*1024*1024});
-  if(r.error||r.status!==0)throw Error('Blocked: '+command+' failed (details hidden from public Actions logs)');
+  if(r.error||r.status!==0){
+    const error=String(r.stderr||'').toLowerCase();
+    // Never print STDERR; PostgreSQL messages may contain hostnames and SQL.
+    let reason='UNCLASSIFIED';
+    if(/password authentication failed|invalid password|sasl authentication failed/.test(error))reason='INVALID_PASSWORD';
+    else if(/tenant or user not found|role .* does not exist/.test(error))reason='INVALID_POOLER_USERNAME_OR_ROLE';
+    else if(/could not translate host|name or service not known|nodename nor servname/.test(error))reason='DNS_LOOKUP';
+    else if(/no route to host|network is unreachable|connection refused|timeout expired|connection timed out/.test(error))reason='NETWORK_CONNECTION';
+    else if(/permission denied|must be (?:owner|member)|insufficient privilege/.test(error))reason='INSUFFICIENT_DB_PERMISSIONS';
+    else if(/invalid port number|invalid connection option|could not parse.*connection/.test(error))reason='BAD_CONNECTION_URI';
+    else if(/error:|fatal:/.test(error))reason='DB_SQL_OR_SERVER_ERROR';
+    else if(r.error)reason='RUNNER_COMMAND_NOT_AVAILABLE';
+    throw Error('Blocked: '+command+' failed ['+reason+']');
+  }
   return (r.stdout||'').trim();
 }
 function quoteCheck(sql){
@@ -45,12 +58,12 @@ function query(db,sql){
   const key=db===process.env.HSN_PROD_READONLY_DB_URL?'HSN_PROD_READONLY_DB_URL':
     db===process.env.HSN_STAGING_DB_URL?'HSN_STAGING_DB_URL':null;
   if(!key)throw Error('BLOCK: unknown SQL connection');
-  return invoke('docker',[
+  try{return invoke('docker',[
     'run','--rm','--network','host','--env',key,
     'postgres:17','sh','-ec',
     'exec psql -X -q -A -t --no-password --set=ON_ERROR_STOP=1 --dbname="$'+key+'" --command="$1"',
     'hsn-sql',sql
-  ]);
+  ]);}catch(e){throw Error('BLOCK: '+(key==='HSN_PROD_READONLY_DB_URL'?'TOKYO_SOURCE':'SINGAPORE_TARGET')+' connection: '+e.message)}
 }
 const roleSql=[
 'select case when',
