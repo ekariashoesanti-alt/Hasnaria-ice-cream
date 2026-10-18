@@ -28,11 +28,6 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Install Supabase CLI
-        uses: supabase/setup-cli@v1
-        with:
-          version: latest
-
       - name: Install PostgreSQL client
         shell: bash
         run: |
@@ -41,7 +36,8 @@ jobs:
           sudo apt-get install -y -qq postgresql-client
           psql --version >/dev/null
           docker info --format '{{.ServerVersion}}' >/dev/null
-          supabase --version >/dev/null
+          docker pull postgres:17 >/dev/null
+          echo 'PostgreSQL 17 schema exporter ready'
 
       - name: Run source, project and SQL guard unit tests
         shell: bash
