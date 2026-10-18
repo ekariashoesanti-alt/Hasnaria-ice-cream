@@ -46,7 +46,8 @@ test('C x D always drives purchase, Jas Hujan loan gets own source and audit met
 });
 test('dashboard cannot call a finance row posted when no journal exists',()=>{
   const ui=fs.readFileSync('purchase-finance-alignment-v1.js','utf8');
-  assert.match(ui,/if\(n\(control\.journal_rows\)===0\)return statusPill\('Belum dijurnal'/);
+  assert.match(ui,/control\.finance_link_status!=='MATCH'/);
+  assert.match(ui,/purchaseJournalReconciliation\(\)/);
 });
 
 test('BELANJA parser reads exactly E-H funding and does not import B OPERASIONAL as purchases',()=>{
