@@ -56,7 +56,8 @@ async function parseFile(file){
    var value=typeof qty==='number'?qty:Number(String(qty).trim().replace(',','.'));
    if(!Number.isFinite(value)||value<0){errors.push('Baris '+(ri+1)+': jumlah fisik tidak numerik');continue}
    var item=id?byId.get(id):null;
-   if(!item&&name){var a=byName.get(norm(name))||[];if(a.length===1)item=a[0];else if(a.length>1)errors.push('Baris '+(ri+1)+': nama SKU ambigu, gunakan ID')}
+   if(!item&&id){errors.push('Baris '+(ri+1)+': ID SKU tidak ditemukan; tidak boleh mengganti berdasarkan nama');continue}
+   if(!item&&!id&&name){var a=byName.get(norm(name))||[];if(a.length===1)item=a[0];else if(a.length>1)errors.push('Baris '+(ri+1)+': nama SKU ambigu, gunakan ID')}
    if(!item){errors.push('Baris '+(ri+1)+': SKU tidak ditemukan dalam master backend');continue}
    if(name&&norm(name)!==norm(item.item_name)){errors.push('Baris '+(ri+1)+': nama dan ID SKU tidak sama');continue}
    if(!String(row[idx.k]||'').trim()||norm(row[idx.k])!==norm(item.unit)){
