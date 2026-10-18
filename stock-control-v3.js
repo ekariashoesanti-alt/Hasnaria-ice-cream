@@ -621,7 +621,7 @@
       return '<option value="' + esc(k) + '"' + (k === S.period ? ' selected' : '') + '>' + esc(monthLabel(k)) + '</option>';
     }).join('');
     return '<div class="sc3-head"><div><div class="sc3-eyebrow">STOK · ' + esc(cutLabel()) + '</div><h2>Stok &amp; Pergerakan Material</h2><p>Ringkasan periode menampilkan jumlah SKU dan aktivitas. Quantity antar satuan tidak dijumlahkan menjadi satu angka.</p></div>' +
-      '<div class="sc4-head-tools"><label><span>Bulan</span><select id="sc4Period" data-month-filter="stok">' + options + '</select></label><div class="sc3-actions"><button type="button" class="sc3-btn" data-sc3-action="refresh">↻ Refresh</button><button type="button" class="sc3-btn" data-sc3-action="export"' + (!S.baseLoaded ? ' disabled' : '') + '>Export CSV</button></div></div></div>';
+      '<div class="sc4-head-tools"><label><span>Bulan</span><select id="sc4Period" data-month-filter="stok">' + options + '</select></label><div class="sc3-actions"><button type="button" class="sc3-btn" data-sc3-action="refresh">↻ Refresh</button></div></div></div>';
   }
 
   function renderFormula() {
@@ -810,6 +810,42 @@
     if (nav && nav.click) { nav.click(); clickCreate(20); }
   }
 
+
+  var topSkuMode='in';
+  function compositionInfographic(){
+    var v=S.overview||{},a=Math.max(0,num(v.positive_skus)),b=Math.max(0,num(v.zero_skus)),c=Math.max(0,num(v.negative_skus)),sum=a+b+c;
+    if(S.periodLoading&&!S.overview)return'<div class="sc3-loading">Memuat posisi SKU…</div>';
+    if(!sum)return'<div class="sc4-empty">Komposisi SKU belum tersedia untuk periode ini.</div>';
+    var aa=+(100*a/sum).toFixed(1),ab=+(100*(a+b)/sum).toFixed(1),bb=+(100*b/sum).toFixed(1),cc=+(100*c/sum).toFixed(1);
+    return'<div class="sc4-donut-wrap"><div class="sc4-donut" style="background:conic-gradient(#176b55 0% '+aa+'%,#a3cbb7 '+aa+'% '+ab+'%,#e4b84e '+ab+'% 100%)"><span>'+fmt(v.sku_count==null?sum:v.sku_count)+'<small>Total SKU</small></span></div><div class="sc4-donut-legend">'+
+     '<div><span><i style="background:#176b55"></i>Saldo Positif</span><b>'+fmt(a)+' · '+aa+'%</b></div>'+
+     '<div><span><i style="background:#a3cbb7"></i>Saldo Nol</span><b>'+fmt(b)+' · '+bb+'%</b></div>'+
+     '<div><span><i style="background:#e4b84e"></i>Historical Discrepancy</span><b>'+fmt(c)+' · '+cc+'%</b></div></div></div>'+
+     (v.sku_count!=null&&num(v.sku_count)!==sum?'<div class="sc4-info">Jumlah status berbeda dari total SKU. Periksa basis data periode.</div>':'');
+  }
+  function topSkuInfographic(){
+    var activeCount=(S.activity||[]).reduce(function(t,z){return t+num(z.movement_rows)},0);
+    if(S.periodLoading&&!S.activity.length)return'<div class="sc3-loading">Memuat movement…</div>';
+    if(!activeCount)return'<div class="sc4-blank-insight">Belum ada movement pada periode ini. Ranking SKU tidak ditampilkan tanpa sumber.</div>';
+    if(S.ledgerLoading)return'<div class="sc3-loading">Memuat ledger SKU…</div>';
+    if(!S.ledger.length)return'<div class="sc4-blank-insight"><div>Ranking SKU dimuat hanya saat diminta agar dashboard tetap ringan.<p><button class="sc4-btn-small" type="button" data-sc4-top-load>Muat Top 5 SKU</button></p></div></div>';
+    var choices={},sign=topSkuMode==='in'?1:-1;
+    S.ledger.forEach(function(z){var name=String(z.sku_name||z.sku_code||'').trim(),qty=num(z.qty_delta);if(!name||!(qty*sign>0))return;var key=name.toUpperCase();if(!choices[key])choices[key]={name:name,count:0};choices[key].count++});
+    var best=Object.keys(choices).map(function(k){return choices[k]}).sort(function(a,b){return b.count-a.count}).slice(0,5);
+    var buttons='<div class="sc4-sku-toggle"><button type="button" data-sc4-top-mode="in" class="'+(topSkuMode==='in'?'on':'')+'">Masuk</button><button type="button" data-sc4-top-mode="out" class="'+(topSkuMode==='out'?'on':'')+'">Keluar</button></div>';
+    if(!best.length)return buttons+'<div class="sc4-blank-insight">Tidak ada movement '+(sign>0?'masuk':'keluar')+' pada periode ini.</div>';
+    return buttons+'<div class="sc4-sku-list">'+best.map(function(z,i){return'<div class="sc4-sku-row"><span>'+(i+1)+'. <b>'+esc(z.name)+'</b></span><strong>'+fmt(z.count)+' movement</strong><progress max="100" value="'+(z.count/best[0].count*100).toFixed(1)+'"></progress></div>'}).join('')+'</div><div class="sc4-info">Ranking berdasarkan jumlah event, bukan penjumlahan quantity beda satuan.</div>';
+  }
+  function anomalyInfographic(){
+    var v=S.overview||{},items=[];
+    if(num(v.negative_skus)>0)items.push(['Saldo negatif historis',fmt(v.negative_skus)+' SKU · informasional']);
+    if(num(v.opname_rows)===0)items.push(['Belum ada opname periode','Input opname hanya berdasarkan hitung fisik']);
+    if(!(S.activity||[]).some(function(z){return num(z.movement_rows)>0}))items.push(['Belum ada movement','Tidak berarti transaksi Pembelian belum ada']);
+    if(num(v.opname_variance_rows)>0)items.push(['Selisih opname',fmt(v.opname_variance_rows)+' perlu pemeriksaan']);
+    if(!items.length)items.push(['Tidak ada anomali tercatat','Periksa backlog satuan pada Notifikasi']);
+    return'<div class="sc4-anomaly">'+items.map(function(z){return'<div><b>'+esc(z[0])+'</b><span>'+esc(z[1])+'</span></div>'}).join('')+
+       (isOwner()?'<button type="button" class="sc4-btn-small" data-sc4-notifications>Periksa di Notifikasi →</button>':'')+'</div>';
+  }
   function render() {
     var host = document.getElementById('stok');
     if (!host) return;
@@ -825,7 +861,11 @@
     var pAlert = S.periodError ? '<div class="sc3-alert">' + esc(S.periodError) + '</div>' : '';
     var loading = S.baseLoading && !S.baseLoaded ? '<div class="sc3-loading">Memuat posisi SKU terkini…</div>' : '';
     shell.innerHTML = renderHeader() + pAlert + overviewKpis() + alert + loading +
-      '<div class="sc4-main-grid"><article class="sc4-panel"><div class="sc4-panel-head"><div><h3>Aktivitas Stok</h3><p>Jumlah movement, bukan penjumlahan quantity lintas unit.</p></div></div>' + renderActivity() + '</article><article class="sc4-panel"><div class="sc4-panel-head"><div><h3>Kontrol Periode</h3><p>' + esc(cutLabel()) + '</p></div></div>' + renderPeriodControl() + '<div class="sc4-info">Saldo negatif historis ditampilkan sebagai historical discrepancy. Error operasional baru harus dibaca dari transaksi setelah cutoff opname.</div></article></div>' +
+      '<div class="sc4-infographic-main"><article class="sc4-panel"><div class="sc4-panel-head"><div><h3>Tren Aktivitas Stok</h3><p>Jumlah movement per jenis dalam periode; bukan quantity gabungan.</p></div></div>' + renderActivity() + '</article>'+
+      '<div class="sc4-side-stack"><article class="sc4-panel"><div class="sc4-panel-head"><div><h3>Komposisi Posisi Stok</h3><p>Distribusi SKU menurut saldo akhir periode.</p></div></div>' + compositionInfographic() + '</article>'+
+      '<article class="sc4-panel"><div class="sc4-panel-head"><div><h3>Kontrol Periode</h3><p>' + esc(cutLabel()) + '</p></div></div>' + renderPeriodControl() + '<div class="sc4-info">Saldo negatif historis hanya informasional. Periksa transaksi setelah cutoff opname untuk error aktif.</div></article></div></div>'+
+      '<div class="sc4-infographic-bottom"><article class="sc4-panel"><div class="sc4-panel-head"><div><h3>Top SKU Movement</h3><p>5 SKU teratas menurut jumlah movement; ledger dimuat bila diperlukan.</p></div></div>' + topSkuInfographic() + '</article>'+
+      '<article class="sc4-panel"><div class="sc4-panel-head"><div><h3>Anomali &amp; Tindak Lanjut</h3><p>Temuan yang memerlukan review dan opname.</p></div></div>' + anomalyInfographic() + '</article></div>'+
       '<div class="sc4-actions-row"><div><b>Detail dipisahkan dari halaman utama</b><span>Pilih posisi SKU terkini atau ledger periode saat dibutuhkan.</span></div><div><button type="button" data-sc4-modal="position">Lihat Detail SKU</button><button type="button" data-sc4-modal="ledger">Lihat Ledger Periode</button>' + (isOwner() ? '<button type="button" class="primary" data-sc4-action="opname">Input Opname</button>' : '') + '</div></div>' +
       renderModal();
     bind(host);
@@ -853,6 +893,12 @@
         render();
         return;
       }
+      var note = e.target && e.target.closest ? e.target.closest('[data-sc4-notifications]') : null;
+      if (note && isOwner() && window.__HASNARIA_OWNER_SHELL) { window.__HASNARIA_OWNER_SHELL.navigate('notifikasi'); return; }
+      var top = e.target && e.target.closest ? e.target.closest('[data-sc4-top-load]') : null;
+      if (top) { loadLedger(); return; }
+      var mode = e.target && e.target.closest ? e.target.closest('[data-sc4-top-mode]') : null;
+      if (mode) { topSkuMode=mode.getAttribute('data-sc4-top-mode')==='out'?'out':'in'; render(); return; }
       var ui4 = e.target && e.target.closest ? e.target.closest('[data-sc4-action]') : null;
       if (ui4 && ui4.getAttribute('data-sc4-action') === 'opname') {
         openOpname();
