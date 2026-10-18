@@ -4,7 +4,7 @@
 -- Security: invoker view scoped to the signed-in user's brand (not a definer RPC).
 -- Purchase 'canonical_rows' is a DISTINCT source-row count (not the sum of
 -- inventory + expense + review buckets, which overlap).
--- Rollback: supabase/rollback/20261018202000_restore_pre_hotfix_finance_alerts.sql
+-- Rollback: supabase/rollback/20261018202000_restore_pre_hotfix_ui_finance_alerts.sql
 create or replace view public.ui_finance_alerts
 with (security_invoker = true)
 as
