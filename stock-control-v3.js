@@ -418,6 +418,9 @@
     if(sync && !sync.canRefresh(h,'#sc4Period,#sc3Search,#sc3Category,#sc3Status')){
       S.pendingStockRefresh=true;return;
     }
+    if(window.__HASNARIA_STOCK_UPLOAD_V1&&window.__HASNARIA_STOCK_UPLOAD_V1.active()){
+      S.pendingStockRefresh=true;return;
+    }
     S.verifiedRefreshing=true;S.pendingStockRefresh=false;
     try{
       await Promise.all([loadBase(),loadPeriodData(true)]);
@@ -552,7 +555,7 @@
   }
 
   function canSync() {
-    if (S.correction) return false; // Never overwrite an in-progress correction form.
+    if (S.correction || (window.__HASNARIA_STOCK_UPLOAD_V1&&window.__HASNARIA_STOCK_UPLOAD_V1.active())) return false; // Never overwrite a draft form.
     var host = document.getElementById('stok'), sync = window.__HASNARIA_DATA_SYNC;
     if (!sync || !active() || !S.baseLoaded || S.baseLoading || S.auxLoading || S.periodLoading || S.ledgerLoading) return false;
     var focused = document.activeElement;
@@ -778,7 +781,7 @@
       return '<option value="' + esc(k) + '"' + (k === S.period ? ' selected' : '') + '>' + esc(monthLabel(k)) + '</option>';
     }).join('');
     return '<div class="sc3-head"><div><div class="sc3-eyebrow">STOK · ' + esc(cutLabel()) + '</div><h2>Stok &amp; Pergerakan Material</h2><p>Ringkasan periode menampilkan jumlah SKU dan aktivitas. Quantity antar satuan tidak dijumlahkan menjadi satu angka.</p></div>' +
-      '<div class="sc4-head-tools"><label><span>Bulan</span><select id="sc4Period" data-month-filter="stok">' + options + '</select></label><div class="sc3-actions"><button type="button" class="sc3-btn" data-sc4-action="upload-purchase">Upload Pembelian →</button><button type="button" class="sc3-btn" data-sc3-action="refresh">↻ Refresh</button></div></div></div>';
+      '<div class="sc4-head-tools"><label><span>Bulan</span><select id="sc4Period" data-month-filter="stok">' + options + '</select></label><div class="sc3-actions"><button type="button" class="sc3-btn" data-sc4-action="upload-opname">Upload Opname →</button><button type="button" class="sc3-btn" data-sc4-action="upload-purchase">Upload Pembelian →</button><button type="button" class="sc3-btn" data-sc3-action="refresh">↻ Refresh</button></div></div></div>';
   }
 
   function renderFormula() {
@@ -1066,6 +1069,11 @@
       var mode = e.target && e.target.closest ? e.target.closest('[data-sc4-top-mode]') : null;
       if (mode) { topSkuMode=mode.getAttribute('data-sc4-top-mode')==='out'?'out':'in'; render(); return; }
       var ui4 = e.target && e.target.closest ? e.target.closest('[data-sc4-action]') : null;
+      if (ui4 && ui4.getAttribute('data-sc4-action') === 'upload-opname') {
+        if(window.__HASNARIA_STOCK_UPLOAD_V1)window.__HASNARIA_STOCK_UPLOAD_V1.open();
+        else window.alert('Form upload sedang dimuat. Coba sekali lagi setelah halaman siap.');
+        return;
+      }
       if (ui4 && ui4.getAttribute('data-sc4-action') === 'upload-purchase') {
         if(window.__HASNARIA_OWNER_SHELL)window.__HASNARIA_OWNER_SHELL.navigate('pembelian');
         return;
