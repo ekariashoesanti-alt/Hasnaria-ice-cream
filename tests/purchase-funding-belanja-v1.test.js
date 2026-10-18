@@ -63,7 +63,7 @@ test('BELANJA parser reads exactly E-H funding and does not import B OPERASIONAL
  assert.notEqual(js,safe,'parser instrumentation must be inserted in test sandbox');
  const w={XLSX:{utils:{sheet_to_json:ws=>ws.grid,decode_cell:()=>{throw new Error('fake sheet')}}}};
  const doc={addEventListener(){}};
- const ctx={window:w,document:doc,Number,Math,String,Array,Object,Date,Promise,JSON,console};
+ const ctx={window:w,document:doc,XLSX:w.XLSX,Number,Math,String,Array,Object,Date,Promise,JSON,console};
  vm.runInNewContext(js,ctx,{filename:'purchase-excel-safe-merge-v3.js'});
  const result=w.__TEST_PARSE__(wb,{name:'RENCANA BELANJA OKTOBER 2026.xlsx'});
  assert.equal(result.rows.length,2);
