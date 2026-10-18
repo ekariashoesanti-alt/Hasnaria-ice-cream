@@ -25,6 +25,10 @@ jobs:
           set -euo pipefail
           node --check scripts/hasnaria_schema_only_actions.js
           node scripts/hasnaria_schema_only_actions.js --self-test
+          node --check scripts/hasnaria_staging_schema_restore.js
+          node scripts/hasnaria_staging_schema_restore.js --self-test
+          node --check scripts/hasnaria_owner_staging_gate.js
+          node scripts/hasnaria_owner_staging_gate.js --self-test
 
       - name: JavaScript syntax
         shell: bash
