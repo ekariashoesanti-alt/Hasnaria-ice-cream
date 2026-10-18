@@ -77,6 +77,7 @@ function boot(){
     document.addEventListener('change',function(e){if(e.target&&e.target.id==='financeV6Period'){requestSeq++;pack=null;loadedPeriod='';schedule(true)}},true);
     document.addEventListener('click',function(e){var t=e.target&&e.target.closest?e.target.closest('[data-tab="ops"],[data-fin-view]'):null;if(t)setTimeout(function(){schedule(false)},120)},true);
     window.addEventListener('hasnaria:finance-rebuilt',function(){requestSeq++;pack=null;loadedPeriod='';schedule(true)});
+    document.addEventListener('hasnaria:purchase-imported',function(){requestSeq++;pack=null;loadedPeriod='';schedule(true)},true);
     schedule(true);return
   }if(tries++<150)setTimeout(wait,100)})()
 }
