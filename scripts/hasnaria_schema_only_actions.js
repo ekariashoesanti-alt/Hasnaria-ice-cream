@@ -20,8 +20,11 @@ function verifyUrl(raw,ref,source){
   if(!direct&&!pooler)throw Error('BLOCK: database project ref mismatch');
   if(!u.password||u.pathname!=='/postgres')throw Error('BLOCK: missing password or unexpected database name');
   if(u.searchParams.has('options')||u.hash)throw Error('BLOCK: unexpected connection options');
-  if(source&&(/^(postgres|supabase_admin|supabase_auth_admin|service_role)$/i.test(username)||/^postgres\./i.test(username)))
-    throw Error('BLOCK: production requires a dedicated non-admin read-only role');
+  if(source && ![ 'hsn_schema_reader', 'hsn_schema_reader.'+PROD ].includes(username))
+    throw Error('BLOCK: source must be hsn_schema_reader (read-only role)');
+  if(!source && ![ 'postgres', 'postgres.'+STAGE ].includes(username))
+    throw Error('BLOCK: Singapore destination must be the designated postgres staging role');
+  if(u.port!=='5432')throw Error('BLOCK: use session pooler or direct PostgreSQL port 5432');
   return true;
 }
 function invoke(command,args){
@@ -75,29 +78,64 @@ function main(){
   if(process.argv.includes('--self-test'))return selfTest();
   if(process.env.GITHUB_REPOSITORY!=='ekariashoesanti-alt/Hasnaria-ice-cream'||process.env.GITHUB_REF!=='refs/heads/main')
     throw Error('BLOCK: manual workflow must run from Hasnaria main');
-  // Only validation is permitted until an independent reviewed restore procedure.
   const mode=process.env.HSN_SCHEMA_OPERATION||'validate-only';
-  if(mode!=='validate-only')throw Error('BLOCK: staging restore is deliberately unavailable');
+  if(!['validate-only','restore-staging'].includes(mode))throw Error('BLOCK: unknown operation');
+  if(mode==='restore-staging' && (process.env.HSN_STAGING_RESTORE_APPROVED!=='RESTORE_SCHEMA_ONLY_SINGAPORE' || process.env.GITHUB_EVENT_NAME!=='workflow_dispatch'))
+    throw Error('BLOCK: explicit staging restore approval required');
   const src=process.env.HSN_PROD_READONLY_DB_URL||'';
   const dest=process.env.HSN_STAGING_DB_URL||'';
   verifyUrl(src,PROD,true);verifyUrl(dest,STAGE,false);
   if(query(src,roleSql)!=='OK')throw Error('BLOCK: source database role has write privileges');
   if(query(dest,stageSql)!=='OK')throw Error('BLOCK: target is not empty Singapore staging with valid identity');
+  if(query(dest,"SELECT case when exists(SELECT 1 FROM pg_roles WHERE rolname='hsn_schema_reader' AND NOT rolcanlogin) then 'OK' else 'DENY' end")!=='OK')
+    throw Error('BLOCK: staging is missing the safe NOLOGIN ACL placeholder role');
   const temp=fs.mkdtempSync(path.join(os.tmpdir(),'hasnaria-schema-'));
   try{
     const dump=path.join(temp,'schema-only.sql');
-    invoke('supabase',['db','dump','--db-url',src,'--schema','public,private','-f',dump]);
+    // Supabase CLI db dump attempts to SET ROLE postgres and fails with a
+    // strictly read-only custom login. Use PostgreSQL 17's pg_dump directly.
+    // --schema-only never copies business rows, passwords, or customer data.
+    // Retain ACLs/policies, and omit ownership rewrites of staging-managed roles.
+    invoke('docker',[
+      'run','--rm','--network','host',
+      '--volume',temp+':/schema',
+      '--env','HSN_PROD_READONLY_DB_URL',
+      'postgres:17','sh','-ec',
+      'exec pg_dump --no-password --schema-only --no-owner --schema=public --schema=private --dbname="$HSN_PROD_READONLY_DB_URL" --file=/schema/schema-only.sql'
+    ]);
     const stat=fs.statSync(dump);
     if(stat.size<3000||stat.size>50*1024*1024)throw Error('Unexpected schema export size');
     const sql=fs.readFileSync(dump,'utf8');
     quoteCheck(sql);
     const sha=crypto.createHash('sha256').update(sql).digest('hex');
-    // Trial: a transaction on staging, with forced ROLLBACK before closing.
-    invoke('psql',['-X','-q','--set=ON_ERROR_STOP=1','--dbname',dest,'--command','BEGIN','--file',dump,'--command','ROLLBACK']);
+    // The dump may contain PostgreSQL 17 psql meta-commands such as \\restrict.
+    // Use the same major-version client for trial and restore (Ubuntu's psql may be 16).
+    // Test all SQL inside a transaction that is ALWAYS rolled back.
+    invoke('docker',[
+      'run','--rm','--network','host','--volume',temp+':/schema',
+      '--env','HSN_STAGING_DB_URL','postgres:17','sh','-ec',
+      'exec psql -X -q --set=ON_ERROR_STOP=1 --dbname="$HSN_STAGING_DB_URL" --command="BEGIN" --file=/schema/schema-only.sql --command="ROLLBACK"'
+    ]);
     if(query(dest,stageSql)!=='OK')throw Error('BLOCK: staging changed after trial');
     console.log('PASS: public + private schema exported; Singapore trial rolled back');
     console.log('SQL size: '+stat.size+' bytes; SHA-256: '+sha);
-    console.log('VALIDATE ONLY: no permanent database changes; no raw SQL uploaded');
+    if(mode==='restore-staging'){
+      // One transaction: no half-restored schema on any SQL error.
+      // A staging-only credential performs the DDL; never pass production for --dbname.
+      invoke('docker',[
+        'run','--rm','--network','host','--volume',temp+':/schema',
+        '--env','HSN_STAGING_DB_URL','postgres:17','sh','-ec',
+        'exec psql -X --single-transaction -q --set=ON_ERROR_STOP=1 --dbname="$HSN_STAGING_DB_URL" --file=/schema/schema-only.sql'
+      ]);
+      const tables=query(dest,"SELECT count(*) FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relkind IN ('r','p')");
+      const views=query(dest,"SELECT count(*) FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relkind IN ('v','m')");
+      const control=query(dest,"SELECT count(*) FROM staging_guard.environment_identity WHERE environment='staging' AND region='ap-southeast-1' AND supabase_project_ref='rynnpndtzjwpekbiwiif'");
+      // Match the schema metrics captured before release. No historical row data.
+      if(Number(tables)<87||Number(views)<176||control!=='1')throw Error('RESTORE CHECK FAILED: staging catalog incomplete; inspect staging before UAT');
+      console.log('STAGING SCHEMA RESTORED: tables='+tables+' views='+views+' identity='+control);
+    }else{
+      console.log('VALIDATE ONLY: no permanent database changes; no raw SQL uploaded');
+    }
   }finally{fs.rmSync(temp,{recursive:true,force:true})}
 }
 if(require.main===module){try{main()}catch(e){console.error(e.message);process.exitCode=1}}
