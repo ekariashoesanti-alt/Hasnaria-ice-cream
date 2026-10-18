@@ -412,15 +412,19 @@
       (all.length?'<button type="button" data-sc4-action="open-operasional">Lanjutkan di Operasional →</button>':'')+'</div>';
   }
 
+  async function readPendingUploads(){
+    var rows=await request('operational_runs?' + qs({
+      brand_id:'eq.'+BRAND,run_type:'eq.stock_opname',status:'in.(draft,in_progress,submitted)',
+      select:'id,title,status,scheduled_date',order:'scheduled_date.desc',limit:'250'
+    }));
+    return (rows||[]).filter(function(x){return String(x.title||'').indexOf('[UPLOAD_OPNAME]')===0});
+  }
+
   async function loadPendingUploads(seq){
     if(!isOwner())return;
     try{
-      var rows=await request('operational_runs?' + qs({
-        brand_id:'eq.'+BRAND,run_type:'eq.stock_opname',status:'in.(draft,in_progress,submitted)',
-        select:'id,title,status,scheduled_date',order:'scheduled_date.desc',limit:'250'
-      }));
-      if(seq!==S.periodSeq)return;
-      S.pendingUploadRuns=(rows||[]).filter(function(x){return String(x.title||'').indexOf('[UPLOAD_OPNAME]')===0});
+      var rows=await readPendingUploads();
+      if(seq===S.periodSeq)S.pendingUploadRuns=rows;
     }catch(_){if(seq===S.periodSeq)S.pendingUploadRuns=null}
   }
 
@@ -451,7 +455,12 @@
       if(S.modal==='ledger')await loadLedger();
     }finally{
       S.verifiedRefreshing=false;
-      // Defer the next attempt to a user navigation if an active edit remains.
+      // A second committed write may arrive during the first reload. Do not lose it.
+      // Keep deferred updates waiting if a user is editing a form.
+      if(S.pendingStockRefresh && active() && !S.correction &&
+         !(window.__HASNARIA_STOCK_UPLOAD_V1&&window.__HASNARIA_STOCK_UPLOAD_V1.active())){
+        setTimeout(function(){if(S.pendingStockRefresh)refreshCommittedData()},0);
+      }
     }
   }
 
@@ -606,6 +615,10 @@
         reads.push(request('ui_stock_activity_chart_v1?' + qs({brand_id: 'eq.' + BRAND, period_month: 'eq.' + period + '-01', select: 'movement_type,movement_rows,sku_count', order: 'movement_rows.desc'})));
       }
       if (modal === 'ledger' && period) reads.push(readLedger(period));
+      // Recheck audited upload drafts on every cross-tab/data-change notification.
+      // Append this read LAST to preserve the existing detail/overview indices.
+      var pendingIndex=reads.length;
+      reads.push(isOwner()?readPendingUploads():Promise.resolve(S.pendingUploadRuns));
       var result = await Promise.all(reads);
       if (seq !== S.syncSeq || context !== syncContext() || !canSync()) return;
       var raw = result[0] || [], audit = await loadVerifiedAudit(raw);
@@ -634,11 +647,13 @@
         var selected = S.periods.find(function (x) { return monthKey(x.period_start || x.period_key) === period; });
         periods = periods.concat([selected || { period_start: period + '-01' }]);
       }
-      var next = [raw, items, periods, overview, activity, ledger, audit, true, '', '', '', modal === 'ledger' ? '' : S.ledgerError];
-      var current = [S.raw, S.items, S.periods, S.overview, S.activity, S.ledger, S.ledgerAudit, S.auxLoaded, S.error, S.auxError, S.periodError, S.ledgerError];
+      var pendingUploads=result[pendingIndex];
+      var next = [raw, items, periods, overview, activity, ledger, audit, pendingUploads, true, '', '', '', modal === 'ledger' ? '' : S.ledgerError];
+      var current = [S.raw, S.items, S.periods, S.overview, S.activity, S.ledger, S.ledgerAudit, S.pendingUploadRuns, S.auxLoaded, S.error, S.auxError, S.periodError, S.ledgerError];
       if (JSON.stringify(next) === JSON.stringify(current)) return;
       S.raw = raw; S.items = items; S.periods = periods;
       S.ledgerAudit = audit;
+      S.pendingUploadRuns = pendingUploads;
       S.lastVerifiedAt = new Date().toLocaleString('id-ID');
       S.overview = overview; S.activity = activity; S.ledger = ledger;
       S.auxLoaded = true; S.error = ''; S.auxError = ''; S.periodError = '';
