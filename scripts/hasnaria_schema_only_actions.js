@@ -28,7 +28,7 @@ function verifyUrl(raw,ref,source){
   return true;
 }
 function invoke(command,args){
-  const r=spawnSync(command,args,{encoding:'utf8',stdio:['ignore','pipe','pipe'],timeout:14*60*1000,maxBuffer:4*1024*1024});
+  const r=spawnSync(command,args,{encoding:'utf8',stdio:['ignore','pipe','pipe'],timeout:20*60*1000,maxBuffer:4*1024*1024});
   if(r.error||r.status!==0){
     const error=String(r.stderr||'').toLowerCase();
     // Never print STDERR; PostgreSQL messages may contain hostnames and SQL.
