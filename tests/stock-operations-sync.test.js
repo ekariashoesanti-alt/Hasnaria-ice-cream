@@ -118,9 +118,9 @@ function stockFixture() {
   const overview = { sku_count: 40, movement_rows: 3 };
   const activity = [{ movement_type: 'PURCHASE', movement_rows: 3, sku_count: 2 }];
   const ledger = Array.from({ length: 80 }, (_, i) => ({ movement_id: i, movement_date: '2026-10-01', qty_delta: 1 }));
-  const data = { raw, recipes, periods, overview, activity, ledger, ledgers };
+  const data = { raw, recipes, periods, overview, activity, ledger, ledgers, pendingUploads:[] };
   Object.assign(f.api.S, { raw: clone(raw), items: f.api.supplementalItems(clone(raw), recipes, [], []), baseLoaded: true,
-    auxLoaded: true, ledgerAudit:f.api.auditLedgerPositions(raw,ledgers), periods: clone(periods), period: '2026-10', overview: clone(overview), activity: clone(activity),
+    auxLoaded: true, pendingUploadRuns:[], ledgerAudit:f.api.auditLedgerPositions(raw,ledgers), periods: clone(periods), period: '2026-10', overview: clone(overview), activity: clone(activity),
     modal: 'position', category: 'Bahan', page: 2 });
   for (const [table, value] of [
     ['inventory_stock_reconciliation', 'raw'], ['inventory_ledger_balance','ledgers'], ['ui_period_catalog_v1', 'periods'],
@@ -129,6 +129,7 @@ function stockFixture() {
   f.handlers.set('ui_stock_overview_v1', () => [clone(data.overview)]);
   f.handlers.set('get_ui_period_catalog_fast_v1', () => clone(data.periods));
   f.handlers.set('purchase_order_items', () => []);
+  f.handlers.set('operational_runs', () => clone(data.pendingUploads));
   f.api.render(); f.data = data;
   return f;
 }
@@ -170,6 +171,22 @@ async function main() {
       assert.equal(f.queries.length, queryCount, field + ' defers background reads');
     }
   }
+
+  // Cross-session upload updates must refresh the pending batch counter without
+  // altering stock position or performing any posting RPC.
+  stock.data.pendingUploads = [{id:'draft-a',title:'[UPLOAD_OPNAME] 2026-10-18 hash-1',status:'in_progress',scheduled_date:'2026-10-18'}];
+  const beforeBatchUpdate = stock.queries.length;
+  await stock.api.syncRefresh();
+  assert.equal(stock.api.S.pendingUploadRuns.length,1,'Owner Stock sees new draft after another session writes it');
+  assert.equal(stock.api.S.pendingUploadRuns[0].status,'in_progress');
+  assert.equal(stock.api.S.items[0].balance_qty,10,'draft upload never changes posted stock balance');
+  assert.ok(stock.queries.slice(beforeBatchUpdate).every(q=>q.method==='GET'||q.rpc==='get_ui_period_catalog_fast_v1'));
+  stock.data.pendingUploads[0].status='submitted';
+  await stock.api.syncRefresh();
+  assert.equal(stock.api.S.pendingUploadRuns[0].status,'submitted','Owner sees submitted status via read-only refresh');
+  stock.data.pendingUploads=[];
+  await stock.api.syncRefresh();
+  assert.equal(stock.api.S.pendingUploadRuns.length,0,'approval removes pending draft notice without manual reload');
 
   stock.data.raw[0].system_qty = 5;
   stock.data.overview.movement_rows = 4;
