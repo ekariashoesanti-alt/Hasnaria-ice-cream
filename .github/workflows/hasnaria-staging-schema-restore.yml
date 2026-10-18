@@ -1,0 +1,54 @@
+name: Hasnaria Singapore Schema Restore
+# Independent, manual schema-only staging operation. Production is READ ONLY.
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: "Type RESTORE_SCHEMA_SINGAPORE; no production business/Auth data copied"
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: hasnaria-staging-schema-restore
+  cancel-in-progress: false
+jobs:
+  restore-only-if-empty:
+    if: ${{ github.repository == 'ekariashoesanti-alt/Hasnaria-ice-cream' && github.ref == 'refs/heads/main' && inputs.confirmation == 'RESTORE_SCHEMA_SINGAPORE' }}
+    environment: hasnaria-staging-schema
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
+      - name: Install source-safe tools
+        uses: supabase/setup-cli@v1
+        with: { version: latest }
+      - name: PostgreSQL client and Docker runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client
+          docker info --format '{{.ServerVersion}}' >/dev/null
+          psql --version
+      - name: Negative guard unit tests (no secrets)
+        run: |
+          node --check scripts/hasnaria_staging_schema_restore.js
+          node scripts/hasnaria_schema_only_actions.js --self-test
+          node scripts/hasnaria_staging_schema_restore.js --self-test
+      - name: Independent transactional PRE-FLIGHT (rollback)
+        env:
+          HSN_PROD_READONLY_DB_URL: ${{ secrets.HSN_PROD_READONLY_DB_URL }}
+          HSN_STAGING_DB_URL: ${{ secrets.HSN_STAGING_DB_URL }}
+          HSN_SCHEMA_OPERATION: validate-only
+        run: node scripts/hasnaria_schema_only_actions.js
+      - name: Atomic SCHEMA-ONLY restore + parity validation (Singapore only)
+        env:
+          HSN_PROD_READONLY_DB_URL: ${{ secrets.HSN_PROD_READONLY_DB_URL }}
+          HSN_STAGING_DB_URL: ${{ secrets.HSN_STAGING_DB_URL }}
+          HSN_STAGING_SCHEMA_CONFIRM: ${{ inputs.confirmation }}
+        run: node scripts/hasnaria_staging_schema_restore.js
+# No production DML, no Auth data, no customer data, no raw SQL file/artifact/log.
+# Staging target must have ZERO public/private business objects AND Auth users.
+# The independent production-like role/RLS/browser acceptance remains a separate gate.
