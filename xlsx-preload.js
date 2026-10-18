@@ -40,7 +40,7 @@
     sm.src='/purchase-excel-safe-merge-v3.js?v=6';
     sm.async=true;
     sm.onload=loadDualSourceV2;
-    sm.onerror=function(){console.error('Safe merge Pembelian gagal dimuat; memuat fallback dual-source.');loadDualSourceV2();};
+    sm.onerror=function(){console.error('Pengaman upload BELANJA gagal dimuat; tombol Excel harus ditahan.');window.__HASNARIA_PURCHASE_SAFE_IMPORT_FAILED=true;loadDualSourceV2();};
     document.head.appendChild(sm);
   }else{
     loadDualSourceV2();
