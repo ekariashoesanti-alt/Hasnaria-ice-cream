@@ -61,7 +61,7 @@ function draw(){
  shown.forEach(function(x){k+='<button type="button" data-hqn-item="'+esc(x.id)+'" class="hqn-item '+(chosen&&chosen.id===x.id?'active':'')+'"><span class="hqn-icon '+esc(x.kind)+'">'+(x.kind==='success'?'✓':x.kind==='backlog'?'!':'i')+'</span><span><b>'+esc(x.title)+'</b><small>'+esc(x.scope)+' · '+esc(x.amount)+'</small></span><span class="hqn-arrow">›</span></button>'});
  if(!shown.length)k+='<div class="hqn-message">Tidak ada item pada filter ini.</div>';
  k+='</div><div class="hqn-detail">';
- if(chosen)k+='<small>'+esc(chosen.scope)+' · '+esc(chosen.kind==='success'?'BERHASIL':chosen.kind==='backlog'?'PERLU REVIEW':'INFORMASI')+'</small><h3>'+esc(chosen.title)+'</h3><strong>'+esc(chosen.amount)+'</strong><p>'+esc(chosen.description)+'</p>'+(chosen.kind==='backlog'?'<div class="hqn-guidance">Bukti asli, keputusan Owner dan pratinjau dampak diperlukan sebelum perubahan data.</div><button type="button" class="hqn-primary" '+(chosen.inventoryItemId?'data-hqn-stock="'+esc(chosen.inventoryItemId)+'"':'data-hqn-purchase')+'>'+(chosen.inventoryItemId?'Buka Entry Koreksi di Stok →':'Buka Review di Pembelian →')+'</button>':'<div class="hqn-guidance">Pemeriksaan ini tidak mengubah Stok maupun jurnal.</div>');
+ if(chosen)k+='<small>'+esc(chosen.scope)+' · '+esc(chosen.kind==='success'?'BERHASIL':chosen.kind==='backlog'?'PERLU REVIEW':'INFORMASI')+'</small><h3>'+esc(chosen.title)+'</h3><strong>'+esc(chosen.amount)+'</strong><p>'+esc(chosen.description)+'</p>'+(chosen.kind==='backlog'?'<div class="hqn-guidance">Bukti asli, keputusan Owner dan pratinjau dampak diperlukan sebelum perubahan data.</div><button type="button" class="hqn-primary" '+(chosen.inventoryItemId?'data-hqn-stock="'+esc(chosen.inventoryItemId)+'"':(chosen.scope==='Stok'?'data-hqn-stock-summary':'data-hqn-purchase'))+'>'+(chosen.inventoryItemId?'Buka Entry Koreksi di Stok →':chosen.scope==='Stok'?'Periksa Tab Stok →':'Buka Review di Pembelian →')+'</button>':'<div class="hqn-guidance">Pemeriksaan ini tidak mengubah Stok maupun jurnal.</div>');
  else k+='<p>Belum ada item untuk ditampilkan.</p>';
  k+='</div></div></div></section>';h.innerHTML=k;
 }
@@ -92,10 +92,11 @@ function mount(){if(!active())return;var s=window.__HASNARIA_CONTEXT;if(ctx!==s)
  draw();
  if(window.__HASNARIA_STOCK_NOTIFICATION_REFRESH_NEEDED){window.__HASNARIA_STOCK_NOTIFICATION_REFRESH_NEEDED=false;load(true)}
  else if(!data&&!loading)load(false)}
-document.addEventListener('click',function(e){if(!active())return;var t=e.target&&e.target.closest?e.target.closest('[data-hqn-refresh],[data-hqn-filter],[data-hqn-item],[data-hqn-purchase],[data-hqn-stock]'):null;if(!t)return;
+document.addEventListener('click',function(e){if(!active())return;var t=e.target&&e.target.closest?e.target.closest('[data-hqn-refresh],[data-hqn-filter],[data-hqn-item],[data-hqn-purchase],[data-hqn-stock],[data-hqn-stock-summary]'):null;if(!t)return;
  if(t.hasAttribute('data-hqn-refresh')){load(true);return}
  if(t.hasAttribute('data-hqn-filter')){filter=t.getAttribute('data-hqn-filter');selected='';draw();return}
  if(t.hasAttribute('data-hqn-item')){selected=t.getAttribute('data-hqn-item');draw();return}
+ if(t.hasAttribute('data-hqn-stock-summary')&&window.__HASNARIA_OWNER_SHELL){window.__HASNARIA_OWNER_SHELL.navigate('stok');return;}
  if(t.hasAttribute('data-hqn-stock')&&window.__HASNARIA_OWNER_SHELL){
   window.__HASNARIA_STOCK_CORRECTION_PENDING={inventoryItemId:t.getAttribute('data-hqn-stock')};
   window.__HASNARIA_OWNER_SHELL.navigate('stok');
