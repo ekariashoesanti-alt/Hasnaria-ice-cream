@@ -68,6 +68,9 @@ function main(){
   if(query(src,roleSql)!=='OK')throw Error('BLOCK: production reader may write');
   if(query(dest,stageSql)!=='OK')throw Error('BLOCK: staging identity missing or target not empty');
   if(query(dest,'select count(*) from auth.users')!=='0')throw Error('BLOCK: staging already has real or synthetic Auth users');
+  const extensionsQuery="select coalesce(string_agg(e.extname||':'||e.extversion||':'||n.nspname,',' order by e.extname),'') from pg_extension e join pg_namespace n on n.oid=e.extnamespace";
+  if(query(src,extensionsQuery)!==query(dest,extensionsQuery))
+    throw Error('BLOCK: production/staging extension names, versions or namespaces differ');
   const expected=parseCounts(query(src,countsSql));
   const dir=fs.mkdtempSync(path.join(os.tmpdir(),'hasnaria-schema-staging-'));
   try{
