@@ -778,7 +778,7 @@
       return '<option value="' + esc(k) + '"' + (k === S.period ? ' selected' : '') + '>' + esc(monthLabel(k)) + '</option>';
     }).join('');
     return '<div class="sc3-head"><div><div class="sc3-eyebrow">STOK · ' + esc(cutLabel()) + '</div><h2>Stok &amp; Pergerakan Material</h2><p>Ringkasan periode menampilkan jumlah SKU dan aktivitas. Quantity antar satuan tidak dijumlahkan menjadi satu angka.</p></div>' +
-      '<div class="sc4-head-tools"><label><span>Bulan</span><select id="sc4Period" data-month-filter="stok">' + options + '</select></label><div class="sc3-actions"><button type="button" class="sc3-btn" data-sc3-action="refresh">↻ Refresh</button></div></div></div>';
+      '<div class="sc4-head-tools"><label><span>Bulan</span><select id="sc4Period" data-month-filter="stok">' + options + '</select></label><div class="sc3-actions"><button type="button" class="sc3-btn" data-sc4-action="upload-purchase">Upload Pembelian →</button><button type="button" class="sc3-btn" data-sc3-action="refresh">↻ Refresh</button></div></div></div>';
   }
 
   function renderFormula() {
@@ -873,7 +873,7 @@
     return '<div class="sc3-notes">' +
       '<article><span>AKURASI</span><strong>Saldo hanya aktif setelah opname awal</strong><p>Item tanpa opname awal tidak diberi saldo aktual agar angka opening lama tidak dianggap posisi fisik terkini.</p></article>' +
       '<article><span>KEBUTUHAN</span><strong>Incoming mengurangi kebutuhan beli</strong><p>PO issued dipantau sebagai incoming, tetapi baru menambah saldo setelah penerimaan barang.</p></article>' +
-      '<article><span>PERFORMA</span><strong>Data utama tidak menunggu BOM</strong><p>Saldo, opname, pembelian dan pemakaian ditampilkan dulu agar Tab Stok tetap ringan.</p></article>' +
+      '<article><span>PERFORMA</span><strong>Data utama tidak menunggu BOM</strong><p>Saldo, opname, pembelian dan pemakaian ditampilkan dulu agar Tab Stok tetap ringan. Upload Pembelian belum otomatis menambah stok sebelum penerimaan dibukukan.</p></article>' +
     '</div>';
   }
 
@@ -1066,6 +1066,10 @@
       var mode = e.target && e.target.closest ? e.target.closest('[data-sc4-top-mode]') : null;
       if (mode) { topSkuMode=mode.getAttribute('data-sc4-top-mode')==='out'?'out':'in'; render(); return; }
       var ui4 = e.target && e.target.closest ? e.target.closest('[data-sc4-action]') : null;
+      if (ui4 && ui4.getAttribute('data-sc4-action') === 'upload-purchase') {
+        if(window.__HASNARIA_OWNER_SHELL)window.__HASNARIA_OWNER_SHELL.navigate('pembelian');
+        return;
+      }
       if (ui4 && ui4.getAttribute('data-sc4-action') === 'opname') {
         openOpname();
         return;
