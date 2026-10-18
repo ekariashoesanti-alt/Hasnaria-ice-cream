@@ -284,3 +284,9 @@
 #stok .sc4-backend-integrity.warn b{color:#895c11}
 #stok .sc4-backend-integrity button{flex:none;padding:7px 10px;background:#fff;border:1px solid #dec695;border-radius:7px;color:#735118;font-size:10px;font-weight:800;cursor:pointer}
 @media(max-width:650px){#stok .sc4-backend-integrity{flex-direction:column;align-items:stretch}#stok .sc4-backend-integrity button{width:100%}}
+
+/* HSN-402: pending Stock uploads are persisted Operational drafts, not ledger stock. */
+#stok .sc4-upload-state{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:7px 10px;border:1px dashed #cadcd2;border-radius:9px;background:#fff;margin:5px 0 10px;font-size:10px;color:#5f7267}
+#stok .sc4-upload-state b{color:#174e3c}
+#stok .sc4-upload-state button{border:1px solid #b0cbbb;border-radius:7px;background:#f8fcf8;padding:6px 9px;font-size:10px;color:#265e47;cursor:pointer}
+@media(max-width:700px){#stok .sc4-upload-state{flex-wrap:wrap}#stok .sc4-upload-state button{width:100%}}
