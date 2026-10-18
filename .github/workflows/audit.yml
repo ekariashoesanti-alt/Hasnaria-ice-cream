@@ -45,6 +45,9 @@ jobs:
       - name: Schema-only GitHub Actions safeguards (without credentials)
         run: node scripts/hasnaria_schema_only_actions.js --self-test
 
+      - name: Stock and Finance hotfix SQL contract regression
+        run: node --test tests/hsn-stock-finance-hotfix.test.js
+
       - name: Majoo importer smoke test
         run: node tests/majoo-import-v2.test.js
 
