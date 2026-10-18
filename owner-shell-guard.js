@@ -11,9 +11,9 @@
      deliberately NOT loaded because it used to take ownership of every tab. */
   var EXEC_SRC='/owner-executive-v1.js?v=1';
   var DASH_SRC='/owner-dashboard-one-view.js?v=8';
-  var OWNER_TABS=['dashboard','sales','pembelian','operasional','administrasi','ops','stok'];
-  var SECTION_IDS=['dashboard','sales','pembelian','operasional','administrasi','ops','stok','shift','social','approval','team','sistem','karyawan'];
-  var state={active:'dashboard',initialized:false,scheduled:false,salesRetries:0,finStockLoad:null,operationalLoad:null,adminLoad:null,dashboardLoad:null};
+  var OWNER_TABS=['dashboard','sales','pembelian','operasional','administrasi','ops','stok','notifikasi'];
+  var SECTION_IDS=['dashboard','sales','pembelian','operasional','administrasi','ops','stok','notifikasi','shift','social','approval','team','sistem','karyawan'];
+  var state={active:'dashboard',initialized:false,scheduled:false,salesRetries:0,finStockLoad:null,operationalLoad:null,adminLoad:null,dashboardLoad:null,notificationsLoad:null};
   var tries=0;
 
   function context(){return window.__HASNARIA_CONTEXT||null}
@@ -34,7 +34,9 @@
       var finance=section('ops');main.insertBefore(h,finance||null);
     }
     var admin=section('administrasi');if(main&&!admin){admin=document.createElement('section');admin.id='administrasi';admin.className='hidden';var finance2=section('ops');main.insertBefore(admin,finance2||null)}
+    var notify=section('notifikasi');if(main&&!notify){notify=document.createElement('section');notify.id='notifikasi';notify.className='hidden';var stock=section('stok');if(stock&&stock.nextSibling)main.insertBefore(notify,stock.nextSibling);else main.appendChild(notify)}
     var tabs=document.getElementById('tabs');
+    if(tabs&&!tabs.querySelector('.tab[data-tab="notifikasi"]')){var nb=document.createElement('button');nb.type='button';nb.className='tab';nb.setAttribute('data-tab','notifikasi');nb.textContent='Notifikasi';var stockNav=tabs.querySelector('.tab[data-tab="stok"]');if(stockNav&&stockNav.nextSibling)tabs.insertBefore(nb,stockNav.nextSibling);else tabs.appendChild(nb)}
     var employeeTab=tabs&&tabs.querySelector('.tab[data-tab="karyawan"]');if(employeeTab)employeeTab.remove();
     var employeeSection=section('karyawan');if(employeeSection)employeeSection.remove();
     var b=tabs&&tabs.querySelector('.tab[data-tab="operasional"]');
@@ -46,7 +48,7 @@
     if(b){b.textContent='Operasional';b.setAttribute('aria-label','Operasional');b.style.display=''}
     var ab=tabs&&tabs.querySelector('.tab[data-tab="administrasi"]');if(tabs&&!ab){ab=document.createElement('button');ab.type='button';ab.className='tab';ab.setAttribute('data-tab','administrasi');ab.textContent='Administrasi';ab.setAttribute('aria-label','Administrasi');var finance3=tabs.querySelector('.tab[data-tab="ops"]');tabs.insertBefore(ab,finance3||null)}
     if(ab){ab.textContent='Administrasi';ab.setAttribute('aria-label','Administrasi');ab.style.display=''}
-    var labels={dashboard:'Ringkasan CEO',sales:'Penjualan',pembelian:'Pembelian',operasional:'Operasional',administrasi:'Administrasi',ops:'Keuangan',stok:'Stok'};
+    var labels={dashboard:'Ringkasan CEO',sales:'Penjualan',pembelian:'Pembelian',operasional:'Operasional',administrasi:'Administrasi',ops:'Keuangan',stok:'Stok',notifikasi:'Notifikasi'};
     Object.keys(labels).forEach(function(id){var x=tabs&&tabs.querySelector('.tab[data-tab="'+id+'"]');if(x){x.textContent=labels[id];x.style.display=''}});
     return h;
   }
@@ -200,6 +202,15 @@
     var marker=document.createElement('span');marker.hidden=true;marker.setAttribute('data-owner-shell-stock-nudge','1');h.appendChild(marker);h.removeChild(marker);
   }
 
+  function ensureNotifications(){
+    if(!isOwner()||state.active!=='notifikasi')return;
+    if(window.__HASNARIA_OWNER_NOTIFICATIONS){window.__HASNARIA_OWNER_NOTIFICATIONS.mount();return}
+    if(state.notificationsLoad)return;
+    state.notificationsLoad=new Promise(function(resolve){
+      var script=document.createElement('script');script.id='hasnaria-owner-notifications-js';script.src='/owner-notifications-v1.js?v=1';script.async=true;
+      script.onload=resolve;script.onerror=function(){state.notificationsLoad=null;var h=section('notifikasi');if(h)h.textContent='Notifikasi gagal dimuat. Silakan refresh.';resolve()};document.head.appendChild(script)
+    }).then(function(){if(isOwner()&&state.active==='notifikasi'&&window.__HASNARIA_OWNER_NOTIFICATIONS)window.__HASNARIA_OWNER_NOTIFICATIONS.mount()});
+  }
   function ensureFinance(requestRender){ensureFinStockRuntime('ops',!!requestRender)}
   function ensureStock(requestRender){if(typeof window.__HASNARIA_LOAD_STOCK==='function')window.__HASNARIA_LOAD_STOCK();ensureFinStockRuntime('stok',!!requestRender);setTimeout(nudgeLegacyStockFallback,700)}
   function patchContext(){var c=context();if(!c||c.role!=='owner')return;if(c.navigate!==safeNavigate)c.navigate=safeNavigate}
@@ -214,6 +225,7 @@
     if(id==='administrasi')ensureAdministration(true);
     if(id==='ops')ensureFinance(true);
     if(id==='stok')ensureStock(true);
+    if(id==='notifikasi')ensureNotifications();
     return true;
   }
 
@@ -229,6 +241,7 @@
     if(state.active==='administrasi')ensureAdministration(false);
     if(state.active==='ops')ensureFinance(false);
     if(state.active==='stok')ensureStock(false);
+    if(state.active==='notifikasi')ensureNotifications();
   }
 
   function scheduleReconcile(){if(state.scheduled)return;state.scheduled=true;setTimeout(function(){state.scheduled=false;reconcile()},0)}
@@ -243,6 +256,7 @@
   function start(){
     if(!document.body)return;
     ensureOperationalSurface();ensureShellCss();
+    if(!document.getElementById('hasnaria-owner-insight-css')){var ins=document.createElement('link');ins.id='hasnaria-owner-insight-css';ins.rel='stylesheet';ins.href='/owner-insight-v1.css?v=1';document.head.appendChild(ins)}
     var tabs=document.getElementById('tabs'),main=document.querySelector('#app main');
     if(tabs)new MutationObserver(scheduleReconcile).observe(tabs,{childList:true});
     if(main)new MutationObserver(scheduleReconcile).observe(main,{childList:true});
