@@ -66,6 +66,9 @@ jobs:
       - name: Owner conversion triage safety regression
         run: node --test tests/p02-owner-conversion-triage.test.js
 
+      - name: Owner Purchase, Stock and Notifications UX regression
+        run: node --test tests/owner-insights-ui.test.js
+
       - name: Runtime source integrity
         shell: bash
         run: |
