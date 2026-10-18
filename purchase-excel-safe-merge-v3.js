@@ -70,9 +70,6 @@
     if(maxR<0)return;var a={s:{r:minR,c:minC},e:{r:maxR,c:maxC}},cur=null;try{cur=ws['!ref']?XLSX.utils.decode_range(ws['!ref']):null}catch(_){}if(!cur||a.s.r<cur.s.r||a.s.c<cur.s.c||a.e.r>cur.e.r||a.e.c>cur.e.c)ws['!ref']=XLSX.utils.encode_range(a);
   }
   function matrix(ws){expandRef(ws);return XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:true})}
-  function sourceRank(t){return t==='majoo'?3:t==='excel'?2:t==='excel_legacy'?1:0}
-  function kind(r){return raw(r).analytics_kind||'purchase_item'}
-  function coreKey(r){return [r.purchase_date||'',n(r.item_name),Math.round((+r.total_amount||0)*100)/100].join('|')}
   function toast(msg,type,ttl){var old=document.getElementById('purchaseDualToast');if(old)old.remove();var x=document.createElement('div');x.id='purchaseDualToast';x.className='purchase-dual-toast '+(type||'info');x.textContent=msg;document.body.appendChild(x);if(ttl!==0)setTimeout(function(){if(x.isConnected)x.remove()},ttl||5000)}
   function busy(on){var b=document.getElementById('purchaseExcelBtn');if(b)b.disabled=!!on}
 
@@ -151,60 +148,6 @@
   }
   window.__HASNARIA_PURCHASE_FUNDING_V1.fundingOverview=fundingOverview;
 
-  async function fetchEvidence(db,period){var q=await db.from(EVID).select('*').eq('brand_id',BRAND).eq('source_period',period).order('row_no',{ascending:true}).limit(10000);if(q.error)throw q.error;return q.data||[]}
-  async function mergeEvidence(db,period,candidates){
-    var existing=await fetchEvidence(db,period),pool=existing.filter(function(r){return r.source_type==='excel'||r.source_type==='excel_legacy'}),used={},inserted=0,replaced=0;
-    for(var i=0;i<candidates.length;i++){
-      var r=candidates[i],match=null;
-      for(var j=0;j<pool.length;j++){
-        var x=pool[j];if(used[x.id])continue;
-        if(x.purchase_date===r.purchase_date&&n(x.item_name)===n(r.item_name)&&Math.abs((+x.total_amount||0)-(+r.total_amount||0))<0.01){match=x;break}
-      }
-      if(match){
-        used[match.id]=1;var upd=Object.assign({},r);delete upd.brand_id;delete upd.source_type;delete upd.source_period;delete upd.source_record_key;
-        upd.raw_data=Object.assign({},raw(match),r.raw_data,{replaced_exact_evidence_id:match.id,merge_version:'v3_exact_preserve'});
-        var u=await db.from(EVID).update(upd).eq('id',match.id);if(u.error)throw u.error;replaced++;
-      }else{
-        var ins=await db.from(EVID).insert(r);if(ins.error){
-          if(String(ins.error.code||'')==='23505'){var u2=await db.from(EVID).update(r).eq('brand_id',BRAND).eq('source_type','excel').eq('source_period',period).eq('source_record_key',r.source_record_key);if(u2.error)throw u2.error;replaced++}else throw ins.error;
-        }else inserted++;
-      }
-    }
-    return{inserted:inserted,replaced:replaced};
-  }
-
-  function canonicalize(rows){
-    rows=rows.filter(function(r){return kind(r)==='purchase_item'&&(+r.total_amount||0)>0});
-    var groups={};rows.forEach(function(r){var k=coreKey(r),g=groups[k]||(groups[k]={});(g[r.source_type]||(g[r.source_type]=[])).push(r)});
-    var selected=[];
-    Object.keys(groups).forEach(function(k){var g=groups[k],types=Object.keys(g),max=0;types.forEach(function(t){g[t].sort(function(a,b){return(+a.row_no||0)-(+b.row_no||0)});max=Math.max(max,g[t].length)});
-      for(var i=0;i<max;i++){
-        var opts=[];types.forEach(function(t){if(g[t][i])opts.push(g[t][i])});if(!opts.length)continue;
-        opts.sort(function(a,b){var ar=payNorm(a.payment_method)?100:0,br=payNorm(b.payment_method)?100:0;return(br+sourceRank(b.source_type))-(ar+sourceRank(a.source_type))});
-        selected.push(opts[0]);
-      }
-    });
-    selected.sort(function(a,b){return String(a.purchase_date||'').localeCompare(String(b.purchase_date||''))||(+a.row_no||0)-(+b.row_no||0)});
-    return selected;
-  }
-
-  async function materialize(db,period){
-    var evidence=await fetchEvidence(db,period),sel=canonicalize(evidence),unresolved=sel.filter(function(r){return!payNorm(r.payment_method)});
-    var rows=sel.map(function(r,i){
-      var z=raw(r),category=z.analytics_category||cat(r.item_name),method=payNorm(r.payment_method)||'BELUM_DIPETAKAN',needsReview=method==='BELUM_DIPETAKAN';
-      return{
-        source_file:'HASNARIA_PURCHASE_UNIFIED_'+period.slice(0,7)+'.xlsx',row_no:i+1,purchase_date:r.purchase_date,item_name:r.item_name,
-        quantity_text:r.quantity==null?'':String(r.quantity),unit_text:r.unit_text||'',unit_price:r.unit_price,total_amount:r.total_amount,payment_method:method,
-        notes:'UNIFIED V3 · '+(z.analytics_group||grp(r.item_name,category))+' · '+category+(needsReview?' · ACCOUNT REVIEW':''),
-        raw_data:Object.assign({},z,{unified_source_v1:true,dedup_version:'v3_exact_multiplicity',canonical_source_type:r.source_type,canonical_source_file:r.source_file,
-          canonical_source_record_key:r.source_record_key,analytics_category:category,analytics_kind:'purchase_item',account_mapping_status:needsReview?'unmapped':'mapped',
-          source_payment_label:z.source_payment_label||r.payment_method||''})
-      };
-    });
-    var rpc=await db.rpc('replace_purchase_canonical_period_v1',{p_source_period:period,p_rows:rows});if(rpc.error)throw rpc.error;
-    return{canonical:rows.length,unresolved:unresolved.length,unresolvedAmount:unresolved.reduce(function(s,r){return s+(+r.total_amount||0)},0)};
-  }
-
   /* A single source file must never overwrite a period containing unrelated
      canonical/Stock-linked history. Only a totally new, complete, single-counter
      period may use the existing atomic RPC. Mixed/loan funding awaits a tested
@@ -233,13 +176,14 @@
     if(p.invalid){
       var examples=p.invalidRows.slice(0,5).map(function(z){return'baris '+z.row+' ('+z.item+'): '+z.reason}).join('; ');
       toast('Upload ditahan: '+p.invalid+' baris BELANJA perlu dilengkapi. '+examples,'error',11000);
+      if(window.alert)window.alert(preview+'\\n\\nPERLU DILENGKAPI: '+examples);
       return;
     }
     if(Math.abs(summary.delta)>0.01)throw Error('Total debit-kredit sumber pendanaan tidak seimbang.');
     if(ps.length!==1)throw Error('Satu file berisi lebih dari satu bulan transaksi. Pisahkan per periode sebelum upload.');
     if(p.unmapped){
       toast('Upload ditahan: '+p.unmapped+' baris memakai pembiayaan campuran/pinjaman yang butuh jurnal multi-akun. Pratinjau tetap dapat dipakai, tetapi jangan paksa sebagai Tunai/Utang pemasok.','error',12000);
-      console.info(preview);
+      if(window.alert)window.alert(preview+'\n\nPosting jurnal multi-kredit belum tersedia. File ini belum ditulis ke database.');
       return;
     }
     var period=ps[0];
