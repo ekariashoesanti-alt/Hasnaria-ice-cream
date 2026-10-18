@@ -54,7 +54,7 @@ function assertActionContracts() {
     assert.equal(api.canHandle(type), true, `${type} is directly resolvable`);
   }
   const request = (action, values) => JSON.parse(JSON.stringify(api._buildRequest(action, values)));
-  assert.deepEqual(request({action_type:'pack_conversion',metadata:{conversion_id:'c1'}},{units_per_purchase_unit:'50',reason:'Kemasan supplier'}), {rpc:'resolve_inventory_conversion',params:{p_conversion_id:'c1',p_units_per_purchase_unit:50,p_reason:'Kemasan supplier'}});
+  assert.throws(()=>api._buildRequest({action_type:'pack_conversion',metadata:{conversion_id:'c1'}},{units_per_purchase_unit:'50',reason:'Kemasan supplier'}),/P0.2.*dinonaktifkan/);
   assert.deepEqual(request({action_type:'recipe_verification',metadata:{product_id:'p1'}},{effective_from:'2026-09-18',reason:'BOM diperiksa'}), {rpc:'resolve_product_recipe_verification_v2',params:{p_product_id:'p1',p_verified:true,p_effective_from:'2026-09-18',p_reason:'BOM diperiksa'}});
   assert.deepEqual(request({action_type:'missing_recipe',metadata:{product_id:'p0'}},{components:[{inventory_item_id:'i10',qty_per_sale:'1'},{inventory_item_id:'i11',qty_per_sale:'0.25'}],reason:'Resep aktual owner'}), {rpc:'save_product_recipe_draft',params:{p_product_id:'p0',p_components:[{inventory_item_id:'i10',qty_per_sale:1},{inventory_item_id:'i11',qty_per_sale:0.25}],p_reason:'Resep aktual owner'}});
   assert.deepEqual(request({action_type:'missing_component_cost',metadata:{inventory_item_id:'i20'}},{unit_cost:'825',effective_from:'2026-09-18',source_reference:'Nota supplier 18/09',reason:'Harga per porsi diverifikasi'}), {rpc:'resolve_inventory_item_cost_verification',params:{p_inventory_item_id:'i20',p_unit_cost:825,p_effective_from:'2026-09-18',p_source_reference:'Nota supplier 18/09',p_reason:'Harga per porsi diverifikasi'}});
@@ -79,7 +79,7 @@ function assertActionContracts() {
   assert.ok(actionSource.includes('resolve_inventory_item_cost_verification'), 'missing component cost uses audited temporal cost RPC');
   assert.match(actionSource,/referensi saja|tidak diterapkan otomatis/i, 'observed purchase cost is presented only as reference');
   assert.match(actionSource,/Draft tidak mengurangi stok|draft tersimpan/i, 'recipe form explains draft/verification separation');
-  assert.throws(()=>api._buildRequest({action_type:'pack_conversion',metadata:{conversion_id:'c1'}},{units_per_purchase_unit:'0',reason:'x'}),/lebih dari 0/);
+  assert.throws(()=>api._buildRequest({action_type:'pack_conversion',metadata:{conversion_id:'c1'}},{units_per_purchase_unit:'0',reason:'x'}),/P0.2.*dinonaktifkan/);
   assert.throws(()=>api._buildRequest({action_type:'missing_recipe',metadata:{product_id:'p0'}},{components:[],reason:'x'}),/Minimal satu komponen/);
   assert.throws(()=>api._buildRequest({action_type:'missing_recipe',metadata:{product_id:'p0'}},{components:[{inventory_item_id:'i1',qty_per_sale:'1'},{inventory_item_id:'i1',qty_per_sale:'2'}],reason:'x'}),/duplikat/);
   assert.throws(()=>api._buildRequest({action_type:'missing_recipe',metadata:{product_id:'p0'}},{components:[{inventory_item_id:'i1',qty_per_sale:'0'}],reason:'x'}),/lebih dari 0/);
