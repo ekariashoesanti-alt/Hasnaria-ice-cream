@@ -85,7 +85,7 @@
     var payCols=[];
     for(i=0;i<h.length;i++){
       var label=c(h[i]),norm=payNorm(label);
-      if(norm||/tunai|cash|paylater|pay later|utang|hutang|qris|rek.*mandiri|transfer|bank/i.test(label))payCols.push({i:i,label:label,norm:norm});
+      if(norm||/tunai|cash|paylater|pay later|utang|hutang|qris|rek.*mandiri|transfer|bank|pinjam|jas\s*hujan/i.test(label))payCols.push({i:i,label:label,norm:norm});
     }
     var out=[],last=null,invalid=0,unmapped=0,occ={};
     for(i=hi+1;i<a.length;i++){
