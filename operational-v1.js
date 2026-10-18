@@ -224,7 +224,7 @@
     if(!reviewable(state.activeRun)||state.busy)return;
     if(!window.confirm('Approve Stock Opname dan posting hasil hitung ke saldo stok? Proses ini akan membuat checkpoint opname final untuk seluruh item.'))return;
     var id=state.activeRun.id,notes=reviewNotes();state.busy=true;clearAction();render();
-    try{var q=await db().rpc('approve_stock_opname_run',{p_run_id:id,p_review_notes:notes||null});if(q.error)throw q.error;notifyChange();state.notice='Stock Opname disetujui dan checkpoint stok berhasil diposting.';await loadRuns(id);await loadItemPage(id,state.itemPage)}catch(e){state.actionError=e&&e.message?e.message:String(e)}finally{state.busy=false;render()}
+    try{var q=await db().rpc('approve_stock_opname_run',{p_run_id:id,p_review_notes:notes||null});if(q.error)throw q.error;notifyChange();state.notice='Stock Opname disetujui dan checkpoint stok berhasil diposting.';try{document.dispatchEvent(new CustomEvent('hasnaria:stock-posted',{detail:{runId:id}}))}catch(_){}await loadRuns(id);await loadItemPage(id,state.itemPage)}catch(e){state.actionError=e&&e.message?e.message:String(e)}finally{state.busy=false;render()}
   }
 
   async function rejectRun(){
