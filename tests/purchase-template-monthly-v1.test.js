@@ -40,7 +40,7 @@ test('July: E-G credit sources; H=KET ignored; 106560+19980 positive shortages b
  assert.equal(wb.window.__HASNARIA_PURCHASE_FUNDING_V1.fundingOverview(p).auto_cash,126540);
 });
 test('August: missing C x D inputs create explicit row backlog and never auto-import partial file',async()=>{
- const wb=build([heading,['2026-08-01','AQUVIVA',12,1600,19200,0,0,''],[null,'ODENG',8,null,888000,0,0,'']));
+ const wb=build([heading,['2026-08-01','AQUVIVA',12,1600,19200,0,0,''],[null,'ODENG',8,null,888000,0,0,'']]);
  const p=wb.parse();assert.equal(p.invalid,1);assert.equal(p.invalidRows[0].row,3);
  await wb.process();assert.equal(wb.writes.length,0);assert.equal(wb.calls.length,0);
 });
