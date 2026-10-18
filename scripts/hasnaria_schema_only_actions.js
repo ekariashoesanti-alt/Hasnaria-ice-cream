@@ -101,4 +101,4 @@ function main(){
   }finally{fs.rmSync(temp,{recursive:true,force:true})}
 }
 if(require.main===module){try{main()}catch(e){console.error(e.message);process.exitCode=1}}
-module.exports={verifyUrl,quoteCheck,selfTest};
+module.exports={verifyUrl,quoteCheck,selfTest,roleSql,stageSql,query,invoke};
