@@ -30,7 +30,7 @@ assert.match(preload,/purchase-finance-alignment-v1\.js\?v=14/,
   'optimized canonical Purchase runtime must be cache-busted');
 assert.match(lazy,/purchase-analytics\.js\?v=5/,
   'optimized Purchase analytics runtime must be cache-busted');
-assert.match(app,/xlsx-preload\.js\?v=11/,
+assert.match(app,/xlsx-preload\.js\?v=12/,
   'Purchase preload entry runtime must be cache-busted');
 
 console.log('Purchase fast-load contract: PASS');
