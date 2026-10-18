@@ -75,9 +75,10 @@ function main(){
   if(process.argv.includes('--self-test'))return selfTest();
   if(process.env.GITHUB_REPOSITORY!=='ekariashoesanti-alt/Hasnaria-ice-cream'||process.env.GITHUB_REF!=='refs/heads/main')
     throw Error('BLOCK: manual workflow must run from Hasnaria main');
-  // Only validation is permitted until an independent reviewed restore procedure.
   const mode=process.env.HSN_SCHEMA_OPERATION||'validate-only';
-  if(mode!=='validate-only')throw Error('BLOCK: staging restore is deliberately unavailable');
+  if(!['validate-only','restore-staging'].includes(mode))throw Error('BLOCK: unknown operation');
+  if(mode==='restore-staging' && (process.env.HSN_STAGING_RESTORE_APPROVED!=='RESTORE_SCHEMA_ONLY_SINGAPORE' || process.env.GITHUB_EVENT_NAME!=='workflow_dispatch'))
+    throw Error('BLOCK: explicit staging restore approval required');
   const src=process.env.HSN_PROD_READONLY_DB_URL||'';
   const dest=process.env.HSN_STAGING_DB_URL||'';
   verifyUrl(src,PROD,true);verifyUrl(dest,STAGE,false);
@@ -97,7 +98,19 @@ function main(){
     if(query(dest,stageSql)!=='OK')throw Error('BLOCK: staging changed after trial');
     console.log('PASS: public + private schema exported; Singapore trial rolled back');
     console.log('SQL size: '+stat.size+' bytes; SHA-256: '+sha);
-    console.log('VALIDATE ONLY: no permanent database changes; no raw SQL uploaded');
+    if(mode==='restore-staging'){
+      // One transaction: no half-restored schema on any SQL error.
+      // A staging-only credential performs the DDL; never pass production for --dbname.
+      invoke('psql',['-X','--single-transaction','-q','--set=ON_ERROR_STOP=1','--dbname',dest,'--file',dump]);
+      const tables=query(dest,"SELECT count(*) FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relkind IN ('r','p')");
+      const views=query(dest,"SELECT count(*) FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relkind IN ('v','m')");
+      const control=query(dest,"SELECT count(*) FROM staging_guard.environment_identity WHERE environment='staging' AND region='ap-southeast-1' AND supabase_project_ref='rynnpndtzjwpekbiwiif'");
+      // Match the schema metrics captured before release. No historical row data.
+      if(Number(tables)<87||Number(views)<176||control!=='1')throw Error('RESTORE CHECK FAILED: staging catalog incomplete; inspect staging before UAT');
+      console.log('STAGING SCHEMA RESTORED: tables='+tables+' views='+views+' identity='+control);
+    }else{
+      console.log('VALIDATE ONLY: no permanent database changes; no raw SQL uploaded');
+    }
   }finally{fs.rmSync(temp,{recursive:true,force:true})}
 }
 if(require.main===module){try{main()}catch(e){console.error(e.message);process.exitCode=1}}
