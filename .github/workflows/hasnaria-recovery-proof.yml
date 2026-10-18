@@ -1,0 +1,128 @@
+name: Hasnaria Encrypted Backup and Recovery Proof
+# Deliberately manual. This file is tooling only and never deploys application changes.
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "Choose encrypted export or proof on a disposable recovery database"
+        type: choice
+        required: true
+        options: [encrypted-backup, restore-proof]
+      confirmation:
+        description: "Type BACKUP_READONLY or RESTORE_DISPOSABLE"
+        type: string
+        required: true
+      backup_key:
+        description: "Existing S3 key for restore-proof only, e.g. hasnaria/20261018T120000Z.age"
+        type: string
+        required: false
+permissions:
+  contents: read
+concurrency:
+  group: hasnaria-backup-recovery
+  cancel-in-progress: false
+jobs:
+  encrypted-backup:
+    if: ${{ github.repository == 'ekariashoesanti-alt/Hasnaria-ice-cream' && github.ref == 'refs/heads/main' && inputs.action == 'encrypted-backup' && inputs.confirmation == 'BACKUP_READONLY' }}
+    environment: hasnaria-backup-private
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
+      - name: Export encrypted archive and verify remote ciphertext (no public artifacts)
+        shell: bash
+        env:
+          HSN_PROD_READONLY_DB_URL: ${{ secrets.HSN_PROD_READONLY_DB_URL }}
+          HSN_BACKUP_AGE_RECIPIENT: ${{ vars.HSN_BACKUP_AGE_RECIPIENT }}
+          HSN_BACKUP_S3_BUCKET: ${{ vars.HSN_BACKUP_S3_BUCKET }}
+          AWS_DEFAULT_REGION: ${{ vars.AWS_DEFAULT_REGION }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        run: |
+          set -Eeuo pipefail
+          umask 077
+          tmp="$(mktemp -d)"
+          trap 'rm -rf "$tmp"' EXIT
+          for required in HSN_PROD_READONLY_DB_URL HSN_BACKUP_AGE_RECIPIENT HSN_BACKUP_S3_BUCKET AWS_DEFAULT_REGION AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY; do
+            [[ -n "${!required:-}" ]] || { echo "BLOCK: missing required backup secret/variable"; exit 1; }
+          done
+          # Read-only source role cannot change production even if a dump command is compromised.
+          node -e "require('./scripts/hasnaria_schema_only_actions.js').verifyUrl(process.env.HSN_PROD_READONLY_DB_URL,'bnnhmtkpdjlgehsvgoda',true)"
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq age awscli
+          docker pull postgres:17 >/dev/null
+          db() { docker run --rm --network host -e HSN_PROD_READONLY_DB_URL postgres:17 psql -X -qAt -v ON_ERROR_STOP=1 -d "$HSN_PROD_READONLY_DB_URL" -c "$1"; }
+          role_guard="select case when coalesce((select rolsuper or rolcreaterole or rolcreatedb or rolreplication or rolbypassrls from pg_roles where rolname=current_user),true) or has_database_privilege(current_user,current_database(),'CREATE') or exists(select 1 from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname in ('public','private','auth','storage','supabase_migrations') and c.relkind in ('r','p') and has_table_privilege(current_user,c.oid,'INSERT,UPDATE,DELETE,TRUNCATE')) then 'DENY' else 'OK' end"
+          [[ "$(db "$role_guard")" == 'OK' ]] || { echo "BLOCK: production connection is not strictly read-only"; exit 1; }
+          # Supabase Storage object bytes are external to SQL dump. Never claim complete backup if present.
+          [[ "$(db 'select count(*) from storage.objects')" == '0' ]] || { echo "BLOCK: Storage blob backup procedure is separately required"; exit 1; }
+          docker run --rm --network host -e HSN_PROD_READONLY_DB_URL -v "$tmp:/out" postgres:17 sh -c 'pg_dump --format=custom --no-owner --no-privileges --schema=public --schema=private --schema=auth --schema=storage --schema=supabase_migrations --file=/out/hasnaria.dump "$HSN_PROD_READONLY_DB_URL"' >/dev/null 2>&1 || { echo "BLOCK: PostgreSQL 17 scoped dump failed; source permissions or managed schema need DBA review"; exit 1; }
+          test -s "$tmp/hasnaria.dump"
+          docker run --rm -v "$tmp:/out:ro" postgres:17 pg_restore --list /out/hasnaria.dump > "$tmp/toc.txt"
+          for required in 'TABLE DATA public products' 'TABLE DATA public offline_purchase_history' 'TABLE DATA auth users' 'TABLE DATA supabase_migrations schema_migrations'; do
+            grep -Fq "$required" "$tmp/toc.txt" || { echo "BLOCK: expected schema/data missing from backup archive"; exit 1; }
+          done
+          for table in products offline_purchase_history inventory_items finance_journal_entries finance_journal_lines purchase_import_evidence; do
+            printf '%s\t%s\n' "$table" "$(db "select count(*) from public.$table")" >> "$tmp/counts.tsv"
+          done
+          (cd "$tmp" && sha256sum hasnaria.dump > archive.sha256 && tar -cf packed.tar hasnaria.dump archive.sha256 counts.tsv)
+          age -r "$HSN_BACKUP_AGE_RECIPIENT" -o "$tmp/backup.age" "$tmp/packed.tar"
+          stamp="$(date -u +%Y%m%dT%H%M%SZ)"
+          key="hasnaria/$stamp.age"
+          aws s3api get-public-access-block --bucket "$HSN_BACKUP_S3_BUCKET" --query 'PublicAccessBlockConfiguration.[BlockPublicAcls,IgnorePublicAcls,BlockPublicPolicy,RestrictPublicBuckets]' --output text | grep -Fxq $'True\tTrue\tTrue\tTrue' || { echo "BLOCK: S3 bucket public-access-block must be fully enabled"; exit 1; }
+          aws s3api put-object --bucket "$HSN_BACKUP_S3_BUCKET" --key "$key" --body "$tmp/backup.age" --server-side-encryption AES256 >/dev/null
+          aws s3api get-object --bucket "$HSN_BACKUP_S3_BUCKET" --key "$key" "$tmp/downloaded.age" >/dev/null
+          cmp -s "$tmp/backup.age" "$tmp/downloaded.age" || { echo "BLOCK: remote ciphertext differs from local encrypted backup"; exit 1; }
+          echo "Encrypted offsite archive verified; object key: $key"
+          echo "STATUS: BACKUP ARCHIVED, NOT YET RESTORE-PROVEN (run restore-proof against disposable DB)"
+  restore-proof:
+    if: ${{ github.repository == 'ekariashoesanti-alt/Hasnaria-ice-cream' && github.ref == 'refs/heads/main' && inputs.action == 'restore-proof' && inputs.confirmation == 'RESTORE_DISPOSABLE' }}
+    environment: hasnaria-restore-disposable
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
+      - name: Restore only into separately approved disposable database
+        shell: bash
+        env:
+          HSN_RESTORE_DB_URL: ${{ secrets.HSN_RESTORE_DB_URL }}
+          HSN_RESTORE_PROJECT_REF: ${{ vars.HSN_RESTORE_PROJECT_REF }}
+          HSN_BACKUP_AGE_IDENTITY: ${{ secrets.HSN_BACKUP_AGE_IDENTITY }}
+          HSN_BACKUP_S3_BUCKET: ${{ vars.HSN_BACKUP_S3_BUCKET }}
+          AWS_DEFAULT_REGION: ${{ vars.AWS_DEFAULT_REGION }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          RESTORE_KEY: ${{ inputs.backup_key }}
+        run: |
+          set -Eeuo pipefail
+          umask 077
+          tmp="$(mktemp -d)"
+          trap 'rm -rf "$tmp"' EXIT
+          for required in HSN_RESTORE_DB_URL HSN_RESTORE_PROJECT_REF HSN_BACKUP_AGE_IDENTITY HSN_BACKUP_S3_BUCKET AWS_DEFAULT_REGION AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY RESTORE_KEY; do
+            [[ -n "${!required:-}" ]] || { echo "BLOCK: missing recovery target/key/secret"; exit 1; }
+          done
+          [[ "$HSN_RESTORE_PROJECT_REF" =~ ^[a-z0-9]{20}$ ]] || exit 1
+          [[ "$HSN_RESTORE_PROJECT_REF" != 'bnnhmtkpdjlgehsvgoda' && "$HSN_RESTORE_PROJECT_REF" != 'rynnpndtzjwpekbiwiif' ]] || { echo "BLOCK: recovery destination must differ from production and Owner UAT staging"; exit 1; }
+          [[ "$RESTORE_KEY" =~ ^hasnaria/[0-9]{8}T[0-9]{6}Z\.age$ ]] || { echo "BLOCK: invalid encrypted archive key"; exit 1; }
+          HSN_RESTORE_DB_URL="$HSN_RESTORE_DB_URL" HSN_RESTORE_PROJECT_REF="$HSN_RESTORE_PROJECT_REF" node -e "const u=new URL(process.env.HSN_RESTORE_DB_URL),r=process.env.HSN_RESTORE_PROJECT_REF; if(!['postgres:','postgresql:'].includes(u.protocol)||!u.password||u.pathname!='/postgres'||!(u.hostname==='db.'+r+'.supabase.co'||(u.hostname.endsWith('.pooler.supabase.com')&&decodeURIComponent(u.username).endsWith('.'+r)))) process.exit(1)"
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq age awscli
+          docker pull postgres:17 >/dev/null
+          db() { docker run --rm --network host -e HSN_RESTORE_DB_URL postgres:17 psql -X -qAt -v ON_ERROR_STOP=1 -d "$HSN_RESTORE_DB_URL" -c "$1"; }
+          [[ "$(db "select case when to_regclass('public.user_profiles') is null and to_regclass('public.offline_purchase_history') is null then 'EMPTY' else 'NOT_EMPTY' end")" == 'EMPTY' ]] || { echo "BLOCK: disposable target already contains business tables"; exit 1; }
+          aws s3api get-object --bucket "$HSN_BACKUP_S3_BUCKET" --key "$RESTORE_KEY" "$tmp/backup.age" >/dev/null
+          printf '%s\n' "$HSN_BACKUP_AGE_IDENTITY" > "$tmp/identity.txt"
+          age -d -i "$tmp/identity.txt" -o "$tmp/packed.tar" "$tmp/backup.age"
+          tar -xf "$tmp/packed.tar" -C "$tmp" hasnaria.dump archive.sha256 counts.tsv
+          (cd "$tmp" && sha256sum -c archive.sha256 >/dev/null)
+          # Single transaction: failed restore rolls itself back. No --clean or --if-exists.
+          docker run --rm --network host -e HSN_RESTORE_DB_URL -v "$tmp:/out:ro" postgres:17 sh -c 'pg_restore --single-transaction --exit-on-error --no-owner --no-privileges --dbname="$HSN_RESTORE_DB_URL" /out/hasnaria.dump' >/dev/null 2>&1 || { echo "BLOCK: full restore not compatible with target; do not mark recoverable"; exit 1; }
+          while IFS=$'\t' read -r table expected; do
+            [[ "$table" =~ ^[a-z_]+$ && "$expected" =~ ^[0-9]+$ ]] || exit 1
+            actual="$(db "select count(*) from public.$table")"
+            [[ "$actual" == "$expected" ]] || { echo "BLOCK: restore count mismatch for $table"; exit 1; }
+          done < "$tmp/counts.tsv"
+          echo "PASS: independent SQL restore + selected ledger row counts on disposable target"
+          echo "NEXT: independently test Auth login, RLS, managed roles and Storage before full recovery sign-off"
