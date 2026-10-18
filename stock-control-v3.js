@@ -45,7 +45,9 @@
     ledgerError: '',
     ledgerPage: 1,
     accessToken: '',
-    tokenAt: 0
+    tokenAt: 0,
+    correction: null,
+    correctionNotice: ''
   };
 
   function esc(value) {
@@ -485,6 +487,7 @@
   }
 
   function canSync() {
+    if (S.correction) return false; // Never overwrite an in-progress correction form.
     var host = document.getElementById('stok'), sync = window.__HASNARIA_DATA_SYNC;
     if (!sync || !active() || !S.baseLoaded || S.baseLoading || S.auxLoading || S.periodLoading || S.ledgerLoading) return false;
     var focused = document.activeElement;
@@ -613,6 +616,89 @@
       if (x.ui_status === 'incoming') out.incoming++;
     });
     return out;
+  }
+
+
+  // Corrections are explicit new physical checkpoints, never backdated edits to Excel.
+  function takeCorrectionRequest() {
+    if (!isOwner()) return;
+    var req = window.__HASNARIA_STOCK_CORRECTION_PENDING;
+    if (!req) return;
+    delete window.__HASNARIA_STOCK_CORRECTION_PENDING;
+    S.correction = { id: String(req.inventoryItemId || ''), physical: '', reason: '', busy: false, error: '' };
+    S.correctionNotice = '';
+    S.modal = '';
+  }
+
+  function renderCorrectionPanel() {
+    if (!isOwner()) return '';
+    if (!S.correction) return S.correctionNotice ?
+      '<div class="sc4-correction-note" role="status">' + esc(S.correctionNotice) + '</div>' : '';
+    var c = S.correction, item = S.items.find(function(x){return x.inventory_item_id === c.id;});
+    var found = !!item, missing = S.baseLoaded && !found, quantity = String(c.physical || '');
+    var number = quantity.trim() === '' ? NaN : Number(quantity.replace(',', '.'));
+    var valid = Number.isFinite(number) && number >= 0;
+    var preview = found && valid ? '<strong>Selisih jika disimpan: ' + esc(signed(number - num(item.system_qty))) +
+      ' ' + esc(item.unit || 'unit') + '</strong>' : 'Masukkan jumlah fisik terbaru untuk melihat selisih.';
+    return '<section class="sc4-correction-panel" aria-labelledby="sc4CorrectionTitle">' +
+      '<div class="sc4-correction-title"><div><small>REKONSILIASI · VERIFIKASI OWNER</small><h3 id="sc4CorrectionTitle">Entry Koreksi Stok</h3>' +
+      '<p>Selisih historis perlu ditelusuri dahulu. Entri ini menyimpan hasil hitung fisik TERBARU, bukan menimpa saldo bulan sebelumnya.</p></div>' +
+      '<button type="button" data-sc4-correction="cancel">Tutup</button></div>' +
+      (c.error ? '<p class="sc3-alert" role="alert">' + esc(c.error) + '</p>' : '') +
+      (missing ? '<p class="sc3-alert">SKU yang dirujuk tidak ditemukan dalam stok brand aktif. Periksa mapping sebelum koreksi.</p>' : '') +
+      (!S.baseLoaded ? '<p>Memuat referensi SKU dari server…</p>' :
+        '<div class="sc4-correction-fields"><div><label>Material</label><strong>' + esc(item ? item.item_name : 'Tidak ditemukan') +
+          '</strong><small>' + esc(item ? (item.category || 'Lainnya') + ' · ' + (item.unit || 'unit') : '') + '</small></div>' +
+        '<div><label>Saldo sistem saat ini</label><strong>' + (found ? esc(fmt(item.system_qty)) : '—') + '</strong>' +
+          '<small>Selisih opname sebelumnya: ' + (found && item.last_variance != null ? esc(signed(item.last_variance)) : '—') + '</small></div>' +
+        '<label>Hasil hitung fisik hari ini<input id="sc4CorrectionPhysical" type="number" min="0" step="any" inputmode="decimal" ' +
+          'value="' + esc(quantity) + '" placeholder="Jumlah fisik aktual" ' + (c.busy ? 'disabled' : '') + '></label>' +
+        '<label>Alasan dan bukti koreksi<textarea id="sc4CorrectionReason" rows="2" maxlength="500" placeholder="Sumber selisih, hasil cek fisik, bukti..." ' +
+          (c.busy ? 'disabled' : '') + '>' + esc(c.reason) + '</textarea></label></div>') +
+      '<div class="sc4-correction-actions"><span id="sc4CorrectionPreview">' + preview + '</span>' +
+      '<button type="button" data-sc4-correction="save" ' + (!found || c.busy ? 'disabled' : '') + '>' +
+      (c.busy ? 'Menyimpan…' : 'Konfirmasi & Simpan Opname Baru') + '</button></div>' +
+      '<p class="sc4-correction-footnote">Tanggal otomatis hari ini. Entri baru memiliki audit trail. Jika ingin mengoreksi arsip September/Oktober, verifikasi dokumen sumber terlebih dahulu; jangan gunakan angka historis sebagai hasil hitung fisik hari ini.</p></section>';
+  }
+
+  async function saveCorrection() {
+    var c = S.correction;
+    if (!isOwner() || !c || c.busy) return;
+    var item = S.items.find(function(x){return x.inventory_item_id === c.id;});
+    var qty = Number(String(c.physical).trim().replace(',', '.'));
+    var reason = String(c.reason || '').trim();
+    if (!item) { c.error = 'Material belum ditemukan di master Stok.'; render(); return; }
+    if (String(c.physical).trim() === '' || !Number.isFinite(qty) || qty < 0) {
+      c.error = 'Masukkan hasil hitung fisik yang valid (minimal 0).'; render(); return;
+    }
+    if (reason.length < 12) { c.error = 'Tuliskan alasan dan bukti koreksi minimal 12 karakter.'; render(); return; }
+    c.busy = true; c.error = ''; render();
+    try {
+      // RPC posts from the canonical inventory ledger, so the visible snapshot must agree first.
+      var latest = await request('inventory_ledger_balance?' + qs({
+        brand_id: 'eq.' + BRAND, inventory_item_id: 'eq.' + c.id, select: 'ledger_qty', limit: '1'
+      }));
+      if (!latest.length || Math.abs(num(latest[0].ledger_qty) - num(item.system_qty)) > 0.00001) {
+        throw new Error('Saldo ledger dan dashboard belum cocok. Refresh Stok dan rekonsiliasi sumber terlebih dahulu. Tidak ada koreksi disimpan.');
+      }
+      if (!window.confirm('Simpan hasil hitung fisik terbaru untuk ' + item.item_name +
+        '? Saldo sistem: ' + fmt(item.system_qty) + ' ' + (item.unit || '') +
+        ', fisik: ' + fmt(qty) + ', selisih: ' + signed(qty - num(item.system_qty)) +
+        '. Tindakan membuat checkpoint baru dan audit trail, bukan mengubah arsip Excel.')) return;
+      await rpc('resolve_physical_stock_opname', {
+        p_inventory_item_id: c.id, p_physical_qty: qty, p_opname_date: today(),
+        p_reason: '[Review selisih stok] ' + reason
+      });
+      S.correction = null;
+      S.correctionNotice = 'Stock opname koreksi tersimpan dengan audit trail. Periksa saldo dan riwayat terbaru.';
+      window.__HASNARIA_STOCK_NOTIFICATION_REFRESH_NEEDED = true;
+      await loadBase();
+      return;
+    } catch (e) {
+      c.error = e && e.message ? e.message : String(e);
+    } finally {
+      if (S.correction === c) { c.busy = false; render(); }
+    }
   }
 
   function renderHeader() {
@@ -860,7 +946,7 @@
     var alert = S.error ? '<div class="sc3-alert">' + esc(S.error) + '</div>' : '';
     var pAlert = S.periodError ? '<div class="sc3-alert">' + esc(S.periodError) + '</div>' : '';
     var loading = S.baseLoading && !S.baseLoaded ? '<div class="sc3-loading">Memuat posisi SKU terkini…</div>' : '';
-    shell.innerHTML = renderHeader() + pAlert + overviewKpis() + alert + loading +
+    shell.innerHTML = renderHeader() + renderCorrectionPanel() + pAlert + overviewKpis() + alert + loading +
       '<div class="sc4-infographic-main"><article class="sc4-panel"><div class="sc4-panel-head"><div><h3>Tren Aktivitas Stok</h3><p>Jumlah movement per jenis dalam periode; bukan quantity gabungan.</p></div></div>' + renderActivity() + '</article>'+
       '<div class="sc4-side-stack"><article class="sc4-panel"><div class="sc4-panel-head"><div><h3>Komposisi Posisi Stok</h3><p>Distribusi SKU menurut saldo akhir periode.</p></div></div>' + compositionInfographic() + '</article>'+
       '<article class="sc4-panel"><div class="sc4-panel-head"><div><h3>Kontrol Periode</h3><p>' + esc(cutLabel()) + '</p></div></div>' + renderPeriodControl() + '<div class="sc4-info">Saldo negatif historis hanya informasional. Periksa transaksi setelah cutoff opname untuk error aktif.</div></article></div></div>'+
@@ -874,6 +960,12 @@
 
   function bind(host) {
     host.onclick = function (e) {
+      var correction = e.target && e.target.closest ? e.target.closest('[data-sc4-correction]') : null;
+      if (correction && S.correction) {
+        if (correction.getAttribute('data-sc4-correction') === 'cancel') { S.correction = null; render(); }
+        else saveCorrection();
+        return;
+      }
       var close = e.target && e.target.closest ? e.target.closest('[data-sc4-close]') : null;
       if (close && (e.target === close || close.classList.contains('sc4-close'))) {
         S.modal = '';
@@ -923,6 +1015,16 @@
     };
     host.oninput = function (e) {
       var el = e.target;
+      if (S.correction && (el.id === 'sc4CorrectionPhysical' || el.id === 'sc4CorrectionReason')) {
+        if (el.id === 'sc4CorrectionPhysical') S.correction.physical = el.value;
+        else S.correction.reason = el.value;
+        var it = S.items.find(function(x){return x.inventory_item_id===S.correction.id;});
+        var qty = Number(String(S.correction.physical).replace(',','.'));
+        var pv = document.getElementById('sc4CorrectionPreview');
+        if (pv && it) pv.textContent = S.correction.physical.trim() !== '' && Number.isFinite(qty) && qty >= 0 ?
+          'Selisih jika disimpan: ' + signed(qty - num(it.system_qty)) + ' ' + (it.unit || 'unit') : 'Masukkan jumlah fisik terbaru untuk melihat selisih.';
+        return;
+      }
       if (el.id === 'sc3Search') {
         S.search = el.value || '';
         S.page = 1;
@@ -987,6 +1089,7 @@
   function mount(force) {
     var host = document.getElementById('stok');
     if (!host || !active()) return;
+    takeCorrectionRequest();
     ensureCss();
     if (host.querySelector('.sc3-shell') && !force) return;
     render();
@@ -1014,6 +1117,7 @@
     }
   }, true);
 
+  window.__HASNARIA_STOCK_REVIEW = { openPending: function(){takeCorrectionRequest();if(active()){render();if(!S.baseLoaded&&!S.baseLoading)loadBase();}} };
   ensureCss();
   registerSync();
   document.addEventListener('hasnaria:data-sync-ready', registerSync);
