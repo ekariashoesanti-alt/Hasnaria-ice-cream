@@ -11,6 +11,13 @@
 
   var BRAND='a36d4b4f-3ccc-4a78-8aeb-b868f0407ea4';
   var EVID='purchase_import_evidence';
+  function previewUsesProductionDatabase(){
+    var host=window.location&&window.location.hostname;
+    if(!host)return false; // Browser previews always have a location; unit harnesses may not.
+    if(String(window.HASNARIA_SB||'').indexOf('bnnhmtkpdjlgehsvgoda.supabase.co')<0)return false;
+    return host!=='hasnaria-business-analyzer.vercel.app'&&
+      host!=='hasnaria-business-analyzer-ekariashoesanti-9951s-projects.vercel.app';
+  }
 
   function c(v){return String(v==null?'':v).trim().replace(/\s+/g,' ')}
   function n(v){return c(v).toUpperCase().replace(/^#+/,'').replace(/[^A-Z0-9]+/g,'')}
@@ -200,6 +207,7 @@
       console.info(preview);
       return;
     }
+    if(previewUsesProductionDatabase())throw Error('Preview masih memakai database PRODUKSI. Impor Pembelian diblokir; lakukan UAT melalui staging terisolasi atau tunggu rilis resmi.');
     // No staged evidence mutation. One transactional canonical RPC for an empty
     // period; the server will enforce permission and payment method validity.
     if(!confirm(preview+'\\n\\nPeriode ini belum memiliki transaksi kanonis. Import '+p.rows.length+
