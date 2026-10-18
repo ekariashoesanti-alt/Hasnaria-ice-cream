@@ -1,12 +1,11 @@
-name: Hasnaria Staging Schema Preflight
+name: Hasnaria Singapore Schema Restore
 
-# Deliberately manual and validation-only. This does NOT upload SQL artifacts
-# to this public repository or commit/migrate the production database.
+# Manual isolated schema-only trial or restore. Never exports rows, credentials or SQL artifacts.
 on:
   workflow_dispatch:
     inputs:
       confirmation:
-        description: "Type CHECK_STAGING_SCHEMA to start a schema-only trial"
+        description: "CHECK_STAGING_SCHEMA for trial; RESTORE_SCHEMA_ONLY_SINGAPORE for permanent schema-only restore to Singapore"
         type: string
         required: true
 
@@ -18,9 +17,9 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  validate-only:
+  schema-guarded:
     environment: hasnaria-staging-schema
-    if: ${{ github.repository == 'ekariashoesanti-alt/Hasnaria-ice-cream' && github.ref == 'refs/heads/main' && inputs.confirmation == 'CHECK_STAGING_SCHEMA' }}
+    if: ${{ github.repository == 'ekariashoesanti-alt/Hasnaria-ice-cream' && github.ref == 'refs/heads/main' && (inputs.confirmation == 'CHECK_STAGING_SCHEMA' || inputs.confirmation == 'RESTORE_SCHEMA_ONLY_SINGAPORE') }}
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -51,12 +50,13 @@ jobs:
           node --check scripts/hasnaria_schema_only_actions.js
           node scripts/hasnaria_schema_only_actions.js --self-test
 
-      - name: Export schema and trial restore with rollback on Singapore staging
+      - name: Export and transactionally validate; optionally restore Singapore staging schema
         shell: bash
         env:
           HSN_PROD_READONLY_DB_URL: ${{ secrets.HSN_PROD_READONLY_DB_URL }}
           HSN_STAGING_DB_URL: ${{ secrets.HSN_STAGING_DB_URL }}
-          HSN_SCHEMA_OPERATION: validate-only
+          HSN_SCHEMA_OPERATION: ${{ inputs.confirmation == 'RESTORE_SCHEMA_ONLY_SINGAPORE' && 'restore-staging' || 'validate-only' }}
+          HSN_STAGING_RESTORE_APPROVED: ${{ inputs.confirmation }}
         run: |
           set -euo pipefail
           if [[ -z "${HSN_PROD_READONLY_DB_URL}" || -z "${HSN_STAGING_DB_URL}" ]]; then
@@ -70,4 +70,6 @@ jobs:
 # - Production and Singapore staging project refs are enforced in the script.
 # - SQL only lives in an ephemeral GitHub runner temp folder and is deleted.
 # - No upload-artifact, cache, PR/comment, git commit or logging of SQL/password.
-# - A separate reviewed change is required to enable a real staging restore.
+# - Explicit protected environment approval is required for schema restore.
+# - Trial rollback precedes restore; on SQL failure no partial objects are committed.
+# - Do not set production credentials on staging connection or run from PR branches.
