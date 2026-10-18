@@ -11,9 +11,9 @@ function deferred() {
   return { promise, resolve };
 }
 
-function harness(file, handlerName) {
+function harness(file, handlerName, options = {}) {
   const elements = {}, events = {}, handlers = {}, calls = [], timers = [];
-  const control = { safe: true, hidden: false, gate: null, fail: false };
+  const control = { safe: true, hidden: false, gate: null, fail: false, ...options };
   const data = {
     get_finance_reporting_pack_v1: { periods: [{ period_month: '2026-10-01', period_status: 'closed' }] },
     get_finance_period_pack_v1: { period: '2026-10-01', income_current: { revenue_sales: 10 }, income_previous: {}, readiness: {} },
@@ -73,7 +73,7 @@ function harness(file, handlerName) {
         select() { return this; }, eq(key, value) { args[key] = value; return this; }, order() { return this; }, limit() { return this; },
         then(resolve, reject) {
           calls.push({ name, args, kind: 'select' });
-          const payload = clone(data[name]), failed = control.fail, gate = control.gate;
+          const payload = clone(data[name]), failed = control.fail, gate = control.gates?.[name] || control.gate;
           return (async () => {
             if (gate) await gate.promise;
             return failed ? { error: new Error('Read unavailable') } : { data: payload };
@@ -92,7 +92,7 @@ function harness(file, handlerName) {
     __HASNARIA_DATA_SYNC: { register(name, callback) { handlers[name] = callback; }, canRefresh: () => control.safe, notify() {} },
     addEventListener(name, callback) { (events[name] ||= []).push(callback); } };
   vm.runInNewContext(fs.readFileSync(path.join(__dirname, '..', file), 'utf8'), {
-    window, document, console, Date, Intl, Promise, Number, String, Array, JSON,
+    window, document, console, Date: class extends Date { static now() { return Date.now() + (control.clockOffset || 0); } }, Intl, Promise, Number, String, Array, JSON,
     setTimeout(callback) { timers.push(callback); return timers.length; }, clearTimeout() {},
     MutationObserver: class { observe() {} }, alert(message) { throw new Error(message); }
   });
@@ -246,6 +246,130 @@ function harness(file, handlerName) {
     assert.match(race.rendered, /90/, file + ': old-period response cannot overwrite the selected-period load');
     assert.match(race.rendered, /September 2026/, file + ': selected period remains unchanged by an older read');
   }
+  const slowAlerts = deferred();
+  const fastReport = harness('finance-accuracy-v6.js', 'owner-finance-report', { gates: { ui_finance_alerts: slowAlerts } });
+  await fastReport.settle();
+  assert.match(fastReport.rendered, /Laporan Laba Rugi/, 'Finance renders the report before slow alerts complete');
+  slowAlerts.resolve(); await fastReport.settle();
+  fastReport.data.get_finance_reporting_pack_v1.periods.unshift({ period_month: '2026-09-01', period_status: 'closed' });
+  await fastReport.refresh(); await fastReport.settle();
+  const alertReads = fastReport.calls.filter(c => c.name === 'ui_finance_alerts').length;
+  fastReport.changePeriod('2026-09-01'); await fastReport.settle();
+  assert.equal(fastReport.calls.filter(c => c.name === 'ui_finance_alerts').length, alertReads, 'empty alerts are cached across month selection');
+
+  const cachedAdmin = harness('administration-v1.js', 'owner-administration-report');
+  await cachedAdmin.start();
+  const initialReads = cachedAdmin.calls.length;
+  await cachedAdmin.window.__HASNARIA_ADMIN_V1.mount({ force: true, navigation: true });
+  assert.equal(cachedAdmin.calls.length, initialReads, 'recent Administration navigation uses zero extra requests');
+  await cachedAdmin.window.__HASNARIA_ADMIN_V1.mount({ force: true });
+  assert.equal(cachedAdmin.calls.length, initialReads + 3, 'explicit refresh bypasses the navigation cache');
+  cachedAdmin.data.ui_administration_overview_v1 = [];
+  cachedAdmin.data.ui_administration_category_chart_v1 = [];
+  await cachedAdmin.refresh();
+  const emptyReads = cachedAdmin.calls.length;
+  await cachedAdmin.window.__HASNARIA_ADMIN_V1.mount({ force: true, navigation: true });
+  assert.equal(cachedAdmin.calls.length, emptyReads, 'successful empty summaries are cached');
+  cachedAdmin.window.__HASNARIA_CONTEXT = { role: 'owner' };
+  await cachedAdmin.window.__HASNARIA_ADMIN_V1.mount({ force: true, navigation: true });
+  assert.equal(cachedAdmin.calls.length, emptyReads + 3, 'replacement session cannot reuse cached Administration data');
+
+  const expiredReads = cachedAdmin.calls.length;
+  cachedAdmin.control.clockOffset = 31000;
+  await cachedAdmin.window.__HASNARIA_ADMIN_V1.mount({ force: true, navigation: true });
+  assert.equal(cachedAdmin.calls.length, expiredReads + 3, 'Administration navigation cache expires after 30 seconds');
+  const switchedOwner = harness('administration-v1.js', 'owner-administration-report');
+  await switchedOwner.start();
+  const oldSessionGate = deferred();
+  switchedOwner.control.gate = oldSessionGate;
+  const oldSessionLoad = switchedOwner.window.__HASNARIA_ADMIN_V1.mount({ force: true });
+  await flush(); await flush();
+  const oldSessionRequestCount = switchedOwner.calls.length;
+  switchedOwner.window.__HASNARIA_CONTEXT = { role: 'owner' };
+  switchedOwner.data.ui_administration_overview_v1[0].admin_amount = 55;
+  switchedOwner.data.ui_administration_category_chart_v1[0].amount = 55;
+  const newSessionLoad = switchedOwner.window.__HASNARIA_ADMIN_V1.mount({ force: true, navigation: true });
+  await flush(); await flush();
+  assert.equal(switchedOwner.calls.length, oldSessionRequestCount + 1,
+    'new Owner session starts a fresh catalog request even when old session is loading');
+  assert.doesNotMatch(switchedOwner.rendered, /Rp10\b/,
+    'new session never shows cached amount from previous Owner while fetching');
+  oldSessionGate.resolve();
+  await Promise.all([oldSessionLoad, newSessionLoad]); await switchedOwner.settle();
+  assert.equal(switchedOwner.calls.length, oldSessionRequestCount + 3,
+    'replacement Owner session completes all three report reads');
+  assert.match(switchedOwner.rendered, /Rp55\b/,
+    'new Owner report uses its own read after stale response is rejected');
+
+  const oldDetailMonth = harness('administration-v1.js', 'owner-administration-report');
+  oldDetailMonth.data.ui_period_catalog_v1.push({ period_start: '2026-09-01', period_key: '2026-09' });
+  await oldDetailMonth.start();
+  const heldDetail = deferred();
+  oldDetailMonth.data.ui_administration_detail_v1 = [{ item_name: 'Old October Private Detail' }];
+  oldDetailMonth.control.gates = { ui_administration_detail_v1: heldDetail };
+  oldDetailMonth.openModal();
+  await flush();
+  oldDetailMonth.data.ui_administration_detail_v1 = [{ item_name: 'New September Detail' }];
+  oldDetailMonth.changePeriod('2026-09');
+  oldDetailMonth.control.gates = {};
+  await oldDetailMonth.settle();
+  oldDetailMonth.openModal();
+  await oldDetailMonth.settle();
+  assert.match(oldDetailMonth.rendered, /New September Detail/,
+    'new month modal loads its own rows without waiting for the prior month');
+  heldDetail.resolve();
+  await oldDetailMonth.settle();
+  assert.match(oldDetailMonth.rendered, /New September Detail/);
+  assert.doesNotMatch(oldDetailMonth.rendered, /Old October Private Detail/,
+    'stale detail query cannot overwrite modal rows after month changes');
+
+  const reopenedDetail = harness('administration-v1.js', 'owner-administration-report');
+  await reopenedDetail.start();
+  const heldClosedDetail = deferred();
+  reopenedDetail.data.ui_administration_detail_v1 = [{ item_name: 'Closed Dialog Old Rows' }];
+  reopenedDetail.control.gates = { ui_administration_detail_v1: heldClosedDetail };
+  reopenedDetail.openModal(); await flush();
+  reopenedDetail.closeModal();
+  reopenedDetail.data.ui_administration_detail_v1 = [{ item_name: 'Reopened Dialog New Rows' }];
+  reopenedDetail.control.gates = {};
+  reopenedDetail.openModal(); await reopenedDetail.settle();
+  assert.match(reopenedDetail.rendered, /Reopened Dialog New Rows/);
+  heldClosedDetail.resolve(); await reopenedDetail.settle();
+  assert.doesNotMatch(reopenedDetail.rendered, /Closed Dialog Old Rows/,
+    'closing and reopening the detail dialog invalidates its old pending query');
+
+  const oldDetailSession = harness('administration-v1.js', 'owner-administration-report');
+  await oldDetailSession.start();
+  const heldSessionDetail = deferred();
+  oldDetailSession.data.ui_administration_detail_v1 = [{ item_name: 'Previous Owner Detail' }];
+  oldDetailSession.control.gates = { ui_administration_detail_v1: heldSessionDetail };
+  oldDetailSession.openModal();
+  await flush();
+  oldDetailSession.window.__HASNARIA_CONTEXT = { role: 'owner' };
+  oldDetailSession.data.ui_administration_detail_v1 = [{ item_name: 'Current Owner Detail' }];
+  oldDetailSession.control.gates = {};
+  await oldDetailSession.window.__HASNARIA_ADMIN_V1.mount({ force: true, navigation: true });
+  await oldDetailSession.settle();
+  oldDetailSession.openModal();
+  await oldDetailSession.settle();
+  assert.match(oldDetailSession.rendered, /Current Owner Detail/);
+  heldSessionDetail.resolve();
+  await oldDetailSession.settle();
+  assert.doesNotMatch(oldDetailSession.rendered, /Previous Owner Detail/,
+    'prior Owner detail must not leak into the replacement session');
+  const quickMonth = harness('administration-v1.js', 'owner-administration-report');
+  quickMonth.data.ui_period_catalog_v1.push({ period_start: '2026-09-01', period_key: '2026-09' });
+  await quickMonth.start();
+  quickMonth.control.gate = deferred();
+  const oldLoad = quickMonth.window.__HASNARIA_ADMIN_V1.mount({ force: true });
+  await flush(); await flush();
+  quickMonth.data.ui_administration_overview_v1[0].admin_amount = 77;
+  quickMonth.changePeriod('2026-09');
+  quickMonth.control.gate.resolve(); await oldLoad;
+  quickMonth.control.gate = null; await quickMonth.settle();
+  assert.match(quickMonth.rendered, /September 2026/);
+  assert.match(quickMonth.rendered, /77/, 'month selection during a foreground request must start its own read');
+
   const journal = harness('finance-accuracy-v6.js', 'owner-finance-report'); await journal.start();
   // Use the bound handler with the same attributes as the real detail button.
   const detailTarget = { closest: () => detailTarget, hasAttribute: key => key === 'data-fin-v6-open', getAttribute: () => 'journal' };
