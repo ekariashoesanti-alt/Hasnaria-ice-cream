@@ -39,6 +39,21 @@
     if(s==='PAYLATER'||s==='PAY LATER')return'PAYLATER';
     return null;
   }
+  /* BELANJA C×D determines purchase value; E,F cash/bank, G,H liabilities.
+     A positive shortfall becomes TUNAI; overfunding stops import. */
+  function balanceFunding(value,funding,rowNo){
+    function cents(x){return Math.round(Number(x||0)*100)}
+    var order=['cash','bank_mandiri','paylater','related_party_loan_jas_hujan'],v=cents(value);
+    if(!Number.isFinite(v)||v<=0)throw Error('BELANJA baris '+rowNo+': jumlah × harga harus positif.');
+    var f={};order.forEach(function(k){var x=cents(funding[k]);if(!Number.isFinite(x)||x<0)throw Error('BELANJA baris '+rowNo+': sumber dana '+k+' tidak valid.');f[k]=x});
+    var recorded=order.reduce(function(n,k){return n+f[k]},0);
+    if(recorded>v)throw Error('BELANJA baris '+rowNo+': pendanaan melebihi C × D sebesar Rp '+((recorded-v)/100).toLocaleString('id-ID')+'. Perlu review.');
+    var extra=v-recorded;f.cash+=extra;
+    var amounts={};order.forEach(function(k){amounts[k]=f[k]/100});
+    return {purchase_value:v/100,recorded_funding_total:recorded/100,additional_cash:extra/100,breakdown:amounts,funding_total:v/100};
+  }
+  window.__HASNARIA_PURCHASE_FUNDING_V1={balanceFunding:balanceFunding};
+
   function cat(item){
     var u=c(item).toUpperCase();
     if(/MIKA|KARDUS|PLASTIK|SENDOK|GARPU|GELAS|CONE|TISU|TISSUE|MANGKOK|PAPER|SEDOTAN|TUSUK/.test(u))return'Kemasan & Supplies';
@@ -76,17 +91,34 @@
     for(i=hi+1;i<a.length;i++){
       var r=a[i]||[],d=D>=0?iso(r[D]):null;if(d)last=d;
       var item=N>=0?c(r[N]):'';if(!item||/^TOTAL$/i.test(item)||!last)continue;
-      var q=Q>=0?num(r[Q]):0,pr=P>=0?num(r[P]):0,amount=T>=0?num(r[T]):0,labels=[],methods=[];
-      payCols.forEach(function(pc){var v=num(r[pc.i]);if(v){if(T<0)amount+=v;labels.push(pc.label);if(pc.norm)methods.push(pc.norm)}});
-      if(!(amount>0)&&q&&pr)amount=q*pr;if(!(amount>0)){invalid++;continue}
-      var method=null;if(methods.length===1&&labels.length===1)method=methods[0];else if(methods.length===1&&methods.every(function(x){return x===methods[0]}))method=methods[0];
+      var q=Q>=0?num(r[Q]):0,pr=P>=0?num(r[P]):0;
+      if(!(q>0)||!(pr>0)){invalid++;continue}
+      var amount=Math.round(q*pr*100)/100,parts={cash:0,bank_mandiri:0,paylater:0,related_party_loan_jas_hujan:0},labels=[];
+      payCols.forEach(function(pc){
+        var v=num(r[pc.i]);if(!v)return;
+        var label=c(pc.label).toUpperCase(),key=/JAS\s*HUJAN/.test(label)?'related_party_loan_jas_hujan':
+          pc.norm==='TUNAI'?'cash':pc.norm==='TRANSFER'?'bank_mandiri':
+          pc.norm==='PAYLATER'?'paylater':null;
+        if(!key)throw Error('BELANJA baris '+(i+1)+': sumber dana '+pc.label+' tidak dikenali.');
+        if(v<0)throw Error('BELANJA baris '+(i+1)+': nominal sumber dana negatif.');
+        parts[key]+=v;labels.push(pc.label);
+      });
+      var funding=balanceFunding(amount,parts,i+1);
+      if(T>=0&&num(r[T])>0&&Math.abs(num(r[T])-amount)>.01)throw Error('BELANJA baris '+(i+1)+': TOTAL berbeda dari JUMLAH × HARGA SATUAN.');
+      if(funding.additional_cash>0)labels.push('TUNAI (pelengkap)');
+      var used=Object.keys(funding.breakdown).filter(function(k){return funding.breakdown[k]>0});
+      var method=used.length===1&&used[0]==='cash'?'TUNAI':
+        used.length===1&&used[0]==='bank_mandiri'?'TRANSFER':
+        used.length===1&&used[0]==='paylater'?'PAYLATER':null;
+      // Group loans and mixed tenders remain under financing review until
+      // the finance ledger supports independent counter-account lines.
       if(!method)unmapped++;
       var category=cat(item),base=[last,n(item),Math.round(amount*100)/100,method||labels.join('+')||'UNMAPPED'].join('|');occ[base]=(occ[base]||0)+1;
       out.push({
         brand_id:BRAND,source_type:'excel',source_period:per(last),source_file:file.name,source_record_key:'excel:v3:'+hash(base)+':'+occ[base],row_no:i+1,
         purchase_date:last,item_name:item,normalized_item:n(item),sku:null,quantity:q>0?q:null,unit_text:null,unit_price:pr>0?pr:null,total_amount:amount,
         payment_method:method,supplier_name:null,invoice_no:null,source_status:method?'VALID':'ACCOUNT_REVIEW',
-        raw_data:{source_type:'excel',format:'legacy_belanja_v3',source_sheet:sn,source_row:i+1,original_file:file.name,analytics_group:grp(item,category),analytics_category:category,analytics_kind:'purchase_item',source_payment_label:labels.join(' + '),account_mapping_status:method?'mapped':'unmapped'}
+        raw_data:{source_type:'excel',format:'legacy_belanja_v3',source_sheet:sn,source_row:i+1,original_file:file.name,analytics_group:grp(item,category),analytics_category:category,analytics_kind:'purchase_item',source_payment_label:labels.join(' + '),account_mapping_status:method?'mapped':'financing_review',funding_breakdown:funding.breakdown,source_funding_total:funding.recorded_funding_total,auto_cash_adjustment:funding.additional_cash,source_purchase_value:amount,source_funding_status:funding.additional_cash>0?'AUTO_CASH_COMPLETED':'BALANCED',source_funding_policy:'BELANJA_CxD_vs_EFGH_v1'}
       });
     }
     if(!out.length)throw Error('Tidak ditemukan transaksi pembelian valid pada BELANJA.');
