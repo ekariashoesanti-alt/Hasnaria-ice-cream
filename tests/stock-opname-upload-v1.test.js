@@ -41,6 +41,8 @@ function harness(inputRows,opts={}){
  };
  const win={
   __HASNARIA_CONTEXT:user,__HASNARIA_DB:db,
+  location:{hostname:opts.preview?'hasnaria-business-analyzer-test123.vercel.app':'hasnaria-business-analyzer.vercel.app'},
+  HASNARIA_SB:'https://bnnhmtkpdjlgehsvgoda.supabase.co',
   crypto:{subtle:{digest:async()=>Uint8Array.from([1,2,3]).buffer}},
   XLSX:{read:()=>data,utils:{sheet_to_json:s=>s}},
   confirm:()=>true
@@ -102,4 +104,14 @@ test('staff cannot stage an opname',async()=>{
  const f=harness(sheet([['sku-1','ODENG','porsi',1]]),{role:'staff'});
  Object.assign(f.api.st,{rows:[{id:'sku-1',qty:1}],date:f.api.today(),hash:'qwer',busy:false,runId:''});
  await f.api.stage();assert.equal(f.calls.length,0);
+});
+
+test('PR preview connected to live Supabase cannot stage any Stock mutation',async()=>{
+ const f=harness(sheet([['sku-1','ODENG','porsi',2]]),{preview:true});
+ f.api.st.rows=(await f.api.parseFile(file())).rows;
+ Object.assign(f.api.st,{date:f.api.today(),file:file(),hash:'abcxyz',runId:'',busy:false});
+ await f.api.stage();
+ assert.equal(f.calls.length,0,'preview guard must reject before even checking canonical runs');
+ assert.match(f.api.st.error,/PRODUKSI/);
+ assert.equal(f.api.st.runId,'');
 });
