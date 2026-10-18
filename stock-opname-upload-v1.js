@@ -10,6 +10,13 @@ function esc(x){return String(x==null?'':x).replace(/[&<>"']/g,function(c){retur
 function today(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
 function norm(x){return String(x||'').trim().toUpperCase().replace(/[^A-Z0-9]+/g,'')}
 function owner(){var c=window.__HASNARIA_CONTEXT;return !!(c&&c.role==='owner')}
+function previewUsesProductionDatabase(){
+  var host=window.location&&window.location.hostname;
+  if(!host)return false; // Headless unit tests; real browsers always provide location.
+  if(String(window.HASNARIA_SB||'').indexOf('bnnhmtkpdjlgehsvgoda.supabase.co')<0)return false;
+  return host!=='hasnaria-business-analyzer.vercel.app'&&
+    host!=='hasnaria-business-analyzer-ekariashoesanti-9951s-projects.vercel.app';
+}
 function getDb(){db=window.__HASNARIA_DB||null;if(!db)throw Error('Database Hasnaria belum siap. Masuk kembali dan ulangi.');return db}
 function close(){if(st.busy)return;st.open=false;st.file=null;st.rows=null;st.error='';st.notice='';if(dialog){dialog.remove();dialog=null}if(window.__HASNARIA_STOCK_REFRESH_VERIFIED)window.__HASNARIA_STOCK_REFRESH_VERIFIED()}
 function template(){
@@ -95,6 +102,7 @@ async function preview(file){
 }
 async function stage(){
  if(!owner()||st.busy||!st.rows||st.runId)return;
+ if(previewUsesProductionDatabase()){st.error='Preview masih terhubung ke database PRODUKSI. Simpan draft diblokir demi keamanan. Gunakan staging terisolasi untuk UAT atau situs produksi setelah rilis disetujui.';render();return;}
  if(st.date!==today()){st.error='Upload hitungan fisik harus bertanggal hari ini. Arsip Rencana Belanja historis tidak boleh menggantikan saldo live.';render();return}
  if(!window.confirm('Simpan '+st.rows.length+' hasil hitung fisik sebagai DRAFT Operasional? Tidak ada saldo yang berubah sebelum seluruh item diverifikasi dan disetujui.'))return;
  st.busy=true;st.error='';st.notice='';st.saving=0;render();
