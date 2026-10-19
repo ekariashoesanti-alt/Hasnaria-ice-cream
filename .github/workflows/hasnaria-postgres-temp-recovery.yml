@@ -1,0 +1,63 @@
+name: Hasnaria Temporary PostgreSQL Recovery Rehearsal
+# This does not modify Tokyo, Singapore or any customer transaction.
+# No PII archive, credentials, or restore logs are uploaded as artifacts.
+on:
+  pull_request:
+    paths:
+      - 'scripts/hasnaria_ephemeral_postgres_recovery.sh'
+      - '.github/workflows/hasnaria-postgres-temp-recovery.yml'
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: 'Type TEMP_POSTGRES_RESTORE_READONLY to run a read-only Tokyo dump and isolated local restore'
+        type: string
+        required: true
+permissions:
+  contents: read
+concurrency:
+  group: hasnaria-temp-postgres-rehearsal
+  cancel-in-progress: false
+jobs:
+  script-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Syntax and safety self-check (no credentials)
+        shell: bash
+        run: |
+          bash -n scripts/hasnaria_ephemeral_postgres_recovery.sh
+          bash scripts/hasnaria_ephemeral_postgres_recovery.sh --self-test
+          node - <<'JS'
+          const fs = require('node:fs'),assert=require('node:assert/strict');
+          const s=fs.readFileSync('scripts/hasnaria_ephemeral_postgres_recovery.sh','utf8');
+          assert.match(s,/--network none/);
+          assert.match(s,/--single-transaction --exit-on-error/);
+          assert.match(s,/--no-owner --no-privileges/);
+          assert.match(s,/supabase\/postgres:17\.6\.1\.173/);
+          assert.match(s,/pg_dump/);
+          assert.match(s,/rolbypassrls/);
+          assert.match(s,/has_table_privilege\(current_user,c\.oid,'INSERT,UPDATE,DELETE,TRUNCATE'\)/);
+          assert.match(s,/bnnhmtkpdjlgehsvgoda/);
+          assert.doesNotMatch(s,/supabase\.co.{0,100}\/auth\/v1\/admin/);
+          console.log('PASS: network isolation, source read-only, recovery fail-closed static guard');
+          JS
+  restore-to-temporary-postgres:
+    if: ${{ github.event_name == 'workflow_dispatch' && github.repository == 'ekariashoesanti-alt/Hasnaria-ice-cream' && github.ref == 'refs/heads/main' && inputs.confirmation == 'TEMP_POSTGRES_RESTORE_READONLY' }}
+    needs: script-contract
+    environment: hasnaria-backup-private
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Read-only Tokyo snapshot, restore to isolated PG17, verify, destroy
+        shell: bash
+        env:
+          HSN_PROD_BACKUP_READONLY_DB_URL: ${{ secrets.HSN_PROD_BACKUP_READONLY_DB_URL }}
+          HSN_TEMP_PG_CONFIRM: ${{ inputs.confirmation }}
+        run: |
+          bash scripts/hasnaria_ephemeral_postgres_recovery.sh --run
