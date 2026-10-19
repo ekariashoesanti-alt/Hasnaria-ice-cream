@@ -1,0 +1,39 @@
+name: Hasnaria Isolated Owner UAT Preflight
+# Manual-only; never points browser tests at production.
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: "Type CHECK_OWNER_STAGING (preflight only, no upload)"
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: hasnaria-owner-staging-only
+  cancel-in-progress: false
+jobs:
+  staging-preflight:
+    if: ${{ github.repository == 'ekariashoesanti-alt/Hasnaria-ice-cream' && github.ref == 'refs/heads/main' && inputs.confirmation == 'CHECK_OWNER_STAGING' }}
+    environment: hasnaria-owner-staging-uat
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client
+      - name: Test all fail-closed project and Preview guards offline
+        run: |
+          node --check scripts/hasnaria_owner_staging_gate.js
+          node scripts/hasnaria_owner_staging_gate.js --self-test
+      - name: Verify synthetic staging Owner and Preview connectivity (SELECT-only)
+        env:
+          HSN_STAGING_DB_URL: ${{ secrets.HSN_STAGING_DB_URL }}
+          HSN_OWNER_UAT_PREVIEW_URL: ${{ vars.HSN_OWNER_UAT_PREVIEW_URL }}
+          HSN_STAGING_PUBLISHABLE_KEY: ${{ vars.HSN_STAGING_PUBLISHABLE_KEY }}
+        run: node scripts/hasnaria_owner_staging_gate.js
+# A PASS only permits subsequent UAT. It does not prove upload/approval/posting.
