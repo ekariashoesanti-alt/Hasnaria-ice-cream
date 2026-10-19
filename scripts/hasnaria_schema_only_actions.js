@@ -20,13 +20,29 @@ function verifyUrl(raw,ref,source){
   if(!direct&&!pooler)throw Error('BLOCK: database project ref mismatch');
   if(!u.password||u.pathname!=='/postgres')throw Error('BLOCK: missing password or unexpected database name');
   if(u.searchParams.has('options')||u.hash)throw Error('BLOCK: unexpected connection options');
-  if(source&&(/^(postgres|supabase_admin|supabase_auth_admin|service_role)$/i.test(username)||/^postgres\./i.test(username)))
-    throw Error('BLOCK: production requires a dedicated non-admin read-only role');
+  if(source && ![ 'hsn_schema_reader', 'hsn_schema_reader.'+PROD ].includes(username))
+    throw Error('BLOCK: source must be hsn_schema_reader (read-only role)');
+  if(!source && ![ 'postgres', 'postgres.'+STAGE ].includes(username))
+    throw Error('BLOCK: Singapore destination must be the designated postgres staging role');
+  if(u.port!=='5432')throw Error('BLOCK: use session pooler or direct PostgreSQL port 5432');
   return true;
 }
 function invoke(command,args){
-  const r=spawnSync(command,args,{encoding:'utf8',stdio:['ignore','pipe','pipe'],timeout:14*60*1000,maxBuffer:4*1024*1024});
-  if(r.error||r.status!==0)throw Error('Blocked: '+command+' failed (details hidden from public Actions logs)');
+  const r=spawnSync(command,args,{encoding:'utf8',stdio:['ignore','pipe','pipe'],timeout:20*60*1000,maxBuffer:4*1024*1024});
+  if(r.error||r.status!==0){
+    const error=String(r.stderr||'').toLowerCase();
+    // Never print STDERR; PostgreSQL messages may contain hostnames and SQL.
+    let reason='UNCLASSIFIED';
+    if(/password authentication failed|invalid password|sasl authentication failed/.test(error))reason='INVALID_PASSWORD';
+    else if(/tenant or user not found|role .* does not exist/.test(error))reason='INVALID_POOLER_USERNAME_OR_ROLE';
+    else if(/could not translate host|name or service not known|nodename nor servname/.test(error))reason='DNS_LOOKUP';
+    else if(/no route to host|network is unreachable|connection refused|timeout expired|connection timed out/.test(error))reason='NETWORK_CONNECTION';
+    else if(/permission denied|must be (?:owner|member)|insufficient privilege/.test(error))reason='INSUFFICIENT_DB_PERMISSIONS';
+    else if(/invalid port number|invalid connection option|could not parse.*connection/.test(error))reason='BAD_CONNECTION_URI';
+    else if(/error:|fatal:/.test(error))reason='DB_SQL_OR_SERVER_ERROR';
+    else if(r.error)reason='RUNNER_COMMAND_NOT_AVAILABLE';
+    throw Error('Blocked: '+command+' failed ['+reason+']');
+  }
   return (r.stdout||'').trim();
 }
 function quoteCheck(sql){
@@ -37,7 +53,17 @@ function quoteCheck(sql){
     throw Error('BLOCK: schema contains project URLs; manual offline review required');
 }
 function query(db,sql){
-  return invoke('psql',['-X','-q','-A','-t','--set=ON_ERROR_STOP=1','--dbname',db,'--command',sql]);
+  // The hosted runner has no system psql; use PostgreSQL 17 in Docker.
+  // Connections are passed only as masked environment variables.
+  const key=db===process.env.HSN_PROD_READONLY_DB_URL?'HSN_PROD_READONLY_DB_URL':
+    db===process.env.HSN_STAGING_DB_URL?'HSN_STAGING_DB_URL':null;
+  if(!key)throw Error('BLOCK: unknown SQL connection');
+  try{return invoke('docker',[
+    'run','--rm','--network','host','--env',key,
+    'postgres:17','sh','-ec',
+    'exec psql -X -q -A -t --no-password --set=ON_ERROR_STOP=1 --dbname="$'+key+'" --command="$1"',
+    'hsn-sql',sql
+  ]);}catch(e){throw Error('BLOCK: '+(key==='HSN_PROD_READONLY_DB_URL'?'TOKYO_SOURCE':'SINGAPORE_TARGET')+' connection: '+e.message)}
 }
 const roleSql=[
 'select case when',
@@ -86,6 +112,16 @@ function main(){
   if(query(dest,stageSql)!=='OK')throw Error('BLOCK: target is not empty Singapore staging with valid identity');
   if(query(dest,"SELECT case when exists(SELECT 1 FROM pg_roles WHERE rolname='hsn_schema_reader' AND NOT rolcanlogin) then 'OK' else 'DENY' end")!=='OK')
     throw Error('BLOCK: staging is missing the safe NOLOGIN ACL placeholder role');
+  // Supabase provisions matching supabase_admin default privileges in both
+  // databases. PostgreSQL rightly forbids ordinary postgres login from
+  // changing defaults FOR ROLE supabase_admin; never elevate that account.
+  const adminDefaultsSql=[
+    "SELECT coalesce(string_agg(n.nspname||':'||d.defaclobjtype::text||':'||d.defaclacl::text,'|' ORDER BY n.nspname,d.defaclobjtype),'')",
+    "FROM pg_default_acl d JOIN pg_namespace n ON n.oid=d.defaclnamespace",
+    "WHERE pg_get_userbyid(d.defaclrole)='supabase_admin' AND n.nspname IN ('public','private')"
+  ].join(' ');
+  if(query(src,adminDefaultsSql)!==query(dest,adminDefaultsSql))
+    throw Error('BLOCK: Supabase-admin default grants differ between Tokyo and Singapore');
   const temp=fs.mkdtempSync(path.join(os.tmpdir(),'hasnaria-schema-'));
   try{
     const dump=path.join(temp,'schema-only.sql');
@@ -95,6 +131,9 @@ function main(){
     // Retain ACLs/policies, and omit ownership rewrites of staging-managed roles.
     invoke('docker',[
       'run','--rm','--network','host',
+      // Match the host runner UID/GID so the ephemeral pg_dump file can be
+      // read and removed without loosening its 0600 permissions.
+      '--user',String(process.getuid())+':'+String(process.getgid()),
       '--volume',temp+':/schema',
       '--env','HSN_PROD_READONLY_DB_URL',
       'postgres:17','sh','-ec',
@@ -102,18 +141,44 @@ function main(){
     ]);
     const stat=fs.statSync(dump);
     if(stat.size<3000||stat.size>50*1024*1024)throw Error('Unexpected schema export size');
-    const sql=fs.readFileSync(dump,'utf8');
+    let sql=fs.readFileSync(dump,'utf8');
     quoteCheck(sql);
+    // Supabase creates the public schema on every new project. A plain pg_dump
+    // would fail with SQLSTATE 42P06 when restoring Tokyo's public schema to
+    // an otherwise empty Singapore project. Never drop the staging public schema.
+    const publicCreate=/^CREATE SCHEMA public;\r?$/gm;
+    const publicCreateCount=(sql.match(publicCreate)||[]).length;
+    if(publicCreateCount!==1)throw Error('BLOCK: expected exactly one public schema definition in export');
+    sql=sql.replace(publicCreate,'CREATE SCHEMA IF NOT EXISTS public;');
+    // Retain staging's identical managed admin defaults; they cannot be
+    // changed by the unprivileged staging postgres role (SQLSTATE 42501).
+    // Only remove full-line commands for this exact managed owner.
+    const managedDefaults=/^ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin IN SCHEMA (?:public|private) (?:GRANT|REVOKE) [^;\r\n]*;\r?$/gm;
+    const managedDefaultCount=(sql.match(managedDefaults)||[]).length;
+    if(managedDefaultCount<1||managedDefaultCount>30)
+      throw Error('BLOCK: unexpected Supabase-admin default grants export');
+    sql=sql.replace(managedDefaults,'-- Managed Supabase-admin default ACL already equivalent on Singapore');
+    fs.writeFileSync(dump,sql,{encoding:'utf8',mode:0o600});
     const sha=crypto.createHash('sha256').update(sql).digest('hex');
-    // Trial: a transaction on staging, with forced ROLLBACK before closing.
-    invoke('psql',['-X','-q','--set=ON_ERROR_STOP=1','--dbname',dest,'--command','BEGIN','--file',dump,'--command','ROLLBACK']);
+    // The dump may contain PostgreSQL 17 psql meta-commands such as \\restrict.
+    // Use the same major-version client for trial and restore (Ubuntu's psql may be 16).
+    // Test all SQL inside a transaction that is ALWAYS rolled back.
+    invoke('docker',[
+      'run','--rm','--network','host','--volume',temp+':/schema',
+      '--env','HSN_STAGING_DB_URL','postgres:17','sh','-ec',
+      'exec psql -X -q --set=ON_ERROR_STOP=1 --dbname="$HSN_STAGING_DB_URL" --command="BEGIN" --file=/schema/schema-only.sql --command="ROLLBACK"'
+    ]);
     if(query(dest,stageSql)!=='OK')throw Error('BLOCK: staging changed after trial');
     console.log('PASS: public + private schema exported; Singapore trial rolled back');
     console.log('SQL size: '+stat.size+' bytes; SHA-256: '+sha);
     if(mode==='restore-staging'){
       // One transaction: no half-restored schema on any SQL error.
       // A staging-only credential performs the DDL; never pass production for --dbname.
-      invoke('psql',['-X','--single-transaction','-q','--set=ON_ERROR_STOP=1','--dbname',dest,'--file',dump]);
+      invoke('docker',[
+        'run','--rm','--network','host','--volume',temp+':/schema',
+        '--env','HSN_STAGING_DB_URL','postgres:17','sh','-ec',
+        'exec psql -X --single-transaction -q --set=ON_ERROR_STOP=1 --dbname="$HSN_STAGING_DB_URL" --file=/schema/schema-only.sql'
+      ]);
       const tables=query(dest,"SELECT count(*) FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relkind IN ('r','p')");
       const views=query(dest,"SELECT count(*) FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relkind IN ('v','m')");
       const control=query(dest,"SELECT count(*) FROM staging_guard.environment_identity WHERE environment='staging' AND region='ap-southeast-1' AND supabase_project_ref='rynnpndtzjwpekbiwiif'");
