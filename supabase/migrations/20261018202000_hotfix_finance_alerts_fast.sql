@@ -110,6 +110,10 @@ select 40,'warning'::text,'PURCHASE_PAYMENT_PROVISIONAL'::text,
 from latest_purchase p cross join purchase_journals j
 where j.provisional_entries>0;
 
+-- An earlier schema-only restore can retain broad SELECT ACLs for anon;
+-- a SECURITY INVOKER view alone does not revoke existing view privileges.
+-- Always enforce the production-compatible authenticated-only Finance access.
+revoke all privileges on public.ui_finance_alerts from anon;
 grant select on public.ui_finance_alerts to authenticated;
 comment on view public.ui_finance_alerts is
  'Lean current-brand, current-period reconciliation alerts. Full historical line-level checks stay in Finance quality reports.';
