@@ -75,6 +75,9 @@ jobs:
       - name: Cross-month workbook safe upload regressions
         run: node --test tests/purchase-template-monthly-v1.test.js
 
+      - name: Rehearsed stock approval SQL patch safety contract
+        run: node --test tests/hsn-stock-workflow-generated-variance.test.js
+
       - name: Runtime source integrity
         shell: bash
         run: |
