@@ -27,7 +27,7 @@ fi
  { echo 'BLOCK: explicit read-only rehearsal confirmation required'; exit 1; }
 [[ -n "${HSN_PROD_BACKUP_READONLY_DB_URL:-}" ]] ||
  { echo 'BLOCK: missing protected read-only Tokyo DB credential'; exit 1; }
-node -e "require('./scripts/hasnaria_schema_only_actions.js').verifyUrl(process.env.HSN_PROD_BACKUP_READONLY_DB_URL,'bnnhmtkpdjlgehsvgoda',true)"
+node scripts/hasnaria_backup_connection_guard.js
 command -v docker >/dev/null
 command -v openssl >/dev/null
 TMP="$(mktemp -d)"
