@@ -39,6 +39,7 @@ test('Finance alert counts canonical rows once and preserves unmatched Purchases
   assert.match(finance,/c\.divergent_rows>0/i);
   assert.match(finance,/PURCHASE_SYNC_MISMATCH/);
   assert.match(finance,/PURCHASE_PAYMENT_PROVISIONAL/);
+  assert.match(finance,/revoke\s+all\s+privileges\s+on\s+public\.ui_finance_alerts\s+from\s+anon/i);
   assert.doesNotMatch(finance,/from public\.finance_purchase_sync_status_v1/i);
   assert.doesNotMatch(finance,/from public\.finance_administration_sync_status_v1/i);
 });
