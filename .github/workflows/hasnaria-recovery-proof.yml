@@ -48,7 +48,7 @@ jobs:
             [[ -n "${!required:-}" ]] || { echo "BLOCK: missing required backup secret/variable"; exit 1; }
           done
           # Read-only source role cannot change production even if a dump command is compromised.
-          node -e "require('./scripts/hasnaria_schema_only_actions.js').verifyUrl(process.env.HSN_PROD_BACKUP_READONLY_DB_URL,'bnnhmtkpdjlgehsvgoda',true)"
+          node scripts/hasnaria_backup_connection_guard.js
           sudo apt-get update -qq
           sudo apt-get install -y -qq age awscli
           docker pull postgres:17 >/dev/null
