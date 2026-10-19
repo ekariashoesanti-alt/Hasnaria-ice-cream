@@ -11,6 +11,9 @@
  */
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
 const PROD_REF='bnnhmtkpdjlgehsvgoda';
+const STAGE_REF='rynnpndtzjwpekbiwiif';
+const PROD_BRAND='a36d4b4f-3ccc-4a78-8aeb-b868f0407ea4';
+const UAT_BRAND='a611dd70-87a1-4b37-8415-266101900001';
 function inspect(html,files,ref,key){
  const errors=[];
  if(!/^[a-z0-9]{20}$/.test(ref||''))errors.push('Missing/invalid staging project ref');
@@ -23,7 +26,10 @@ function inspect(html,files,ref,key){
  if(!api||api[1]!==key)errors.push('HTML publishable key does not match staging');
  for(const [name,source] of Object.entries(files)){
   if(source.includes(PROD_REF))errors.push('Production Supabase project ref found in output '+name);
+  if(ref===STAGE_REF&&source.includes(PROD_BRAND))errors.push('Production tenant brand found in staging output '+name);
  }
+ if(ref===STAGE_REF&&!Object.values(files).some(t=>t.includes(UAT_BRAND)))
+  errors.push('Singapore UAT brand identity missing from Preview bundle');
  return errors;
 }
 function collect(dir){
@@ -47,6 +53,10 @@ function selfTest(){
  const bad=good.replace(ref,PROD_REF);
  assert.ok(inspect(bad,{'index.html':bad},ref,key).length);
  assert.ok(inspect(good,{'index.html':good,'app.js':'const s="https://'+PROD_REF+'.supabase.co"'},ref,key).length);
+ const sg='<script>window.HASNARIA_SB="https://'+STAGE_REF+'.supabase.co";window.HASNARIA_KEY="'+key+'";</script>';
+ assert.deepEqual(inspect(sg,{'index.html':sg,'app.js':"const BRAND='"+UAT_BRAND+"'"},STAGE_REF,key),[]);
+ assert.ok(inspect(sg,{'index.html':sg,'app.js':"const BRAND='"+PROD_BRAND+"'"},STAGE_REF,key).length);
+ assert.ok(inspect(sg,{'index.html':sg},STAGE_REF,key).length);
  process.stdout.write('PASS: UAT staging isolation checks reject production, bad keys and mixed bundles\n');
 }
 if(require.main===module){
