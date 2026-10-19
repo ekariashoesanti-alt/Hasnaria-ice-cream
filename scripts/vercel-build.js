@@ -59,12 +59,15 @@ if (process.env.VERCEL_ENV === 'preview' || process.env.HASNARIA_P0_STAGING_PREV
   // Keep the guard strict: a missed reference blocks all Preview releases.
   const prodRef = 'bnnhmtkpdjlgehsvgoda';
   const prodPublishableKey = 'sb_publishable_eXrgSxWTXoa9q-hVpLx-sQ_IaEiUbeO';
+  // This is a *fictional* Singapore UAT tenant, distinct from Tokyo production.
+  const prodBrand = 'a36d4b4f-3ccc-4a78-8aeb-b868f0407ea4';
+  const uatBrand = 'a611dd70-87a1-4b37-8415-266101900001';
   for (const [name, text] of Object.entries(collect(dir))) {
-    const rewritten = text.replaceAll(prodRef, ref).replaceAll(prodPublishableKey, key);
+    const rewritten = text.replaceAll(prodRef, ref).replaceAll(prodPublishableKey, key).replaceAll(prodBrand, uatBrand);
     if (rewritten !== text) fs.writeFileSync(path.join(dir, name), rewritten);
   }
   const files = collect(dir);
   const issues = inspect(files['index.html'] || '', files, ref, key);
   if (issues.length) throw Error('Preview BLOCKED: ' + issues.join('; '));
-  console.log('Vercel Preview: isolated Singapore Supabase staging verified; production references absent');
+  console.log('Vercel Preview: isolated Singapore Supabase staging and synthetic tenant verified; production references absent');
 }
