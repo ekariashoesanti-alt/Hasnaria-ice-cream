@@ -84,7 +84,10 @@
       "priority": "P0",
       "status": "REVIEW",
       "title": "GPS absensi akurat dan pemeriksaan ulang lokasi toko",
-      "dependencies": ["HSN-602", "HSN-614"],
+      "dependencies": [
+        "HSN-602",
+        "HSN-614"
+      ],
       "acceptance": "GPS awal yang kasar/stale tidak mengunci clock; setiap percobaan memperoleh GPS baru dan akurat; hanya jarak <=50m dapat disimpan; sesi dan tampilan tetap.",
       "owner": "Codex/ChatGPT",
       "updated_at": "2026-10-10",
@@ -96,7 +99,9 @@
       "priority": "P1",
       "status": "DONE",
       "title": "Ubah nama Arum menjadi Tari dengan kredensial yang sama",
-      "dependencies": ["HSN-600"],
+      "dependencies": [
+        "HSN-600"
+      ],
       "acceptance": "Employee Arum tampil sebagai Tari dengan employee ID, PIN, akses modul, outlet, dan sesi yang sama; tidak reset kredensial.",
       "owner": "Codex/ChatGPT",
       "updated_at": "2026-10-10",
@@ -108,7 +113,9 @@
       "priority": "P1",
       "status": "REVIEW",
       "title": "Team Portal branding pada header dan logo HP",
-      "dependencies": ["HSN-011"],
+      "dependencies": [
+        "HSN-011"
+      ],
       "acceptance": "Header memakai Team Portal/Hasnaria Team dan logo aplikasi bertuliskan TEAM; layout, jalur portal, identitas sesi, dan akses tetap.",
       "owner": "Codex/ChatGPT",
       "updated_at": "2026-10-08",
@@ -120,7 +127,10 @@
       "priority": "P0",
       "status": "REVIEW",
       "title": "Catatan Clock In/Out staf di lokasi toko",
-      "dependencies": ["HSN-602", "HSN-011"],
+      "dependencies": [
+        "HSN-602",
+        "HSN-011"
+      ],
       "acceptance": "Clock In/Out mengambil GPS baru dan hanya disimpan di radius toko; kartu Clock In hijau muncul dari waktu tersimpan, Clock Out merah di bawahnya; gagal simpan tidak membuat catatan; sesi dan sinkronisasi tetap aman.",
       "owner": "Codex/ChatGPT",
       "updated_at": "2026-10-08",
@@ -132,7 +142,10 @@
       "priority": "P0",
       "status": "REVIEW",
       "title": "Sinkronisasi data HP Owner/Staff dengan web tanpa perubahan UI/UX",
-      "dependencies": ["HSN-004", "HSN-602"],
+      "dependencies": [
+        "HSN-004",
+        "HSN-602"
+      ],
       "acceptance": "HP Owner, HP Staff, dan web membaca authority Supabase yang sama; perubahan eksternal disegarkan tanpa mereset form, header, navigasi, atau tampilan; mutasi dan sesi tetap dilindungi database; regression dan build lulus.",
       "owner": "Codex/ChatGPT",
       "updated_at": "2026-10-06",
@@ -2105,14 +2118,15 @@
       "id": "HSN-1004",
       "milestone": "M10",
       "priority": "P0",
-      "status": "TODO",
+      "status": "IN_PROGRESS",
       "title": "Backup/restore runbook",
       "dependencies": [
         "HSN-115"
       ],
       "acceptance": "Restore process terdokumentasi dan diuji di environment aman.",
       "owner": "Codex/ChatGPT",
-      "updated_at": "2026-09-18"
+      "updated_at": "2026-10-18",
+      "notes": "Tokyo production database read-only checked; Singapore staging independent but lacks public/private business schema. Manual-only encrypted S3/age backup, disposable restore-proof and fail-closed Owner staging preflight prepared on feature branch. NOT EXECUTED; backup object, successful independent restore, Auth/RLS proof, staging schema, genuine Owner/Staff UAT are outstanding. See docs/BACKUP_OWNER_STAGING_ACCEPTANCE_2026-10-18.md."
     },
     {
       "id": "HSN-1005",

@@ -1,6 +1,6 @@
 # Hasnaria ERP — Backup & Restore Runbook
 
-Status: **DONE for logical restore rehearsal**.
+Status: **PARTIAL — transactional logical-copy rehearsal (25 Sep) passed; encrypted offsite backup and independent restore unverified as of 18 Oct 2026.**
 
 Production project: `bnnhmtkpdjlgehsvgoda` (`Hasnaria Project`).
 
@@ -82,6 +82,10 @@ Validated datasets:
 Restored Finance debit and credit both equal Rp198,690,802.00. Missing Purchase `import_job_id` = 0. The transaction ended with ROLLBACK and created no persistent production change.
 
 `HSN-1004 Backup/restore runbook`: **DONE for logical restore acceptance**.
+
+## 18 October corrective release gate
+
+See [Independent Backup & Owner staging acceptance](BACKUP_OWNER_STAGING_ACCEPTANCE_2026-10-18.md). The old in-production temporary-table transaction is useful for basic data-integrity checks, but **not** evidence of an export that can survive loss of the production project. HSN-1004 remains IN_PROGRESS until the encrypted offsite archive is independently restored and Auth/Storage/RLS are verified. Manual-only GitHub Actions are prepared in the feature branch; none has produced backup or restore evidence yet.
 
 ## Limitation
 This rehearsal validates logical data recovery, not a simulated total Supabase infrastructure loss. For an actual project-loss incident, use Supabase Dashboard backup/PITR when available or restore the approved logical backup into a replacement project, then rerun Finance/RLS/application verification before reopening writes.
