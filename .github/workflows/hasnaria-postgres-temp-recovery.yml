@@ -5,6 +5,8 @@ on:
   pull_request:
     paths:
       - 'scripts/hasnaria_ephemeral_postgres_recovery.sh'
+      - 'scripts/hasnaria_backup_connection_guard.js'
+      - 'tests/hasnaria-backup-connection-guard.test.js'
       - '.github/workflows/hasnaria-postgres-temp-recovery.yml'
   workflow_dispatch:
     inputs:
@@ -30,6 +32,7 @@ jobs:
         run: |
           bash -n scripts/hasnaria_ephemeral_postgres_recovery.sh
           bash scripts/hasnaria_ephemeral_postgres_recovery.sh --self-test
+          node --test tests/hasnaria-backup-connection-guard.test.js
           node - <<'JS'
           const fs = require('node:fs'),assert=require('node:assert/strict');
           const s=fs.readFileSync('scripts/hasnaria_ephemeral_postgres_recovery.sh','utf8');
@@ -41,6 +44,7 @@ jobs:
           assert.match(s,/rolbypassrls/);
           assert.match(s,/has_table_privilege\(current_user,c\.oid,'INSERT,UPDATE,DELETE,TRUNCATE'\)/);
           assert.match(s,/bnnhmtkpdjlgehsvgoda/);
+          assert.match(s,/hasnaria_backup_connection_guard\.js/);
           assert.doesNotMatch(s,/supabase\.co.{0,100}\/auth\/v1\/admin/);
           console.log('PASS: network isolation, source read-only, recovery fail-closed static guard');
           JS
