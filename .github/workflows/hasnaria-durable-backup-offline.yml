@@ -34,6 +34,8 @@ jobs:
           assert.match(w,/github.event_name == 'push'/);
           assert.match(w,/--verify-backup/);
           assert.match(w,/OCI server-side AES-256/);
+          assert.match(w,/https:\/\/awscli\.amazonaws\.com\/awscli-exe-linux-x86_64\.zip/);
+          assert.doesNotMatch(w,/apt-get install -y -qq awscli/);
           assert.doesNotMatch(w,/get-public-access-block|get-bucket-versioning/);
           assert.match(w,/HSN_OCI_NAMESPACE/);
           assert.match(w,/HSN_OCI_NAMESPACE: axf1xcjq8gsy/);
