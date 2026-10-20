@@ -34,8 +34,8 @@ assert.equal(replaced, 0, 'Repeated Owner render should leave canonical summary 
 
 assert.match(app, /core-app\.js\?v=9/);
 assert.match(app, /owner-shell-guard\.js\?v=10/);
-assert.match(index, /app\.js\?v=p059/);
+assert.match(index, /app\.js\?v=p060/);
 assert.match(build, /owner-shell-guard\.js\?v=10/);
 assert.match(build, /purchase-lazy-loader\.js\?v=3/);
-assert.match(lazy, /purchase-analytics\.js\?v=6/);
+assert.match(lazy, /purchase-analytics\.js\?v=7/);
 console.log('Purchase Owner flicker regression: PASS');
