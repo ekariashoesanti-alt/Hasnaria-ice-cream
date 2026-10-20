@@ -49,7 +49,8 @@ test('Owner Purchase reuses a single canonical panel and does not call legacy de
  assert.match(a,/if\(ownerCompact\(\)\)\{state\.error='Jalur upload Excel lama ditutup/);
  assert.match(p,/get_purchase_control_period_v1/);
  assert.match(p,/pfa-insights-grid/);
- assert.match(p,/Tren Pembelian Harian/);
+ assert.match(p,/Tren Pembelian Bulanan/);
+ assert.match(p,/Porsi Pembelian/);
  assert.match(p,/Top 5 Item Pembelian/);
  assert.doesNotMatch(p,/pfa-main-grid/);
 });
