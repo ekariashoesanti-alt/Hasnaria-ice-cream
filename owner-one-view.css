@@ -610,3 +610,88 @@
   #pembelian #purchaseFinanceAlignment .pfa-review-list{grid-template-columns:1fr;height:auto;overflow:visible}
   #pembelian #purchaseFinanceAlignment .pfa-head-actions{justify-content:flex-start}
 }
+
+/* Owner Purchase unified card (PR #128): one header, one card and no Majoo button.
+   Actual #paPeriod / #purchaseExcelBtn nodes are mounted into .pfa-controls-slot. */
+#pembelian .pa-root.pa-owner-single-render.pa-unified-card>.pa-controls{
+  position:absolute!important;width:1px!important;height:1px!important;
+  overflow:hidden!important;opacity:0!important;pointer-events:none!important;
+  padding:0!important;border:0!important;box-shadow:none!important;
+}
+#pembelian #purchaseFinanceAlignment .pfa-controls-slot{
+  display:block;flex:0 0 auto;min-width:0;min-height:0;
+  margin:7px 0 10px;
+}
+#pembelian #purchaseFinanceAlignment .pfa-controls-slot>.pa-controls{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) auto!important;
+  gap:14px!important;
+  align-items:center!important;
+  background:transparent!important;
+  border:0!important;border-radius:0!important;
+  box-shadow:none!important;
+  padding:0!important;margin:0!important;
+  min-height:0!important;
+}
+#pembelian #purchaseFinanceAlignment .pfa-controls-slot .pa-controls label{
+  min-width:0!important;
+}
+#pembelian #purchaseFinanceAlignment .pfa-controls-slot .pa-controls label>span{
+  margin-bottom:3px!important;font-size:10px!important;
+}
+#pembelian #purchaseFinanceAlignment .pfa-controls-slot .pa-controls select{
+  height:36px!important;min-height:36px!important;
+  padding:6px 12px!important;
+  border-radius:9px!important;
+}
+#pembelian #purchaseFinanceAlignment .pfa-controls-slot .pa-upload-wrap{
+  grid-column:2!important;
+  width:auto!important;
+  border:0!important;
+  padding:0!important;
+  min-width:0!important;
+}
+#pembelian #purchaseFinanceAlignment .pfa-controls-slot .purchase-dual-buttons{
+  justify-content:flex-end!important;
+  display:flex!important;
+}
+#pembelian #purchaseFinanceAlignment .pfa-controls-slot #purchaseExcelBtn{
+  min-height:36px!important;
+  height:36px!important;
+  padding:6px 17px!important;
+}
+@media(min-width:901px){
+  html body.hasnaria-owner-erp #app>main.wrap #pembelian .pa-root.pa-owner-single-render.pa-unified-card:has(>#purchaseFinanceAlignment){
+    grid-template-rows:minmax(0,1fr)!important;
+    gap:0!important;
+  }
+  html body.hasnaria-owner-erp #app>main.wrap #pembelian .pa-root.pa-owner-single-render.pa-unified-card>#purchaseFinanceAlignment{
+    grid-row:1!important;
+    grid-column:1!important;
+    height:100%!important;
+    align-self:stretch!important;
+    min-height:0!important;
+    margin:0!important;
+  }
+  html body.hasnaria-owner-erp #app>main.wrap #pembelian #purchaseFinanceAlignment>.pfa-controls-slot{
+    margin:7px 0 9px!important;
+  }
+}
+@media(max-width:900px){
+  #pembelian #purchaseFinanceAlignment .pfa-controls-slot>.pa-controls{
+    grid-template-columns:minmax(0,1fr) auto!important;
+  }
+}
+@media(max-width:600px){
+  #pembelian #purchaseFinanceAlignment .pfa-controls-slot>.pa-controls{
+    grid-template-columns:1fr!important;
+    align-items:stretch!important;
+    gap:8px!important;
+  }
+  #pembelian #purchaseFinanceAlignment .pfa-controls-slot .pa-upload-wrap{
+    grid-column:1!important;
+  }
+  #pembelian #purchaseFinanceAlignment .pfa-controls-slot .purchase-dual-buttons{
+    justify-content:flex-start!important;
+  }
+}
