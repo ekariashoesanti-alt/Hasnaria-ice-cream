@@ -8,7 +8,7 @@ test('Owner conversion triage is read-only, role gated and not loaded until open
  const host={querySelector(){return dom.entry},appendChild(x){dom.entry=x},classList:{contains(){return false}}};
  function element(){return {innerHTML:'',setAttribute(){},className:'',remove(){dom.modal=null}}}
  const doc={readyState:'loading',addEventListener(k,fn){(listeners[k]||=[]).push(fn)},
-  getElementById(k){return ['pembelian','purchaseFinanceAlignment','app'].includes(k)?host:null},
+  getElementById(k){return ['pembelian','pfaReviewSlot','app'].includes(k)?host:null},
   createElement:element,body:{appendChild(x){dom.modal=x}}};
  const db={rpc(name){requests.push(name);return new Promise(resolve=>pending.push(resolve))}};
  const win={__HASNARIA_CONTEXT:context,__HASNARIA_DB:db};
@@ -36,5 +36,5 @@ test('No Stock, conversion approval, recipe or Finance write paths exist',()=>{
  for(const forbidden of ['sync_purchase_quantity_stock','resolve_inventory_conversion','apply_inventory_unit_conversion','inventory_purchase_log','inventory_recipe_components'])
    assert.equal(js.includes(forbidden),false,forbidden+' may not be used');
  assert.match(js,/owner_conversion_review_queue_v1/);
- assert.match(fs.readFileSync(path.join(root,'index.html'),'utf8'),/owner-conversion-triage-v1\.js\?v=1/);
+ assert.match(fs.readFileSync(path.join(root,'index.html'),'utf8'),/owner-conversion-triage-v1\.js\?v=2/);
 });

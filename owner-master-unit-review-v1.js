@@ -16,7 +16,7 @@ function invalidate(){preview=null;var b=dialog&&dialog.querySelector('[data-hsn
 function clearForm(){decision='';unit='';evidence='';reason='';preview=null;error='';notice=''}
 function close(){seq++;opened=false;selected='';preview=null;sessionContext=null;if(dialog){dialog.remove();dialog=null}}
 function entry(){
- var host=document.getElementById('purchaseFinanceAlignment');if(!host)return;
+ var host=document.getElementById('pfaReviewSlot');if(!host)return;
  var old=host.querySelector('[data-hsn-master-entry]');
  if(!owner()){if(old)old.remove();if(opened)close();return}
  if(old)return;
