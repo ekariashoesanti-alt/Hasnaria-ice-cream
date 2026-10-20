@@ -29,7 +29,7 @@
     if(document.getElementById('hasnaria-purchase-dual-source-v2-js'))return;
     var d=document.createElement('script');
     d.id='hasnaria-purchase-dual-source-v2-js';
-    d.src='/purchase-dual-source-v2.js?v=5';
+    d.src='/purchase-dual-source-v2.js?v=6';
     d.async=true;
     document.head.appendChild(d);
   }
@@ -57,7 +57,7 @@
   if(!document.getElementById('hasnaria-purchase-finance-alignment-js')){
     var af=document.createElement('script');
     af.id='hasnaria-purchase-finance-alignment-js';
-    af.src='/purchase-finance-alignment-v1.js?v=17';
+    af.src='/purchase-finance-alignment-v1.js?v=18';
     af.async=true;
     document.head.appendChild(af);
   }
