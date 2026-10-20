@@ -14,7 +14,7 @@ const head=vm.runInNewContext('('+source.slice(hStart,hEnd).trim()+')',{
   esc(v){return String(v)},n(v){return Number(v)},purchaseView:'summary'
 });
 const markup=head({purchase_rows:57},false);
-for(const token of ['PURCHASE INTELLIGENCE','Dashboard Pembelian','Upload Excel.','Lihat Detail Pembelian','2026-10-01 s/d 2026-10-31','57 transaksi','PERLU PERIKSA','Ringkasan','Kategori','pfa-upload-slot','pfa-controls-slot']){
+for(const token of ['PURCHASE INTELLIGENCE','Dashboard Pembelian','upload Excel.','Lihat Detail Pembelian','2026-10-01 s/d 2026-10-31','57 transaksi','PERLU PERIKSA','Ringkasan','Kategori','pfa-upload-slot','pfa-controls-slot']){
  assert.ok(markup.includes(token),'missing expected Sales-style layout: '+token);
 }
 assert.doesNotMatch(markup,/Format & Multi-Periode|Review Faktur Majoo/,'unrequested/legacy actions cannot be reintroduced');
