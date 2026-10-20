@@ -1,0 +1,148 @@
+name: Hasnaria Temporary PostgreSQL Recovery Rehearsal
+# This does not modify Tokyo, Singapore or any customer transaction.
+# No PII archive, credentials, or restore logs are uploaded as artifacts.
+on:
+  pull_request:
+    paths:
+      - 'scripts/hasnaria_ephemeral_postgres_recovery.sh'
+      - 'scripts/hasnaria_ephemeral_pg_bootstrap.sql'
+      - 'scripts/hasnaria_restore_error_classifier.js'
+      - 'tests/hasnaria-restore-error-classifier.test.js'
+      - 'scripts/hasnaria_backup_connection_guard.js'
+      - 'tests/hasnaria-backup-connection-guard.test.js'
+      - '.github/workflows/hasnaria-postgres-temp-recovery.yml'
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: 'Type TEMP_POSTGRES_RESTORE_READONLY to run a read-only Tokyo dump and isolated local restore'
+        type: string
+        required: true
+permissions:
+  contents: read
+concurrency:
+  group: hasnaria-temp-postgres-rehearsal
+  cancel-in-progress: false
+jobs:
+  script-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Syntax and safety self-check (no credentials)
+        shell: bash
+        run: |
+          bash -n scripts/hasnaria_ephemeral_postgres_recovery.sh
+          bash scripts/hasnaria_ephemeral_postgres_recovery.sh --self-test
+          node --test tests/hasnaria-backup-connection-guard.test.js
+          node --test tests/hasnaria-restore-error-classifier.test.js
+          test -s scripts/hasnaria_ephemeral_pg_bootstrap.sql
+          ! grep -Eq 'CREATE ROLE[[:space:]]+supabase_realtime_admin' scripts/hasnaria_ephemeral_pg_bootstrap.sql
+          node - <<'JS'
+          const fs = require('node:fs'),assert=require('node:assert/strict');
+          const s=fs.readFileSync('scripts/hasnaria_ephemeral_postgres_recovery.sh','utf8');
+          assert.match(s,/--network none/);
+          assert.match(s,/--single-transaction --exit-on-error/);
+          assert.match(s,/TEMPLATE template0/);
+          assert.match(s,/TARGET_DB='hasnaria_pristine_restore'/);
+          assert.match(s,/--no-owner --no-privileges/);
+          assert.match(s,/supabase\/postgres:17\.6\.1\.173/);
+          assert.match(s,/pg_dump/);
+          assert.match(s,/rolbypassrls/);
+          assert.match(s,/has_table_privilege\(current_user,c\.oid,'INSERT,UPDATE,DELETE,TRUNCATE'\)/);
+          assert.match(s,/bnnhmtkpdjlgehsvgoda/);
+          assert.match(s,/hasnaria_backup_connection_guard\.js/);
+          assert.doesNotMatch(s,/supabase\.co.{0,100}\/auth\/v1\/admin/);
+          console.log('PASS: network isolation, source read-only, recovery fail-closed static guard');
+          JS
+      - name: Smoke-test bootstrap on real disposable Supabase PostgreSQL image (no Tokyo data)
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          ci_db="hsn-pg-bootstrap-${GITHUB_RUN_ID}"
+          trap 'docker rm -f "$ci_db" >/dev/null 2>&1 || true' EXIT
+          docker pull supabase/postgres:17.6.1.173 >/dev/null
+          docker run -d --name "$ci_db" --network none \
+            -e POSTGRES_PASSWORD=ci_bootstrap_only \
+            -e POSTGRES_DB=ci_recovery_sandbox \
+            supabase/postgres:17.6.1.173 \
+            postgres -c config_file=/etc/postgresql/postgresql.conf >/dev/null
+          # Robust readiness: container must stay running and answer SELECT 1
+          # several times in a row. pg_isready alone races with Supabase image
+          # init/restart cycles that produce "database system is shutting down".
+          ready=0
+          consecutive=0
+          for i in $(seq 1 60); do
+            if ! docker inspect -f '{{.State.Running}}' "$ci_db" 2>/dev/null | grep -q true; then
+              echo "BLOCK: container exited during startup (attempt $i)"
+              break
+            fi
+            if docker exec "$ci_db" psql -X -qAt -v ON_ERROR_STOP=1 -U postgres -d ci_recovery_sandbox -c "SELECT 1" >/dev/null 2>&1; then
+              consecutive=$((consecutive+1))
+              if [[ $consecutive -ge 3 ]]; then ready=1; break; fi
+            else
+              consecutive=0
+            fi
+            sleep 2
+          done
+          if [[ "$ready" != 1 ]]; then
+            echo "BLOCK: PostgreSQL sandbox startup failed after robust readiness; local container diagnostic follows"
+            docker ps -a --filter "name=$ci_db" --format 'CONTAINER {{.Status}}' || true
+            docker logs --tail 60 "$ci_db" 2>&1 | sed -E 's/[^[:print:]\t]//g' | head -n 80 || true
+            exit 1
+          fi
+          docker exec "$ci_db" psql -X -qAt -v ON_ERROR_STOP=1 -U postgres -d ci_recovery_sandbox \
+            -c "SELECT 'LOCAL_DB_ACCESS: '||current_user||' owner='||pg_get_userbyid(datdba)||' create='||has_database_privilege(current_user,current_database(),'CREATE') FROM pg_database WHERE datname=current_database()"
+          docker exec "$ci_db" psql -X -qAt -v ON_ERROR_STOP=1 -U postgres -d postgres \
+            -c "SELECT 'DEFAULT_DB_ACCESS: '||current_user||' owner='||pg_get_userbyid(datdba)||' create='||has_database_privilege(current_user,current_database(),'CREATE') FROM pg_database WHERE datname=current_database()"
+          docker exec "$ci_db" psql -X -qAt -U supabase_admin -d ci_recovery_sandbox \
+            -c "SELECT 'LOCAL_ADMIN_ACCESS: '||current_user||' db_create='||has_database_privilege(current_user,current_database(),'CREATE')" || echo 'LOCAL_ADMIN_UNAVAILABLE'
+          docker exec -i "$ci_db" psql -X -q -v ON_ERROR_STOP=1 \
+            -U supabase_admin -d ci_recovery_sandbox \
+            < scripts/hasnaria_ephemeral_pg_bootstrap.sql
+          docker exec "$ci_db" psql -X -qAt -v ON_ERROR_STOP=1 \
+            -U supabase_admin -d ci_recovery_sandbox \
+            -c "SELECT CASE WHEN to_regrole('authenticated') IS NOT NULL AND to_regrole('anon') IS NOT NULL THEN 'PASS' ELSE 'BLOCK' END" \
+            | grep -Fxq PASS
+          # Isolated, synthetic dump/restore exercise: two new TEMPLATE template0
+          # databases, a public + auth fixture, no credentials or Tokyo data.
+          docker exec "$ci_db" psql -X -q -v ON_ERROR_STOP=1 -U supabase_admin -d postgres \
+            -c 'CREATE DATABASE ci_clean_source WITH TEMPLATE template0 OWNER supabase_admin'
+          docker exec "$ci_db" psql -X -q -v ON_ERROR_STOP=1 -U supabase_admin -d postgres \
+            -c 'CREATE DATABASE ci_clean_target WITH TEMPLATE template0 OWNER supabase_admin'
+          docker exec "$ci_db" psql -X -q -v ON_ERROR_STOP=1 -U supabase_admin -d ci_clean_source \
+            -c 'CREATE SCHEMA auth; CREATE TABLE auth.recovery_probe (id int PRIMARY KEY); INSERT INTO auth.recovery_probe VALUES (17); CREATE TABLE public.recovery_probe (id int PRIMARY KEY); INSERT INTO public.recovery_probe VALUES (25);'
+          docker exec "$ci_db" pg_dump -Fc --no-owner --no-privileges \
+            -n public -n auth -U supabase_admin -d ci_clean_source \
+            -f /tmp/ci_hasnaria_probe.dump
+          docker exec "$ci_db" pg_restore -l /tmp/ci_hasnaria_probe.dump > /tmp/hasnaria_restore_probe_toc.txt
+          docker exec "$ci_db" psql -X -qAt -v ON_ERROR_STOP=1 -U supabase_admin -d ci_clean_target \
+            -c "SELECT CASE WHEN to_regnamespace('auth') IS NULL THEN 'OK' ELSE 'BLOCK' END" | grep -Fxq OK
+          if grep -Eq '^[0-9]+;[[:space:]]+[0-9]+[[:space:]]+[0-9]+[[:space:]]+SCHEMA[[:space:]]+-[[:space:]]+public([[:space:]]|$)' /tmp/hasnaria_restore_probe_toc.txt; then
+            docker exec "$ci_db" psql -X -q -v ON_ERROR_STOP=1 -U supabase_admin -d ci_clean_target \
+              -c 'DROP SCHEMA IF EXISTS public CASCADE'
+          fi
+          docker exec "$ci_db" pg_restore --single-transaction --exit-on-error --no-owner --no-privileges \
+            -U supabase_admin -d ci_clean_target /tmp/ci_hasnaria_probe.dump
+          docker exec "$ci_db" psql -X -qAt -v ON_ERROR_STOP=1 -U supabase_admin -d ci_clean_target \
+            -c "SELECT (SELECT id FROM auth.recovery_probe) + (SELECT id FROM public.recovery_probe)" | grep -Fxq 42
+          echo 'PASS: pristine template0 auth/public synthetic restore'
+          echo 'PASS: real Supabase PG17 role/extension bootstrap completed'
+  restore-to-temporary-postgres:
+    if: ${{ github.event_name == 'workflow_dispatch' && github.repository == 'ekariashoesanti-alt/Hasnaria-ice-cream' && github.ref == 'refs/heads/main' && inputs.confirmation == 'TEMP_POSTGRES_RESTORE_READONLY' }}
+    needs: script-contract
+    environment: hasnaria-backup-private
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Read-only Tokyo snapshot, restore to isolated PG17, verify, destroy
+        shell: bash
+        env:
+          HSN_PROD_BACKUP_READONLY_DB_URL: ${{ secrets.HSN_PROD_BACKUP_READONLY_DB_URL }}
+          HSN_TEMP_PG_CONFIRM: ${{ inputs.confirmation }}
+        run: |
+          bash scripts/hasnaria_ephemeral_postgres_recovery.sh --run

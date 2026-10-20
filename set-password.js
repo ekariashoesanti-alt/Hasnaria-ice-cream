@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-var URL='https://bnnhmtkpdjlgehsvgoda.supabase.co';
+var SUPABASE_URL='https://bnnhmtkpdjlgehsvgoda.supabase.co';
 var KEY='sb_publishable_eXrgSxWTXoa9q-hVpLx-sQ_IaEiUbeO';
 var client=null,mode='recovery',session=null;
 function $(id){return document.getElementById(id)}
@@ -31,7 +31,7 @@ async function boot(){
   if(typeof supabase==='undefined'){show('setPasswordExpired');return}
   try{
     mode=(new URLSearchParams(location.search).get('mode')||'recovery').toLowerCase()==='activate'?'activate':'recovery';
-    client=supabase.createClient(URL,KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,flowType:'implicit',storageKey:'hasnaria-password-setup-v1'}});
+    client=supabase.createClient(SUPABASE_URL,KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,flowType:'implicit',storageKey:'hasnaria-password-setup-v1'}});
     session=await resolveSession();
     if(!session){show('setPasswordExpired');return}
     cleanSensitiveUrl();configureView();
