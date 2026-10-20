@@ -59,7 +59,6 @@ jobs:
           trap 'docker rm -f "$ci_db" >/dev/null 2>&1 || true' EXIT
           docker pull supabase/postgres:17.6.1.173 >/dev/null
           docker run -d --rm --name "$ci_db" --network none \
-            -e POSTGRES_USER=postgres \
             -e POSTGRES_PASSWORD=ci_bootstrap_only \
             -e POSTGRES_DB=ci_recovery_sandbox \
             supabase/postgres:17.6.1.173 \
@@ -72,6 +71,10 @@ jobs:
           [[ "$ready" == 1 ]] || { echo "BLOCK: PostgreSQL sandbox startup failed"; exit 1; }
           docker exec "$ci_db" psql -X -qAt -v ON_ERROR_STOP=1 -U postgres -d ci_recovery_sandbox \
             -c "SELECT 'LOCAL_DB_ACCESS: '||current_user||' owner='||pg_get_userbyid(datdba)||' create='||has_database_privilege(current_user,current_database(),'CREATE') FROM pg_database WHERE datname=current_database()"
+          docker exec "$ci_db" psql -X -qAt -v ON_ERROR_STOP=1 -U postgres -d postgres \
+            -c "SELECT 'DEFAULT_DB_ACCESS: '||current_user||' owner='||pg_get_userbyid(datdba)||' create='||has_database_privilege(current_user,current_database(),'CREATE') FROM pg_database WHERE datname=current_database()"
+          docker exec "$ci_db" psql -X -qAt -U supabase_admin -d ci_recovery_sandbox \
+            -c "SELECT 'LOCAL_ADMIN_ACCESS: '||current_user||' db_create='||has_database_privilege(current_user,current_database(),'CREATE')" || echo 'LOCAL_ADMIN_UNAVAILABLE'
           docker exec -i "$ci_db" psql -X -q -v ON_ERROR_STOP=1 \
             -U postgres -d ci_recovery_sandbox \
             < scripts/hasnaria_ephemeral_pg_bootstrap.sql
