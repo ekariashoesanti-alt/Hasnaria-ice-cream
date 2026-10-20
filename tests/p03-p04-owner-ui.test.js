@@ -7,7 +7,7 @@ test('P0.3 owner UI loads both documentary queues; Staff cannot see private resu
  const listeners={},calls=[],pending=[],view={dialog:null,entry:null},rootNode={querySelector(){return view.entry},appendChild(el){view.entry=el}};
  let context={role:'staff'};
  const doc={readyState:'loading',addEventListener(k,f){(listeners[k]||=[]).push(f)},getElementById(id){
-  if(id==='pembelian'||id==='purchaseFinanceAlignment')return rootNode;
+  if(id==='pembelian'||id==='pfaReviewSlot')return rootNode;
   if(id==='app')return{classList:{contains(){return false}}};return null;
  },createElement(){return{innerHTML:'',setAttribute(){},getAttribute(){return null},remove(){view.dialog=null}}},body:{appendChild(x){view.dialog=x}}};
  const db={rpc(name,args){calls.push({name,args});if(name==='owner_p03_work_queue_v1')
@@ -34,7 +34,7 @@ test('P0.3 owner UI loads both documentary queues; Staff cannot see private resu
 });
 test('P0.3 feature is linked, is documentary-only and does not use direct business writes',()=>{
  const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
- assert.match(html,/owner-p03-p04-reconciliation-v1\.js\?v=1/);
+ assert.match(html,/owner-p03-p04-reconciliation-v1\.js\?v=2/);
  for(const marker of ['owner_p03_work_queue_v1','owner_p04_import_readiness_v1','owner_purchase_unmapped_preview_v1','owner_purchase_unmapped_apply_v1'])
  assert.ok(js.includes(marker),'missing '+marker);
  assert.doesNotMatch(js,/\.from\(['"](?:inventory_purchase_log|inventory_movements|offline_purchase_history|sales|finance_journal_entries)['"]\)/);
