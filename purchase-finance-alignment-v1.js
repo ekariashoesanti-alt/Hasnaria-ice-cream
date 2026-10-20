@@ -41,7 +41,16 @@ function syncPeriodOptions(){
   var available=periods.some(function(x){return periodKey(x.period_start||x.period_key)===current});
   sel.value=available?current:periodKey(periods[0].period_start||periods[0].period_key);
 }
-function card(label,value,sub,cls){return'<article class="pfa-card '+(cls||'')+'"><span>'+esc(label)+'</span><strong>'+esc(value)+'</strong><small>'+esc(sub||'')+'</small></article>'}
+function card(label,value,sub,cls){
+ // Decorative card icon only; all values still come from the canonical report.
+ var svg={total:'<path d="M3 4h2l2 11h11l3-8H6"/><circle cx="9" cy="19" r="1.5"/><circle cx="18" cy="19" r="1.5"/>',
+ inventory:'<path d="M12 2 3 7v10l9 5 9-5V7z"/><path d="m3 7 9 5 9-5M12 12v10"/>',
+ expense:'<circle cx="12" cy="12" r="3"/><path d="m10 2-.5 2.2-2 1-2.2-.7-2 3.5 1.7 1.5v2.5L3.3 13.5l2 3.5 2.2-.7 2 1L10 20h4l.5-2.7 2-1 2.2.7 2-3.5-1.7-1.5V9.5L20.7 8l-2-3.5-2.2.7-2-1L14 2z"/>',
+ review:'<path d="M7 2h8l4 4v16H7z"/><path d="M15 2v5h4M10 11h6M10 15h6M10 19h4"/>'};
+ var icon=svg[cls]||'';
+ return'<article class="pfa-card '+(cls||'')+'"><div class="pfa-card-copy"><span>'+esc(label)+'</span><strong>'+esc(value)+'</strong><small>'+esc(sub||'')+'</small></div>'+
+ (icon?'<i class="pfa-card-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">'+icon+'</svg></i>':'')+'</article>';
+}
 function stockCell(r){
   if(r.stock_status==='posted_to_stock')return statusPill('+'+qty(r.posted_stock_qty||r.source_stock_qty)+' '+(r.posted_stock_unit||r.source_stock_unit||'unit'),'ok')+'<small class="pfa-action">'+esc(r.inventory_item_name||'Stok')+'</small>';
   if(r.stock_status==='ready_to_stock')return statusPill(!r.source_stock_unit?'Perlu verifikasi satuan':'Cek satuan & konversi','warn')+'<small class="pfa-action">'+esc(qty(r.source_stock_qty))+' '+esc(r.source_stock_unit||'satuan belum ada')+' · '+esc(r.inventory_item_name||'stok')+'</small>';
@@ -376,8 +385,9 @@ function render(){
       card('Inventory',money(v.inventory_amount),n(v.inventory_rows).toLocaleString('id-ID')+' transaksi','inventory')+
       card('Operasional',money(v.operating_amount),n(v.operating_rows).toLocaleString('id-ID')+' transaksi','expense')+
       card('Review',money(v.review_amount),n(v.review_rows).toLocaleString('id-ID')+' transaksi','review')+
-    '</div>'+
-    purchaseJournalReconciliation()+
+    '</div>'+ 
+    // The reconciliation warning has its permanent home in Notifications;
+    // the header status pill remains visible without consuming chart space.
     infographicMarkup()+
     modalMarkup();
   // Review controls mount asynchronously into #pfaReviewSlot. Avoid comparing live
