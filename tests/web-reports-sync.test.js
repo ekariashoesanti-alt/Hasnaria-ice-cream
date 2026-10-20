@@ -30,8 +30,23 @@ function harness(file, handlerName) {
   };
   function element(id) {
     let html = '';
-    const el = { id, writes: 0, value: '', className: '', classList: { contains: name => name === 'hidden' && control.hidden },
-      querySelector: () => null, setAttribute() {}, hasAttribute: () => false,
+    const attrs = {}, classes = new Set();
+    const el = { id, writes: 0, value: '', className: '',
+      classList: {
+        contains(name) { return (name === 'hidden' && control.hidden) || classes.has(name); },
+        add(name) { classes.add(name); },
+        remove(name) { classes.delete(name); },
+        toggle(name, force) {
+          const enabled = force === undefined ? !classes.has(name) : !!force;
+          if (enabled) classes.add(name); else classes.delete(name);
+          return enabled;
+        }
+      },
+      querySelector: () => null,
+      setAttribute(name, value) { attrs[name] = String(value); },
+      getAttribute(name) { return Object.hasOwn(attrs, name) ? attrs[name] : null; },
+      removeAttribute(name) { delete attrs[name]; },
+      hasAttribute(name) { return Object.hasOwn(attrs, name); },
       remove() { delete elements[this.id]; } };
     Object.defineProperty(el, 'innerHTML', {
       get() { return html; },

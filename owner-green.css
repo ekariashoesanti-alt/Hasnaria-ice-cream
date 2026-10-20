@@ -1,6 +1,11 @@
 @import url('/owner-green-base.css?v=2');
 @import url('/owner-ui-modern.css?v=2');
-@import url('/owner-one-view.css?v=1');
+/* Owner Purchase CSS is critical to first paint: preload once, reuse from cache for lazy modules. */
+@import url('/purchase-analytics.css?v=1');
+@import url('/purchase-finance-alignment-v1.css?v=5');
+@import url('/purchase-dual-source.css?v=1');
+@import url('/owner-insight-v1.css?v=1');
+@import url('/owner-one-view.css?v=2');
 
 /* Stable brand tokens retained here because the production gate verifies them. */
 :root{

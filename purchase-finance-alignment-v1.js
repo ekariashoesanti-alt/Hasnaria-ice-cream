@@ -8,6 +8,7 @@ var CATS=['Beban Administrasi','Beban Pemeliharaan','Beban Bahan Baku','Beban Ke
 var CAT_LABEL={'Beban Administrasi':'6100 · Administrasi','Beban Pemeliharaan':'6110 · Pemeliharaan','Beban Bahan Baku':'6120 · Bahan Baku','Beban Kepegawaian':'6200 · Kepegawaian'};
 var MONTHS=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
 var infographicMode='value';
+var purchaseView='summary'; // stable desktop one-view, user-selected secondary insight page
 var db=null,rows=[],control={},overview=null,chartRows=[],periods=[],loading=false,error='',observer=null,timer=0,loadedAt=0,loadedPeriod='',syncingStock=false,lastStockSync='',category='all',modalOpen=false,requestSeq=0,syncing=false,unitOpen=false,unitBusy=false,unitError='',unitNotice='',unitQueue=[],unitSelected='',unitPreview=null,unitPeriod='',unitDraft={sourceUnit:'',factor:'',evidence:'',reason:''},unitSession=null,unitSeq=0;
 
 function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
@@ -216,14 +217,22 @@ function purchaseJournalReconciliation(){
  '. B OPERASIONAL bukan Pembelian kedua.</div>';
 }
 function infographicMarkup(){
- return'<div class="pfa-insights-grid"><article class="pfa-insight-panel"><h3>Tren Pembelian Harian</h3><p>Nilai dan frekuensi transaksi periode terpilih</p>'+purchaseDailyMarkup()+'</article>'+
- '<article class="pfa-insight-panel"><h3>Status Sinkronisasi</h3><p>Perbandingan Pembelian → Keuangan dan Stok</p>'+syncMarkup()+'<div class="pfa-note-banner">Penerimaan Stok hanya dibukukan setelah satuan dan bukti diperiksa. Mapping cocok belum berarti quantity aman ditambahkan ke Stok; opname tetap harus diperiksa.</div></article></div>'+
+ var pages=[['summary','Tren & Sinkronisasi'],['items','Kategori & Item'],['payments','Pembayaran & Kontrol']];
+ var tabs='<nav class="pfa-view-tabs" role="tablist" aria-label="Kelompok infografis Pembelian">'+pages.map(function(p){
+  return'<button type="button" role="tab" id="pfaTab-'+p[0]+'" aria-controls="pfaPanel-'+p[0]+'" aria-selected="'+(purchaseView===p[0]?'true':'false')+'" class="'+(purchaseView===p[0]?'active':'')+'" data-pfa-view="'+p[0]+'">'+p[1]+'</button>';
+ }).join('')+'</nav>';
+ return tabs+'<div class="pfa-view-panels">'+
+ '<section class="pfa-view-panel" role="tabpanel" id="pfaPanel-summary" aria-labelledby="pfaTab-summary" data-pfa-view-panel="summary"'+(purchaseView==='summary'?'':' hidden')+'>'+
+ '<div class="pfa-insights-grid"><article class="pfa-insight-panel"><h3>Tren Pembelian Harian</h3><p>Nilai dan frekuensi transaksi periode terpilih</p>'+purchaseDailyMarkup()+'</article>'+
+ '<article class="pfa-insight-panel"><h3>Status Sinkronisasi</h3><p>Perbandingan Pembelian → Keuangan dan Stok</p>'+syncMarkup()+'<div class="pfa-note-banner">Penerimaan Stok hanya dibukukan setelah satuan dan bukti diperiksa. Mapping cocok belum berarti quantity aman ditambahkan ke Stok; opname tetap harus diperiksa.</div></article></div></section>'+
+ '<section class="pfa-view-panel" role="tabpanel" id="pfaPanel-items" aria-labelledby="pfaTab-items" data-pfa-view-panel="items"'+(purchaseView==='items'?'':' hidden')+'>'+
  '<div class="pfa-insight-two"><article class="pfa-insight-panel"><h3>Komposisi Pembelian</h3><p>Nilai per akun Beban untuk '+esc(cutLabel())+'</p>'+chartMarkup()+'</article>'+
- '<article class="pfa-insight-panel"><h3>Top 5 Item Pembelian</h3><p>Urutan berdasarkan total nilai sumber</p>'+purchaseTopMarkup()+'</article></div>'+
+ '<article class="pfa-insight-panel"><h3>Top 5 Item Pembelian</h3><p>Urutan berdasarkan total nilai sumber</p>'+purchaseTopMarkup()+'</article></div></section>'+
+ '<section class="pfa-view-panel" role="tabpanel" id="pfaPanel-payments" aria-labelledby="pfaTab-payments" data-pfa-view-panel="payments"'+(purchaseView==='payments'?'':' hidden')+'>'+
  '<div class="pfa-insight-two"><article class="pfa-insight-panel"><h3>Komposisi Pembayaran</h3><p>Sumber pembiayaan dari transaksi kanonis</p>'+purchasePaymentMarkup()+'</article>'+
  '<article class="pfa-insight-panel"><h3>Kontrol Data Berkualitas</h3><p>Review dan bukti Owner dipisah dari posting</p>'+
  '<div class="pfa-note-banner"><b>'+esc(String(n(control.stock_review_rows)+n(control.provisional_journal_rows)))+' kandidat perlu perhatian</b>. Pemeriksaan bukti Owner dilakukan melalui tombol review di bawah; mengunggah Excel tidak otomatis memposting Stok.</div>'+
- '<button type="button" class="primary" data-pfa-notifications>Periksa di Notifikasi →</button></article></div>';
+ '<button type="button" class="primary" data-pfa-notifications>Periksa di Notifikasi →</button></article></div></section></div>';
 }
 function render(){
   if(unitOpen&&!unitAllowed())closeUnitReview();
@@ -231,10 +240,20 @@ function render(){
   var target=root.querySelector('.pa-controls');if(!target)return;
   var wrap=document.getElementById('purchaseFinanceAlignment');
   if(!wrap){wrap=document.createElement('section');wrap.id='purchaseFinanceAlignment';wrap.className='pfa-wrap';target.insertAdjacentElement('afterend',wrap)}
-  if(loading){wrap.innerHTML='<div class="pfa-head"><div><div class="pfa-eyebrow">PEMBELIAN</div><h2>Ringkasan Pembelian</h2><p>Memuat periode terpilih…</p></div></div>';return}
-  if(error){wrap.innerHTML='<div class="pfa-head"><div><h2>Ringkasan Pembelian</h2><p class="pfa-error">'+esc(error)+'</p></div><button id="pfaRetry" type="button">Muat ulang</button></div>';var rb=document.getElementById('pfaRetry');if(rb)rb.onclick=function(){load(true)};return}
+  if(loading){
+    wrap.setAttribute('aria-busy','true');
+    if(wrap.getAttribute('data-pfa-ready')==='1'){
+      // Keep the current DOM and controls mounted; only mask the old period when it changes.
+      wrap.classList.toggle('pfa-period-loading',wrap.getAttribute('data-pfa-period')!==periodValue());
+      wrap.classList.toggle('pfa-updating',wrap.getAttribute('data-pfa-period')===periodValue());
+      return;
+    }
+    if(!wrap.querySelector('.pfa-firstload'))wrap.innerHTML='<div class="pfa-firstload" role="status"><div class="pfa-head"><div><div class="pfa-eyebrow">PEMBELIAN</div><h2>Ringkasan Pembelian</h2><p>Menyiapkan laporan periode terpilih…</p></div></div><div class="pfa-firstload-cards"></div><div class="pfa-firstload-panel">Memuat data pembelian…</div></div>';
+    return;
+  }
+  if(error){wrap.classList.remove('pfa-period-loading','pfa-updating');wrap.removeAttribute('data-pfa-ready');wrap.removeAttribute('aria-busy');wrap.innerHTML='<div class="pfa-head"><div><h2>Ringkasan Pembelian</h2><p class="pfa-error">'+esc(error)+'</p></div><button id="pfaRetry" type="button">Muat ulang</button></div>';var rb=document.getElementById('pfaRetry');if(rb)rb.onclick=function(){load(true)};return}
   var v=summaryValues(),finance=control.finance_link_status==='MATCH';
-  wrap.innerHTML='<div class="pfa-head"><div><div class="pfa-eyebrow">PEMBELIAN · '+esc(cutLabel())+'</div><h2>Ringkasan Pembelian</h2><p>Visual utama menampilkan nilai dan kategori. Rincian transaksi disimpan di popup agar halaman tetap ringkas.</p></div><span class="pfa-sync '+(finance?'ok':'warn')+'">'+(finance?'TERSINKRON':'PERLU PERIKSA')+'</span></div>'+
+  var nextMarkup='<div class="pfa-head"><div><div class="pfa-eyebrow">PEMBELIAN · '+esc(cutLabel())+'</div><h2>Ringkasan Pembelian</h2><p>Visual utama menampilkan nilai dan kategori. Rincian transaksi disimpan di popup agar halaman tetap ringkas.</p></div><span class="pfa-sync '+(finance?'ok':'warn')+'">'+(finance?'TERSINKRON':'PERLU PERIKSA')+'</span></div>'+
     '<div class="pfa-cards">'+
       card('Total Pembelian',money(v.total_purchase_amount),n(v.purchase_rows).toLocaleString('id-ID')+' transaksi','total')+
       card('Inventory',money(v.inventory_amount),n(v.inventory_rows).toLocaleString('id-ID')+' transaksi','inventory')+
@@ -243,9 +262,14 @@ function render(){
     '</div>'+
     purchaseJournalReconciliation()+
     infographicMarkup()+
-    '<div class="pfa-detail-cta"><div><b>'+n(v.purchase_rows).toLocaleString('id-ID')+' transaksi pada '+esc(monthLabel(periodValue()))+'</b><span>Tabel lengkap tidak ditampilkan di halaman utama.</span></div><button type="button" class="primary" data-pfa-detail-open="1">Lihat Detail Pembelian</button></div>'+
-    unitVerificationMarkup()+
+    '<div class="pfa-cta-row"><div class="pfa-detail-cta"><div><b>'+n(v.purchase_rows).toLocaleString('id-ID')+' transaksi pada '+esc(monthLabel(periodValue()))+'</b><span>Detail tersedia melalui popup.</span></div><button type="button" class="primary" data-pfa-detail-open="1">Lihat Detail Pembelian</button></div>'+
+    unitVerificationMarkup()+'</div>'+
     modalMarkup();
+  if(wrap.innerHTML!==nextMarkup)wrap.innerHTML=nextMarkup;
+  wrap.setAttribute('data-pfa-ready','1');
+  wrap.setAttribute('data-pfa-period',periodValue());
+  wrap.setAttribute('aria-busy','false');
+  wrap.classList.remove('pfa-period-loading','pfa-updating');
 }
 async function loadPeriods(){
   db=db||window.__HASNARIA_DB;if(!db)return;
@@ -297,7 +321,7 @@ async function syncReport(){
 function registerSync(){var s=window.__HASNARIA_DATA_SYNC;if(s)s.register('owner-purchase-report',syncReport)}
 registerSync();window.addEventListener('hasnaria:data-sync-ready',registerSync);
 function resetData(){rows=[];control={};overview=null;chartRows=[];loadedAt=0;loadedPeriod='';category='all';modalOpen=false;closeUnitReview()}
-function schedule(){clearTimeout(timer);timer=setTimeout(function(){if(!document.getElementById('paRoot'))return;render();if(!loading&&(!rows.length||loadedPeriod!==periodValue()))load(false)},80)}
+function schedule(){clearTimeout(timer);timer=setTimeout(function(){if(!document.getElementById('paRoot'))return;if(!document.getElementById('purchaseFinanceAlignment'))render();if(!loading&&(loadedPeriod!==periodValue()||(loadedAt&&Date.now()-loadedAt>60000)))load(false)},80)}
 window.__HASNARIA_PURCHASE_FINANCE_REFRESH=syncReport;
 function boot(){
   db=window.__HASNARIA_DB||null;var tries=0;
@@ -305,6 +329,16 @@ function boot(){
     observer=new MutationObserver(schedule);observer.observe(host,{childList:true,subtree:false});
     document.addEventListener('change',function(e){if(!e.target)return;if(e.target.id==='paPeriod'){resetData();lastStockSync='';load(true);return}if(e.target.id==='pfaCategory'){category=e.target.value;render()}},true);
     document.addEventListener('click',function(e){
+      var view=e.target&&e.target.closest?e.target.closest('[data-pfa-view]'):null;
+      if(view){
+        purchaseView=view.getAttribute('data-pfa-view')||'summary';
+        document.querySelectorAll('#purchaseFinanceAlignment [data-pfa-view]').forEach(function(b){
+          var on=b.getAttribute('data-pfa-view')===purchaseView;
+          b.classList.toggle('active',on);b.setAttribute('aria-selected',on?'true':'false');
+        });
+        document.querySelectorAll('#purchaseFinanceAlignment [data-pfa-view-panel]').forEach(function(p){p.hidden=p.getAttribute('data-pfa-view-panel')!==purchaseView});
+        return;
+      }
       var mode=e.target&&e.target.closest?e.target.closest('[data-pfa-mode]'):null;
       if(mode){infographicMode=mode.getAttribute('data-pfa-mode')==='count'?'count':'value';render();return}
       var notice=e.target&&e.target.closest?e.target.closest('[data-pfa-notifications]'):null;
@@ -321,7 +355,8 @@ function boot(){
       var open=e.target&&e.target.closest?e.target.closest('[data-pfa-detail-open]'):null;if(open){modalOpen=true;render();return}
       var close=e.target&&e.target.closest?e.target.closest('[data-pfa-detail-close]'):null;if(close&&e.target===close){modalOpen=false;render();return}
       var b=e.target&&e.target.closest?e.target.closest('#paUpload,#purchaseExcelBtn,#purchaseMajooBtn,[data-tab="pembelian"]'):null;if(!b)return;
-      if(b.matches('#paUpload,#purchaseExcelBtn,#purchaseMajooBtn'))setTimeout(function(){resetData();lastStockSync='';loadPeriods().then(function(){load(true)})},350);else setTimeout(schedule,120)
+      // Opening a file picker is not an import: only the confirmed purchase-imported event refreshes data.
+      if(!b.matches('#paUpload,#purchaseExcelBtn,#purchaseMajooBtn'))setTimeout(schedule,120)
     },true);
     document.addEventListener('input',function(e){var key=e.target&&e.target.getAttribute&&e.target.getAttribute('data-pfa-unit-field');if(key&&Object.prototype.hasOwnProperty.call(unitDraft,key)){unitDraft[key]=e.target.value;unitPreview=null;var save=document.querySelector('[data-pfa-unit-apply]');if(save)save.disabled=true;var p=document.querySelector('.pfa-unit-preview');if(p)p.textContent='Input berubah. Jalankan pratinjau ulang sebelum menyimpan.'}},true);
     document.addEventListener('keydown',function(e){if(e.key==='Escape'){if(unitOpen){closeUnitReview();render()}else if(modalOpen){modalOpen=false;render()}}},true);
