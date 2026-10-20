@@ -346,7 +346,9 @@
 
     if (window.HasnariaERP) window.HasnariaERP.mount();
 
-    $("sales").innerHTML = '<div class="card"><h2>Omzet + kas harian</h2>' +
+    // Owner Sales is exclusively rendered by the canonical Sales board.
+    // Never build the legacy daily-entry DOM even for one frame on login/tab load.
+    if (role !== "owner") $("sales").innerHTML = '<div class="card"><h2>Omzet + kas harian</h2>' +
       (canSales(role) ? "" : '<p class="small" style="color:var(--d)">Role Anda tidak menginput penjualan.</p>') +
       '<div class="form"><div><label>Tanggal</label><input id="sDate" type="date" value="' + today() + '"></div>' +
       '<div><label>Omzet total</label><input id="sRev" type="number"></div>' +
