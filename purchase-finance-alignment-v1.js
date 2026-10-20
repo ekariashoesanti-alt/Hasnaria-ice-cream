@@ -8,6 +8,7 @@ var CATS=['Beban Administrasi','Beban Pemeliharaan','Beban Bahan Baku','Beban Ke
 var CAT_LABEL={'Beban Administrasi':'6100 · Administrasi','Beban Pemeliharaan':'6110 · Pemeliharaan','Beban Bahan Baku':'6120 · Bahan Baku','Beban Kepegawaian':'6200 · Kepegawaian'};
 var MONTHS=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
 var infographicMode='value';
+var purchaseTrendCache={},trendLoadSequence=0,trendLoadingKey='';
 var purchaseView='summary'; // stable desktop one-view, user-selected secondary insight page
 var db=null,rows=[],control={},overview=null,chartRows=[],periods=[],loading=false,error='',observer=null,timer=0,loadedAt=0,loadedPeriod='',syncingStock=false,lastStockSync='',category='all',modalOpen=false,requestSeq=0,syncing=false,unitOpen=false,unitBusy=false,unitError='',unitNotice='',unitQueue=[],unitSelected='',unitPreview=null,unitPeriod='',unitDraft={sourceUnit:'',factor:'',evidence:'',reason:''},unitSession=null,unitSeq=0;
 
@@ -182,17 +183,104 @@ async function unitRevokeSelected(){
 }
 
 
-function purchaseDailyMarkup(){
- var daily={};rows.forEach(function(r){var d=String(r.effective_date||r.purchase_date||'').slice(0,10);if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(d))return;
-  if(!daily[d])daily[d]={date:d,count:0,amount:0};daily[d].count++;daily[d].amount+=n(r.total_amount)
+function trendMonths(selected){
+ var p=periodKey(selected),year=p.slice(0,4),end=Number(p.slice(5,7)),out=[];
+ if(!year||end<1||end>12)return out;
+ for(var m=1;m<=end;m++){var key=year+'-'+String(m).padStart(2,'0');out.push({key:key,label:MONTHS[m-1].slice(0,3)})}
+ return out;
+}
+function catalogHasPeriod(key){return periods.some(function(x){return periodKey(x.period_start||x.period_key)===key})}
+function rememberTrendMonth(key,values){
+ var p=periodKey(key);if(!p)return;
+ purchaseTrendCache[p]={value:total(Array.isArray(values)?values:[]),count:Array.isArray(values)?values.length:0,seen:Date.now()};
+}
+function trendCacheFresh(key){var x=purchaseTrendCache[key];return!!(x&&Date.now()-x.seen<300000)}
+function monthlyTrendMarkup(){
+ var p=periodValue(),slots=trendMonths(p);
+ if(!slots.length)return'<div class="pfa-empty">Pilih bulan untuk menampilkan tren tahun berjalan.</div>';
+ var data=slots.map(function(x){var val=purchaseTrendCache[x.key];return{key:x.key,label:x.label,amount:val?val.value:null,count:val?val.count:0,available:catalogHasPeriod(x.key)||!!val}});
+ var known=data.filter(function(x){return x.amount!==null});
+ var unresolved=data.filter(function(x){return x.available&&x.amount===null});
+ var skipped=data.filter(function(x){return !x.available&&x.amount===null});
+ if(!known.length)return'<div class="pfa-trend-state" role="status">'+(unresolved.length?'Memuat tren Pembelian Januari–'+esc(monthLabel(p))+'…':'Belum tersedia sumber Pembelian terverifikasi untuk tahun '+esc(p.slice(0,4))+'.')+'</div>';
+ var amounts=known.map(function(x){return x.amount}),hi=Math.max.apply(null,[0].concat(amounts)),lo=Math.min.apply(null,[0].concat(amounts));
+ if(hi===lo){hi+=1}
+ var x0=57,x1=668,y0=25,y1=175,scale=function(v){return y1-(v-lo)/(hi-lo)*(y1-y0)};
+ var xAt=function(i){return slots.length===1?(x0+x1)/2:x0+(x1-x0)*i/(slots.length-1)};
+ var grids=[0,1,2,3,4].map(function(i){var val=lo+(hi-lo)*i/4,y=scale(val);return'<line class="pfa-trend-grid" x1="'+x0+'" x2="'+x1+'" y1="'+y.toFixed(1)+'" y2="'+y.toFixed(1)+'"/><text class="pfa-trend-axis" x="'+(x0-7)+'" y="'+(y+3).toFixed(1)+'" text-anchor="end">'+esc(money(val))+'</text>'}).join('');
+ var path='',active=false;
+ var dots=data.map(function(d,i){
+  var x=xAt(i),axis='<text class="pfa-trend-month" x="'+x.toFixed(1)+'" y="199" text-anchor="middle">'+esc(d.label)+'</text>';
+  if(d.amount===null){active=false;return axis+'<circle class="pfa-trend-missing" cx="'+x.toFixed(1)+'" cy="183" r="2.5"><title>'+esc(monthLabel(d.key))+' · belum ada sumber terverifikasi</title></circle>'}
+  var y=scale(d.amount),point=x.toFixed(1)+' '+y.toFixed(1);
+  path+=(active?' L':' M')+point;active=true;
+  return axis+'<circle class="pfa-trend-point" cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="5"><title>'+esc(monthLabel(d.key)+' · '+money(d.amount)+' · '+d.count+' transaksi')+'</title></circle>';
+ }).join('');
+ var note=unresolved.length?'Memuat '+unresolved.length+' bulan lainnya…':skipped.length?skipped.length+' bulan tanpa sumber pembelian; bukan dianggap Rp 0.':'';
+ return'<div class="pfa-monthly-chart" role="img" aria-label="Tren pembelian bulanan Januari sampai '+esc(monthLabel(p))+' dari transaksi kanonis">'+
+ '<svg viewBox="0 0 700 212" preserveAspectRatio="xMidYMid meet" aria-hidden="true">'+grids+'<path class="pfa-trend-line" d="'+path+'"/>'+dots+'</svg></div>'+
+ '<div class="pfa-trend-foot"><span>Januari–'+esc(monthLabel(p))+'</span><strong>'+esc(known.length)+' dari '+esc(slots.length)+' bulan memiliki hasil pembacaan</strong></div>'+
+ (note?'<div class="pfa-trend-note" role="status">'+esc(note)+'</div>':'');
+}
+function goodsKind(r){
+ var c=String(r.analytics_category||'').trim().toUpperCase().replace(/\s+/g,' ');
+ if(c==='MAKANAN'||c==='FOOD'||c==='SNACK')return'Makanan';
+ if(c==='MINUMAN'||c==='DRINK'||c==='BEVERAGE')return'Minuman';
+ if(c==='ICE CREAM'||c==='ES KRIM'||c==='ES KRIM/ICE CREAM'||c==='ICECREAM')return'Es Krim';
+ if(c==='KEMASAN'||c==='KEMASAN & SUPPLIES'||c==='PACKAGING'||c==='SUPPLIES')return'Kemasan';
+ if(c&&r.expense_account_code==='6120')return'Jenis lainnya';
+ if(!c&&r.expense_account_code==='6120')return'Belum diklasifikasikan';
+ return'';
+}
+function purchasePieMarkup(){
+ var labels=['Makanan','Minuman','Es Krim','Kemasan','Jenis lainnya','Belum diklasifikasikan'],totals={},excluded=0,corrections=0;
+ rows.forEach(function(r){
+  var amt=n(r.total_amount),cat=goodsKind(r);
+  if(amt<=0){if(amt<0)corrections++;return}
+  if(!cat){excluded+=amt;return}
+  totals[cat]=(totals[cat]||0)+amt;
  });
- var series=Object.keys(daily).sort().map(function(k){return daily[k]});
- if(!series.length)return'<div class="pfa-empty">Tidak ada tanggal transaksi terverifikasi untuk grafik harian.</div>';
- var highest=Math.max.apply(null,series.map(function(r){return infographicMode==='value'?r.amount:r.count}).concat([1]));
- return'<div class="pfa-mode"><button type="button" data-pfa-mode="value" class="'+(infographicMode==='value'?'on':'')+'">Nilai</button><button type="button" data-pfa-mode="count" class="'+(infographicMode==='count'?'on':'')+'">Transaksi</button></div>'+
- '<div class="pfa-day-chart" role="img" aria-label="Grafik Pembelian per hari dari transaksi kanonis">'+series.map(function(r){var v=infographicMode==='value'?r.amount:r.count;var h=Math.max(2,Math.round(v/highest*112));
- return'<div class="pfa-day" title="'+esc(dateLabel(r.date)+' · '+r.count+' transaksi · '+money(r.amount))+'"><b>'+esc(infographicMode==='value'?money(r.amount):String(r.count))+'</b><i style="height:'+h+'px"></i><small>'+esc(r.date.slice(8,10)+'/'+r.date.slice(5,7))+'</small></div>'
- }).join('')+'</div><div class="pfa-note-banner">Distribusi harian dihitung dari transaksi Pembelian kanonis. Angka nol tidak dibuat untuk hari tanpa sumber.</div>'
+ var sum=labels.reduce(function(a,k){return a+(totals[k]||0)},0);
+ if(sum<=0)return'<div class="pfa-trend-state">Belum ada nilai pembelian barang berkategori pada '+esc(monthLabel(periodValue()))+'.</div>';
+ var slices=[],legend=[],acc=0,colors=labels.map(function(_,i){return'pfa-pie-color-'+i});
+ labels.forEach(function(label,i){
+  var val=totals[label]||0;if(val<=0)return;
+  var share=val/sum,from=acc,to=acc+share;acc=to;
+  function point(f){var a=f*Math.PI*2-Math.PI/2;return{x:100+76*Math.cos(a),y:100+76*Math.sin(a)}}
+  var start=point(from),end=point(to);
+  var shape=share>=.999999?'<circle cx="100" cy="100" r="76" class="'+colors[i]+'"/>':
+   '<path d="M100 100 L'+start.x.toFixed(2)+' '+start.y.toFixed(2)+' A76 76 0 '+(share>.5?'1':'0')+' 1 '+end.x.toFixed(2)+' '+end.y.toFixed(2)+' Z" class="'+colors[i]+'"/>';
+  slices.push('<g>'+shape+'<title>'+esc(label+' · '+(share*100).toLocaleString('id-ID',{maximumFractionDigits:1})+'% · '+money(val))+'</title></g>');
+  legend.push('<div class="pfa-pie-legend-row"><span><i class="'+colors[i]+'"></i>'+esc(label)+'</span><b>'+esc((share*100).toLocaleString('id-ID',{maximumFractionDigits:1}))+'%</b></div>');
+ });
+ return'<div class="pfa-pie-wrap"><svg class="pfa-pie" viewBox="0 0 200 200" role="img" aria-label="Persentase nilai pembelian barang menurut kategori pada '+esc(monthLabel(periodValue()))+'">'+slices.join('')+'</svg>'+
+ '<div class="pfa-pie-legend">'+legend.join('')+'</div></div>'+
+ '<div class="pfa-pie-total">Total barang berkategori <strong>'+esc(money(sum))+'</strong></div>'+
+ ((excluded>0||corrections>0)?'<p class="pfa-pie-note">'+(excluded>0?'Biaya nonbarang '+esc(money(excluded))+' tidak masuk porsi. ':'')+(corrections>0?corrections+' transaksi koreksi negatif tidak dihitung.':'')+'</p>':'');
+}
+function ensureMonthlyTrend(){
+ var p=periodValue(),months=trendMonths(p);if(!months.length||!db)return;
+ var key=p;
+ var pending=months.filter(function(m){return catalogHasPeriod(m.key)&&!trendCacheFresh(m.key)});
+ if(!pending.length){paintMonthlyTrend();return}
+ if(trendLoadingKey===key)return;
+ var token=++trendLoadSequence;trendLoadingKey=key;
+ paintMonthlyTrend();
+ var index=0,failed=0;
+ async function worker(){
+  while(index<pending.length){
+   var item=pending[index++],cached=purchaseTrendCache[item.key];
+   try{var q=await purchasePack(item.key);if(q.error)throw q.error;rememberTrendMonth(item.key,(q.data||{}).rows)}
+   catch(e){failed++;if(!cached)purchaseTrendCache[item.key]={value:null,count:0,seen:Date.now()};if(console&&console.warn)console.warn('Monthly Purchase trend read '+item.key+':',e)}
+   if(token!==trendLoadSequence)return;
+   paintMonthlyTrend();
+  }
+ }
+ Promise.all([worker(),worker(),worker()]).then(function(){if(token===trendLoadSequence){trendLoadingKey='';paintMonthlyTrend();if(failed&&console&&console.warn)console.warn('Purchase trend: '+failed+' months unavailable')}})
+}
+function paintMonthlyTrend(){
+ var slot=document.getElementById('pfaMonthlyTrend');if(!slot||purchaseView!=='summary')return;
+ var markup=monthlyTrendMarkup();if(slot.innerHTML!==markup)slot.innerHTML=markup;
 }
 function purchaseTopMarkup(){
  var g={};rows.forEach(function(r){var label=String(r.item_name||r.source_name||r.purchase_item_name||'').trim();if(!label)return;var k=label.toUpperCase();if(!g[k])g[k]={label:label,amount:0,count:0};g[k].amount+=n(r.total_amount);g[k].count++});
@@ -217,14 +305,14 @@ function purchaseJournalReconciliation(){
  '. B OPERASIONAL bukan Pembelian kedua.</div>';
 }
 function infographicMarkup(){
- var pages=[['summary','Tren & Sinkronisasi'],['items','Kategori & Item'],['payments','Pembayaran & Kontrol'],['reviews','Pemeriksaan']];
+ var pages=[['summary','Tren & Porsi'],['items','Kategori & Item'],['payments','Pembayaran & Kontrol'],['reviews','Pemeriksaan']];
  var tabs='<nav class="pfa-view-tabs" role="tablist" aria-label="Kelompok infografis Pembelian">'+pages.map(function(p){
   return'<button type="button" role="tab" id="pfaTab-'+p[0]+'" aria-controls="pfaPanel-'+p[0]+'" aria-selected="'+(purchaseView===p[0]?'true':'false')+'" class="'+(purchaseView===p[0]?'active':'')+'" data-pfa-view="'+p[0]+'">'+p[1]+'</button>';
  }).join('')+'</nav>';
  return tabs+'<div class="pfa-view-panels">'+
  '<section class="pfa-view-panel" role="tabpanel" id="pfaPanel-summary" aria-labelledby="pfaTab-summary" data-pfa-view-panel="summary"'+(purchaseView==='summary'?'':' hidden')+'>'+
- '<div class="pfa-insights-grid"><article class="pfa-insight-panel"><h3>Tren Pembelian Harian</h3><p>Nilai dan frekuensi transaksi periode terpilih</p>'+purchaseDailyMarkup()+'</article>'+
- '<article class="pfa-insight-panel"><h3>Status Sinkronisasi</h3><p>Perbandingan Pembelian → Keuangan dan Stok</p>'+syncMarkup()+'<div class="pfa-note-banner">Penerimaan Stok hanya dibukukan setelah satuan dan bukti diperiksa. Mapping cocok belum berarti quantity aman ditambahkan ke Stok; opname tetap harus diperiksa.</div></article></div></section>'+
+ '<div class="pfa-insights-grid"><article class="pfa-insight-panel"><h3>Tren Pembelian Bulanan</h3><p>Nilai Pembelian Januari–'+esc(monthLabel(periodValue()))+'</p><div id="pfaMonthlyTrend">'+monthlyTrendMarkup()+'</div></article>'+
+ '<article class="pfa-insight-panel"><h3>Porsi Pembelian</h3><p>Persentase nilai per jenis barang · '+esc(monthLabel(periodValue()))+'</p>'+purchasePieMarkup()+'</article></div></section>'+
  '<section class="pfa-view-panel" role="tabpanel" id="pfaPanel-items" aria-labelledby="pfaTab-items" data-pfa-view-panel="items"'+(purchaseView==='items'?'':' hidden')+'>'+
  '<div class="pfa-insight-two"><article class="pfa-insight-panel"><h3>Komposisi Pembelian</h3><p>Nilai per akun Beban untuk '+esc(cutLabel())+'</p>'+chartMarkup()+'</article>'+
  '<article class="pfa-insight-panel"><h3>Top 5 Item Pembelian</h3><p>Urutan berdasarkan total nilai sumber</p>'+purchaseTopMarkup()+'</article></div></section>'+
@@ -303,9 +391,9 @@ async function load(force){
     // Overview and category chart are derived locally from the same selected-month
     // pack. This avoids two expensive aggregate views and keeps one canonical read.
     overview=null;chartRows=[];
-    loadedAt=Date.now();loadedPeriod=p;
+    loadedAt=Date.now();loadedPeriod=p;rememberTrendMonth(p,rows);
   }catch(e){if(seq!==requestSeq)return;rows=[];control={};overview=null;chartRows=[];loadedPeriod='';loadedAt=0;error='Gagal memuat ringkasan Pembelian: '+(e&&e.message?e.message:String(e))}
-  finally{if(seq===requestSeq){loading=false;render()}else{loading=false;setTimeout(function(){if(periodValue())load(true)},0)}}
+  finally{if(seq===requestSeq){loading=false;render();if(!error)ensureMonthlyTrend()}else{loading=false;setTimeout(function(){if(periodValue())load(true)},0)}}
 }
 function canSyncReport(){var h=document.getElementById('pembelian'),c=window.__HASNARIA_CONTEXT,s=window.__HASNARIA_DATA_SYNC;return!!(h&&!h.classList.contains('hidden')&&c&&c.role==='owner'&&document.getElementById('paRoot')&&!modalOpen&&!unitOpen&&s&&s.canRefresh(h,'#paPeriod,#pfaCategory'))}
 async function syncReport(){
@@ -328,13 +416,13 @@ async function syncReport(){
       ps=ps.concat([selected||{period_start:p+'-01'}]);
     }
     var changed=!!error||JSON.stringify([rows,control,overview,chartRows,periods])!==JSON.stringify([nr,nc,no,chart,ps]);
-    rows=nr;control=nc;overview=no;chartRows=chart;periods=ps;loadedAt=Date.now();loadedPeriod=p;error='';
-    if(changed)render();
+    rows=nr;control=nc;overview=no;chartRows=chart;periods=ps;loadedAt=Date.now();loadedPeriod=p;error='';rememberTrendMonth(p,rows);
+    if(changed){render();ensureMonthlyTrend()}
   }finally{syncing=false}
 }
 function registerSync(){var s=window.__HASNARIA_DATA_SYNC;if(s)s.register('owner-purchase-report',syncReport)}
 registerSync();window.addEventListener('hasnaria:data-sync-ready',registerSync);
-function resetData(){rows=[];control={};overview=null;chartRows=[];loadedAt=0;loadedPeriod='';category='all';modalOpen=false;closeUnitReview()}
+function resetData(){trendLoadSequence++;trendLoadingKey='';rows=[];control={};overview=null;chartRows=[];loadedAt=0;loadedPeriod='';category='all';modalOpen=false;closeUnitReview()}
 function schedule(){clearTimeout(timer);timer=setTimeout(function(){if(!document.getElementById('paRoot'))return;if(!document.getElementById('purchaseFinanceAlignment'))render();if(!loading&&(loadedPeriod!==periodValue()||(loadedAt&&Date.now()-loadedAt>60000)))load(false)},80)}
 window.__HASNARIA_PURCHASE_FINANCE_REFRESH=syncReport;
 function boot(){
@@ -351,6 +439,7 @@ function boot(){
           b.classList.toggle('active',on);b.setAttribute('aria-selected',on?'true':'false');
         });
         document.querySelectorAll('#purchaseFinanceAlignment [data-pfa-view-panel]').forEach(function(p){p.hidden=p.getAttribute('data-pfa-view-panel')!==purchaseView});
+        if(purchaseView==='summary')ensureMonthlyTrend();
         return;
       }
       var mode=e.target&&e.target.closest?e.target.closest('[data-pfa-mode]'):null;
@@ -374,7 +463,7 @@ function boot(){
     },true);
     document.addEventListener('input',function(e){var key=e.target&&e.target.getAttribute&&e.target.getAttribute('data-pfa-unit-field');if(key&&Object.prototype.hasOwnProperty.call(unitDraft,key)){unitDraft[key]=e.target.value;unitPreview=null;var save=document.querySelector('[data-pfa-unit-apply]');if(save)save.disabled=true;var p=document.querySelector('.pfa-unit-preview');if(p)p.textContent='Input berubah. Jalankan pratinjau ulang sebelum menyimpan.'}},true);
     document.addEventListener('keydown',function(e){if(e.key==='Escape'){if(unitOpen){closeUnitReview();render()}else if(modalOpen){modalOpen=false;render()}}},true);
-    document.addEventListener('hasnaria:purchase-imported',function(e){resetData();loadPeriods().then(function(){var p=e&&e.detail&&String(e.detail.period||'').slice(0,7),sel=document.getElementById('paPeriod');if(sel&&p&&Array.from(sel.options).some(function(o){return o.value===p}))sel.value=p;load(true)})},true);
+    document.addEventListener('hasnaria:purchase-imported',function(e){purchaseTrendCache={};resetData();loadPeriods().then(function(){var p=e&&e.detail&&String(e.detail.period||'').slice(0,7),sel=document.getElementById('paPeriod');if(sel&&p&&Array.from(sel.options).some(function(o){return o.value===p}))sel.value=p;load(true)})},true);
     loadPeriods().then(function(){load(true)});return
   }if(tries++<150)setTimeout(wait,100)})()
 }
