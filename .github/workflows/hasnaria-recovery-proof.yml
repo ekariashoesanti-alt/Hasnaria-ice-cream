@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
     inputs:
       action:
-        description: "Choose encrypted S3 export or isolated local PostgreSQL restore"
+        description: "OCI encrypted backup or disposable PostgreSQL restore"
         type: choice
         required: true
         options: [encrypted-backup, restore-proof]
@@ -37,7 +37,8 @@ jobs:
           HSN_PROD_BACKUP_READONLY_DB_URL: ${{ secrets.HSN_PROD_BACKUP_READONLY_DB_URL }}
           HSN_BACKUP_AGE_RECIPIENT: ${{ vars.HSN_BACKUP_AGE_RECIPIENT }}
           HSN_BACKUP_S3_BUCKET: ${{ vars.HSN_BACKUP_S3_BUCKET }}
-          AWS_DEFAULT_REGION: ${{ vars.AWS_DEFAULT_REGION }}
+          HSN_OCI_NAMESPACE: ${{ vars.HSN_OCI_NAMESPACE }}
+          AWS_DEFAULT_REGION: ap-batam-1
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         run: |
@@ -45,7 +46,7 @@ jobs:
           umask 077
           tmp="$(mktemp -d)"
           trap 'rm -rf "$tmp"' EXIT
-          for required in HSN_PROD_BACKUP_READONLY_DB_URL HSN_BACKUP_AGE_RECIPIENT HSN_BACKUP_S3_BUCKET AWS_DEFAULT_REGION AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY; do
+          for required in HSN_PROD_BACKUP_READONLY_DB_URL HSN_BACKUP_AGE_RECIPIENT HSN_BACKUP_S3_BUCKET HSN_OCI_NAMESPACE AWS_DEFAULT_REGION AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY; do
             [[ -n "${!required:-}" ]] || { echo "BLOCK: missing required backup secret/variable"; exit 1; }
           done
           # Read-only source role cannot change production even if a dump command is compromised.
@@ -77,10 +78,18 @@ jobs:
           age -r "$HSN_BACKUP_AGE_RECIPIENT" -o "$tmp/backup.age" "$tmp/packed.tar"
           stamp="$(date -u +%Y%m%dT%H%M%SZ)"
           key="hasnaria/$stamp.age"
-          aws s3api get-public-access-block --bucket "$HSN_BACKUP_S3_BUCKET" --query 'PublicAccessBlockConfiguration.[BlockPublicAcls,IgnorePublicAcls,BlockPublicPolicy,RestrictPublicBuckets]' --output text | grep -Fxq $'True\tTrue\tTrue\tTrue' || { echo "BLOCK: S3 bucket public-access-block must be fully enabled"; exit 1; }
-          aws s3api get-bucket-versioning --bucket "$HSN_BACKUP_S3_BUCKET" --query Status --output text | grep -Fxq Enabled || { echo 'BLOCK: bucket versioning must be enabled'; exit 1; }
-          aws s3api put-object --bucket "$HSN_BACKUP_S3_BUCKET" --key "$key" --body "$tmp/backup.age" --server-side-encryption AES256 >/dev/null
-          aws s3api get-object --bucket "$HSN_BACKUP_S3_BUCKET" --key "$key" "$tmp/downloaded.age" >/dev/null
+          # OCI S3 compatibility does not expose AWS bucket access-block/versioning APIs.
+          # Configure a private, versioned Hasnaria-only bucket in OCI Console.
+          [[ "$HSN_OCI_NAMESPACE" =~ ^[a-z0-9]{5,64}$ ]] || { echo 'BLOCK: bad OCI namespace'; exit 1; }
+          [[ "$HSN_BACKUP_S3_BUCKET" =~ ^[A-Za-z0-9][A-Za-z0-9._-]{2,62}$ ]] || { echo 'BLOCK: bad OCI bucket'; exit 1; }
+          [[ "${HSN_BACKUP_S3_BUCKET,,}" != ai-room* ]] || { echo 'BLOCK: AI ROOM bucket forbidden'; exit 1; }
+          [[ "$AWS_DEFAULT_REGION" == ap-batam-1 ]] || { echo 'BLOCK: expected OCI Batam'; exit 1; }
+          oci_s3_endpoint="https://${HSN_OCI_NAMESPACE}.compat.objectstorage.ap-batam-1.oraclecloud.com"
+          aws configure set default.s3.addressing_style path
+          aws --endpoint-url "$oci_s3_endpoint" s3api head-bucket --bucket "$HSN_BACKUP_S3_BUCKET" >/dev/null ||
+            { echo 'BLOCK: dedicated OCI bucket absent or inaccessible'; exit 1; }
+          aws --endpoint-url "$oci_s3_endpoint" s3api put-object --bucket "$HSN_BACKUP_S3_BUCKET" --key "$key" --body "$tmp/backup.age" >/dev/null
+          aws --endpoint-url "$oci_s3_endpoint" s3api get-object --bucket "$HSN_BACKUP_S3_BUCKET" --key "$key" "$tmp/downloaded.age" >/dev/null
           cmp -s "$tmp/backup.age" "$tmp/downloaded.age" || { echo "BLOCK: remote ciphertext differs from local encrypted backup"; exit 1; }
           echo "Encrypted offsite archive verified; object key: $key"
           echo "STATUS: BACKUP ARCHIVED, NOT YET RESTORE-PROVEN (run restore-proof against disposable DB)"
@@ -98,7 +107,8 @@ jobs:
         env:
           HSN_BACKUP_AGE_IDENTITY: ${{ secrets.HSN_BACKUP_AGE_IDENTITY }}
           HSN_BACKUP_S3_BUCKET: ${{ vars.HSN_BACKUP_S3_BUCKET }}
-          AWS_DEFAULT_REGION: ${{ vars.AWS_DEFAULT_REGION }}
+          HSN_OCI_NAMESPACE: ${{ vars.HSN_OCI_NAMESPACE }}
+          AWS_DEFAULT_REGION: ap-batam-1
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           RESTORE_KEY: ${{ inputs.backup_key }}
@@ -108,14 +118,23 @@ jobs:
           umask 077
           tmp="$(mktemp -d)"
           trap 'rm -rf "$tmp"' EXIT
-          for required in HSN_BACKUP_AGE_IDENTITY HSN_BACKUP_S3_BUCKET AWS_DEFAULT_REGION AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY RESTORE_KEY; do
+          for required in HSN_BACKUP_AGE_IDENTITY HSN_BACKUP_S3_BUCKET HSN_OCI_NAMESPACE AWS_DEFAULT_REGION AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY RESTORE_KEY; do
             [[ -n "${!required:-}" ]] || { echo 'BLOCK: encrypted key or protected credentials missing'; exit 1; }
           done
           [[ "$RESTORE_KEY" =~ ^hasnaria/[0-9]{8}T[0-9]{6}Z\.age$ ]] || { echo 'BLOCK: invalid archive key'; exit 1; }
           sudo apt-get update -qq
           sudo apt-get install -y -qq age awscli
-          aws s3api get-public-access-block --bucket "$HSN_BACKUP_S3_BUCKET" --query 'PublicAccessBlockConfiguration.[BlockPublicAcls,IgnorePublicAcls,BlockPublicPolicy,RestrictPublicBuckets]' --output text | grep -Fxq $'True\tTrue\tTrue\tTrue' || { echo 'BLOCK: private backup bucket verification failed'; exit 1; }
-          aws s3api get-object --bucket "$HSN_BACKUP_S3_BUCKET" --key "$RESTORE_KEY" "$tmp/backup.age" >/dev/null
+          # OCI S3 compatibility does not expose AWS bucket access-block/versioning APIs.
+          # Configure a private, versioned Hasnaria-only bucket in OCI Console.
+          [[ "$HSN_OCI_NAMESPACE" =~ ^[a-z0-9]{5,64}$ ]] || { echo 'BLOCK: bad OCI namespace'; exit 1; }
+          [[ "$HSN_BACKUP_S3_BUCKET" =~ ^[A-Za-z0-9][A-Za-z0-9._-]{2,62}$ ]] || { echo 'BLOCK: bad OCI bucket'; exit 1; }
+          [[ "${HSN_BACKUP_S3_BUCKET,,}" != ai-room* ]] || { echo 'BLOCK: AI ROOM bucket forbidden'; exit 1; }
+          [[ "$AWS_DEFAULT_REGION" == ap-batam-1 ]] || { echo 'BLOCK: expected OCI Batam'; exit 1; }
+          oci_s3_endpoint="https://${HSN_OCI_NAMESPACE}.compat.objectstorage.ap-batam-1.oraclecloud.com"
+          aws configure set default.s3.addressing_style path
+          aws --endpoint-url "$oci_s3_endpoint" s3api head-bucket --bucket "$HSN_BACKUP_S3_BUCKET" >/dev/null ||
+            { echo 'BLOCK: dedicated OCI bucket absent or inaccessible'; exit 1; }
+          aws --endpoint-url "$oci_s3_endpoint" s3api get-object --bucket "$HSN_BACKUP_S3_BUCKET" --key "$RESTORE_KEY" "$tmp/backup.age" >/dev/null
           test -s "$tmp/backup.age"
           printf '%s\n' "$HSN_BACKUP_AGE_IDENTITY" > "$tmp/identity.txt"
           age -d -i "$tmp/identity.txt" -o "$tmp/packed.tar" "$tmp/backup.age"
