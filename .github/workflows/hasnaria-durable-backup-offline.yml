@@ -1,0 +1,90 @@
+name: Hasnaria Durable Backup Offline Fixture
+# No production or staging credentials are available to this job.
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/hasnaria-recovery-proof.yml'
+      - '.github/workflows/hasnaria-durable-backup-offline.yml'
+      - 'scripts/hasnaria_verify_durable_backup_local.sh'
+      - 'scripts/hasnaria_ephemeral_pg_bootstrap.sql'
+      - 'scripts/hasnaria_restore_error_classifier.js'
+permissions:
+  contents: read
+jobs:
+  encrypted-restore-fixture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Syntax and static security contract
+        run: |
+          set -Eeuo pipefail
+          bash -n scripts/hasnaria_verify_durable_backup_local.sh
+          node --test tests/hasnaria-restore-error-classifier.test.js
+          node --test tests/hasnaria-backup-connection-guard.test.js
+          node - <<'JS'
+          const fs=require('node:fs'),assert=require('node:assert/strict');
+          const w=fs.readFileSync('.github/workflows/hasnaria-recovery-proof.yml','utf8');
+          const s=fs.readFileSync('scripts/hasnaria_verify_durable_backup_local.sh','utf8');
+          assert.doesNotMatch(w,/HSN_RESTORE_DB_URL|HSN_RESTORE_PROJECT_REF|hasnaria-restore-disposable/);
+          assert.match(w,/environment: hasnaria-backup-private/);
+          assert.match(w,/HSN_BACKUP_AGE_IDENTITY/);
+          assert.match(w,/get-bucket-versioning/);
+          assert.match(s,/--network none/);
+          assert.match(s,/TEMPLATE template0/);
+          assert.match(s,/--single-transaction --exit-on-error/);
+          assert.match(s,/--no-owner --no-privileges/);
+          assert.match(s,/--test-fixture/);
+          console.log('PASS: no third DB, no public artifact, isolated schema bootstrap contract');
+          JS
+      - name: Full synthetic age ciphertext round trip and offline PostgreSQL restore
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          set +x
+          umask 077
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq age
+          tmp="$(mktemp -d)"
+          ci_db="hsn-durable-fixture-${GITHUB_RUN_ID}"
+          trap 'docker rm -f "$ci_db" >/dev/null 2>&1 || true; rm -rf "$tmp"' EXIT
+          docker pull supabase/postgres:17.6.1.173 >/dev/null
+          docker run -d --name "$ci_db" --network none \
+            -e POSTGRES_DB=ci_fixture_init \
+            supabase/postgres:17.6.1.173 \
+            postgres -c config_file=/etc/postgresql/postgresql.conf >/dev/null
+          ready=0
+          consecutive=0
+          for i in $(seq 1 60); do
+            docker inspect -f '{{.State.Running}}' "$ci_db" 2>/dev/null | grep -q true || { echo 'BLOCK: source fixture exited'; exit 1; }
+            if docker exec "$ci_db" psql -X -qAt -v ON_ERROR_STOP=1 -U postgres -d ci_fixture_init -c 'SELECT 1' >/dev/null 2>&1; then
+              consecutive=$((consecutive+1))
+              if [[ "$consecutive" -ge 3 ]]; then ready=1; break; fi
+            else
+              consecutive=0
+            fi
+            sleep 2
+          done
+          [[ "$ready" == 1 ]] || { echo 'BLOCK: source fixture DB startup'; exit 1; }
+          docker exec "$ci_db" psql -X -q -v ON_ERROR_STOP=1 -U supabase_admin -d postgres \
+            -c 'CREATE DATABASE ci_fixture_source WITH TEMPLATE template0 OWNER supabase_admin'
+          docker exec "$ci_db" psql -X -q -v ON_ERROR_STOP=1 -U supabase_admin -d ci_fixture_source \
+            -c 'CREATE SCHEMA auth; CREATE TABLE auth.hsn_restore_fixture(id int PRIMARY KEY); INSERT INTO auth.hsn_restore_fixture VALUES (17); CREATE TABLE public.hsn_restore_fixture(id int PRIMARY KEY); INSERT INTO public.hsn_restore_fixture VALUES (25);'
+          docker exec "$ci_db" pg_dump -Fc --no-owner --no-privileges -n public -n auth \
+            -U supabase_admin -d ci_fixture_source -f /tmp/hasnaria.dump
+          docker cp "$ci_db:/tmp/hasnaria.dump" "$tmp/hasnaria.dump"
+          (cd "$tmp" && sha256sum hasnaria.dump > archive.sha256 && tar -cf packed.tar hasnaria.dump archive.sha256)
+          age-keygen -o "$tmp/key.txt" 2>/dev/null
+          recipient="$(age-keygen -y "$tmp/key.txt")"
+          age -r "$recipient" -o "$tmp/fixture.age" "$tmp/packed.tar"
+          rm -f "$tmp/hasnaria.dump" "$tmp/packed.tar"
+          age -d -i "$tmp/key.txt" -o "$tmp/packed.tar" "$tmp/fixture.age"
+          tar -tf "$tmp/packed.tar" | sort > "$tmp/members"
+          printf '%s\n' archive.sha256 hasnaria.dump > "$tmp/allowed-members"
+          cmp -s "$tmp/members" "$tmp/allowed-members" || { echo 'BLOCK: unexpected archive files'; exit 1; }
+          tar -xf "$tmp/packed.tar" -C "$tmp" hasnaria.dump archive.sha256
+          (cd "$tmp" && sha256sum -c archive.sha256 >/dev/null)
+          bash scripts/hasnaria_verify_durable_backup_local.sh --test-fixture "$tmp/hasnaria.dump"
+          echo 'PASS: age + SHA256 + isolated SQL round trip; synthetic only, NOT Tokyo'
