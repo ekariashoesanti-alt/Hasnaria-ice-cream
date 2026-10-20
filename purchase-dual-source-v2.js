@@ -258,12 +258,19 @@ function patch(){
   var w=document.querySelector('#pembelian .pa-upload-wrap');if(!w)return;
   if(w.classList.contains('purchase-dual-upload-v2'))return;
   w.classList.remove('purchase-dual-upload');w.classList.add('purchase-dual-upload-v2','purchase-dual-upload');
-  w.innerHTML='<input id="purchaseExcelFile" type="file" accept=".xlsx,.xls" hidden><input id="purchaseMajooFile" type="file" accept=".xlsx,.xls" hidden><div class="purchase-dual-buttons"><button id="purchaseExcelBtn" class="purchase-source-btn excel" type="button">Upload Excel</button><button id="purchaseMajooBtn" class="purchase-source-btn majoo" type="button">Review Faktur Majoo</button></div><small class="purchase-source-hint">2 sumber · fuzzy dedup v2 aktif</small>';
+  var owner=!!(window.__HASNARIA_CONTEXT&&window.__HASNARIA_CONTEXT.role==='owner');
+  // Only the Owner Purchase card hides Majoo review. Preserve Staff flows.
+  w.innerHTML='<input id="purchaseExcelFile" type="file" accept=".xlsx,.xls" hidden>'+
+    (owner?'':'<input id="purchaseMajooFile" type="file" accept=".xlsx,.xls" hidden>')+
+    '<div class="purchase-dual-buttons"><button id="purchaseExcelBtn" class="purchase-source-btn excel" type="button">Upload Excel</button>'+
+    (owner?'':'<button id="purchaseMajooBtn" class="purchase-source-btn majoo" type="button">Review Faktur Majoo</button>')+'</div>'+
+    (owner?'':'<small class="purchase-source-hint">2 sumber · fuzzy dedup v2 aktif</small>');
   var eb=document.getElementById('purchaseExcelBtn'),mb=document.getElementById('purchaseMajooBtn'),ef=document.getElementById('purchaseExcelFile'),mf=document.getElementById('purchaseMajooFile');
   if(window.__HASNARIA_PURCHASE_SAFE_IMPORT_FAILED){eb.disabled=true;eb.title='Pengaman upload BELANJA gagal dimuat. Refresh halaman sebelum upload.'}
-  eb.onclick=function(){if(!eb.disabled)ef.click()};mb.onclick=function(){mf.click()};
+  eb.onclick=function(){if(!eb.disabled)ef.click()};
+  if(mb&&mf)mb.onclick=function(){mf.click()};
   ef.onchange=function(){if(this.files[0])handle('excel',this.files[0]);this.value=''};
-  mf.onchange=function(){if(this.files[0])handle('majoo',this.files[0]);this.value=''};
+  if(mf)mf.onchange=function(){if(this.files[0])handle('majoo',this.files[0]);this.value=''};
 }
 function schedule(){clearTimeout(timer);timer=setTimeout(patch,40)}
 function boot(){
