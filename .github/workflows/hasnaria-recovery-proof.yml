@@ -56,8 +56,17 @@ jobs:
           done
           # Read-only source role cannot change production even if a dump command is compromised.
           node scripts/hasnaria_backup_connection_guard.js
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq awscli
+          # Ubuntu runner no longer provides the apt awscli package.
+          # Prefer preinstalled CLI; otherwise use the official AWS CLI v2 installer
+          # within this ephemeral job (not OCI VM, no persistent machine changes).
+          if ! command -v aws >/dev/null 2>&1; then
+            mkdir -p "$tmp/aws-bin"
+            curl -fsSLo "$tmp/awscli-v2.zip" https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip
+            unzip -qq "$tmp/awscli-v2.zip" -d "$tmp"
+            "$tmp/aws/install" --install-dir "$tmp/aws-cli" --bin-dir "$tmp/aws-bin" >/dev/null
+            export PATH="$tmp/aws-bin:$PATH"
+          fi
+          aws --version
           docker pull postgres:17 >/dev/null
           db() { docker run --rm --network host -e HSN_PROD_BACKUP_READONLY_DB_URL postgres:17 psql -X -qAt -v ON_ERROR_STOP=1 -d "$HSN_PROD_BACKUP_READONLY_DB_URL" -c "$1"; }
           role_guard="select case when coalesce((select rolsuper or rolcreaterole or rolcreatedb or rolreplication from pg_roles where rolname=current_user),true) or has_database_privilege(current_user,current_database(),'CREATE') or exists(select 1 from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname in ('public','private','auth','storage','supabase_migrations') and c.relkind in ('r','p') and has_table_privilege(current_user,c.oid,'INSERT,UPDATE,DELETE,TRUNCATE')) then 'DENY' else 'OK' end"
@@ -129,8 +138,17 @@ jobs:
             [[ -n "${!required:-}" ]] || { echo 'BLOCK: encrypted key or protected credentials missing'; exit 1; }
           done
           [[ "$RESTORE_KEY" =~ ^hasnaria/[0-9]{8}T[0-9]{6}Z\.dump$ ]] || { echo 'BLOCK: invalid archive key'; exit 1; }
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq awscli
+          # Ubuntu runner no longer provides the apt awscli package.
+          # Prefer preinstalled CLI; otherwise use the official AWS CLI v2 installer
+          # within this ephemeral job (not OCI VM, no persistent machine changes).
+          if ! command -v aws >/dev/null 2>&1; then
+            mkdir -p "$tmp/aws-bin"
+            curl -fsSLo "$tmp/awscli-v2.zip" https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip
+            unzip -qq "$tmp/awscli-v2.zip" -d "$tmp"
+            "$tmp/aws/install" --install-dir "$tmp/aws-cli" --bin-dir "$tmp/aws-bin" >/dev/null
+            export PATH="$tmp/aws-bin:$PATH"
+          fi
+          aws --version
           # OCI S3 compatibility does not expose AWS bucket access-block/versioning APIs.
           # Configure a private, versioned Hasnaria-only bucket in OCI Console.
           [[ "$HSN_OCI_NAMESPACE" =~ ^[a-z0-9]{5,64}$ ]] || { echo 'BLOCK: bad OCI namespace'; exit 1; }
