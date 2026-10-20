@@ -116,10 +116,12 @@ async function preview(file){
 }
 async function stage(){
  if(!owner()||st.busy||!st.rows||st.runId)return;
+ // First deny any Preview still wired to Tokyo, before assignee/row checks.
+ // Do not even read master/run data when the origin is unsafe.
+ if(previewUsesProductionDatabase()){st.error='Preview masih terhubung ke database PRODUKSI. Simpan draft diblokir demi keamanan. Gunakan staging terisolasi untuk UAT atau situs produksi setelah rilis disetujui.';render();return;}
  if(!st.assignee||!st.assignees.some(function(x){return x.id===st.assignee})){
   st.error='Pilih Staff aktif yang akan menindaklanjuti draft di Operasional. Draft tidak boleh otomatis ditugaskan ke Owner.';render();return;
  }
- if(previewUsesProductionDatabase()){st.error='Preview masih terhubung ke database PRODUKSI. Simpan draft diblokir demi keamanan. Gunakan staging terisolasi untuk UAT atau situs produksi setelah rilis disetujui.';render();return;}
  if(st.date!==today()){st.error='Upload hitungan fisik harus bertanggal hari ini. Arsip Rencana Belanja historis tidak boleh menggantikan saldo live.';render();return}
  if(!window.confirm('Simpan '+st.rows.length+' hasil hitung fisik sebagai DRAFT Operasional? Tidak ada saldo yang berubah sebelum seluruh item diverifikasi dan disetujui.'))return;
  st.busy=true;st.error='';st.notice='';st.saving=0;render();
