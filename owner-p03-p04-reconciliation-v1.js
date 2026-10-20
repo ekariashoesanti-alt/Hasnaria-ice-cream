@@ -23,7 +23,7 @@ function selectedRow(){return(queue.mapping_review||[]).find(function(x){return 
 function resetForm(){selected='';decision='';target='';expense='';evidence='';reason='';preview=null;error='';notice=''}
 function close(){token++;shown=false;context=null;resetForm();if(modal){modal.remove();modal=null}}
 function entry(){
- var root=document.getElementById('purchaseFinanceAlignment');
+ var root=document.getElementById('pfaReviewSlot');
  if(!root)return;
  var button=root.querySelector('[data-hsn-p03-entry]');
  if(!owner()){if(button)button.remove();if(shown)close();return}
