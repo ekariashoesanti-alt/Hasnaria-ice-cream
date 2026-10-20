@@ -57,7 +57,7 @@
     if(document.getElementById('hasnaria-stock-control-v3-canonical-js'))return;
     var s=document.createElement('script');
     s.id='hasnaria-stock-control-v3-canonical-js';
-    s.src='/stock-control-v3.js?v=9';
+    s.src='/stock-control-v3.js?v=11';
     s.async=false;
     s.onload=function(){
       setTimeout(markCanonical,0);
@@ -67,11 +67,18 @@
     document.head.appendChild(s);
   }
 
+  function loadStockUpload(){
+    if(window.__HASNARIA_STOCK_UPLOAD_V1||document.getElementById('hasnaria-stock-opname-upload-v1-js'))return;
+    var l=document.createElement('link');l.id='hasnaria-stock-opname-upload-v1-css';l.rel='stylesheet';l.href='/stock-opname-upload-v1.css?v=1';document.head.appendChild(l);
+    var script=document.createElement('script');script.id='hasnaria-stock-opname-upload-v1-js';script.src='/stock-opname-upload-v1.js?v=1';script.async=true;document.head.appendChild(script);
+  }
+
   function wake(){
     var h=host();
     if(!visible(h))return;
     claim();
     loadCanonical();
+    loadStockUpload();
   }
 
   document.addEventListener('hasnaria:owner-shell-navigate',function(e){

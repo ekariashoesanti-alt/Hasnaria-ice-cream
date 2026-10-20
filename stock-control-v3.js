@@ -13,6 +13,13 @@
   var SB = window.HASNARIA_SB;
   var KEY = window.HASNARIA_KEY;
   var BRAND = 'a36d4b4f-3ccc-4a78-8aeb-b868f0407ea4';
+  function previewUsesProductionDatabase(){
+    var host=window.location&&window.location.hostname;
+    if(!host)return false;
+    if(String(window.HASNARIA_SB||'').indexOf('bnnhmtkpdjlgehsvgoda.supabase.co')<0)return false;
+    return host!=='hasnaria-business-analyzer.vercel.app'&&
+      host!=='hasnaria-business-analyzer-ekariashoesanti-9951s-projects.vercel.app';
+  }
   var PAGE_SIZE = 18;
   var AUX_CHUNK = 40;
   var S = {
@@ -45,7 +52,14 @@
     ledgerError: '',
     ledgerPage: 1,
     accessToken: '',
-    tokenAt: 0
+    tokenAt: 0,
+    correction: null,
+    correctionNotice: '',
+    ledgerAudit: {state:'loading',items:[],count:0},
+    lastVerifiedAt: '',
+    pendingStockRefresh: false,
+    verifiedRefreshing: false,
+    pendingUploadRuns: null
   };
 
   function esc(value) {
@@ -187,7 +201,7 @@
     var l = document.createElement('link');
     l.id = 'stock-control-v3-css';
     l.rel = 'stylesheet';
-    l.href = '/stock-control-v3.css?v=3';
+    l.href = '/stock-control-v3.css?v=5';
     document.head.appendChild(l);
   }
 
@@ -364,6 +378,99 @@
     }
   }
 
+
+  // Compare two authenticated, read-only server views. Never alter ledger or guess units.
+  function auditLedgerPositions(rows, ledgerRows) {
+    var byId = new Map();
+    (ledgerRows || []).forEach(function(r){byId.set(r.inventory_item_id,r)});
+    var items=[],tracked=0;
+    (rows || []).forEach(function(row){
+      if(!row.tracking_active)return;
+      tracked++;
+      var ledger=byId.get(row.inventory_item_id);
+      if(!ledger || ledger.ledger_qty == null){
+        items.push({id:row.inventory_item_id,name:row.item_name,category:row.category,
+          unit:row.unit,reason:'missing-ledger',reconcile:row.system_qty,ledger:null});return;
+      }
+      var a=Number(row.system_qty),b=Number(ledger.ledger_qty);
+      if(!Number.isFinite(a)||!Number.isFinite(b)||Math.abs(a-b)>0.00001){
+        items.push({id:row.inventory_item_id,name:row.item_name,category:row.category,
+          unit:row.unit,reason:'mismatch',reconcile:row.system_qty,ledger:ledger.ledger_qty});
+      }
+    });
+    return {state:'checked',count:items.length,tracked:tracked,items:items};
+  }
+
+  function loadVerifiedAudit(rows) {
+    return request('inventory_ledger_balance?' + qs({
+      brand_id:'eq.'+BRAND,select:'inventory_item_id,ledger_qty,tracking_active',order:'inventory_item_id.asc'
+    })).then(function(ledger){return auditLedgerPositions(rows,ledger)})
+      .catch(function(){return {state:'unavailable',count:0,tracked:0,items:[]};});
+  }
+
+
+  function renderUploadStatus(){
+    if(!isOwner())return '';
+    if(S.pendingUploadRuns===null)return '';
+    var all=S.pendingUploadRuns||[],draft=all.filter(function(x){return x.status==='draft'||x.status==='in_progress'}).length,
+        submitted=all.filter(function(x){return x.status==='submitted'}).length;
+    return '<div class="sc4-upload-state" role="status"><span><b>Upload Opname</b> · '+fmt(all.length)+' batch menunggu tindak lanjut</span>'+
+      '<span>'+fmt(draft)+' draft / belum lengkap · '+fmt(submitted)+' menunggu persetujuan</span>'+
+      (all.length?'<button type="button" data-sc4-action="open-operasional">Lanjutkan di Operasional →</button>':'')+'</div>';
+  }
+
+  async function readPendingUploads(){
+    var rows=await request('operational_runs?' + qs({
+      brand_id:'eq.'+BRAND,run_type:'eq.stock_opname',status:'in.(draft,in_progress,submitted)',
+      select:'id,title,status,scheduled_date',order:'scheduled_date.desc',limit:'250'
+    }));
+    return (rows||[]).filter(function(x){return String(x.title||'').indexOf('[UPLOAD_OPNAME]')===0});
+  }
+
+  async function loadPendingUploads(seq){
+    if(!isOwner())return;
+    try{
+      var rows=await readPendingUploads();
+      if(seq===S.periodSeq)S.pendingUploadRuns=rows;
+    }catch(_){if(seq===S.periodSeq)S.pendingUploadRuns=null}
+  }
+
+  function renderLedgerAudit() {
+    var a=S.ledgerAudit || {};
+    if(a.state==='loading')return '';
+    if(a.state==='unavailable')return '<div class="sc4-backend-integrity warn" role="status"><b>Audit kesesuaian saldo belum dapat dibaca</b><span>Infografis berasal dari server, tetapi keselarasan view rekonsiliasi dengan ledger belum diverifikasi. Coba Refresh.</span></div>';
+    if(!a.count)return '<div class="sc4-backend-integrity ok" role="status"><b>Saldo dua sumber server cocok</b><span>'+fmt(a.tracked)+' SKU dengan opname telah dibandingkan dengan ledger. Pemeriksaan '+esc(S.lastVerifiedAt||'')+'.</span></div>';
+    var examples=a.items.slice(0,3).map(function(x){return esc(x.name)+' ('+esc(fmt(x.reconcile))+' / '+esc(x.ledger==null?'belum ada':fmt(x.ledger))+' '+esc(x.unit||'unit')+')'}).join(' · ');
+    return '<div class="sc4-backend-integrity warn" role="alert"><div><b>'+fmt(a.count)+' SKU tidak sama antara rekonsiliasi dan ledger</b><span>Angka pertama = view rekonsiliasi, angka kedua = ledger. Contoh: '+examples+'. Tidak ada saldo yang diubah otomatis.</span></div><button type="button" data-sc4-audit="open">Periksa SKU →</button></div>';
+  }
+
+  async function refreshCommittedData(){
+    if(!active()){S.pendingStockRefresh=true;return}
+    if(S.verifiedRefreshing || S.baseLoading || S.periodLoading || S.ledgerLoading){
+      S.pendingStockRefresh=true;return;
+    }
+    var h=document.getElementById('stok'),sync=window.__HASNARIA_DATA_SYNC;
+    if(sync && !sync.canRefresh(h,'#sc4Period,#sc3Search,#sc3Category,#sc3Status')){
+      S.pendingStockRefresh=true;return;
+    }
+    if(window.__HASNARIA_STOCK_UPLOAD_V1&&window.__HASNARIA_STOCK_UPLOAD_V1.active()){
+      S.pendingStockRefresh=true;return;
+    }
+    S.verifiedRefreshing=true;S.pendingStockRefresh=false;
+    try{
+      await Promise.all([loadBase(),loadPeriodData(true)]);
+      if(S.modal==='ledger')await loadLedger();
+    }finally{
+      S.verifiedRefreshing=false;
+      // A second committed write may arrive during the first reload. Do not lose it.
+      // Keep deferred updates waiting if a user is editing a form.
+      if(S.pendingStockRefresh && active() && !S.correction &&
+         !(window.__HASNARIA_STOCK_UPLOAD_V1&&window.__HASNARIA_STOCK_UPLOAD_V1.active())){
+        setTimeout(function(){if(S.pendingStockRefresh)refreshCommittedData()},0);
+      }
+    }
+  }
+
   async function loadBase() {
     if (S.baseLoading) return;
     var seq = ++S.loadSeq;
@@ -381,8 +488,11 @@
         order: 'category.asc,item_name.asc'
       });
       var rows = await request('inventory_stock_reconciliation?' + baseQuery);
+      var audit = await loadVerifiedAudit(rows);
       if (seq !== S.loadSeq) return;
       S.raw = rows || [];
+      S.ledgerAudit = audit;
+      S.lastVerifiedAt = new Date().toLocaleString('id-ID');
       S.items = S.raw.map(baseItem);
       S.baseLoaded = true;
     } catch (e) {
@@ -393,8 +503,22 @@
         S.baseLoading = false;
         render();
         if (S.baseLoaded) scheduleAux(seq);
+        schedulePendingCommittedRefresh();
       }
     }
+  }
+
+  // Data-change events may arrive while initial Stock reads are in-flight.
+  // Replay one deferred refresh once BOTH base and period reads are idle.
+  function schedulePendingCommittedRefresh(){
+    if(!S.pendingStockRefresh||S.verifiedRefreshing||S.baseLoading||S.periodLoading||S.ledgerLoading)return;
+    setTimeout(function(){
+      if(S.pendingStockRefresh && !S.verifiedRefreshing && !S.baseLoading &&
+         !S.periodLoading && !S.ledgerLoading && active() && !S.correction &&
+         !(window.__HASNARIA_STOCK_UPLOAD_V1&&window.__HASNARIA_STOCK_UPLOAD_V1.active())){
+        refreshCommittedData();
+      }
+    },0);
   }
 
   async function loadPeriodData(force) {
@@ -413,6 +537,7 @@
         }
       }
       if (!S.period) {
+        await loadPendingUploads(seq);
         S.overview = null;
         S.activity = [];
         return;
@@ -422,7 +547,8 @@
       var aq = qs({ brand_id: 'eq.' + BRAND, period_month: 'eq.' + month, select: 'movement_type,movement_rows,sku_count', order: 'movement_rows.desc' });
       var pair = await Promise.all([
         request('ui_stock_overview_v1?' + oq),
-        request('ui_stock_activity_chart_v1?' + aq)
+        request('ui_stock_activity_chart_v1?' + aq),
+        loadPendingUploads(seq)
       ]);
       if (seq !== S.periodSeq) return;
       S.overview = pair[0] && pair[0][0] ? pair[0][0] : null;
@@ -436,6 +562,7 @@
       if (seq === S.periodSeq) {
         S.periodLoading = false;
         render();
+        schedulePendingCommittedRefresh();
       }
     }
   }
@@ -485,6 +612,7 @@
   }
 
   function canSync() {
+    if (S.correction || (window.__HASNARIA_STOCK_UPLOAD_V1&&window.__HASNARIA_STOCK_UPLOAD_V1.active())) return false; // Never overwrite a draft form.
     var host = document.getElementById('stok'), sync = window.__HASNARIA_DATA_SYNC;
     if (!sync || !active() || !S.baseLoaded || S.baseLoading || S.auxLoading || S.periodLoading || S.ledgerLoading) return false;
     var focused = document.activeElement;
@@ -509,9 +637,17 @@
         reads.push(request('ui_stock_activity_chart_v1?' + qs({brand_id: 'eq.' + BRAND, period_month: 'eq.' + period + '-01', select: 'movement_type,movement_rows,sku_count', order: 'movement_rows.desc'})));
       }
       if (modal === 'ledger' && period) reads.push(readLedger(period));
+      // Recheck audited upload drafts on every cross-tab/data-change notification.
+      // Append this read LAST to preserve the existing detail/overview indices.
+      var pendingIndex=reads.length;
+      // The upload-status panel is OPTIONAL. Failure to read operational_runs must
+      // never prevent the authoritative Stock and infographic snapshots refreshing.
+      reads.push(isOwner()?readPendingUploads().catch(function(){return null}):Promise.resolve(S.pendingUploadRuns));
       var result = await Promise.all(reads);
       if (seq !== S.syncSeq || context !== syncContext() || !canSync()) return;
-      var raw = result[0] || [], trackedIds = raw.filter(function (x) { return !!x.tracking_active; }).map(function (x) { return x.inventory_item_id; });
+      var raw = result[0] || [], audit = await loadVerifiedAudit(raw);
+      if (seq !== S.syncSeq || context !== syncContext() || !canSync()) return;
+      var trackedIds = raw.filter(function (x) { return !!x.tracking_active; }).map(function (x) { return x.inventory_item_id; });
       var recipes = [], poRows = [], receipts = [];
       if (trackedIds.length) {
         var trackedSet = {};
@@ -535,10 +671,15 @@
         var selected = S.periods.find(function (x) { return monthKey(x.period_start || x.period_key) === period; });
         periods = periods.concat([selected || { period_start: period + '-01' }]);
       }
-      var next = [raw, items, periods, overview, activity, ledger, true, '', '', '', modal === 'ledger' ? '' : S.ledgerError];
-      var current = [S.raw, S.items, S.periods, S.overview, S.activity, S.ledger, S.auxLoaded, S.error, S.auxError, S.periodError, S.ledgerError];
+      var pendingUploads=result[pendingIndex];
+      if(pendingUploads===null)pendingUploads=S.pendingUploadRuns; // Keep last verified status when optional read fails.
+      var next = [raw, items, periods, overview, activity, ledger, audit, pendingUploads, true, '', '', '', modal === 'ledger' ? '' : S.ledgerError];
+      var current = [S.raw, S.items, S.periods, S.overview, S.activity, S.ledger, S.ledgerAudit, S.pendingUploadRuns, S.auxLoaded, S.error, S.auxError, S.periodError, S.ledgerError];
       if (JSON.stringify(next) === JSON.stringify(current)) return;
       S.raw = raw; S.items = items; S.periods = periods;
+      S.ledgerAudit = audit;
+      S.pendingUploadRuns = pendingUploads;
+      S.lastVerifiedAt = new Date().toLocaleString('id-ID');
       S.overview = overview; S.activity = activity; S.ledger = ledger;
       S.auxLoaded = true; S.error = ''; S.auxError = ''; S.periodError = '';
       if (modal === 'ledger') S.ledgerError = '';
@@ -587,7 +728,9 @@
     var q = S.search.trim().toLowerCase();
     var rows = S.items.filter(function (x) {
       if (S.category && String(x.category || 'Lainnya') !== S.category) return false;
-      if (S.status === 'diff') {
+      if (S.status === 'ledger-diff') {
+        if(!(S.ledgerAudit&&S.ledgerAudit.items.some(function(i){return i.id===x.inventory_item_id;})))return false;
+      } else if (S.status === 'diff') {
         if (!(x.last_variance !== null && x.last_variance !== undefined && Math.abs(num(x.last_variance)) > 0.00001)) return false;
       } else if (S.status && x.ui_status !== S.status) return false;
       if (q && (String(x.item_name || '') + ' ' + String(x.category || '')).toLowerCase().indexOf(q) < 0) return false;
@@ -615,13 +758,97 @@
     return out;
   }
 
+
+  // Corrections are explicit new physical checkpoints, never backdated edits to Excel.
+  function takeCorrectionRequest() {
+    if (!isOwner()) return;
+    var req = window.__HASNARIA_STOCK_CORRECTION_PENDING;
+    if (!req) return;
+    delete window.__HASNARIA_STOCK_CORRECTION_PENDING;
+    S.correction = { id: String(req.inventoryItemId || ''), physical: '', reason: '', busy: false, error: '' };
+    S.correctionNotice = '';
+    S.modal = '';
+  }
+
+  function renderCorrectionPanel() {
+    if (!isOwner()) return '';
+    if (!S.correction) return S.correctionNotice ?
+      '<div class="sc4-correction-note" role="status">' + esc(S.correctionNotice) + '</div>' : '';
+    var c = S.correction, item = S.items.find(function(x){return x.inventory_item_id === c.id;});
+    var found = !!item, missing = S.baseLoaded && !found, quantity = String(c.physical || '');
+    var number = quantity.trim() === '' ? NaN : Number(quantity.replace(',', '.'));
+    var valid = Number.isFinite(number) && number >= 0;
+    var preview = found && valid ? '<strong>Selisih jika disimpan: ' + esc(signed(number - num(item.system_qty))) +
+      ' ' + esc(item.unit || 'unit') + '</strong>' : 'Masukkan jumlah fisik terbaru untuk melihat selisih.';
+    return '<div class="sc4-modal-backdrop"><section class="sc4-correction-panel" role="dialog" aria-modal="true" aria-labelledby="sc4CorrectionTitle">' +
+      '<div class="sc4-correction-title"><div><small>REKONSILIASI · VERIFIKASI OWNER</small><h3 id="sc4CorrectionTitle">Entry Koreksi Stok</h3>' +
+      '<p>Selisih historis perlu ditelusuri dahulu. Entri ini menyimpan hasil hitung fisik TERBARU, bukan menimpa saldo bulan sebelumnya.</p></div>' +
+      '<button type="button" data-sc4-correction="cancel">Tutup</button></div>' +
+      (c.error ? '<p class="sc3-alert" role="alert">' + esc(c.error) + '</p>' : '') +
+      (missing ? '<p class="sc3-alert">SKU yang dirujuk tidak ditemukan dalam stok brand aktif. Periksa mapping sebelum koreksi.</p>' : '') +
+      (!S.baseLoaded ? '<p>Memuat referensi SKU dari server…</p>' :
+        '<div class="sc4-correction-fields"><div><label>Material</label><strong>' + esc(item ? item.item_name : 'Tidak ditemukan') +
+          '</strong><small>' + esc(item ? (item.category || 'Lainnya') + ' · ' + (item.unit || 'unit') : '') + '</small></div>' +
+        '<div><label>Saldo sistem saat ini</label><strong>' + (found ? esc(fmt(item.system_qty)) : '—') + '</strong>' +
+          '<small>Selisih opname sebelumnya: ' + (found && item.last_variance != null ? esc(signed(item.last_variance)) : '—') + '</small></div>' +
+        '<label>Hasil hitung fisik hari ini<input id="sc4CorrectionPhysical" type="number" min="0" step="any" inputmode="decimal" ' +
+          'value="' + esc(quantity) + '" placeholder="Jumlah fisik aktual" ' + (c.busy ? 'disabled' : '') + '></label>' +
+        '<label>Alasan dan bukti koreksi<textarea id="sc4CorrectionReason" rows="2" maxlength="500" placeholder="Sumber selisih, hasil cek fisik, bukti..." ' +
+          (c.busy ? 'disabled' : '') + '>' + esc(c.reason) + '</textarea></label></div>') +
+      '<div class="sc4-correction-actions"><span id="sc4CorrectionPreview">' + preview + '</span>' +
+      '<button type="button" data-sc4-correction="save" ' + (!found || c.busy ? 'disabled' : '') + '>' +
+      (c.busy ? 'Menyimpan…' : 'Konfirmasi & Simpan Opname Baru') + '</button></div>' +
+      '<p class="sc4-correction-footnote">Tanggal otomatis hari ini. Entri baru memiliki audit trail. Jika ingin mengoreksi arsip September/Oktober, verifikasi dokumen sumber terlebih dahulu; jangan gunakan angka historis sebagai hasil hitung fisik hari ini.</p></section></div>';
+  }
+
+  async function saveCorrection() {
+    var c = S.correction;
+    if (!isOwner() || !c || c.busy) return;
+    var item = S.items.find(function(x){return x.inventory_item_id === c.id;});
+    var qty = Number(String(c.physical).trim().replace(',', '.'));
+    var reason = String(c.reason || '').trim();
+    if (!item) { c.error = 'Material belum ditemukan di master Stok.'; render(); return; }
+    if (String(c.physical).trim() === '' || !Number.isFinite(qty) || qty < 0) {
+      c.error = 'Masukkan hasil hitung fisik yang valid (minimal 0).'; render(); return;
+    }
+    if (reason.length < 12) { c.error = 'Tuliskan alasan dan bukti koreksi minimal 12 karakter.'; render(); return; }
+    if(previewUsesProductionDatabase()){c.error='Preview memakai database produksi. Koreksi fisik diblokir sampai staging terisolasi siap.';render();return;}
+    c.busy = true; c.error = ''; render();
+    try {
+      // RPC posts from the canonical inventory ledger, so the visible snapshot must agree first.
+      var latest = await request('inventory_ledger_balance?' + qs({
+        brand_id: 'eq.' + BRAND, inventory_item_id: 'eq.' + c.id, select: 'ledger_qty', limit: '1'
+      }));
+      if (!latest.length || Math.abs(num(latest[0].ledger_qty) - num(item.system_qty)) > 0.00001) {
+        throw new Error('Saldo ledger dan dashboard belum cocok. Refresh Stok dan rekonsiliasi sumber terlebih dahulu. Tidak ada koreksi disimpan.');
+      }
+      if (!window.confirm('Simpan hasil hitung fisik terbaru untuk ' + item.item_name +
+        '? Saldo sistem: ' + fmt(item.system_qty) + ' ' + (item.unit || '') +
+        ', fisik: ' + fmt(qty) + ', selisih: ' + signed(qty - num(item.system_qty)) +
+        '. Tindakan membuat checkpoint baru dan audit trail, bukan mengubah arsip Excel.')) return;
+      await rpc('resolve_physical_stock_opname', {
+        p_inventory_item_id: c.id, p_physical_qty: qty, p_opname_date: today(),
+        p_reason: '[Review selisih stok] ' + reason
+      });
+      S.correction = null;
+      S.correctionNotice = 'Stock opname koreksi tersimpan dengan audit trail. Periksa saldo dan riwayat terbaru.';
+      window.__HASNARIA_STOCK_NOTIFICATION_REFRESH_NEEDED = true;
+      await loadBase();
+      return;
+    } catch (e) {
+      c.error = e && e.message ? e.message : String(e);
+    } finally {
+      if (S.correction === c) { c.busy = false; render(); }
+    }
+  }
+
   function renderHeader() {
     var options = (S.periods || []).map(function (x) {
       var k = monthKey(x.period_start || x.period_key);
       return '<option value="' + esc(k) + '"' + (k === S.period ? ' selected' : '') + '>' + esc(monthLabel(k)) + '</option>';
     }).join('');
     return '<div class="sc3-head"><div><div class="sc3-eyebrow">STOK · ' + esc(cutLabel()) + '</div><h2>Stok &amp; Pergerakan Material</h2><p>Ringkasan periode menampilkan jumlah SKU dan aktivitas. Quantity antar satuan tidak dijumlahkan menjadi satu angka.</p></div>' +
-      '<div class="sc4-head-tools"><label><span>Bulan</span><select id="sc4Period" data-month-filter="stok">' + options + '</select></label><div class="sc3-actions"><button type="button" class="sc3-btn" data-sc3-action="refresh">↻ Refresh</button></div></div></div>';
+      '<div class="sc4-head-tools"><label><span>Bulan</span><select id="sc4Period" data-month-filter="stok">' + options + '</select></label><div class="sc3-actions"><button type="button" class="sc3-btn" data-sc4-action="upload-opname">Upload Opname →</button><button type="button" class="sc3-btn" data-sc4-action="upload-purchase">Upload Pembelian →</button><button type="button" class="sc3-btn" data-sc3-action="refresh">↻ Refresh</button></div></div></div>';
   }
 
   function renderFormula() {
@@ -652,6 +879,7 @@
         '<option value="untracked"' + (S.status === 'untracked' ? ' selected' : '') + '>Perlu Opname Awal</option>' +
         '<option value="ok"' + (S.status === 'ok' ? ' selected' : '') + '>Aman</option>' +
         '<option value="diff"' + (S.status === 'diff' ? ' selected' : '') + '>Ada Selisih Opname</option>' +
+        '<option value="ledger-diff"' + (S.status === 'ledger-diff' ? ' selected' : '') + '>Beda Saldo Ledger</option>' +
       '</select>' +
       '<div class="sc3-filter-links"><button type="button" data-sc3-jump="pembelian">Buka Pembelian →</button><button type="button" data-sc3-jump="sales">Buka Penjualan →</button></div>' +
     '</div>';
@@ -715,7 +943,7 @@
     return '<div class="sc3-notes">' +
       '<article><span>AKURASI</span><strong>Saldo hanya aktif setelah opname awal</strong><p>Item tanpa opname awal tidak diberi saldo aktual agar angka opening lama tidak dianggap posisi fisik terkini.</p></article>' +
       '<article><span>KEBUTUHAN</span><strong>Incoming mengurangi kebutuhan beli</strong><p>PO issued dipantau sebagai incoming, tetapi baru menambah saldo setelah penerimaan barang.</p></article>' +
-      '<article><span>PERFORMA</span><strong>Data utama tidak menunggu BOM</strong><p>Saldo, opname, pembelian dan pemakaian ditampilkan dulu agar Tab Stok tetap ringan.</p></article>' +
+      '<article><span>PERFORMA</span><strong>Data utama tidak menunggu BOM</strong><p>Saldo, opname, pembelian dan pemakaian ditampilkan dulu agar Tab Stok tetap ringan. Upload Pembelian belum otomatis menambah stok sebelum penerimaan dibukukan.</p></article>' +
     '</div>';
   }
 
@@ -860,7 +1088,7 @@
     var alert = S.error ? '<div class="sc3-alert">' + esc(S.error) + '</div>' : '';
     var pAlert = S.periodError ? '<div class="sc3-alert">' + esc(S.periodError) + '</div>' : '';
     var loading = S.baseLoading && !S.baseLoaded ? '<div class="sc3-loading">Memuat posisi SKU terkini…</div>' : '';
-    shell.innerHTML = renderHeader() + pAlert + overviewKpis() + alert + loading +
+    shell.innerHTML = renderHeader() + renderCorrectionPanel() + renderLedgerAudit() + renderUploadStatus() + pAlert + overviewKpis() + alert + loading +
       '<div class="sc4-infographic-main"><article class="sc4-panel"><div class="sc4-panel-head"><div><h3>Tren Aktivitas Stok</h3><p>Jumlah movement per jenis dalam periode; bukan quantity gabungan.</p></div></div>' + renderActivity() + '</article>'+
       '<div class="sc4-side-stack"><article class="sc4-panel"><div class="sc4-panel-head"><div><h3>Komposisi Posisi Stok</h3><p>Distribusi SKU menurut saldo akhir periode.</p></div></div>' + compositionInfographic() + '</article>'+
       '<article class="sc4-panel"><div class="sc4-panel-head"><div><h3>Kontrol Periode</h3><p>' + esc(cutLabel()) + '</p></div></div>' + renderPeriodControl() + '<div class="sc4-info">Saldo negatif historis hanya informasional. Periksa transaksi setelah cutoff opname untuk error aktif.</div></article></div></div>'+
@@ -874,6 +1102,14 @@
 
   function bind(host) {
     host.onclick = function (e) {
+      var auditButton = e.target && e.target.closest ? e.target.closest('[data-sc4-audit]') : null;
+      if(auditButton){S.modal='position';S.status='ledger-diff';S.page=1;render();return;}
+      var correction = e.target && e.target.closest ? e.target.closest('[data-sc4-correction]') : null;
+      if (correction && S.correction) {
+        if (correction.getAttribute('data-sc4-correction') === 'cancel') { S.correction = null; render(); }
+        else saveCorrection();
+        return;
+      }
       var close = e.target && e.target.closest ? e.target.closest('[data-sc4-close]') : null;
       if (close && (e.target === close || close.classList.contains('sc4-close'))) {
         S.modal = '';
@@ -900,6 +1136,19 @@
       var mode = e.target && e.target.closest ? e.target.closest('[data-sc4-top-mode]') : null;
       if (mode) { topSkuMode=mode.getAttribute('data-sc4-top-mode')==='out'?'out':'in'; render(); return; }
       var ui4 = e.target && e.target.closest ? e.target.closest('[data-sc4-action]') : null;
+      if (ui4 && ui4.getAttribute('data-sc4-action') === 'open-operasional') {
+        if(window.__HASNARIA_OWNER_SHELL)window.__HASNARIA_OWNER_SHELL.navigate('operasional');
+        return;
+      }
+      if (ui4 && ui4.getAttribute('data-sc4-action') === 'upload-opname') {
+        if(window.__HASNARIA_STOCK_UPLOAD_V1)window.__HASNARIA_STOCK_UPLOAD_V1.open();
+        else window.alert('Form upload sedang dimuat. Coba sekali lagi setelah halaman siap.');
+        return;
+      }
+      if (ui4 && ui4.getAttribute('data-sc4-action') === 'upload-purchase') {
+        if(window.__HASNARIA_OWNER_SHELL)window.__HASNARIA_OWNER_SHELL.navigate('pembelian');
+        return;
+      }
       if (ui4 && ui4.getAttribute('data-sc4-action') === 'opname') {
         openOpname();
         return;
@@ -923,6 +1172,16 @@
     };
     host.oninput = function (e) {
       var el = e.target;
+      if (S.correction && (el.id === 'sc4CorrectionPhysical' || el.id === 'sc4CorrectionReason')) {
+        if (el.id === 'sc4CorrectionPhysical') S.correction.physical = el.value;
+        else S.correction.reason = el.value;
+        var it = S.items.find(function(x){return x.inventory_item_id===S.correction.id;});
+        var qty = Number(String(S.correction.physical).replace(',','.'));
+        var pv = document.getElementById('sc4CorrectionPreview');
+        if (pv && it) pv.textContent = S.correction.physical.trim() !== '' && Number.isFinite(qty) && qty >= 0 ?
+          'Selisih jika disimpan: ' + signed(qty - num(it.system_qty)) + ' ' + (it.unit || 'unit') : 'Masukkan jumlah fisik terbaru untuk melihat selisih.';
+        return;
+      }
       if (el.id === 'sc3Search') {
         S.search = el.value || '';
         S.page = 1;
@@ -987,6 +1246,7 @@
   function mount(force) {
     var host = document.getElementById('stok');
     if (!host || !active()) return;
+    takeCorrectionRequest();
     ensureCss();
     if (host.querySelector('.sc3-shell') && !force) return;
     render();
@@ -1014,6 +1274,16 @@
     }
   }, true);
 
+  window.__HASNARIA_STOCK_REVIEW = { openPending: function(){takeCorrectionRequest();if(active()){render();if(!S.baseLoaded&&!S.baseLoading)loadBase();}} };
+  window.__HASNARIA_STOCK_REFRESH_VERIFIED = refreshCommittedData;
+  document.addEventListener('hasnaria:stock-posted',function(){refreshCommittedData()},true);
+  document.addEventListener('hasnaria:write-complete',function(e){
+    if(e&&e.detail&&e.detail.module==='stok')refreshCommittedData();
+  },true);
+  document.addEventListener('hasnaria:purchase-imported',function(){refreshCommittedData()},true);
+  document.addEventListener('hasnaria:owner-shell-navigate',function(e){
+    if(e.detail&&e.detail.tab==='stok')refreshCommittedData();
+  },true);
   ensureCss();
   registerSync();
   document.addEventListener('hasnaria:data-sync-ready', registerSync);

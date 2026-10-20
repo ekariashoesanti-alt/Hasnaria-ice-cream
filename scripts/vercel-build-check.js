@@ -238,6 +238,7 @@ run(process.execPath, ['tests/p2-owner-performance.test.js']);
 run(process.execPath, ['tests/purchase-fast-load.test.js']);
 run(process.execPath, ['--test', 'tests/purchase-funding-belanja-v1.test.js']);
 run(process.execPath, ['--test', 'tests/purchase-template-monthly-v1.test.js']);
+run(process.execPath, ['--test', 'tests/purchase-upload-canonical-finance-v1.test.js']);
 run(process.execPath, ['tests/month-filter-owner-tabs.test.js']);
 run(process.execPath, ['--test', 'tests/owner-insights-ui.test.js']);
 run(process.execPath, ['tests/data-sync-runtime.test.js']);

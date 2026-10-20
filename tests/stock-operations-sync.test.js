@@ -108,32 +108,34 @@ function fixture(file, exports, tab) {
 }
 
 function stockFixture() {
-  const f = fixture('stock-control-v3.js', 'S,syncRefresh,supplementalItems,render,loadLedger', 'stok');
+  const f = fixture('stock-control-v3.js', 'S,syncRefresh,supplementalItems,auditLedgerPositions,render,loadLedger,saveCorrection', 'stok');
   const raw = Array.from({ length: 40 }, (_, i) => ({ inventory_item_id: 'sku-' + i, item_name: 'Material ' + i,
     category: 'Bahan', unit: 'kg', min_qty: 2, order_qty: 4, system_qty: 10, purchase_qty: 4,
     sales_usage_qty: 1, last_opname_date: '2026-10-01', last_physical_qty: 7, tracking_active: true }));
   const recipes = raw.map(row => ({ inventory_item_id: row.inventory_item_id }));
+  const ledgers = raw.map(row => ({inventory_item_id:row.inventory_item_id,ledger_qty:row.system_qty,tracking_active:true}));
   const periods = [{ period_start: '2026-11-01' }, { period_start: '2026-10-01' }];
   const overview = { sku_count: 40, movement_rows: 3 };
   const activity = [{ movement_type: 'PURCHASE', movement_rows: 3, sku_count: 2 }];
   const ledger = Array.from({ length: 80 }, (_, i) => ({ movement_id: i, movement_date: '2026-10-01', qty_delta: 1 }));
-  const data = { raw, recipes, periods, overview, activity, ledger };
+  const data = { raw, recipes, periods, overview, activity, ledger, ledgers, pendingUploads:[] };
   Object.assign(f.api.S, { raw: clone(raw), items: f.api.supplementalItems(clone(raw), recipes, [], []), baseLoaded: true,
-    auxLoaded: true, periods: clone(periods), period: '2026-10', overview: clone(overview), activity: clone(activity),
+    auxLoaded: true, pendingUploadRuns:[], ledgerAudit:f.api.auditLedgerPositions(raw,ledgers), periods: clone(periods), period: '2026-10', overview: clone(overview), activity: clone(activity),
     modal: 'position', category: 'Bahan', page: 2 });
   for (const [table, value] of [
-    ['inventory_stock_reconciliation', 'raw'], ['ui_period_catalog_v1', 'periods'],
+    ['inventory_stock_reconciliation', 'raw'], ['inventory_ledger_balance','ledgers'], ['ui_period_catalog_v1', 'periods'],
     ['inventory_recipe_components', 'recipes'], ['ui_stock_activity_chart_v1', 'activity'], ['ui_stock_detail_v1', 'ledger']
   ]) f.handlers.set(table, () => clone(data[value]));
   f.handlers.set('ui_stock_overview_v1', () => [clone(data.overview)]);
   f.handlers.set('get_ui_period_catalog_fast_v1', () => clone(data.periods));
   f.handlers.set('purchase_order_items', () => []);
+  f.handlers.set('operational_runs', () => clone(data.pendingUploads));
   f.api.render(); f.data = data;
   return f;
 }
 
 function operationsFixture() {
-  const f = fixture('operational-v1.js', 'state,syncRefresh,render,loadItemPage,saveItem', 'operasional');
+  const f = fixture('operational-v1.js', 'state,syncRefresh,render,loadItemPage,saveItem,approveRun', 'operasional');
   const run = { id: 'run-a', run_type: 'stock_opname', title: 'Opname', scheduled_date: '2026-10-01', status: 'in_progress', updated_at: 'old' };
   const items = [{ id: 'item-26', label: 'Susu', item_type: 'stock_count', numeric_value: 10, notes: '', expected_qty: 9 }];
   const data = { runs: [run], selected: run, items, total: 80 };
@@ -147,6 +149,9 @@ function operationsFixture() {
 async function main() {
   const stock = stockFixture(), operations = operationsFixture();
   assert.equal(stock.registered.get('stock-control-v3'), stock.api.syncRefresh);
+  assert.equal(stock.api.auditLedgerPositions(stock.data.raw,stock.data.ledgers).count,0,'matching sources have no fake variance alert');
+  const conflict=clone(stock.data.ledgers);conflict[0].ledger_qty=1;
+  assert.equal(stock.api.auditLedgerPositions(stock.data.raw,conflict).count,1,'source discrepancy is detected without writing Stock');
   assert.equal(operations.registered.get('operational-v1'), operations.api.syncRefresh);
   for (const f of [stock, operations]) {
     const display = f === stock ? f.shell : f.host;
@@ -167,10 +172,32 @@ async function main() {
     }
   }
 
+  // Cross-session upload updates must refresh the pending batch counter without
+  // altering stock position or performing any posting RPC.
+  stock.data.pendingUploads = [{id:'draft-a',title:'[UPLOAD_OPNAME] 2026-10-18 hash-1',status:'in_progress',scheduled_date:'2026-10-18'}];
+  const beforeBatchUpdate = stock.queries.length;
+  await stock.api.syncRefresh();
+  assert.equal(stock.api.S.pendingUploadRuns.length,1,'Owner Stock sees new draft after another session writes it');
+  assert.equal(stock.api.S.pendingUploadRuns[0].status,'in_progress');
+  assert.equal(stock.api.S.items[0].balance_qty,10,'draft upload never changes posted stock balance');
+  assert.ok(stock.queries.slice(beforeBatchUpdate).every(q=>q.method==='GET'||q.rpc==='get_ui_period_catalog_fast_v1'));
+  stock.data.pendingUploads[0].status='submitted';
+  await stock.api.syncRefresh();
+  assert.equal(stock.api.S.pendingUploadRuns[0].status,'submitted','Owner sees submitted status via read-only refresh');
+  stock.data.pendingUploads=[];
+  await stock.api.syncRefresh();
+  assert.equal(stock.api.S.pendingUploadRuns.length,0,'approval removes pending draft notice without manual reload');
+
+  // Optional upload-status REST failure cannot stop independently verified
+  // inventory reconciliation and infographic updates.
+  const lastUploadStatus = clone(stock.api.S.pendingUploadRuns);
+  stock.handlers.set('operational_runs', () => { throw new Error('temporary operational-status outage'); });
   stock.data.raw[0].system_qty = 5;
   stock.data.overview.movement_rows = 4;
   await stock.api.syncRefresh();
   assert.equal(stock.api.S.items[0].balance_qty, 5);
+  assert.deepEqual(clone(stock.api.S.pendingUploadRuns),lastUploadStatus,'optional status failure retains prior status');
+  stock.handlers.set('operational_runs', () => clone(stock.data.pendingUploads));
   assert.equal(stock.api.S.period, '2026-10', 'newest catalog entry does not select a different period');
   assert.equal(stock.api.S.category, 'Bahan'); assert.equal(stock.api.S.page, 2); assert.equal(stock.api.S.modal, 'position');
   assert.ok(stock.queries.every(query => query.method === 'GET' || query.rpc === 'get_ui_period_catalog_fast_v1'), 'background stock refresh only performs GET reads and the authorized read-only period RPC');
@@ -244,6 +271,25 @@ async function main() {
   await page.api.loadItemPage('run-b', 1);
   stale.resolve({ data: [{ id: 'stale-item' }], count: 1 }); await oldPage;
   assert.equal(page.api.state.items[0].id, 'run-b-item'); assert.equal(page.api.state.itemLoading, false);
+  // Preview on a production backend must not post real operational stock.
+  const opPreview = operationsFixture();
+  opPreview.window.location = {hostname:'hasnaria-business-analyzer-test123.vercel.app'};
+  opPreview.window.HASNARIA_SB='https://bnnhmtkpdjlgehsvgoda.supabase.co';
+  opPreview.api.state.activeRun.status='submitted';
+  const opCalls=opPreview.queries.length;
+  await opPreview.api.approveRun();
+  assert.equal(opPreview.queries.length,opCalls,'preview approval must not call production RPC');
+  assert.match(opPreview.api.state.actionError,/preview/i);
+
+  const stockPreview=stockFixture();
+  stockPreview.window.location={hostname:'hasnaria-business-analyzer-test123.vercel.app'};
+  stockPreview.window.HASNARIA_SB='https://bnnhmtkpdjlgehsvgoda.supabase.co';
+  stockPreview.api.S.correction={id:'sku-0',physical:'7',reason:'Hitung fisik ulang sesuai bon toko',busy:false,error:''};
+  const stockCalls=stockPreview.queries.length;
+  await stockPreview.api.saveCorrection();
+  assert.equal(stockPreview.queries.length,stockCalls,'preview correction must not query or post production ledger');
+  assert.match(stockPreview.api.S.correction.error,/produksi/i);
+
   console.log('stock/operations synchronization: PASS');
 }
 

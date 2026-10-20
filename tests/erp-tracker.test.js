@@ -137,7 +137,7 @@ assert(administrationCss.includes('.ad5-chart') && administrationCss.includes('.
 assert(!ownerShellSource.includes('finance-hpp-p3.js'), 'HPP workbench must not be loaded by Owner shell');
 assert(!/\.(?:from|insert|update|delete|rpc)\s*\(/.test(ownerShellSource), 'Owner navigation guard contains no database mutation/query path');
 
-assert(ownerFinanceStockSource.includes("finance-purchase-basis-v1.js?v=6"), 'Owner Finance shim must load Purchase-journal reporting v3');
+assert(ownerFinanceStockSource.includes("finance-purchase-basis-v1.js?v=7"), 'Owner Finance shim must load Purchase-journal reporting v3');
 assert(!purchaseBasisSource.includes("createElement('style')"), 'Finance runtime must not inject style elements under strict CSP');
 const financeAccuracySource = fs.readFileSync(path.join(root, 'finance-accuracy-v6.js'), 'utf8');
 assert(!financeAccuracySource.includes("createElement('style')") && !financeAccuracySource.includes('style="'), 'Finance reporting must use external CSS only');
@@ -168,7 +168,7 @@ assert(!salesBoardSource.includes('sales-hourly-chart.js'), 'Sales board must no
 assert(!purchasePreloadSource.includes('purchase-rankings-five.js'), 'legacy Purchase ranking patch must not load beside canonical Finance reconciliation');
 assert(!purchasePreloadSource.includes('purchase-chart-redesign.js'), 'legacy Purchase chart patch must not race the canonical Purchase DOM');
 assert(purchasePreloadSource.includes("purchase-finance-alignment-v1.css?v=5"), 'canonical Purchase layout cache version must be current');
-assert(purchasePreloadSource.includes("purchase-finance-alignment-v1.js?v=14"), 'canonical Purchase runtime cache version must be current');
+assert(purchasePreloadSource.includes("purchase-finance-alignment-v1.js?v=15"), 'canonical Purchase runtime cache version must be current');
 assert(!purchaseInventorySource.includes('pa-stock-grid'), 'Purchase inventory helper must not inject detailed Stock cards back into Pembelian');
 assert(!purchaseInventorySource.includes("querySelectorAll('.pa-lower-grid article')"), 'Purchase inventory helper must remain KPI-only');
 assert(purchaseFinanceCss.includes(':has(>#purchaseFinanceAlignment)'), 'Purchase canonical layout must activate only when reconciliation is present');

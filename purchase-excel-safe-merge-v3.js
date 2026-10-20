@@ -11,6 +11,13 @@
 
   var BRAND='a36d4b4f-3ccc-4a78-8aeb-b868f0407ea4';
   var EVID='purchase_import_evidence';
+  function previewUsesProductionDatabase(){
+    var host=window.location&&window.location.hostname;
+    if(!host)return false; // Browser previews always have a location; unit harnesses may not.
+    if(String(window.HASNARIA_SB||'').indexOf('bnnhmtkpdjlgehsvgoda.supabase.co')<0)return false;
+    return host!=='hasnaria-business-analyzer.vercel.app'&&
+      host!=='hasnaria-business-analyzer-ekariashoesanti-9951s-projects.vercel.app';
+  }
 
   function c(v){return String(v==null?'':v).trim().replace(/\s+/g,' ')}
   function n(v){return c(v).toUpperCase().replace(/^#+/,'').replace(/[^A-Z0-9]+/g,'')}
@@ -152,7 +159,10 @@
      canonical/Stock-linked history. Only a totally new, complete, single-counter
      period may use the existing atomic RPC. Mixed/loan funding awaits a tested
      multi-credit journal backend; no evidence staging occurs before validation. */
+  var processing=false;
   async function process(file,input){
+    if(processing)throw Error('Upload Pembelian sedang diproses. Tunggu hingga selesai.');
+
     var db=window.__HASNARIA_DB;if(!db)throw Error('Database Pembelian belum siap.');
     if(!window.XLSX&&window.__HASNARIA_XLSX_READY)await window.__HASNARIA_XLSX_READY;
     if(!window.XLSX)throw Error('Parser Excel belum siap.');
@@ -197,10 +207,11 @@
       console.info(preview);
       return;
     }
+    if(previewUsesProductionDatabase())throw Error('Preview masih memakai database PRODUKSI. Impor Pembelian diblokir; lakukan UAT melalui staging terisolasi atau tunggu rilis resmi.');
     // No staged evidence mutation. One transactional canonical RPC for an empty
     // period; the server will enforce permission and payment method validity.
     if(!confirm(preview+'\\n\\nPeriode ini belum memiliki transaksi kanonis. Import '+p.rows.length+
-      ' baris sekaligus? Pembukuan keuangan hanya mengikuti periode/akun yang telah tersedia.'))return;
+      ' baris dengan proses atomik tanpa mengganti histori? Jurnal mengikuti status periode dan akun yang sudah disetujui.'))return;
     var payload=p.rows.map(function(z,i){return {
       source_file:file.name,row_no:z.row_no,purchase_date:z.purchase_date,item_name:z.item_name,
       quantity_text:z.quantity==null?'':String(z.quantity),unit_text:z.unit_text||'',
@@ -209,18 +220,32 @@
       raw_data:Object.assign({},raw(z),{canonical_source_record_key:z.source_record_key,
         import_scope:'BELANJA_ONLY',ledger_policy:'CXD_FUNDING_EFGH'})
     }});
-    busy(true);
+    processing=true;busy(true);
     try{
-      var out=await db.rpc('replace_purchase_canonical_period_v1',{p_source_period:period,p_rows:payload});
+      var out=await db.rpc('import_purchase_empty_period_v1',{p_source_period:period,p_rows:payload});
       if(out.error)throw out.error;
-      toast('Berhasil: '+payload.length+' transaksi Pembelian '+period+' tercatat tanpa sumber ganda. Status jurnal mengikuti hasil rekonsiliasi server.','success',0);
-      setTimeout(function(){location.reload()},1800);
-    }finally{busy(false)}
+      var result=out.data||{};
+      if(Number(result.inserted_rows)!==payload.length||Number(result.replaced_rows)!==0)
+        throw Error('Jumlah hasil impor tidak sesuai. Periksa database sebelum mencoba ulang.');
+      toast('Berhasil: '+payload.length+' transaksi Pembelian tercatat di '+period+
+        '. '+(result.finance_synced?'Jurnal disinkronkan; cek status Finance.':'Jurnal belum dibukukan; Finance masih perlu review.'),'success',0);
+      // Refresh all read models from canonical backend. No duplicate frontend posting.
+      if(typeof window.CustomEvent==='function'&&document.dispatchEvent)
+        document.dispatchEvent(new window.CustomEvent('hasnaria:purchase-imported',{detail:{
+          period:period,rows:payload.length,source:'belanja-safe-merge',stockPosted:false,finance_synced:!!result.finance_synced
+        }}));
+
+
+    }finally{processing=false;busy(false)}
   }
 
   document.addEventListener('change',function(e){
     var input=e.target;if(!input||input.id!=='purchaseExcelFile'||!input.files||!input.files[0])return;
-    var f=input.files[0];if(!/RENCANA\s*BELANJA|BELANJA\s*(SEPT|OKT|NOV|DES|JAN|FEB|MAR|APR|MEI|JUN|JUL|AGU)/i.test(f.name))return;
+    var f=input.files[0];
+    // Always use the verified BELANJA parser for the Excel button, even if the
+    // customer renamed the file. Never fall through to an old destructive parser.
+    if(!/\.(xlsx|xls)$/i.test(f.name)){e.preventDefault();e.stopImmediatePropagation();toast('Pilih workbook Excel .xlsx/.xls.','error');return;}
+    if(processing){e.preventDefault();e.stopImmediatePropagation();toast('Upload sebelumnya belum selesai.','error');return;}
     e.preventDefault();e.stopImmediatePropagation();
     process(f,input).catch(function(err){console.error(err);toast('Upload gagal: '+(err&&err.message?err.message:err),'error',8000);busy(false)}).finally(function(){try{input.value=''}catch(_){}});
   },true);

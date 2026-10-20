@@ -29,7 +29,7 @@
     if(document.getElementById('hasnaria-purchase-dual-source-v2-js'))return;
     var d=document.createElement('script');
     d.id='hasnaria-purchase-dual-source-v2-js';
-    d.src='/purchase-dual-source-v2.js?v=4';
+    d.src='/purchase-dual-source-v2.js?v=5';
     d.async=true;
     document.head.appendChild(d);
   }
@@ -37,10 +37,10 @@
   if(!document.getElementById('hasnaria-purchase-excel-safe-merge-v3-js')){
     var sm=document.createElement('script');
     sm.id='hasnaria-purchase-excel-safe-merge-v3-js';
-    sm.src='/purchase-excel-safe-merge-v3.js?v=5';
+    sm.src='/purchase-excel-safe-merge-v3.js?v=6';
     sm.async=true;
     sm.onload=loadDualSourceV2;
-    sm.onerror=function(){console.error('Safe merge Pembelian gagal dimuat; memuat fallback dual-source.');loadDualSourceV2();};
+    sm.onerror=function(){console.error('Pengaman upload BELANJA gagal dimuat; tombol Excel harus ditahan.');window.__HASNARIA_PURCHASE_SAFE_IMPORT_FAILED=true;loadDualSourceV2();};
     document.head.appendChild(sm);
   }else{
     loadDualSourceV2();
@@ -57,7 +57,7 @@
   if(!document.getElementById('hasnaria-purchase-finance-alignment-js')){
     var af=document.createElement('script');
     af.id='hasnaria-purchase-finance-alignment-js';
-    af.src='/purchase-finance-alignment-v1.js?v=14';
+    af.src='/purchase-finance-alignment-v1.js?v=15';
     af.async=true;
     document.head.appendChild(af);
   }

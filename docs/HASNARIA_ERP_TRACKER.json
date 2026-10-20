@@ -84,7 +84,10 @@
       "priority": "P0",
       "status": "REVIEW",
       "title": "GPS absensi akurat dan pemeriksaan ulang lokasi toko",
-      "dependencies": ["HSN-602", "HSN-614"],
+      "dependencies": [
+        "HSN-602",
+        "HSN-614"
+      ],
       "acceptance": "GPS awal yang kasar/stale tidak mengunci clock; setiap percobaan memperoleh GPS baru dan akurat; hanya jarak <=50m dapat disimpan; sesi dan tampilan tetap.",
       "owner": "Codex/ChatGPT",
       "updated_at": "2026-10-10",
@@ -96,7 +99,9 @@
       "priority": "P1",
       "status": "DONE",
       "title": "Ubah nama Arum menjadi Tari dengan kredensial yang sama",
-      "dependencies": ["HSN-600"],
+      "dependencies": [
+        "HSN-600"
+      ],
       "acceptance": "Employee Arum tampil sebagai Tari dengan employee ID, PIN, akses modul, outlet, dan sesi yang sama; tidak reset kredensial.",
       "owner": "Codex/ChatGPT",
       "updated_at": "2026-10-10",
@@ -108,7 +113,9 @@
       "priority": "P1",
       "status": "REVIEW",
       "title": "Team Portal branding pada header dan logo HP",
-      "dependencies": ["HSN-011"],
+      "dependencies": [
+        "HSN-011"
+      ],
       "acceptance": "Header memakai Team Portal/Hasnaria Team dan logo aplikasi bertuliskan TEAM; layout, jalur portal, identitas sesi, dan akses tetap.",
       "owner": "Codex/ChatGPT",
       "updated_at": "2026-10-08",
@@ -120,7 +127,10 @@
       "priority": "P0",
       "status": "REVIEW",
       "title": "Catatan Clock In/Out staf di lokasi toko",
-      "dependencies": ["HSN-602", "HSN-011"],
+      "dependencies": [
+        "HSN-602",
+        "HSN-011"
+      ],
       "acceptance": "Clock In/Out mengambil GPS baru dan hanya disimpan di radius toko; kartu Clock In hijau muncul dari waktu tersimpan, Clock Out merah di bawahnya; gagal simpan tidak membuat catatan; sesi dan sinkronisasi tetap aman.",
       "owner": "Codex/ChatGPT",
       "updated_at": "2026-10-08",
@@ -132,7 +142,10 @@
       "priority": "P0",
       "status": "REVIEW",
       "title": "Sinkronisasi data HP Owner/Staff dengan web tanpa perubahan UI/UX",
-      "dependencies": ["HSN-004", "HSN-602"],
+      "dependencies": [
+        "HSN-004",
+        "HSN-602"
+      ],
       "acceptance": "HP Owner, HP Staff, dan web membaca authority Supabase yang sama; perubahan eksternal disegarkan tanpa mereset form, header, navigasi, atau tampilan; mutasi dan sesi tetap dilindungi database; regression dan build lulus.",
       "owner": "Codex/ChatGPT",
       "updated_at": "2026-10-06",
@@ -926,7 +939,8 @@
       ],
       "acceptance": "System stock = baseline + purchase - usage dengan latest opname baseline.",
       "owner": "Codex/ChatGPT",
-      "updated_at": "2026-09-18"
+      "updated_at": "2026-10-18",
+      "notes": "Perbaikan di PR #96: upload STOCK_OPNAME eksplisit diverifikasi terhadap master SKU/satuan, disimpan sebagai draft operational_runs + operational_run_items (file hash dan row provenance), posting hanya setelah owner approval. Import Pembelian sukses diverifikasi count canonical dan memicu refetch backend tanpa reload. Stok menampilkan mismatch 23 dari 41 tracked SKU view vs ledger (maks 1.098 unit) tanpa auto adjustment; Okt 2026 produk BOM verified 0/54, seluruhnya draft, perlu verifikasi recipe terpisah. Auto refresh, pending upload indicator, test mock + Audit Gate lulus. Tidak ada mutasi saldo live; E2E Owner + Vercel deployment tetap memerlukan verifikasi."
     },
     {
       "id": "HSN-403",
@@ -1066,14 +1080,15 @@
       "id": "HSN-413",
       "milestone": "M4",
       "priority": "P1",
-      "status": "TODO",
+      "status": "REVIEW",
       "title": "Inventory variance dashboard",
       "dependencies": [
         "HSN-408"
       ],
       "acceptance": "Variance opname per item/periode dan root cause notes terlihat.",
       "owner": "Codex/ChatGPT",
-      "updated_at": "2026-09-18"
+      "updated_at": "2026-10-18",
+      "notes": "Implementasi branch feature/hsn413-stock-variance-notifications: Owner Notifikasi membaca variance terbaru pada view stok brand-scoped, deep link exact item ID menuju Entry Koreksi Stok. Input fisik baru memerlukan alasan, preflight saldo ledger, konfirmasi serta RPC opname ber-audit. Angka selisih lintas-bulan Excel belum menjadi sumber backend dan tidak di-hardcode. Pending CI dan penerimaan produksi."
     },
     {
       "id": "HSN-414",

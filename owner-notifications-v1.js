@@ -31,6 +31,17 @@ function analyze(){
    else out.push(entry('stock-ok','Pembelian → Stok sesuai','Kontrak rekonsiliasi Stok berstatus OK.', 'MATCH','success','Stok'));
   }else out.push(entry('empty','Belum ada Pembelian kanonis','Tidak ada transaksi pada periode ini. Belum dapat menyimpulkan hasil rekonsiliasi.', '0 transaksi','info'));
  }
+ var diffs=data&&data.stockVariances;
+ if(Array.isArray(diffs))diffs.forEach(function(row){
+  var variance=Number(row.last_variance);
+  if(!row.inventory_item_id||!Number.isFinite(variance)||Math.abs(variance)<0.00001)return;
+  var unit=String(row.unit||'unit');
+  var sign=(variance>0?'+':'')+variance.toLocaleString('id-ID',{maximumFractionDigits:2});
+  var e=entry('stock-variance:'+row.inventory_item_id,'Selisih opname · '+String(row.item_name||'Material'),
+    'Opname '+String(row.last_opname_date||'tanpa tanggal')+': selisih '+sign+' '+unit+' (fisik − sistem saat opname). Periksa bukti dan hitung fisik terbaru sebelum koreksi. Selisih historis tidak otomatis berarti saldo saat ini salah.',
+    sign+' '+unit,'backlog','Stok');
+  e.inventoryItemId=row.inventory_item_id;out.push(e);
+ });
  if(c&&Number(c.pending_rules)>0)out.push(entry('conversion','Aturan konversi belum diverifikasi','Verifikasi satuan dan faktor draft dengan label kemasan/nota. Jalur verifikasi lama tetap ditahan.',Number(c.pending_rules)+' draft','backlog','Stok'));
  if(!out.length&&!error&&!loading)out.push(entry('none','Tidak ada hasil pemeriksaan','Gunakan Muat Ulang setelah periode dipilih.','—','info'));
  return out;
@@ -50,7 +61,7 @@ function draw(){
  shown.forEach(function(x){k+='<button type="button" data-hqn-item="'+esc(x.id)+'" class="hqn-item '+(chosen&&chosen.id===x.id?'active':'')+'"><span class="hqn-icon '+esc(x.kind)+'">'+(x.kind==='success'?'✓':x.kind==='backlog'?'!':'i')+'</span><span><b>'+esc(x.title)+'</b><small>'+esc(x.scope)+' · '+esc(x.amount)+'</small></span><span class="hqn-arrow">›</span></button>'});
  if(!shown.length)k+='<div class="hqn-message">Tidak ada item pada filter ini.</div>';
  k+='</div><div class="hqn-detail">';
- if(chosen)k+='<small>'+esc(chosen.scope)+' · '+esc(chosen.kind==='success'?'BERHASIL':chosen.kind==='backlog'?'PERLU REVIEW':'INFORMASI')+'</small><h3>'+esc(chosen.title)+'</h3><strong>'+esc(chosen.amount)+'</strong><p>'+esc(chosen.description)+'</p>'+(chosen.kind==='backlog'?'<div class="hqn-guidance">Bukti asli, keputusan Owner dan pratinjau dampak diperlukan sebelum perubahan data.</div><button type="button" class="hqn-primary" data-hqn-purchase>Buka Review di Pembelian →</button>':'<div class="hqn-guidance">Pemeriksaan ini tidak mengubah Stok maupun jurnal.</div>');
+ if(chosen)k+='<small>'+esc(chosen.scope)+' · '+esc(chosen.kind==='success'?'BERHASIL':chosen.kind==='backlog'?'PERLU REVIEW':'INFORMASI')+'</small><h3>'+esc(chosen.title)+'</h3><strong>'+esc(chosen.amount)+'</strong><p>'+esc(chosen.description)+'</p>'+(chosen.kind==='backlog'?'<div class="hqn-guidance">Bukti asli, keputusan Owner dan pratinjau dampak diperlukan sebelum perubahan data.</div><button type="button" class="hqn-primary" '+(chosen.inventoryItemId?'data-hqn-stock="'+esc(chosen.inventoryItemId)+'"':(chosen.scope==='Stok'?'data-hqn-stock-summary':'data-hqn-purchase'))+'>'+(chosen.inventoryItemId?'Buka Entry Koreksi di Stok →':chosen.scope==='Stok'?'Periksa Tab Stok →':'Buka Review di Pembelian →')+'</button>':'<div class="hqn-guidance">Pemeriksaan ini tidak mengubah Stok maupun jurnal.</div>');
  else k+='<p>Belum ada item untuk ditampilkan.</p>';
  k+='</div></div></div></section>';h.innerHTML=k;
 }
@@ -62,7 +73,8 @@ async function load(force){
  try{
   var result=await Promise.allSettled([
    db.rpc('get_purchase_control_period_v1',{p_brand:sess.brandId,p_period:month+'-01'}),
-   db.rpc('owner_conversion_review_queue_v1')
+   db.rpc('owner_conversion_review_queue_v1'),
+   typeof db.from==='function' ? db.from('inventory_stock_reconciliation').select('inventory_item_id,item_name,category,unit,last_opname_date,last_variance,tracking_active').eq('brand_id',sess.brandId).neq('last_variance',0).not('last_variance','is',null).order('item_name',{ascending:true}).limit(100) : Promise.resolve({data:[],error:null})
   ]);
   if(id!==seq||!active()||window.__HASNARIA_CONTEXT!==sess||period!==month)return;
   var failure=[],next={};
@@ -70,18 +82,30 @@ async function load(force){
   else failure.push('Pembelian: '+(result[0].status==='rejected'?String(result[0].reason):result[0].value.error.message));
   if(result[1].status==='fulfilled'&&!result[1].value.error)next.conversions=result[1].value.data||{};
   else failure.push('Konversi: '+(result[1].status==='rejected'?String(result[1].reason):result[1].value.error.message));
+  if(result[2].status==='fulfilled'&&!result[2].value.error)next.stockVariances=result[2].value.data||[];
+  else failure.push('Stok: '+(result[2].status==='rejected'?String(result[2].reason):result[2].value.error.message));
   data=next;error=failure.join(' · ');
  }catch(e){if(id===seq)error=e&&e.message?e.message:String(e)}
  finally{if(id===seq){loading=false;if(active())draw()}}
 }
 function mount(){if(!active())return;var s=window.__HASNARIA_CONTEXT;if(ctx!==s){ctx=s;data=null;period=current();filter='backlog';selected='';}
- draw();if(!data&&!loading)load(false)}
-document.addEventListener('click',function(e){if(!active())return;var t=e.target&&e.target.closest?e.target.closest('[data-hqn-refresh],[data-hqn-filter],[data-hqn-item],[data-hqn-purchase]'):null;if(!t)return;
+ draw();
+ if(window.__HASNARIA_STOCK_NOTIFICATION_REFRESH_NEEDED){window.__HASNARIA_STOCK_NOTIFICATION_REFRESH_NEEDED=false;load(true)}
+ else if(!data&&!loading)load(false)}
+document.addEventListener('click',function(e){if(!active())return;var t=e.target&&e.target.closest?e.target.closest('[data-hqn-refresh],[data-hqn-filter],[data-hqn-item],[data-hqn-purchase],[data-hqn-stock],[data-hqn-stock-summary]'):null;if(!t)return;
  if(t.hasAttribute('data-hqn-refresh')){load(true);return}
  if(t.hasAttribute('data-hqn-filter')){filter=t.getAttribute('data-hqn-filter');selected='';draw();return}
  if(t.hasAttribute('data-hqn-item')){selected=t.getAttribute('data-hqn-item');draw();return}
+ if(t.hasAttribute('data-hqn-stock-summary')&&window.__HASNARIA_OWNER_SHELL){window.__HASNARIA_OWNER_SHELL.navigate('stok');return;}
+ if(t.hasAttribute('data-hqn-stock')&&window.__HASNARIA_OWNER_SHELL){
+  window.__HASNARIA_STOCK_CORRECTION_PENDING={inventoryItemId:t.getAttribute('data-hqn-stock')};
+  window.__HASNARIA_OWNER_SHELL.navigate('stok');
+  if(window.__HASNARIA_STOCK_REVIEW)window.__HASNARIA_STOCK_REVIEW.openPending();
+  return;
+ }
  if(t.hasAttribute('data-hqn-purchase')&&window.__HASNARIA_OWNER_SHELL)window.__HASNARIA_OWNER_SHELL.navigate('pembelian');
 },true);
 document.addEventListener('change',function(e){if(e.target&&e.target.id==='hqnPeriod'&&active()){var p=e.target.value;if(/^\d{4}-(0[1-9]|1[0-2])$/.test(p)){period=p;data=null;selected='';load(true)}}},true);
+document.addEventListener('hasnaria:purchase-imported',function(e){if(!owner())return;data=null;var p=e&&e.detail&&String(e.detail.period||'').slice(0,7);if(p)period=p;if(active())load(true)},true);
 window.__HASNARIA_OWNER_NOTIFICATIONS={mount:mount,refresh:function(){if(active())load(true)}};
 })();

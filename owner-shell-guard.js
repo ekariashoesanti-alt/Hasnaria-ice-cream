@@ -61,7 +61,7 @@
 
   function ensureFinanceWorkbenches(){
     if(!document.getElementById('hasnaria-finance-purchase-basis-v1-js')){
-      var pb=document.createElement('script');pb.id='hasnaria-finance-purchase-basis-v1-js';pb.src='/finance-purchase-basis-v1.js?v=6';pb.async=true;document.head.appendChild(pb);
+      var pb=document.createElement('script');pb.id='hasnaria-finance-purchase-basis-v1-js';pb.src='/finance-purchase-basis-v1.js?v=7';pb.async=true;document.head.appendChild(pb);
     }
     var stale=document.querySelector('[data-fin-hpp-p3-open]');if(stale)stale.remove();
     var staleModal=document.getElementById('finHppP3Modal');if(staleModal)staleModal.remove();
@@ -159,7 +159,7 @@
     if(existing){afterRuntime(id,requestRender);return}
     if(state.finStockLoad){state.finStockLoad.then(function(){afterRuntime(id,requestRender)});return}
     state.finStockLoad=new Promise(function(resolve){
-      var s=document.createElement('script');s.id='hasnaria-owner-finance-stock-v3-js';s.src='/owner-finance-stock-v3'+'.js?v=12';s.async=true;
+      var s=document.createElement('script');s.id='hasnaria-owner-finance-stock-v3-js';s.src='/owner-finance-stock-v3'+'.js?v=13';s.async=true;
       s.onload=resolve;s.onerror=function(){state.finStockLoad=null;resolve()};document.head.appendChild(s);
     });
     state.finStockLoad.then(function(){afterRuntime(id,requestRender)});
@@ -207,7 +207,7 @@
     if(window.__HASNARIA_OWNER_NOTIFICATIONS){window.__HASNARIA_OWNER_NOTIFICATIONS.mount();return}
     if(state.notificationsLoad)return;
     state.notificationsLoad=new Promise(function(resolve){
-      var script=document.createElement('script');script.id='hasnaria-owner-notifications-js';script.src='/owner-notifications-v1.js?v=1';script.async=true;
+      var script=document.createElement('script');script.id='hasnaria-owner-notifications-js';script.src='/owner-notifications-v1.js?v=2';script.async=true;
       script.onload=resolve;script.onerror=function(){state.notificationsLoad=null;var h=section('notifikasi');if(h)h.textContent='Notifikasi gagal dimuat. Silakan refresh.';resolve()};document.head.appendChild(script)
     }).then(function(){if(isOwner()&&state.active==='notifikasi'&&window.__HASNARIA_OWNER_NOTIFICATIONS)window.__HASNARIA_OWNER_NOTIFICATIONS.mount()});
   }
