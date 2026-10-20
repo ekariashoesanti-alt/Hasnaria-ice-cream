@@ -240,7 +240,7 @@ function mountOwnerControls(root,wrap,markup){
   // A native node move preserves #paPeriod value and Excel input event handlers.
   // Temporarily detach from old markup before replacing canonical content.
   var controls=root.querySelector('.pa-controls');
-  if(controls&&controls.parentNode!==root)root.appendChild(controls);
+  if(controls&&controls.parentNode!==root&&root.appendChild)root.appendChild(controls);
   wrap.innerHTML=markup;
   var slot=wrap.querySelector('.pfa-controls-slot');
   if(slot&&controls)slot.appendChild(controls);
