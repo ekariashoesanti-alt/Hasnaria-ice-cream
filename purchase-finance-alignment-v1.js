@@ -236,6 +236,15 @@ function infographicMarkup(){
  '<section class="pfa-view-panel" role="tabpanel" id="pfaPanel-reviews" aria-labelledby="pfaTab-reviews" data-pfa-view-panel="reviews"'+(purchaseView==='reviews'?'':' hidden')+'>'+
  '<div class="pfa-review-list" id="pfaReviewSlot">'+unitVerificationMarkup()+'</div></section></div>';
 }
+function mountOwnerControls(root,wrap,markup){
+  // A native node move preserves #paPeriod value and Excel input event handlers.
+  // Temporarily detach from old markup before replacing canonical content.
+  var controls=root.querySelector('.pa-controls');
+  if(controls&&controls.parentNode!==root&&root.appendChild)root.appendChild(controls);
+  wrap.innerHTML=markup;
+  var slot=wrap.querySelector('.pfa-controls-slot');
+  if(slot&&controls)slot.appendChild(controls);
+}
 function render(){
   if(unitOpen&&!unitAllowed())closeUnitReview();
   var root=document.getElementById('paRoot');if(!root)return;patchCore(root);syncPeriodOptions();
@@ -250,12 +259,12 @@ function render(){
       wrap.classList.toggle('pfa-updating',wrap.getAttribute('data-pfa-period')===periodValue());
       return;
     }
-    if(!wrap.querySelector('.pfa-firstload'))wrap.innerHTML='<div class="pfa-firstload" role="status"><div class="pfa-head"><div><div class="pfa-eyebrow">PEMBELIAN</div><h2>Ringkasan Pembelian</h2><p>Menyiapkan laporan periode terpilih…</p></div></div><div class="pfa-firstload-cards"></div><div class="pfa-firstload-panel">Memuat data pembelian…</div></div>';
+    if(!wrap.querySelector('.pfa-firstload'))mountOwnerControls(root,wrap,'<div class="pfa-firstload" role="status"><div class="pfa-head"><div><div class="pfa-eyebrow">PEMBELIAN</div><h2>Ringkasan Pembelian</h2><p>Menyiapkan laporan periode terpilih…</p></div></div><div class="pfa-controls-slot"></div><div class="pfa-firstload-cards"></div><div class="pfa-firstload-panel">Memuat data pembelian…</div></div>');
     return;
   }
-  if(error){wrap.__pfaCanonicalMarkup=null;wrap.classList.remove('pfa-period-loading','pfa-updating');wrap.removeAttribute('data-pfa-ready');wrap.removeAttribute('aria-busy');wrap.innerHTML='<div class="pfa-head"><div><h2>Ringkasan Pembelian</h2><p class="pfa-error">'+esc(error)+'</p></div><button id="pfaRetry" type="button">Muat ulang</button></div>';var rb=document.getElementById('pfaRetry');if(rb)rb.onclick=function(){load(true)};return}
+  if(error){wrap.__pfaCanonicalMarkup=null;wrap.classList.remove('pfa-period-loading','pfa-updating');wrap.removeAttribute('data-pfa-ready');wrap.removeAttribute('aria-busy');mountOwnerControls(root,wrap,'<div class="pfa-head"><div><h2>Ringkasan Pembelian</h2><p class="pfa-error">'+esc(error)+'</p></div><button id="pfaRetry" type="button">Muat ulang</button></div><div class="pfa-controls-slot"></div>');var rb=document.getElementById('pfaRetry');if(rb)rb.onclick=function(){load(true)};return}
   var v=summaryValues(),finance=control.finance_link_status==='MATCH';
-  var nextMarkup='<div class="pfa-head"><div><div class="pfa-eyebrow">PEMBELIAN · '+esc(cutLabel())+'</div><h2>Ringkasan Pembelian</h2><p>Visual utama menampilkan nilai dan kategori. Rincian transaksi disimpan di popup agar halaman tetap ringkas.</p></div><div class="pfa-head-actions"><span class="pfa-sync '+(finance?'ok':'warn')+'">'+(finance?'TERSINKRON':'PERLU PERIKSA')+'</span><button type="button" class="pfa-summary-detail" data-pfa-detail-open="1">Lihat Detail Pembelian</button></div></div>'+
+  var nextMarkup='<div class="pfa-head"><div><div class="pfa-eyebrow">PEMBELIAN · '+esc(cutLabel())+'</div><h2>Ringkasan Pembelian</h2><p>Visual utama menampilkan nilai dan kategori. Rincian transaksi disimpan di popup agar halaman tetap ringkas.</p></div><div class="pfa-head-actions"><span class="pfa-sync '+(finance?'ok':'warn')+'">'+(finance?'TERSINKRON':'PERLU PERIKSA')+'</span><button type="button" class="pfa-summary-detail" data-pfa-detail-open="1">Lihat Detail Pembelian</button></div></div><div class="pfa-controls-slot"></div>'+
     '<div class="pfa-cards">'+
       card('Total Pembelian',money(v.total_purchase_amount),n(v.purchase_rows).toLocaleString('id-ID')+' transaksi','total')+
       card('Inventory',money(v.inventory_amount),n(v.inventory_rows).toLocaleString('id-ID')+' transaksi','inventory')+
@@ -268,7 +277,7 @@ function render(){
   // Review controls mount asynchronously into #pfaReviewSlot. Avoid comparing live
   // innerHTML to the template: add-on controls make them differ on every repaint.
   if(wrap.__pfaCanonicalMarkup!==nextMarkup){
-    wrap.innerHTML=nextMarkup;
+    mountOwnerControls(root,wrap,nextMarkup);
     wrap.__pfaCanonicalMarkup=nextMarkup;
   }
   wrap.setAttribute('data-pfa-ready','1');

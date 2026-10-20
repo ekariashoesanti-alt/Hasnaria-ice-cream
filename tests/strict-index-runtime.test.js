@@ -18,8 +18,8 @@ try {
   if (!html.includes('/password-reset-bootstrap.js')) throw new Error('password reset bootstrap script missing');
   if (!html.includes('/owner-shell-guard.js?v=10')) throw new Error('owner shell guard missing from production index');
   if (html.indexOf('/owner-shell-guard.js?v=10') > html.indexOf('/app.js')) throw new Error('owner shell guard must load before app runtime');
-  if (!html.includes('/owner-green.css?v=3')) throw new Error('Owner green palette missing from production index');
-  if (html.indexOf('/owner-green.css?v=3') < html.indexOf('/erp.css')) throw new Error('Owner green palette must load after ERP stylesheet');
+  if (!html.includes('/owner-green.css?v=4')) throw new Error('Owner green palette missing from production index');
+  if (html.indexOf('/owner-green.css?v=4') < html.indexOf('/erp.css')) throw new Error('Owner green palette must load after ERP stylesheet');
 
   const ownerPalette = fs.readFileSync(path.join(root, 'owner-green.css'), 'utf8');
   if (!ownerPalette.includes('--hasnaria-green:#125644')) throw new Error('Hasnaria shell must use the approved #125644 brand green');
