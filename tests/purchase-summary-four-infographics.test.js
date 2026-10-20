@@ -10,7 +10,7 @@ const state={
   Math,Number,String,Array,Object,JSON,Date,Promise,console,
   periodKey(v){return String(v||'').slice(0,7)},
   periodValue(){return '2026-04'},
-  monthLabel(key){return this.MONTHS[Number(key.slice(5,7))-1]+' '+key.slice(0,4)},
+  monthLabel(key){return state.MONTHS[Number(key.slice(5,7))-1]+' '+key.slice(0,4)},
   esc(v){return String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;')},
   n(v){const x=Number(v);return Number.isFinite(x)?x:0},
   money(v){return 'Rp '+Number(v).toLocaleString('id-ID')},
