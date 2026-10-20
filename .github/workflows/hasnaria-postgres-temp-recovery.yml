@@ -58,7 +58,7 @@ jobs:
           ci_db="hsn-pg-bootstrap-${GITHUB_RUN_ID}"
           trap 'docker rm -f "$ci_db" >/dev/null 2>&1 || true' EXIT
           docker pull supabase/postgres:17.6.1.173 >/dev/null
-          docker run -d --rm --name "$ci_db" --network none \
+          docker run -d --name "$ci_db" --network none \
             -e POSTGRES_PASSWORD=ci_bootstrap_only \
             -e POSTGRES_DB=ci_recovery_sandbox \
             supabase/postgres:17.6.1.173 \
@@ -68,7 +68,12 @@ jobs:
             if docker exec "$ci_db" pg_isready -U postgres -d ci_recovery_sandbox >/dev/null 2>&1; then ready=1; break; fi
             sleep 2
           done
-          [[ "$ready" == 1 ]] || { echo "BLOCK: PostgreSQL sandbox startup failed"; exit 1; }
+          if [[ "$ready" != 1 ]]; then
+            echo "BLOCK: PostgreSQL sandbox startup failed; local container diagnostic follows"
+            docker ps -a --filter "name=$ci_db" --format 'CONTAINER {{.Status}}'
+            docker logs --tail 45 "$ci_db" 2>&1 | sed -E 's/[^[:print:]\t]//g' || true
+            exit 1
+          fi
           docker exec "$ci_db" psql -X -qAt -v ON_ERROR_STOP=1 -U postgres -d ci_recovery_sandbox \
             -c "SELECT 'LOCAL_DB_ACCESS: '||current_user||' owner='||pg_get_userbyid(datdba)||' create='||has_database_privilege(current_user,current_database(),'CREATE') FROM pg_database WHERE datname=current_database()"
           docker exec "$ci_db" psql -X -qAt -v ON_ERROR_STOP=1 -U postgres -d postgres \
