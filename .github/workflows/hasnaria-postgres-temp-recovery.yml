@@ -81,10 +81,10 @@ jobs:
           docker exec "$ci_db" psql -X -qAt -U supabase_admin -d ci_recovery_sandbox \
             -c "SELECT 'LOCAL_ADMIN_ACCESS: '||current_user||' db_create='||has_database_privilege(current_user,current_database(),'CREATE')" || echo 'LOCAL_ADMIN_UNAVAILABLE'
           docker exec -i "$ci_db" psql -X -q -v ON_ERROR_STOP=1 \
-            -U postgres -d ci_recovery_sandbox \
+            -U supabase_admin -d ci_recovery_sandbox \
             < scripts/hasnaria_ephemeral_pg_bootstrap.sql
           docker exec "$ci_db" psql -X -qAt -v ON_ERROR_STOP=1 \
-            -U postgres -d ci_recovery_sandbox \
+            -U supabase_admin -d ci_recovery_sandbox \
             -c "SELECT CASE WHEN to_regrole('authenticated') IS NOT NULL AND to_regrole('anon') IS NOT NULL THEN 'PASS' ELSE 'BLOCK' END" \
             | grep -Fxq PASS
           echo 'PASS: real Supabase PG17 role/extension bootstrap completed'
