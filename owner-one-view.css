@@ -897,3 +897,41 @@
     flex-wrap:wrap!important;row-gap:5px!important;
   }
 }
+
+
+/* Single navigation for Owner Purchase: only header quick switch controls content.
+   Keep documentary compatibility entries inert/hidden until Notification migration. */
+#pembelian #purchaseFinanceAlignment .pfa-review-compat[hidden]{
+  display:none!important;
+  visibility:hidden!important;
+  position:static!important;
+  width:0!important;
+  height:0!important;
+  overflow:hidden!important;
+}
+#pembelian #purchaseFinanceAlignment .pfa-quick-switch{
+  flex-wrap:nowrap!important;
+  max-width:100%!important;
+  min-width:0!important;
+}
+#pembelian #purchaseFinanceAlignment .pfa-quick-switch button{
+  white-space:nowrap!important;
+  flex:0 0 auto!important;
+}
+#pembelian #purchaseFinanceAlignment .pfa-quick-switch button.active{
+  background:#125644!important;
+  color:#fff!important;
+}
+@media(max-width:900px){
+  #pembelian #purchaseFinanceAlignment .pfa-purchase-toolbar-right{
+    min-width:0!important;
+    max-width:100%!important;
+  }
+  #pembelian #purchaseFinanceAlignment .pfa-quick-switch{
+    overflow-x:auto!important;
+    -webkit-overflow-scrolling:touch!important;
+  }
+  #pembelian #purchaseFinanceAlignment .pfa-quick-switch button{
+    padding:6px 9px!important;
+  }
+}

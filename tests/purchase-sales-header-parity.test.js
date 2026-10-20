@@ -21,6 +21,8 @@ assert.doesNotMatch(markup,/Format & Multi-Periode|Review Faktur Majoo/,'unreque
 assert.equal((markup.match(/data-pfa-detail-open="1"/g)||[]).length,1,'one detail action only');
 assert.match(markup,/data-pfa-view="summary"/);
 assert.match(markup,/data-pfa-view="items"/);
+assert.match(markup,/data-pfa-view="payments"/);
+assert.doesNotMatch(markup,/Pemeriksaan/);
 const move=vm.runInNewContext('('+source.slice(mStart,mEnd).trim()+')');
 const select={value:'2026-10',onchange(){return true}};
 const file={files:[],onchange(){return true}};

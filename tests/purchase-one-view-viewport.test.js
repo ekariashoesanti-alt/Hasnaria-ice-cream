@@ -19,16 +19,20 @@ assert.match(css,/flex:1 1 0!important/);
 assert.match(css,/#purchaseFinanceAlignment\.pfa-period-loading::after/);
 assert.match(css,/max-height:100%!important/);
 
-for(const view of ['summary','items','payments','reviews']){
+for(const view of ['summary','items','payments']){
  assert.ok(app.includes("data-pfa-view-panel=\""+view+"\""),view+' content stays accessible');
- assert.ok(app.includes("['"+view+"'"),view+' tab is defined');
+ assert.ok(app.includes("data-pfa-view=\""+view+"\""),view+' quick switch is defined');
 }
-assert.match(app,/role="tablist"/);
-assert.match(app,/aria-selected/);
+assert.doesNotMatch(app,/class="pfa-view-tabs"/,'duplicate lower navigation must not render');
+assert.doesNotMatch(app,/data-pfa-view-panel="reviews"/,'Pemeriksaan is no longer a Purchase view');
+assert.match(app,/role="group"/);
+assert.match(app,/aria-pressed/);
 assert.match(app,/\.setAttribute\('data-pfa-ready','1'\)/);
 assert.match(app,/if\(wrap\.__pfaCanonicalMarkup!==nextMarkup\)/);
 assert.match(app,/wrap\.__pfaCanonicalMarkup=nextMarkup/);
 assert.match(app,/id="pfaReviewSlot"/);
+assert.match(app,/pfa-review-compat" hidden aria-hidden="true"/);
+assert.match(css,/\.pfa-review-compat\[hidden\]/);
 assert.match(app,/data-pfa-detail-open="1"/);
 assert.match(app,/wrap\.classList\.toggle\('pfa-period-loading'/);
 assert.match(app,/if\(!document\.getElementById\('purchaseFinanceAlignment'\)\)render\(\)/);
@@ -38,10 +42,10 @@ assert.match(app,/hasnaria:purchase-imported/);
 assert.match(app,/data-pfa-detail-open/);
 assert.match(app,/data-pfa-unit-open/);
 
-for(const path of ['purchase-analytics.css?v=1','purchase-finance-alignment-v1.css?v=5','purchase-dual-source.css?v=1','owner-insight-v1.css?v=1','owner-one-view.css?v=6']){
+for(const path of ['purchase-analytics.css?v=1','purchase-finance-alignment-v1.css?v=5','purchase-dual-source.css?v=1','owner-insight-v1.css?v=1','owner-one-view.css?v=7']){
  assert.ok(palette.includes(path),'first-paint Owner CSS preloads '+path);
 }
-assert.match(preload,/purchase-finance-alignment-v1\.js\?v=20/);
+assert.match(preload,/purchase-finance-alignment-v1\.js\?v=21/);
 assert.match(shell,/data-purchase-pending/);
 console.log('Owner Purchase one-view and anti-flicker contract: PASS');
 
