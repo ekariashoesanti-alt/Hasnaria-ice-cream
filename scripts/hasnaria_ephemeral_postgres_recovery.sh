@@ -114,7 +114,10 @@ docker exec -e PGPASSWORD="$LOCAL_PASSWORD" "$NAME" \
  pg_restore --single-transaction --exit-on-error --no-owner --no-privileges \
  -U supabase_admin -d hasnaria_recovery /backup/hasnaria.dump \
  >"$TMP/restore-stdout" 2>"$TMP/restore-stderr" ||
- { echo 'BLOCK: local Supabase-compatible SQL restore failed (review dependencies)'; exit 1; }
+ { node scripts/hasnaria_restore_error_classifier.js "$TMP/restore-stderr" || true
+   echo 'BLOCK: local Supabase-compatible SQL restore failed (category above; no raw SQL logged)'
+   exit 1
+ }
 
 [[ "$(db_recovery "$counts_sql")" == "$source_counts" ]] ||
  { echo 'BLOCK: count mismatch or source changed during snapshot'; exit 1; }
