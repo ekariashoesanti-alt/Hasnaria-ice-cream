@@ -52,13 +52,19 @@ jobs:
           trap 'docker rm -f "$ci_db" >/dev/null 2>&1 || true; rm -rf "$tmp"' EXIT
           docker pull supabase/postgres:17.6.1.173 >/dev/null
           docker run -d --name "$ci_db" --network none \
+            -e POSTGRES_PASSWORD=ci_fixture_only \
             -e POSTGRES_DB=ci_fixture_init \
             supabase/postgres:17.6.1.173 \
             postgres -c config_file=/etc/postgresql/postgresql.conf >/dev/null
           ready=0
           consecutive=0
           for i in $(seq 1 60); do
-            docker inspect -f '{{.State.Running}}' "$ci_db" 2>/dev/null | grep -q true || { echo 'BLOCK: source fixture exited'; exit 1; }
+            if ! docker inspect -f '{{.State.Running}}' "$ci_db" 2>/dev/null | grep -q true; then
+              echo 'BLOCK: source fixture exited before readiness'
+              docker ps -a --filter "name=$ci_db" --format 'CONTAINER {{.Status}}' || true
+              docker logs --tail 35 "$ci_db" 2>&1 | sed -E 's/[^[:print:]\t]//g' || true
+              exit 1
+            fi
             if docker exec "$ci_db" psql -X -qAt -v ON_ERROR_STOP=1 -U postgres -d ci_fixture_init -c 'SELECT 1' >/dev/null 2>&1; then
               consecutive=$((consecutive+1))
               if [[ "$consecutive" -ge 3 ]]; then ready=1; break; fi
