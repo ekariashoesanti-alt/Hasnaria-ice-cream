@@ -44,6 +44,9 @@ jobs:
           HSN_BACKUP_S3_BUCKET: hasnaria-backup-private
           HSN_OCI_NAMESPACE: axf1xcjq8gsy
           AWS_DEFAULT_REGION: ap-batam-1
+          # Disable AWS CLI v2 auto trailer checksum / aws-chunked on OCI S3.
+          AWS_REQUEST_CHECKSUM_CALCULATION: WHEN_REQUIRED
+          AWS_RESPONSE_CHECKSUM_VALIDATION: WHEN_REQUIRED
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         run: |
@@ -125,6 +128,9 @@ jobs:
           HSN_BACKUP_S3_BUCKET: hasnaria-backup-private
           HSN_OCI_NAMESPACE: axf1xcjq8gsy
           AWS_DEFAULT_REGION: ap-batam-1
+          # Disable AWS CLI v2 auto trailer checksum / aws-chunked on OCI S3.
+          AWS_REQUEST_CHECKSUM_CALCULATION: WHEN_REQUIRED
+          AWS_RESPONSE_CHECKSUM_VALIDATION: WHEN_REQUIRED
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           RESTORE_KEY: ${{ inputs.backup_key }}
