@@ -239,6 +239,7 @@ run(process.execPath, ['tests/purchase-fast-load.test.js']);
 run(process.execPath, ['tests/purchase-owner-no-flicker.test.js']);
 run(process.execPath, ['tests/purchase-one-view-viewport.test.js']);
 run(process.execPath, ['tests/purchase-unified-card.test.js']);
+run(process.execPath, ['tests/purchase-ytd-category-pie.test.js']);
 run(process.execPath, ['--test', 'tests/purchase-funding-belanja-v1.test.js']);
 run(process.execPath, ['--test', 'tests/purchase-template-monthly-v1.test.js']);
 run(process.execPath, ['--test', 'tests/purchase-upload-canonical-finance-v1.test.js']);
