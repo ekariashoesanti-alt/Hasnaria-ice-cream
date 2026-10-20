@@ -31,7 +31,12 @@ jobs:
           assert.doesNotMatch(w,/HSN_RESTORE_DB_URL|HSN_RESTORE_PROJECT_REF|hasnaria-restore-disposable/);
           assert.match(w,/environment: hasnaria-backup-private/);
           assert.match(w,/HSN_BACKUP_AGE_IDENTITY/);
-          assert.match(w,/get-bucket-versioning/);
+          assert.doesNotMatch(w,/get-public-access-block|get-bucket-versioning/);
+          assert.match(w,/HSN_OCI_NAMESPACE/);
+          assert.match(w,/oci_s3_endpoint/);
+          assert.match(w,/ap-batam-1/);
+          assert.match(w,/AI ROOM bucket forbidden/);
+          assert.match(w,/--endpoint-url/);
           assert.match(s,/--network none/);
           assert.match(s,/TEMPLATE template0/);
           assert.match(s,/--single-transaction --exit-on-error/);
