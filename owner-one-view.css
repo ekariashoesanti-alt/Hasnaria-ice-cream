@@ -754,3 +754,146 @@
  #pembelian #purchaseFinanceAlignment .pfa-pie-wrap{grid-template-columns:1fr 1fr}
  #pembelian #purchaseFinanceAlignment .pfa-trend-foot{font-size:9px}
 }
+
+
+/* Owner Pembelian – Sales-inspired compact top dashboard.
+   PR #129 monthly trend and goods pie retain their existing renderers. */
+#pembelian #purchaseFinanceAlignment>.pfa-sales-head{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) auto!important;
+  gap:12px!important;
+  align-items:center!important;
+  flex:0 0 auto!important;
+  min-width:0!important;
+}
+#pembelian #purchaseFinanceAlignment .pfa-head-copy{min-width:0}
+#pembelian #purchaseFinanceAlignment .pfa-sales-head .pfa-eyebrow{
+  font-size:10px!important;font-weight:900!important;letter-spacing:.1em!important;
+  color:#12765c!important;
+}
+#pembelian #purchaseFinanceAlignment .pfa-sales-head h2{
+  color:#133e32!important;font-size:23px!important;line-height:1.14!important;
+  margin:3px 0 2px!important;letter-spacing:-.025em!important;
+}
+#pembelian #purchaseFinanceAlignment .pfa-sales-head p{
+  font-size:11px!important;line-height:1.3!important;color:#6e8880!important;
+}
+#pembelian #purchaseFinanceAlignment>.pfa-sales-head>.pfa-head-actions{
+  display:flex!important;align-items:center!important;justify-content:flex-end!important;
+  gap:8px!important;flex:0 0 auto!important;margin:0!important;
+}
+#pembelian #purchaseFinanceAlignment .pfa-upload-slot{min-width:0}
+#pembelian #purchaseFinanceAlignment .pfa-upload-slot>.pa-upload-wrap{
+  display:flex!important;align-items:center!important;justify-content:flex-end!important;
+  padding:0!important;margin:0!important;min-width:0!important;
+  width:auto!important;grid-column:auto!important;border:0!important;
+  border-left:0!important;background:transparent!important;
+}
+#pembelian #purchaseFinanceAlignment .pfa-upload-slot .purchase-dual-buttons{
+  display:flex!important;align-items:center!important;justify-content:flex-end!important;
+}
+#pembelian #purchaseFinanceAlignment .pfa-upload-slot #purchaseExcelBtn{
+  display:inline-flex!important;align-items:center!important;justify-content:center!important;
+  min-height:37px!important;height:37px!important;padding:7px 15px!important;
+  border-radius:9px!important;color:white!important;background:#116e55!important;
+  border:1px solid #116e55!important;font-size:11px!important;font-weight:800!important;
+  white-space:nowrap!important;
+}
+#pembelian #purchaseFinanceAlignment .pfa-sales-head .pfa-summary-detail{
+  display:inline-flex!important;align-items:center!important;justify-content:center!important;
+  min-height:37px!important;height:37px!important;border:0!important;
+  border-radius:9px!important;background:#e3efeb!important;color:#1a4e3e!important;
+  padding:7px 15px!important;font-size:11px!important;font-weight:800!important;
+  white-space:nowrap!important;
+}
+#pembelian #purchaseFinanceAlignment .pfa-purchase-toolbar{
+  display:flex!important;align-items:center!important;justify-content:space-between!important;
+  flex:0 0 auto!important;gap:12px!important;min-width:0!important;
+  margin:8px 0 3px!important;
+}
+#pembelian #purchaseFinanceAlignment .pfa-purchase-period-left,
+#pembelian #purchaseFinanceAlignment .pfa-purchase-toolbar-right{
+  display:flex!important;align-items:center!important;gap:11px!important;min-width:0!important;
+}
+#pembelian #purchaseFinanceAlignment .pfa-purchase-period-left{flex:1 1 auto!important}
+#pembelian #purchaseFinanceAlignment .pfa-purchase-toolbar-right{flex:0 0 auto!important}
+#pembelian #purchaseFinanceAlignment .pfa-purchase-period-meta{
+  font-size:10px!important;color:#7d9690!important;white-space:nowrap!important;
+  overflow:hidden!important;text-overflow:ellipsis!important;
+}
+#pembelian #purchaseFinanceAlignment .pfa-purchase-toolbar .pfa-controls-slot{
+  flex:0 0 auto!important;min-width:0!important;margin:0!important;padding:0!important;
+}
+#pembelian #purchaseFinanceAlignment .pfa-purchase-toolbar .pfa-controls-slot>.pa-controls{
+  display:flex!important;align-items:center!important;gap:7px!important;
+  width:auto!important;min-width:0!important;background:none!important;
+  border:0!important;box-shadow:none!important;padding:0!important;margin:0!important;
+}
+#pembelian #purchaseFinanceAlignment .pfa-purchase-toolbar .pa-controls label{
+  display:flex!important;flex-direction:row!important;align-items:center!important;
+  width:auto!important;gap:7px!important;min-width:0!important;
+}
+#pembelian #purchaseFinanceAlignment .pfa-purchase-toolbar .pa-controls label>span{
+  display:inline-block!important;margin:0!important;
+  font-size:11px!important;color:#687e74!important;font-weight:800!important;
+}
+#pembelian #purchaseFinanceAlignment .pfa-purchase-toolbar #paPeriod{
+  width:116px!important;min-width:116px!important;
+  height:34px!important;min-height:34px!important;padding:4px 9px!important;
+  border:1px solid #d5e4dd!important;border-radius:8px!important;
+  background:#fff!important;color:#164537!important;font-size:11px!important;font-weight:800!important;
+}
+#pembelian #purchaseFinanceAlignment .pfa-purchase-toolbar .pfa-sync{
+  display:inline-flex!important;align-items:center!important;justify-content:center!important;
+  min-height:28px!important;padding:5px 11px!important;
+  border-radius:999px!important;font-size:9px!important;
+}
+#pembelian #purchaseFinanceAlignment .pfa-purchase-toolbar .pfa-sync.warn{
+  background:#fff5db!important;color:#976500!important;border-color:#f1e3bd!important;
+}
+#pembelian #purchaseFinanceAlignment .pfa-quick-switch{
+  display:flex!important;align-items:center!important;gap:3px!important;
+  padding:3px!important;border-radius:10px!important;background:#edf4f0!important;
+}
+#pembelian #purchaseFinanceAlignment .pfa-quick-switch button{
+  display:inline-flex!important;align-items:center!important;justify-content:center!important;
+  border:0!important;min-height:28px!important;
+  border-radius:8px!important;padding:6px 11px!important;
+  background:transparent!important;color:#667e73!important;
+  font-size:10px!important;font-weight:800!important;cursor:pointer!important;
+}
+#pembelian #purchaseFinanceAlignment .pfa-quick-switch button.active{
+  color:#fff!important;background:#125644!important;
+}
+#pembelian #purchaseFinanceAlignment .pfa-quick-switch button:focus-visible{
+  outline:2px solid #125644!important;outline-offset:2px!important;
+}
+#pembelian #purchaseFinanceAlignment>.pfa-cards{margin-top:9px!important}
+@media(min-width:901px) and (max-height:770px){
+  #pembelian #purchaseFinanceAlignment>.pfa-sales-head{gap:9px!important}
+  #pembelian #purchaseFinanceAlignment .pfa-sales-head h2{font-size:19px!important}
+  #pembelian #purchaseFinanceAlignment .pfa-purchase-toolbar{margin:5px 0 2px!important}
+}
+@media(max-width:1100px){
+  #pembelian #purchaseFinanceAlignment>.pfa-sales-head{
+    grid-template-columns:minmax(0,1fr) auto!important;
+  }
+  #pembelian #purchaseFinanceAlignment .pfa-purchase-toolbar{
+    flex-wrap:wrap!important;row-gap:6px!important;
+  }
+}
+@media(max-width:760px){
+  #pembelian #purchaseFinanceAlignment>.pfa-sales-head{
+    display:flex!important;flex-direction:column!important;
+    align-items:stretch!important;gap:10px!important;
+  }
+  #pembelian #purchaseFinanceAlignment>.pfa-sales-head>.pfa-head-actions{
+    justify-content:flex-start!important;flex-wrap:wrap!important;
+  }
+  #pembelian #purchaseFinanceAlignment .pfa-purchase-toolbar-right{
+    width:100%!important;justify-content:space-between!important;
+  }
+  #pembelian #purchaseFinanceAlignment .pfa-purchase-period-left{
+    flex-wrap:wrap!important;row-gap:5px!important;
+  }
+}

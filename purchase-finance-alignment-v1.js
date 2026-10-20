@@ -327,11 +327,29 @@ function infographicMarkup(){
 function mountOwnerControls(root,wrap,markup){
   // A native node move preserves #paPeriod value and Excel input event handlers.
   // Temporarily detach from old markup before replacing canonical content.
-  var controls=root.querySelector('.pa-controls');
+  var controls=root.querySelector('.pa-controls'),upload=root.querySelector('.pa-upload-wrap');
+  // Both controls retain their original DOM identity, including file listeners.
   if(controls&&controls.parentNode!==root&&root.appendChild)root.appendChild(controls);
+  if(upload&&upload.parentNode!==root&&root.appendChild)root.appendChild(upload);
   wrap.innerHTML=markup;
-  var slot=wrap.querySelector('.pfa-controls-slot');
+  var slot=wrap.querySelector('.pfa-controls-slot'),uploadSlot=wrap.querySelector('.pfa-upload-slot');
   if(slot&&controls)slot.appendChild(controls);
+  if(uploadSlot&&upload)uploadSlot.appendChild(upload);
+  else if(controls&&upload&&controls.appendChild)controls.appendChild(upload);
+}
+function purchaseSalesHeader(values,finance){
+  var r=monthRange(),period=r?esc(r.from+' s/d '+r.to):'Periode belum tersedia';
+  return'<div class="pfa-head pfa-sales-head"><div class="pfa-head-copy">'+
+    '<div class="pfa-eyebrow">PURCHASE INTELLIGENCE</div><h2>Dashboard Pembelian</h2>'+
+    '<p>Tren nilai pembelian, komposisi kategori, dan integrasi upload Excel.</p></div>'+
+    '<div class="pfa-head-actions"><div class="pfa-upload-slot"></div>'+
+    '<button type="button" class="pfa-summary-detail" data-pfa-detail-open="1">Lihat Detail Pembelian</button></div></div>'+
+    '<div class="pfa-purchase-toolbar"><div class="pfa-purchase-period-left"><div class="pfa-controls-slot"></div>'+
+    '<span class="pfa-purchase-period-meta">'+period+' · '+n(values.purchase_rows).toLocaleString('id-ID')+' transaksi</span></div>'+
+    '<div class="pfa-purchase-toolbar-right"><span class="pfa-sync '+(finance?'ok':'warn')+'">'+(finance?'TERSINKRON':'PERLU PERIKSA')+'</span>'+
+    '<div class="pfa-quick-switch" role="group" aria-label="Tampilan Pembelian">'+
+    '<button type="button" data-pfa-view="summary" aria-pressed="'+(purchaseView==='summary'?'true':'false')+'" class="'+(purchaseView==='summary'?'active':'')+'">Ringkasan</button>'+
+    '<button type="button" data-pfa-view="items" aria-pressed="'+(purchaseView==='items'?'true':'false')+'" class="'+(purchaseView==='items'?'active':'')+'">Kategori</button></div></div></div>';
 }
 function render(){
   if(unitOpen&&!unitAllowed())closeUnitReview();
@@ -347,12 +365,12 @@ function render(){
       wrap.classList.toggle('pfa-updating',wrap.getAttribute('data-pfa-period')===periodValue());
       return;
     }
-    if(!wrap.querySelector('.pfa-firstload'))mountOwnerControls(root,wrap,'<div class="pfa-firstload" role="status"><div class="pfa-head"><div><div class="pfa-eyebrow">PEMBELIAN</div><h2>Ringkasan Pembelian</h2><p>Menyiapkan laporan periode terpilih…</p></div></div><div class="pfa-controls-slot"></div><div class="pfa-firstload-cards"></div><div class="pfa-firstload-panel">Memuat data pembelian…</div></div>');
+    if(!wrap.querySelector('.pfa-firstload'))mountOwnerControls(root,wrap,'<div class="pfa-firstload" role="status"><div class="pfa-head pfa-sales-head"><div><div class="pfa-eyebrow">PURCHASE INTELLIGENCE</div><h2>Dashboard Pembelian</h2><p>Menyiapkan ringkasan pembelian…</p></div><div class="pfa-upload-slot"></div></div><div class="pfa-purchase-toolbar"><div class="pfa-purchase-period-left"><div class="pfa-controls-slot"></div></div></div><div class="pfa-firstload-cards"></div><div class="pfa-firstload-panel">Memuat data pembelian…</div></div>');
     return;
   }
-  if(error){wrap.__pfaCanonicalMarkup=null;wrap.classList.remove('pfa-period-loading','pfa-updating');wrap.removeAttribute('data-pfa-ready');wrap.removeAttribute('aria-busy');mountOwnerControls(root,wrap,'<div class="pfa-head"><div><h2>Ringkasan Pembelian</h2><p class="pfa-error">'+esc(error)+'</p></div><button id="pfaRetry" type="button">Muat ulang</button></div><div class="pfa-controls-slot"></div>');var rb=document.getElementById('pfaRetry');if(rb)rb.onclick=function(){load(true)};return}
+  if(error){wrap.__pfaCanonicalMarkup=null;wrap.classList.remove('pfa-period-loading','pfa-updating');wrap.removeAttribute('data-pfa-ready');wrap.removeAttribute('aria-busy');mountOwnerControls(root,wrap,'<div class="pfa-head pfa-sales-head"><div><div class="pfa-eyebrow">PURCHASE INTELLIGENCE</div><h2>Dashboard Pembelian</h2><p class="pfa-error">'+esc(error)+'</p></div><div class="pfa-head-actions"><div class="pfa-upload-slot"></div><button id="pfaRetry" type="button">Muat ulang</button></div></div><div class="pfa-purchase-toolbar"><div class="pfa-purchase-period-left"><div class="pfa-controls-slot"></div></div></div>');var rb=document.getElementById('pfaRetry');if(rb)rb.onclick=function(){load(true)};return}
   var v=summaryValues(),finance=control.finance_link_status==='MATCH';
-  var nextMarkup='<div class="pfa-head"><div><div class="pfa-eyebrow">PEMBELIAN · '+esc(cutLabel())+'</div><h2>Ringkasan Pembelian</h2><p>Visual utama menampilkan nilai dan kategori. Rincian transaksi disimpan di popup agar halaman tetap ringkas.</p></div><div class="pfa-head-actions"><span class="pfa-sync '+(finance?'ok':'warn')+'">'+(finance?'TERSINKRON':'PERLU PERIKSA')+'</span><button type="button" class="pfa-summary-detail" data-pfa-detail-open="1">Lihat Detail Pembelian</button></div></div><div class="pfa-controls-slot"></div>'+
+  var nextMarkup=purchaseSalesHeader(v,finance)+
     '<div class="pfa-cards">'+
       card('Total Pembelian',money(v.total_purchase_amount),n(v.purchase_rows).toLocaleString('id-ID')+' transaksi','total')+
       card('Inventory',money(v.inventory_amount),n(v.inventory_rows).toLocaleString('id-ID')+' transaksi','inventory')+
@@ -436,7 +454,7 @@ function boot(){
         purchaseView=view.getAttribute('data-pfa-view')||'summary';
         document.querySelectorAll('#purchaseFinanceAlignment [data-pfa-view]').forEach(function(b){
           var on=b.getAttribute('data-pfa-view')===purchaseView;
-          b.classList.toggle('active',on);b.setAttribute('aria-selected',on?'true':'false');
+          b.classList.toggle('active',on);b.setAttribute('aria-selected',on?'true':'false');if(b.hasAttribute&&b.hasAttribute('aria-pressed'))b.setAttribute('aria-pressed',on?'true':'false');
         });
         document.querySelectorAll('#purchaseFinanceAlignment [data-pfa-view-panel]').forEach(function(p){p.hidden=p.getAttribute('data-pfa-view-panel')!==purchaseView});
         if(purchaseView==='summary')ensureMonthlyTrend();

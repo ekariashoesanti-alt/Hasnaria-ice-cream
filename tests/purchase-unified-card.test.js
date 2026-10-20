@@ -23,7 +23,7 @@ assert.match(upload,/id="purchaseExcelBtn"/);
 assert.match(upload,/id="purchaseExcelFile"/);
 
 const start=report.indexOf('function mountOwnerControls(');
-const end=report.indexOf('function render(){',start);
+const end=report.indexOf('function purchaseSalesHeader(',start);
 assert.ok(start>=0&&end>start,'controls mover exists before canonical renderer');
 const mount=vm.runInNewContext('('+report.slice(start,end).trim()+')');
 const select={value:'2026-10',onchange(){return 'kept'}};
