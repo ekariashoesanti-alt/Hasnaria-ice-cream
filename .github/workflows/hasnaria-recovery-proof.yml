@@ -1,19 +1,20 @@
 name: Hasnaria Encrypted Backup and Recovery Proof
-# Deliberately manual. This file is tooling only and never deploys application changes.
+# Protected real backup/restore is manual; offline fixtures use separate workflow.
+# No third Supabase project or customer data in GitHub artifacts.
 on:
   workflow_dispatch:
     inputs:
       action:
-        description: "Choose encrypted export or proof on a disposable recovery database"
+        description: "Choose encrypted S3 export or isolated local PostgreSQL restore"
         type: choice
         required: true
         options: [encrypted-backup, restore-proof]
       confirmation:
-        description: "Type BACKUP_READONLY or RESTORE_DISPOSABLE"
+        description: "Type BACKUP_READONLY or RESTORE_DISPOSABLE (isolated runner only)"
         type: string
         required: true
       backup_key:
-        description: "Existing S3 key for restore-proof only, e.g. hasnaria/20261018T120000Z.age"
+        description: "Existing encrypted S3 key for restore-proof, e.g. hasnaria/20261020T120000Z.age"
         type: string
         required: false
 permissions:
@@ -70,32 +71,31 @@ jobs:
           for required in 'TABLE DATA public products' 'TABLE DATA public offline_purchase_history' 'TABLE DATA auth users' 'TABLE DATA supabase_migrations schema_migrations'; do
             grep -Fq "$required" "$tmp/toc.txt" || { echo "BLOCK: expected schema/data missing from backup archive"; exit 1; }
           done
-          for table in products offline_purchase_history inventory_items finance_journal_entries finance_journal_lines purchase_import_evidence; do
-            printf '%s\t%s\n' "$table" "$(db "select count(*) from public.$table")" >> "$tmp/counts.tsv"
-          done
-          (cd "$tmp" && sha256sum hasnaria.dump > archive.sha256 && tar -cf packed.tar hasnaria.dump archive.sha256 counts.tsv)
+          # Live queries are not the snapshot used by pg_dump; do not store misleading source counts.
+          # Restore-proof verifies data from the transaction-consistent archive itself.
+          (cd "$tmp" && sha256sum hasnaria.dump > archive.sha256 && tar -cf packed.tar hasnaria.dump archive.sha256)
           age -r "$HSN_BACKUP_AGE_RECIPIENT" -o "$tmp/backup.age" "$tmp/packed.tar"
           stamp="$(date -u +%Y%m%dT%H%M%SZ)"
           key="hasnaria/$stamp.age"
           aws s3api get-public-access-block --bucket "$HSN_BACKUP_S3_BUCKET" --query 'PublicAccessBlockConfiguration.[BlockPublicAcls,IgnorePublicAcls,BlockPublicPolicy,RestrictPublicBuckets]' --output text | grep -Fxq $'True\tTrue\tTrue\tTrue' || { echo "BLOCK: S3 bucket public-access-block must be fully enabled"; exit 1; }
+          aws s3api get-bucket-versioning --bucket "$HSN_BACKUP_S3_BUCKET" --query Status --output text | grep -Fxq Enabled || { echo 'BLOCK: bucket versioning must be enabled'; exit 1; }
           aws s3api put-object --bucket "$HSN_BACKUP_S3_BUCKET" --key "$key" --body "$tmp/backup.age" --server-side-encryption AES256 >/dev/null
           aws s3api get-object --bucket "$HSN_BACKUP_S3_BUCKET" --key "$key" "$tmp/downloaded.age" >/dev/null
           cmp -s "$tmp/backup.age" "$tmp/downloaded.age" || { echo "BLOCK: remote ciphertext differs from local encrypted backup"; exit 1; }
           echo "Encrypted offsite archive verified; object key: $key"
           echo "STATUS: BACKUP ARCHIVED, NOT YET RESTORE-PROVEN (run restore-proof against disposable DB)"
   restore-proof:
-    if: ${{ github.repository == 'ekariashoesanti-alt/Hasnaria-ice-cream' && github.ref == 'refs/heads/main' && inputs.action == 'restore-proof' && inputs.confirmation == 'RESTORE_DISPOSABLE' }}
-    environment: hasnaria-restore-disposable
+    if: ${{ github.event_name == 'workflow_dispatch' && github.repository == 'ekariashoesanti-alt/Hasnaria-ice-cream' && github.ref == 'refs/heads/main' && inputs.action == 'restore-proof' && inputs.confirmation == 'RESTORE_DISPOSABLE' }}
+    # Reuse the PRIVATE encrypted backup environment. No third database.
+    environment: hasnaria-backup-private
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
         with: { persist-credentials: false }
-      - name: Restore only into separately approved disposable database
+      - name: Retrieve encrypted backup and prove SQL restore in isolated local PG17
         shell: bash
         env:
-          HSN_RESTORE_DB_URL: ${{ secrets.HSN_RESTORE_DB_URL }}
-          HSN_RESTORE_PROJECT_REF: ${{ vars.HSN_RESTORE_PROJECT_REF }}
           HSN_BACKUP_AGE_IDENTITY: ${{ secrets.HSN_BACKUP_AGE_IDENTITY }}
           HSN_BACKUP_S3_BUCKET: ${{ vars.HSN_BACKUP_S3_BUCKET }}
           AWS_DEFAULT_REGION: ${{ vars.AWS_DEFAULT_REGION }}
@@ -104,32 +104,27 @@ jobs:
           RESTORE_KEY: ${{ inputs.backup_key }}
         run: |
           set -Eeuo pipefail
+          set +x
           umask 077
           tmp="$(mktemp -d)"
           trap 'rm -rf "$tmp"' EXIT
-          for required in HSN_RESTORE_DB_URL HSN_RESTORE_PROJECT_REF HSN_BACKUP_AGE_IDENTITY HSN_BACKUP_S3_BUCKET AWS_DEFAULT_REGION AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY RESTORE_KEY; do
-            [[ -n "${!required:-}" ]] || { echo "BLOCK: missing recovery target/key/secret"; exit 1; }
+          for required in HSN_BACKUP_AGE_IDENTITY HSN_BACKUP_S3_BUCKET AWS_DEFAULT_REGION AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY RESTORE_KEY; do
+            [[ -n "${!required:-}" ]] || { echo 'BLOCK: encrypted key or protected credentials missing'; exit 1; }
           done
-          [[ "$HSN_RESTORE_PROJECT_REF" =~ ^[a-z0-9]{20}$ ]] || exit 1
-          [[ "$HSN_RESTORE_PROJECT_REF" != 'bnnhmtkpdjlgehsvgoda' && "$HSN_RESTORE_PROJECT_REF" != 'rynnpndtzjwpekbiwiif' ]] || { echo "BLOCK: recovery destination must differ from production and Owner UAT staging"; exit 1; }
-          [[ "$RESTORE_KEY" =~ ^hasnaria/[0-9]{8}T[0-9]{6}Z\.age$ ]] || { echo "BLOCK: invalid encrypted archive key"; exit 1; }
-          HSN_RESTORE_DB_URL="$HSN_RESTORE_DB_URL" HSN_RESTORE_PROJECT_REF="$HSN_RESTORE_PROJECT_REF" node -e "const u=new URL(process.env.HSN_RESTORE_DB_URL),r=process.env.HSN_RESTORE_PROJECT_REF; if(!['postgres:','postgresql:'].includes(u.protocol)||!u.password||u.pathname!='/postgres'||!(u.hostname==='db.'+r+'.supabase.co'||(u.hostname.endsWith('.pooler.supabase.com')&&decodeURIComponent(u.username).endsWith('.'+r)))) process.exit(1)"
+          [[ "$RESTORE_KEY" =~ ^hasnaria/[0-9]{8}T[0-9]{6}Z\.age$ ]] || { echo 'BLOCK: invalid archive key'; exit 1; }
           sudo apt-get update -qq
           sudo apt-get install -y -qq age awscli
-          docker pull postgres:17 >/dev/null
-          db() { docker run --rm --network host -e HSN_RESTORE_DB_URL postgres:17 psql -X -qAt -v ON_ERROR_STOP=1 -d "$HSN_RESTORE_DB_URL" -c "$1"; }
-          [[ "$(db "select case when to_regclass('public.user_profiles') is null and to_regclass('public.offline_purchase_history') is null then 'EMPTY' else 'NOT_EMPTY' end")" == 'EMPTY' ]] || { echo "BLOCK: disposable target already contains business tables"; exit 1; }
+          aws s3api get-public-access-block --bucket "$HSN_BACKUP_S3_BUCKET" --query 'PublicAccessBlockConfiguration.[BlockPublicAcls,IgnorePublicAcls,BlockPublicPolicy,RestrictPublicBuckets]' --output text | grep -Fxq $'True\tTrue\tTrue\tTrue' || { echo 'BLOCK: private backup bucket verification failed'; exit 1; }
           aws s3api get-object --bucket "$HSN_BACKUP_S3_BUCKET" --key "$RESTORE_KEY" "$tmp/backup.age" >/dev/null
+          test -s "$tmp/backup.age"
           printf '%s\n' "$HSN_BACKUP_AGE_IDENTITY" > "$tmp/identity.txt"
           age -d -i "$tmp/identity.txt" -o "$tmp/packed.tar" "$tmp/backup.age"
-          tar -xf "$tmp/packed.tar" -C "$tmp" hasnaria.dump archive.sha256 counts.tsv
+          test -s "$tmp/packed.tar"
+          tar -tf "$tmp/packed.tar" | sort > "$tmp/members"
+          printf '%s\n' archive.sha256 hasnaria.dump > "$tmp/allowed-members"
+          cmp -s "$tmp/members" "$tmp/allowed-members" || { echo 'BLOCK: unexpected archive member'; exit 1; }
+          tar -xf "$tmp/packed.tar" -C "$tmp" hasnaria.dump archive.sha256
           (cd "$tmp" && sha256sum -c archive.sha256 >/dev/null)
-          # Single transaction: failed restore rolls itself back. No --clean or --if-exists.
-          docker run --rm --network host -e HSN_RESTORE_DB_URL -v "$tmp:/out:ro" postgres:17 sh -c 'pg_restore --single-transaction --exit-on-error --no-owner --no-privileges --dbname="$HSN_RESTORE_DB_URL" /out/hasnaria.dump' >/dev/null 2>&1 || { echo "BLOCK: full restore not compatible with target; do not mark recoverable"; exit 1; }
-          while IFS=$'\t' read -r table expected; do
-            [[ "$table" =~ ^[a-z_]+$ && "$expected" =~ ^[0-9]+$ ]] || exit 1
-            actual="$(db "select count(*) from public.$table")"
-            [[ "$actual" == "$expected" ]] || { echo "BLOCK: restore count mismatch for $table"; exit 1; }
-          done < "$tmp/counts.tsv"
-          echo "PASS: independent SQL restore + selected ledger row counts on disposable target"
-          echo "NEXT: independently test Auth login, RLS, managed roles and Storage before full recovery sign-off"
+          bash scripts/hasnaria_verify_durable_backup_local.sh --verify-backup "$tmp/hasnaria.dump"
+          echo "PASS: encrypted offsite SQL archive restored inside network-isolated PG17; key: $RESTORE_KEY"
+          echo 'LIMIT: SQL logical recovery; Supabase Auth API/session and remote Storage bytes are separate'
