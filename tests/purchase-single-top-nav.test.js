@@ -12,6 +12,7 @@ const stub={
  esc:x=>String(x),n:Number,control:{stock_review_rows:3,provisional_journal_rows:1},
  periodValue:()=> '2026-10', monthLabel:()=> 'Oktober 2026',cutLabel:()=> '1–31 Oktober 2026',
  monthlyTrendMarkup:()=>'<span>MONTHLY_TREND_YTD</span>',
+ monthlyPaymentMarkup:()=>'<span>MONTHLY_PAYMENT_100</span>',
  purchasePieMarkup:()=>'<span>GOODS_PIE</span>',
  chartMarkup:()=>'<span>CATEGORY_VALUES</span>',
  purchaseTopMarkup:()=>'<span>TOP_ITEMS</span>',
@@ -21,10 +22,12 @@ const stub={
 };
 let graph=vm.runInNewContext('('+src.slice(i,j).trim()+')',stub);
 let header=vm.runInNewContext('('+src.slice(hs,he).trim()+')',stub);
-for(const [view,needle] of [['summary','MONTHLY_TREND_YTD'],['items','CATEGORY_VALUES'],['payments','CANONICAL_PAYMENTS']]){
+for(const [view,needle] of [['summary','MONTHLY_TREND_YTD'],['items','CATEGORY_VALUES'],['payments','Kontrol Data Berkualitas']]){
  stub.purchaseView=view;
  const html=graph(),toolbar=header({purchase_rows:57},false);
  assert.match(html,new RegExp(needle),'content retained: '+view);
+ if(view==='summary'){assert.match(html,/MONTHLY_PAYMENT_100/);assert.match(html,/TOP_ITEMS/)}
+ if(view==='items')assert.doesNotMatch(html.slice(html.indexOf('id="pfaPanel-items"'),html.indexOf('id="pfaPanel-payments"')),/Top 5 Item Pembelian/);
  assert.match(toolbar,new RegExp('data-pfa-view="'+view+'" aria-pressed="true"'),'active top tab: '+view);
  assert.equal((html.match(/class="pfa-view-panel"/g)||[]).length,3,'exactly three view panels');
  assert.equal((toolbar.match(/data-pfa-view="/g)||[]).length,3,'exactly three top navigation buttons');
