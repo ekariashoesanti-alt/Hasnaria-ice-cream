@@ -6,6 +6,8 @@ on:
     paths:
       - 'scripts/hasnaria_ephemeral_postgres_recovery.sh'
       - 'scripts/hasnaria_ephemeral_pg_bootstrap.sql'
+      - 'scripts/hasnaria_restore_error_classifier.js'
+      - 'tests/hasnaria-restore-error-classifier.test.js'
       - 'scripts/hasnaria_backup_connection_guard.js'
       - 'tests/hasnaria-backup-connection-guard.test.js'
       - '.github/workflows/hasnaria-postgres-temp-recovery.yml'
@@ -34,6 +36,7 @@ jobs:
           bash -n scripts/hasnaria_ephemeral_postgres_recovery.sh
           bash scripts/hasnaria_ephemeral_postgres_recovery.sh --self-test
           node --test tests/hasnaria-backup-connection-guard.test.js
+          node --test tests/hasnaria-restore-error-classifier.test.js
           test -s scripts/hasnaria_ephemeral_pg_bootstrap.sql
           ! grep -Eq 'CREATE ROLE[[:space:]]+supabase_realtime_admin' scripts/hasnaria_ephemeral_pg_bootstrap.sql
           node - <<'JS'
