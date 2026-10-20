@@ -96,7 +96,7 @@ done
 # Isolated network: no route back to Tokyo/Singapore, no listening host port.
 docker pull "$RESTORE_IMAGE" >/dev/null
 docker run -d --rm --name "$NAME" --network none \
- -e POSTGRES_PASSWORD="$LOCAL_PASSWORD" -e POSTGRES_DB=hasnaria_recovery \
+ -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD="$LOCAL_PASSWORD" -e POSTGRES_DB=hasnaria_recovery \
  -v "$TMP:/backup:ro" "$RESTORE_IMAGE" \
  postgres -c config_file=/etc/postgresql/postgresql.conf >/dev/null
 ready=0
