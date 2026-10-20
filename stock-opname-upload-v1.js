@@ -4,7 +4,7 @@
 (function(){
 'use strict';
 if(window.__HASNARIA_STOCK_UPLOAD_V1)return;
-var st={open:false,busy:false,file:null,rows:null,hash:'',error:'',notice:'',date:'',runId:'',saving:0};
+var st={open:false,busy:false,file:null,rows:null,hash:'',error:'',notice:'',date:'',runId:'',saving:0,assignee:'',assignees:[]};
 var BRAND='a36d4b4f-3ccc-4a78-8aeb-b868f0407ea4',db=null,dialog=null,master=null;
 function esc(x){return String(x==null?'':x).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function today(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
@@ -27,6 +27,17 @@ async function loadMaster(){
  if(q.error)throw q.error;
  if(!Array.isArray(q.data)||!q.data.length)throw Error('Master SKU Stok tidak tersedia.');
  return q.data;
+}
+async function loadAssignees(){
+ // Only assign operational drafts to active Staff in this brand.
+ // The backend rechecks target brand/status/role before accepting the UUID.
+ var q=await getDb().from('user_profiles').select('id,display_name,full_name,email')
+   .eq('brand_id',BRAND).eq('status','active').eq('role','pelaksana')
+   .order('display_name',{ascending:true}).limit(100);
+ if(q.error)throw q.error;
+ st.assignees=(q.data||[]).filter(function(x){return !!x.id});
+ st.assignee=st.assignees.some(function(x){return x.id===st.assignee})?st.assignee:'';
+ if(st.open)render();
 }
 function col(headers,pattern){return headers.findIndex(function(x){return pattern.test(String(x||'').trim())})}
 async function parseFile(file){
@@ -85,13 +96,16 @@ function render(){
  (st.error?'<p role="alert" class="hso-error">'+esc(st.error)+'</p>':'')+
  (st.notice?'<p role="status" class="hso-success">'+esc(st.notice)+'</p>':'')+
  '<div class="hso-form"><label>Tanggal hitung fisik<input type="date" data-hso-date value="'+esc(st.date)+'" '+(st.busy?'disabled':'')+'></label>'+
+ '<label>Staff penanggung jawab draft<select data-hso-assignee '+(st.busy?'disabled':'')+'><option value="">Pilih Staff aktif…</option>'+
+ st.assignees.map(function(x){return '<option value="'+esc(x.id)+'" '+(x.id===st.assignee?'selected':'')+'>'+esc(x.display_name||x.full_name||x.email||'Staff')+'</option>'}).join('')+
+ '</select></label>'+
  '<label>File Excel/CSV<input type="file" id="hsoUploadFile" accept=".xlsx,.xls,.csv" '+(st.busy?'disabled':'')+'></label>'+
  '<button type="button" data-hso-template '+(st.busy?'disabled':'')+'>Unduh Template SKU</button></div>'+
  '<div class="hso-file">'+(st.file?esc(st.file.name):'Belum ada file dipilih')+'</div>'+
  (st.rows?'<div class="hso-preview"><b>Preview sumber valid: '+filled+' dari '+total+' SKU master</b><p>'+st.rows.slice(0,8).map(function(x){return esc(x.name)+' = '+esc(x.qty)+' '+esc(x.unit)}).join(' · ')+'</p><small>'+(total-filled)+' SKU lainnya belum terisi; wajib dilengkapi di Operasional sebelum dapat diajukan untuk approval.</small></div>':'')+
  '<footer><span>'+(st.busy?'Menyimpan '+st.saving+' / '+filled+' baris ke draft backend…':'Tidak ada stok yang diposting otomatis')+'</span>'+
  (st.runId?'<button type="button" data-hso-operasional>Buka Operasional →</button>':'')+
- '<button type="button" data-hso-save '+(!filled||st.busy||!!st.runId?'disabled':'')+'>Simpan Draft Terverifikasi</button></footer>'+
+ '<button type="button" data-hso-save '+(!filled||st.busy||!!st.runId||!st.assignee?'disabled':'')+'>Simpan Draft Terverifikasi</button></footer>'+
  '</section></div>';
 }
 async function preview(file){
@@ -102,6 +116,9 @@ async function preview(file){
 }
 async function stage(){
  if(!owner()||st.busy||!st.rows||st.runId)return;
+ if(!st.assignee||!st.assignees.some(function(x){return x.id===st.assignee})){
+  st.error='Pilih Staff aktif yang akan menindaklanjuti draft di Operasional. Draft tidak boleh otomatis ditugaskan ke Owner.';render();return;
+ }
  if(previewUsesProductionDatabase()){st.error='Preview masih terhubung ke database PRODUKSI. Simpan draft diblokir demi keamanan. Gunakan staging terisolasi untuk UAT atau situs produksi setelah rilis disetujui.';render();return;}
  if(st.date!==today()){st.error='Upload hitungan fisik harus bertanggal hari ini. Arsip Rencana Belanja historis tidak boleh menggantikan saldo live.';render();return}
  if(!window.confirm('Simpan '+st.rows.length+' hasil hitung fisik sebagai DRAFT Operasional? Tidak ada saldo yang berubah sebelum seluruh item diverifikasi dan disetujui.'))return;
@@ -112,7 +129,7 @@ async function stage(){
   var existing=await getDb().from('operational_runs').select('id,status').eq('brand_id',BRAND).eq('title',title).limit(1);
   if(existing.error)throw existing.error;
   if(existing.data&&existing.data.length){st.runId=existing.data[0].id;throw Error('File sama sudah pernah masuk ke draft Operasional. Buka dokumen lama, jangan upload ulang.')}
-  var created=await getDb().rpc('create_stock_opname_run',{p_scheduled_date:st.date,p_title:title});
+  var created=await getDb().rpc('create_stock_opname_run',{p_assigned_to:st.assignee,p_scheduled_date:st.date,p_title:title});
   if(created.error)throw created.error;
   runId=created.data;st.runId=runId;
   var q=await getDb().from('operational_run_items').select('id,inventory_item_id').eq('run_id',runId).eq('item_type','stock_count').range(0,999);
@@ -153,7 +170,7 @@ function download(){
 function open(){
  if(!owner())return;
  if(st.open)return;
- st={open:true,busy:false,file:null,rows:null,hash:'',error:'',notice:'',date:today(),runId:'',saving:0};
+ st={open:true,busy:false,file:null,rows:null,hash:'',error:'',notice:'',date:today(),runId:'',saving:0,assignee:'',assignees:[]};
  dialog=document.createElement('div');dialog.id='hsoUploadDialog';
  document.body.appendChild(dialog);
  dialog.addEventListener('click',function(e){
@@ -163,10 +180,12 @@ function open(){
    if(e.target.closest('[data-hso-operasional]')){close();window.__HASNARIA_OWNER_SHELL&&window.__HASNARIA_OWNER_SHELL.navigate('operasional')}
  });
  dialog.addEventListener('change',function(e){
+   if(e.target.matches('[data-hso-assignee]')){st.assignee=e.target.value;st.error='';render();return}
    if(e.target.matches('[data-hso-date]')){st.date=e.target.value;st.rows=null;st.runId='';st.error='';st.notice='';render()}
    if(e.target.id==='hsoUploadFile'&&e.target.files&&e.target.files[0])preview(e.target.files[0])
  });
  render();
+ loadAssignees().catch(function(e){if(!st.open)return;st.error='Gagal memuat Staff aktif: '+(e&&e.message?e.message:String(e));render()});
 }
 window.__HASNARIA_STOCK_UPLOAD_V1={open:open,active:function(){return st.open},close:close};
 })();
