@@ -113,10 +113,12 @@ test('staff cannot stage an opname',async()=>{
 test('PR preview connected to live Supabase cannot stage any Stock mutation',async()=>{
  const f=harness(sheet([['sku-1','ODENG','porsi',2]]),{preview:true});
  f.api.st.rows=(await f.api.parseFile(file())).rows;
- await f.api.loadAssignees();
+ await f.api.loadAssignees(); // Intentional read-only Staff list query.
  Object.assign(f.api.st,{date:f.api.today(),file:file(),hash:'abcxyz',runId:'',busy:false,assignee:'staff-1'});
+ const callsBeforeStage=f.calls.length;
  await f.api.stage();
- assert.equal(f.calls.length,0,'preview guard must reject before even checking canonical runs');
+ assert.equal(f.calls.length,callsBeforeStage,'unsafe preview guard must reject before operational DB queries');
+ assert.ok(!f.calls.some(x=>x.startsWith('rpc:')),'unsafe preview must never call a mutating RPC');
  assert.match(f.api.st.error,/PRODUKSI/);
  assert.equal(f.api.st.runId,'');
 });
