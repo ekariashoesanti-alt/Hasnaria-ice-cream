@@ -40,7 +40,7 @@ db_source() {
 }
 db_recovery() {
  docker exec -e PGPASSWORD="$LOCAL_PASSWORD" "$NAME" \
-  psql -X -qAt -v ON_ERROR_STOP=1 -U postgres -d hasnaria_recovery -c "$1"
+  psql -X -qAt -v ON_ERROR_STOP=1 -U supabase_admin -d hasnaria_recovery -c "$1"
 }
 # Enforce BYPASSRLS with *zero* mutating grants, superuser, database CREATE,
 # CREATE ROLE, or unprivileged reads in managed/Auth/business schemas.
@@ -106,29 +106,13 @@ for _ in $(seq 1 45); do
 done
 [[ "$ready" == 1 ]] || { echo 'BLOCK: ephemeral PostgreSQL start failed'; exit 1; }
 docker exec -e PGPASSWORD="$LOCAL_PASSWORD" -i "$NAME" \
- psql -X -q -v ON_ERROR_STOP=1 -U postgres -d hasnaria_recovery <<'SQL'
-DO $bootstrap$
-DECLARE r text;
-BEGIN
- FOREACH r IN ARRAY ARRAY['anon','authenticated','service_role','authenticator',
-  'supabase_admin','supabase_auth_admin','supabase_storage_admin',
-  'supabase_realtime_admin','dashboard_user','supabase_read_only_user','supabase_etl_admin']
- LOOP
-  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname=r) THEN
-   EXECUTE format('CREATE ROLE %I NOLOGIN',r);
-  END IF;
- END LOOP;
-END $bootstrap$;
-CREATE SCHEMA IF NOT EXISTS extensions;
-CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA extensions;
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA extensions;
-CREATE EXTENSION IF NOT EXISTS pg_stat_statements WITH SCHEMA extensions;
-SQL
+ psql -X -q -v ON_ERROR_STOP=1 -U supabase_admin -d hasnaria_recovery \
+ < scripts/hasnaria_ephemeral_pg_bootstrap.sql
 # All-or-nothing restore. If managed extensions cannot be reproduced locally,
 # report BLOCK rather than bypassing errors or declaring recoverability.
 docker exec -e PGPASSWORD="$LOCAL_PASSWORD" "$NAME" \
  pg_restore --single-transaction --exit-on-error --no-owner --no-privileges \
- -U postgres -d hasnaria_recovery /backup/hasnaria.dump \
+ -U supabase_admin -d hasnaria_recovery /backup/hasnaria.dump \
  >"$TMP/restore-stdout" 2>"$TMP/restore-stderr" ||
  { echo 'BLOCK: local Supabase-compatible SQL restore failed (review dependencies)'; exit 1; }
 

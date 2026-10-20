@@ -5,6 +5,7 @@ on:
   pull_request:
     paths:
       - 'scripts/hasnaria_ephemeral_postgres_recovery.sh'
+      - 'scripts/hasnaria_ephemeral_pg_bootstrap.sql'
       - 'scripts/hasnaria_backup_connection_guard.js'
       - 'tests/hasnaria-backup-connection-guard.test.js'
       - '.github/workflows/hasnaria-postgres-temp-recovery.yml'
@@ -22,7 +23,7 @@ concurrency:
 jobs:
   script-contract:
     runs-on: ubuntu-latest
-    timeout-minutes: 4
+    timeout-minutes: 12
     steps:
       - uses: actions/checkout@v4
         with:
@@ -33,6 +34,8 @@ jobs:
           bash -n scripts/hasnaria_ephemeral_postgres_recovery.sh
           bash scripts/hasnaria_ephemeral_postgres_recovery.sh --self-test
           node --test tests/hasnaria-backup-connection-guard.test.js
+          test -s scripts/hasnaria_ephemeral_pg_bootstrap.sql
+          ! grep -Eq 'CREATE ROLE[[:space:]]+supabase_realtime_admin' scripts/hasnaria_ephemeral_pg_bootstrap.sql
           node - <<'JS'
           const fs = require('node:fs'),assert=require('node:assert/strict');
           const s=fs.readFileSync('scripts/hasnaria_ephemeral_postgres_recovery.sh','utf8');
@@ -48,6 +51,43 @@ jobs:
           assert.doesNotMatch(s,/supabase\.co.{0,100}\/auth\/v1\/admin/);
           console.log('PASS: network isolation, source read-only, recovery fail-closed static guard');
           JS
+      - name: Smoke-test bootstrap on real disposable Supabase PostgreSQL image (no Tokyo data)
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          ci_db="hsn-pg-bootstrap-${GITHUB_RUN_ID}"
+          trap 'docker rm -f "$ci_db" >/dev/null 2>&1 || true' EXIT
+          docker pull supabase/postgres:17.6.1.173 >/dev/null
+          docker run -d --name "$ci_db" --network none \
+            -e POSTGRES_PASSWORD=ci_bootstrap_only \
+            -e POSTGRES_DB=ci_recovery_sandbox \
+            supabase/postgres:17.6.1.173 \
+            postgres -c config_file=/etc/postgresql/postgresql.conf >/dev/null
+          ready=0
+          for i in $(seq 1 50); do
+            if docker exec "$ci_db" pg_isready -U postgres -d ci_recovery_sandbox >/dev/null 2>&1; then ready=1; break; fi
+            sleep 2
+          done
+          if [[ "$ready" != 1 ]]; then
+            echo "BLOCK: PostgreSQL sandbox startup failed; local container diagnostic follows"
+            docker ps -a --filter "name=$ci_db" --format 'CONTAINER {{.Status}}'
+            docker logs --tail 45 "$ci_db" 2>&1 | sed -E 's/[^[:print:]\t]//g' || true
+            exit 1
+          fi
+          docker exec "$ci_db" psql -X -qAt -v ON_ERROR_STOP=1 -U postgres -d ci_recovery_sandbox \
+            -c "SELECT 'LOCAL_DB_ACCESS: '||current_user||' owner='||pg_get_userbyid(datdba)||' create='||has_database_privilege(current_user,current_database(),'CREATE') FROM pg_database WHERE datname=current_database()"
+          docker exec "$ci_db" psql -X -qAt -v ON_ERROR_STOP=1 -U postgres -d postgres \
+            -c "SELECT 'DEFAULT_DB_ACCESS: '||current_user||' owner='||pg_get_userbyid(datdba)||' create='||has_database_privilege(current_user,current_database(),'CREATE') FROM pg_database WHERE datname=current_database()"
+          docker exec "$ci_db" psql -X -qAt -U supabase_admin -d ci_recovery_sandbox \
+            -c "SELECT 'LOCAL_ADMIN_ACCESS: '||current_user||' db_create='||has_database_privilege(current_user,current_database(),'CREATE')" || echo 'LOCAL_ADMIN_UNAVAILABLE'
+          docker exec -i "$ci_db" psql -X -q -v ON_ERROR_STOP=1 \
+            -U supabase_admin -d ci_recovery_sandbox \
+            < scripts/hasnaria_ephemeral_pg_bootstrap.sql
+          docker exec "$ci_db" psql -X -qAt -v ON_ERROR_STOP=1 \
+            -U supabase_admin -d ci_recovery_sandbox \
+            -c "SELECT CASE WHEN to_regrole('authenticated') IS NOT NULL AND to_regrole('anon') IS NOT NULL THEN 'PASS' ELSE 'BLOCK' END" \
+            | grep -Fxq PASS
+          echo 'PASS: real Supabase PG17 role/extension bootstrap completed'
   restore-to-temporary-postgres:
     if: ${{ github.event_name == 'workflow_dispatch' && github.repository == 'ekariashoesanti-alt/Hasnaria-ice-cream' && github.ref == 'refs/heads/main' && inputs.confirmation == 'TEMP_POSTGRES_RESTORE_READONLY' }}
     needs: script-contract
