@@ -115,6 +115,11 @@
 
   function ensurePurchase(){
     var h=section('pembelian');if(!h||h.classList.contains('hidden'))return;
+    // Install a stable first-paint skeleton before loading either Purchase runtime.
+    // Never reveal the core-app legacy Pembelian cards while scripts are in flight.
+    if(!h.querySelector('#paRoot')&&!h.querySelector('[data-purchase-pending="1"]')){
+      h.innerHTML='<div class="pa-root pa-owner-single-render" data-purchase-pending="1" aria-busy="true"><div class="pa-title"><div><h1>Pembelian</h1><p>Menyiapkan ringkasan dan filter periode…</p></div></div><section class="pa-controls"><span class="pa-empty">Memuat data pembelian…</span></section></div>';
+    }
     var jobs=[];
     if(typeof window.__HASNARIA_LOAD_PURCHASE==='function')jobs.push(window.__HASNARIA_LOAD_PURCHASE());
     if(window.HasnariaPurchaseLazy&&typeof window.HasnariaPurchaseLazy.load==='function')jobs.push(window.HasnariaPurchaseLazy.load());
