@@ -99,12 +99,24 @@ docker run -d --rm --name "$NAME" --network none \
  -e POSTGRES_PASSWORD="$LOCAL_PASSWORD" -e POSTGRES_DB=hasnaria_recovery \
  -v "$TMP:/backup:ro" "$RESTORE_IMAGE" \
  postgres -c config_file=/etc/postgresql/postgresql.conf >/dev/null
+# Robust readiness: require container running + 3 consecutive successful SELECT 1.
+# Mitigates Supabase image init race that can pass pg_isready then shut down.
 ready=0
-for _ in $(seq 1 45); do
- if docker exec "$NAME" pg_isready -U postgres -d hasnaria_recovery >/dev/null 2>&1; then ready=1; break; fi
- sleep 2
+consecutive=0
+for _ in $(seq 1 60); do
+  if ! docker inspect -f '{{.State.Running}}' "$NAME" 2>/dev/null | grep -q true; then
+    echo 'BLOCK: ephemeral container exited during startup'
+    exit 1
+  fi
+  if docker exec "$NAME" psql -X -qAt -v ON_ERROR_STOP=1 -U postgres -d hasnaria_recovery -c "SELECT 1" >/dev/null 2>&1; then
+    consecutive=$((consecutive+1))
+    if [[ $consecutive -ge 3 ]]; then ready=1; break; fi
+  else
+    consecutive=0
+  fi
+  sleep 2
 done
-[[ "$ready" == 1 ]] || { echo 'BLOCK: ephemeral PostgreSQL start failed'; exit 1; }
+[[ "$ready" == 1 ]] || { echo 'BLOCK: ephemeral PostgreSQL start failed after robust readiness'; docker logs --tail 40 "$NAME" 2>&1 | sed -E 's/[^[:print:]\t]//g' | head -n 50 || true; exit 1; }
 docker exec -e PGPASSWORD="$LOCAL_PASSWORD" -i "$NAME" \
  psql -X -q -v ON_ERROR_STOP=1 -U supabase_admin -d hasnaria_recovery \
  < scripts/hasnaria_ephemeral_pg_bootstrap.sql
