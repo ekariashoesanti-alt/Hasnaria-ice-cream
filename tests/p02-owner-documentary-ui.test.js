@@ -9,7 +9,7 @@ test('P0.2 UI is owner-only, loads queue without saving and preserves original S
  function node(){return {innerHTML:'',setAttribute(k,v){this.selector='['+k+']'},querySelector(){return null},remove(){if(dialog===this)dialog=null}};}
  const doc={readyState:'loading',addEventListener(t,fn){(listeners[t]||=[]).push(fn)},createElement:node,
  getElementById(id){if(id==='app')return{classList:{contains(n){return n==='hidden'&&hidden}}};
- if(id==='pembelian'||id==='purchaseFinanceAlignment')return host;return null;},
+ if(id==='pembelian'||id==='pfaReviewSlot')return host;return null;},
  body:{appendChild(el){dialog=el}}};
  const db={rpc(name,args){requests.push({name,args});return new Promise(resolve=>pending.push(resolve))}};
  const window={__HASNARIA_CONTEXT:context,__HASNARIA_DB:db};
@@ -31,7 +31,7 @@ test('P0.2 UI is owner-only, loads queue without saving and preserves original S
 });
 test('P0.2 remains a documentary review only',()=>{
  const index=fs.readFileSync(path.join(root,'index.html'),'utf8');
- assert.match(index,/owner-master-unit-review-v1\.js\?v=1/);
+ assert.match(index,/owner-master-unit-review-v1\.js\?v=2/);
  assert.match(source,/owner_master_unit_apply_v1/);
  assert.doesNotMatch(source,/\.from\(['"](?:inventory_items|inventory_movements|inventory_purchase_log|inventory_recipe_components)['"]\)\.(?:update|delete|insert|upsert)/);
  assert.match(source,/c&&c.role==='owner'/);
