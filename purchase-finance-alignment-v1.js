@@ -201,7 +201,8 @@ function trendMonths(selected){
 function catalogHasPeriod(key){return periods.some(function(x){return periodKey(x.period_start||x.period_key)===key})}
 function rememberTrendMonth(key,values){
  var p=periodKey(key);if(!p)return;
- purchaseTrendCache[p]={value:total(Array.isArray(values)?values:[]),count:Array.isArray(values)?values.length:0,seen:Date.now()};
+ var safe=Array.isArray(values)?values:[];
+ purchaseTrendCache[p]={value:total(safe),count:safe.length,payments:paymentParts(safe),seen:Date.now()};
 }
 function trendCacheFresh(key){var x=purchaseTrendCache[key];return!!(x&&Date.now()-x.seen<300000)}
 function monthlyTrendMarkup(){
@@ -288,8 +289,11 @@ function ensureMonthlyTrend(){
  Promise.all([worker(),worker(),worker()]).then(function(){if(token===trendLoadSequence){trendLoadingKey='';paintMonthlyTrend();if(failed&&console&&console.warn)console.warn('Purchase trend: '+failed+' months unavailable')}})
 }
 function paintMonthlyTrend(){
- var slot=document.getElementById('pfaMonthlyTrend');if(!slot||purchaseView!=='summary')return;
- var markup=monthlyTrendMarkup();if(slot.innerHTML!==markup)slot.innerHTML=markup;
+ if(purchaseView!=='summary')return;
+ var slot=document.getElementById('pfaMonthlyTrend');
+ if(slot){var markup=monthlyTrendMarkup();if(slot.innerHTML!==markup)slot.innerHTML=markup}
+ var paymentSlot=document.getElementById('pfaMonthlyPayments');
+ if(paymentSlot){var paymentMarkup=monthlyPaymentMarkup();if(paymentSlot.innerHTML!==paymentMarkup)paymentSlot.innerHTML=paymentMarkup}
 }
 function purchaseTopMarkup(){
  var g={};rows.forEach(function(r){var label=String(r.item_name||r.source_name||r.purchase_item_name||'').trim();if(!label)return;var k=label.toUpperCase();if(!g[k])g[k]={label:label,amount:0,count:0};g[k].amount+=n(r.total_amount);g[k].count++});
@@ -298,12 +302,47 @@ function purchaseTopMarkup(){
  var max=Math.max.apply(null,list.map(function(r){return r.amount}).concat([1]));
  return list.map(function(r,i){return'<div class="pfa-share-row"><div><span>'+(i+1)+'. '+esc(r.label)+'</span><b>'+esc(money(r.amount))+'</b></div><progress max="100" value="'+Math.max(1,r.amount/max*100).toFixed(1)+'"></progress><small>'+r.count+' baris pembelian</small></div>'}).join('');
 }
-function purchasePaymentMarkup(){
- var g={};rows.forEach(function(r){var k=String(r.payment_method||r.payment_label||'Belum dipetakan').trim()||'Belum dipetakan';g[k]=(g[k]||0)+n(r.total_amount)});
- var labels=Object.keys(g).sort(function(a,b){return g[b]-g[a]});
- if(!labels.length)return'<div class="pfa-empty">Metode pembayaran tidak tersedia.</div>';
- var value=total(rows)||1;return labels.slice(0,6).map(function(k){return'<div class="pfa-share-row"><div><span>'+esc(k)+'</span><b>'+esc(money(g[k]))+'</b></div><progress max="100" value="'+Math.max(0,g[k]/value*100).toFixed(1)+'"></progress></div>'}).join('')+
- '<div class="pfa-note-banner">Metode kanonis belum dapat menguraikan transaksi dengan beberapa sumber dana E–H tanpa breakdown yang sudah tersimpan. BELUM_DIPETAKAN bukan otomatis Tunai.</div>';
+function paymentClass(r){
+ // Only one canonical method per row can be represented. Mixed E-H funding is
+ // explicitly not inferred, because the period pack has no reliable split.
+ var k=String(r.payment_method||r.payment_label||'').trim().toUpperCase().replace(/[\s_-]+/g,' ');
+ if(k==='TUNAI'||k==='CASH'||k==='KAS'||k==='CASH ON HAND')return'Tunai';
+ if(k==='TRANSFER'||k==='BANK'||k==='TRANSFER BANK'||k==='BANK TRANSFER')return'Transfer';
+ if(k==='PAYLATER'||k==='PAY LATER'||k==='UTANG'||k==='HUTANG'||k==='KREDIT')return'Paylater';
+ return'Belum Dipetakan';
+}
+function paymentParts(list){
+ var labels=['Tunai','Transfer','Paylater','Belum Dipetakan'],totals={},positive=0,corrections=0;
+ labels.forEach(function(k){totals[k]=0});
+ (Array.isArray(list)?list:[]).forEach(function(r){
+  var v=n(r.total_amount);
+  if(v<=0){if(v<0)corrections++;return}
+  totals[paymentClass(r)]+=v;positive+=v;
+ });
+ return{totals:totals,total:positive,corrections:corrections};
+}
+function monthlyPaymentMarkup(){
+ var slots=trendMonths(periodValue());
+ if(!slots.length)return'<div class="pfa-empty">Pilih periode untuk melihat komposisi pembayaran.</div>';
+ var labels=['Tunai','Transfer','Paylater','Belum Dipetakan'],colors=['pfa-pie-color-0','pfa-pie-color-1','pfa-pie-color-2','pfa-pie-color-3'];
+ var legend='<div class="pfa-payment-legend" aria-label="Legenda pembayaran">'+labels.map(function(k,i){return'<span><i class="'+colors[i]+'"></i>'+esc(k)+'</span>'}).join('')+'</div>';
+ var missing=0,failed=0,positiveMonths=0,unmapped=0;
+ var html=slots.map(function(m){
+  var value=purchaseTrendCache[m.key],known=!!(value&&value.payments&&!value.error),p=known?value.payments:null;
+  var name=esc(m.label),label=esc(monthLabel(m.key));
+  if(!known){missing++;if(value&&value.error)failed++;
+   return'<div class="pfa-payment-month pfa-payment-unavailable"><span class="pfa-payment-month-label">'+name+'</span><div class="pfa-payment-track" aria-label="'+label+' belum tersedia"><span class="pfa-payment-no-data"></span></div><small>—</small></div>';
+  }
+  if(p.total<=0)return'<div class="pfa-payment-month pfa-payment-unavailable"><span class="pfa-payment-month-label">'+name+'</span><div class="pfa-payment-track"><span class="pfa-payment-no-data"></span></div><small>—</small></div>';
+  positiveMonths++;unmapped+=p.totals['Belum Dipetakan'];
+  var parts=labels.map(function(k,i){var amount=p.totals[k],pct=amount/p.total*100;if(!amount)return'';
+   return'<span class="pfa-payment-segment '+colors[i]+'" style="width:'+pct.toFixed(4)+'%" title="'+esc(k+' · '+pct.toLocaleString('id-ID',{maximumFractionDigits:1})+'% · '+money(amount))+'"></span>'}).join('');
+  return'<div class="pfa-payment-month"><span class="pfa-payment-month-label">'+name+'</span><div class="pfa-payment-track" role="img" aria-label="'+label+' · '+labels.map(function(k){return k+' '+(p.totals[k]/p.total*100).toFixed(1)+'%'}).join(', ')+'">'+parts+'</div><small>100%</small></div>';
+ }).join('');
+ var note=missing?(failed?failed+' bulan gagal dibaca. ':'')+(missing-failed)+' bulan belum memiliki sumber; bukan 0%.':'';
+ return'<div class="pfa-payment-chart" aria-label="Komposisi persen pembayaran per bulan Januari sampai '+esc(monthLabel(periodValue()))+'">'+legend+'<div class="pfa-payment-months">'+html+'</div>'+
+ (note?'<p class="pfa-payment-caveat" role="status">'+esc(note)+'</p>':'')+
+ '<p class="pfa-payment-caveat">Persentase dari nilai transaksi positif per bulan, bukan volume transaksi. Multi-sumber tanpa rincian tetap Belum Dipetakan.</p></div>';
 }
 function purchaseJournalReconciliation(){
  var canonical=n(control.purchase_rows),journal=n(control.journal_rows),gap=n(control.purchase_journal_delta);
@@ -314,22 +353,24 @@ function purchaseJournalReconciliation(){
  '. B OPERASIONAL bukan Pembelian kedua.</div>';
 }
 function infographicMarkup(){
- // Header quick switch is the sole Owner navigation. Preserve the documentary
- // entry host (not displayed) until its workflow is migrated into Notifications.
+ // Owner Ringkasan: two compact stacks of equal combined height. Historical
+ // payment percentages reuse the bounded canonical monthly reads of the trend.
  return'<div class="pfa-view-panels">'+
  '<section class="pfa-view-panel" role="region" aria-label="Ringkasan Pembelian" id="pfaPanel-summary" data-pfa-view-panel="summary"'+(purchaseView==='summary'?'':' hidden')+'>'+
- '<div class="pfa-insights-grid"><article class="pfa-insight-panel"><h3>Tren Pembelian Bulanan</h3><p>Nilai Pembelian Januari–'+esc(monthLabel(periodValue()))+'</p><div id="pfaMonthlyTrend">'+monthlyTrendMarkup()+'</div></article>'+
- '<article class="pfa-insight-panel"><h3>Porsi Pembelian</h3><p>Persentase nilai per jenis barang · '+esc(monthLabel(periodValue()))+'</p>'+purchasePieMarkup()+'</article></div></section>'+
+ '<div class="pfa-insights-grid pfa-four-infographics">'+
+ '<div class="pfa-summary-stack pfa-summary-left">'+
+ '<article class="pfa-insight-panel pfa-summary-trend"><h3>Tren Pembelian Bulanan</h3><p>Nilai Pembelian Januari–'+esc(monthLabel(periodValue()))+'</p><div id="pfaMonthlyTrend">'+monthlyTrendMarkup()+'</div></article>'+
+ '<article class="pfa-insight-panel pfa-summary-payment"><h3>Komposisi Pembayaran</h3><p>Persentase sumber pembiayaan per bulan</p><div id="pfaMonthlyPayments">'+monthlyPaymentMarkup()+'</div></article></div>'+
+ '<div class="pfa-summary-stack pfa-summary-right">'+
+ '<article class="pfa-insight-panel pfa-summary-pie"><h3>Porsi Pembelian</h3><p>Persentase nilai per jenis barang · '+esc(monthLabel(periodValue()))+'</p>'+purchasePieMarkup()+'</article>'+
+ '<article class="pfa-insight-panel pfa-summary-top"><h3>Top 5 Item Pembelian</h3><p>Urutan berdasarkan total nilai sumber</p>'+purchaseTopMarkup()+'</article></div></div></section>'+
  '<section class="pfa-view-panel" role="region" aria-label="Kategori dan Item Pembelian" id="pfaPanel-items" data-pfa-view-panel="items"'+(purchaseView==='items'?'':' hidden')+'>'+
- '<div class="pfa-insight-two"><article class="pfa-insight-panel"><h3>Komposisi Pembelian</h3><p>Nilai per akun Beban untuk '+esc(cutLabel())+'</p>'+chartMarkup()+'</article>'+
- '<article class="pfa-insight-panel"><h3>Top 5 Item Pembelian</h3><p>Urutan berdasarkan total nilai sumber</p>'+purchaseTopMarkup()+'</article></div></section>'+
+ '<div class="pfa-insight-two pfa-one-panel"><article class="pfa-insight-panel"><h3>Komposisi Pembelian</h3><p>Nilai per akun Beban untuk '+esc(cutLabel())+'</p>'+chartMarkup()+'</article></div></section>'+
  '<section class="pfa-view-panel" role="region" aria-label="Pembayaran dan Kontrol" id="pfaPanel-payments" data-pfa-view-panel="payments"'+(purchaseView==='payments'?'':' hidden')+'>'+
- '<div class="pfa-insight-two"><article class="pfa-insight-panel"><h3>Komposisi Pembayaran</h3><p>Sumber pembiayaan dari transaksi kanonis</p>'+purchasePaymentMarkup()+'</article>'+
- '<article class="pfa-insight-panel"><h3>Kontrol Data Berkualitas</h3><p>Review dan bukti Owner dipisah dari posting</p>'+
+ '<div class="pfa-insight-two pfa-one-panel"><article class="pfa-insight-panel"><h3>Kontrol Data Berkualitas</h3><p>Review dan bukti Owner dipisah dari posting</p>'+
  '<div class="pfa-note-banner"><b>'+esc(String(n(control.stock_review_rows)+n(control.provisional_journal_rows)))+' kandidat perlu perhatian</b>. Lanjutkan pemeriksaan melalui Notifikasi; mengunggah Excel tidak otomatis memposting Stok.</div>'+
  '<button type="button" class="primary" data-pfa-notifications>Periksa di Notifikasi →</button></article></div></section></div>'+
- // Review workflows remain mounted for compatibility, not visible or navigable
- // here. Migrate them to Notifikasi in a separately tested future change.
+ // Keep legacy review module mount intact but invisible until Notifications migration.
  '<div id="pfaReviewSlot" class="pfa-review-list pfa-review-compat" hidden aria-hidden="true"><div class="pfa-note-banner pfa-review-safety">Penerimaan Stok hanya dibukukan setelah satuan dan bukti diperiksa. Review ini tidak melakukan posting Stok atau jurnal otomatis.</div>'+unitVerificationMarkup()+'</div>';
 }
 function mountOwnerControls(root,wrap,markup){

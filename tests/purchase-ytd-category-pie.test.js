@@ -2,7 +2,7 @@
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
 const source=fs.readFileSync('purchase-finance-alignment-v1.js','utf8');
 const css=fs.readFileSync('owner-one-view.css','utf8');
-const from=source.indexOf('function trendMonths('),end=source.indexOf('function purchaseTopMarkup()',from);
+const from=source.indexOf('function trendMonths('),end=source.indexOf('function purchaseJournalReconciliation()',from);
 assert.ok(from>=0&&end>from,'isolated monthly and pie helpers remain available');
 const contexts=[];
 function make(selected,rows,periods){
