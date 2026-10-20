@@ -33,6 +33,9 @@
   function insightHtml(total,prevTotal,bg,top,disc,prevP){var a=[];if(prevP&&prevTotal>0){var ch=(total-prevTotal)/prevTotal*100;a.push('Total pengeluaran '+periodLabel(state.period)+' '+(ch>=0?'naik ':'turun ')+Math.abs(ch).toLocaleString('id-ID',{maximumFractionDigits:1})+'% dibanding '+periodLabel(prevP)+'.');}else a.push('Periode ini belum memiliki periode pembanding yang setara.');a.push('Komponen terbesar adalah '+bg+' dengan kontribusi terbesar terhadap pengeluaran periode terpilih.');if(top)a.push('Item pembelian terbesar: '+top.name+' sebesar '+fmtMoney(top.total)+'.');if(disc>0)a.push(disc+' item tidak muncul pada periode terpilih dibanding periode data sebelumnya.');return'<ol>'+a.slice(0,4).map(function(x){return'<li>'+esc(x)+'</li>';}).join('')+'</ol>';}
   function ownerCompact(){return !!(window.__HASNARIA_CONTEXT&&window.__HASNARIA_CONTEXT.role==='owner')}
   function renderOwnerShell(host){
+    // Preserve canonical Purchase and its uploads while month data refreshes.
+    // Replacing this host would briefly remount the old/empty shell (flicker).
+    if(host.querySelector('#paRoot.pa-owner-single-render'))return;
     var ps=periods(),opts=ps.slice().reverse().map(function(p){return'<option value="'+esc(p)+'"'+(p===state.period?' selected':'')+'>'+esc(periodLabel(p))+'</option>'}).join('');
     host.innerHTML='<div id="paRoot" class="pa-root pa-owner-single-render"><div class="pa-title"><div><h1>Pembelian</h1><p>Ringkasan visual Pembelian. Rincian transaksi tersedia saat dibutuhkan.</p></div></div>'+ 
       '<section class="pa-controls"><label><span>Bulan</span><select id="paPeriod" data-month-filter="pembelian">'+opts+'</select></label>'+ 
