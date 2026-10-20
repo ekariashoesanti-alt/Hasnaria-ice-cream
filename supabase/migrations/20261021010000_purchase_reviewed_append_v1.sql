@@ -1,4 +1,4 @@
--- Add-only reviewed BELANJA re-upload. No DELETE/UPDATE of history, Stock or Finance.
+-- Add-only reviewed BELANJA re-upload: no DELETE/UPDATE. Existing Finance INSERT trigger may reconcile newly appended rows.
 CREATE OR REPLACE FUNCTION public.import_purchase_reviewed_append_v1(
  p_source_period date,p_rows jsonb,p_expected_count integer DEFAULT NULL,p_commit boolean DEFAULT false
 ) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=''
@@ -39,7 +39,7 @@ BEGIN
      OR date_trunc('month',v_date::timestamp)::date<>p_source_period
      OR v_q IS NULL OR v_q<=0 OR v_price IS NULL OR v_price<=0 OR v_amount IS NULL OR v_amount<=0
      OR round(v_q*v_price,2)<>v_amount OR v_payment NOT IN ('TUNAI','TRANSFER','PAYLATER')
-     OR v_raw->>'source_sheet'<>'BELANJA' OR v_raw->>'source_funding_policy'<>'BELANJA_CxD_vs_EFGH_v1'
+     OR (v_raw->>'source_sheet') IS DISTINCT FROM 'BELANJA' OR (v_raw->>'source_funding_policy') IS DISTINCT FROM 'BELANJA_CxD_vs_EFGH_v1'
      OR jsonb_typeof(v_raw->'funding_breakdown')<>'object'
      OR (v_raw->>'source_row')::integer<>v_rowno
      OR coalesce((v_raw#>>'{funding_breakdown,related_party_loan_jas_hujan}')::numeric,0)<>0
@@ -107,7 +107,7 @@ BEGIN
   'existing_excel',v_excel,'incoming_rows',jsonb_array_length(p_rows),
   'unchanged_rows',v_unchanged,'append_rows',v_append,'conflict_rows',v_conflicts,
   'append_amount',v_delta,'can_commit',v_conflicts=0,
-  'finance_synced',false,'stock_posted',false,'replaced_rows',0);
+  'finance_synced',false,'finance_trigger_policy','TRIGGER_SYNC_ON_INSERT','stock_posted',false,'replaced_rows',0);
 END;
 $body$;
 REVOKE ALL ON FUNCTION public.import_purchase_reviewed_append_v1(date,jsonb,integer,boolean) FROM PUBLIC,anon;
