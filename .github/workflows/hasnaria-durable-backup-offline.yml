@@ -1,4 +1,4 @@
-name: Hasnaria Durable Backup Offline Fixture
+name: Hasnaria OCI Backup Offline Fixture
 # No production or staging credentials are available to this job.
 on:
   pull_request:
@@ -30,7 +30,10 @@ jobs:
           const s=fs.readFileSync('scripts/hasnaria_verify_durable_backup_local.sh','utf8');
           assert.doesNotMatch(w,/HSN_RESTORE_DB_URL|HSN_RESTORE_PROJECT_REF|hasnaria-restore-disposable/);
           assert.match(w,/environment: hasnaria-backup-private/);
-          assert.match(w,/HSN_BACKUP_AGE_IDENTITY/);
+          assert.doesNotMatch(w,/HSN_BACKUP_AGE_IDENTITY|HSN_BACKUP_AGE_RECIPIENT|age -r|age -d/);
+          assert.match(w,/github.event_name == 'push'/);
+          assert.match(w,/--verify-backup/);
+          assert.match(w,/OCI server-side AES-256/);
           assert.doesNotMatch(w,/get-public-access-block|get-bucket-versioning/);
           assert.match(w,/HSN_OCI_NAMESPACE/);
           assert.match(w,/HSN_OCI_NAMESPACE: axf1xcjq8gsy/);
@@ -46,14 +49,12 @@ jobs:
           assert.match(s,/--test-fixture/);
           console.log('PASS: no third DB, no public artifact, isolated schema bootstrap contract');
           JS
-      - name: Full synthetic age ciphertext round trip and offline PostgreSQL restore
+      - name: Full synthetic OCI object readback and offline PostgreSQL restore
         shell: bash
         run: |
           set -Eeuo pipefail
           set +x
           umask 077
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq age
           tmp="$(mktemp -d)"
           ci_db="hsn-durable-fixture-${GITHUB_RUN_ID}"
           trap 'docker rm -f "$ci_db" >/dev/null 2>&1 || true; rm -rf "$tmp"' EXIT
@@ -88,16 +89,14 @@ jobs:
           docker exec "$ci_db" pg_dump -Fc --no-owner --no-privileges -n public -n auth \
             -U supabase_admin -d ci_fixture_source -f /tmp/hasnaria.dump
           docker cp "$ci_db:/tmp/hasnaria.dump" "$tmp/hasnaria.dump"
-          (cd "$tmp" && sha256sum hasnaria.dump > archive.sha256 && tar -cf packed.tar hasnaria.dump archive.sha256)
-          age-keygen -o "$tmp/key.txt" 2>/dev/null
-          recipient="$(age-keygen -y "$tmp/key.txt")"
-          age -r "$recipient" -o "$tmp/fixture.age" "$tmp/packed.tar"
-          rm -f "$tmp/hasnaria.dump" "$tmp/packed.tar"
-          age -d -i "$tmp/key.txt" -o "$tmp/packed.tar" "$tmp/fixture.age"
-          tar -tf "$tmp/packed.tar" | sort > "$tmp/members"
-          printf '%s\n' archive.sha256 hasnaria.dump > "$tmp/allowed-members"
-          cmp -s "$tmp/members" "$tmp/allowed-members" || { echo 'BLOCK: unexpected archive files'; exit 1; }
-          tar -xf "$tmp/packed.tar" -C "$tmp" hasnaria.dump archive.sha256
-          (cd "$tmp" && sha256sum -c archive.sha256 >/dev/null)
-          bash scripts/hasnaria_verify_durable_backup_local.sh --test-fixture "$tmp/hasnaria.dump"
-          echo 'PASS: age + SHA256 + isolated SQL round trip; synthetic only, NOT Tokyo'
+          # This simulates the remote OCI object byte round trip, not OCI's service-side
+          # encryption itself, which is always-on and managed by Oracle.
+          sha="$(sha256sum "$tmp/hasnaria.dump" | cut -d' ' -f1)"
+          mkdir -m 700 "$tmp/oci-object-mock"
+          cp "$tmp/hasnaria.dump" "$tmp/oci-object-mock/20261020.dump"
+          cp "$tmp/oci-object-mock/20261020.dump" "$tmp/downloaded.dump"
+          cmp -s "$tmp/hasnaria.dump" "$tmp/downloaded.dump"
+          mkdir -m 700 "$tmp/verify"
+          mv "$tmp/downloaded.dump" "$tmp/verify/hasnaria.dump"
+          bash scripts/hasnaria_verify_durable_backup_local.sh --test-fixture "$tmp/verify/hasnaria.dump"
+          echo "PASS: mock OCI byte read-back + sha256=$sha + disposable SQL restore (synthetic only)"
