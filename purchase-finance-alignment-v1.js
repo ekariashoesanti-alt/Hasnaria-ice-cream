@@ -200,9 +200,10 @@ function monthlyTrendMarkup(){
  if(!slots.length)return'<div class="pfa-empty">Pilih bulan untuk menampilkan tren tahun berjalan.</div>';
  var data=slots.map(function(x){var val=purchaseTrendCache[x.key];return{key:x.key,label:x.label,amount:val?val.value:null,count:val?val.count:0,available:catalogHasPeriod(x.key)||!!val}});
  var known=data.filter(function(x){return x.amount!==null});
+ var failed=data.filter(function(x){return x.available&&purchaseTrendCache[x.key]&&purchaseTrendCache[x.key].error});
  var unresolved=data.filter(function(x){return x.available&&x.amount===null});
  var skipped=data.filter(function(x){return !x.available&&x.amount===null});
- if(!known.length)return'<div class="pfa-trend-state" role="status">'+(unresolved.length?'Memuat tren Pembelian Januari–'+esc(monthLabel(p))+'…':'Belum tersedia sumber Pembelian terverifikasi untuk tahun '+esc(p.slice(0,4))+'.')+'</div>';
+ if(!known.length)return'<div class="pfa-trend-state" role="status">'+(failed.length?'Gagal membaca tren Pembelian. Coba lagi setelah beberapa saat.':unresolved.length?'Memuat tren Pembelian Januari–'+esc(monthLabel(p))+'…':'Belum tersedia sumber Pembelian terverifikasi untuk tahun '+esc(p.slice(0,4))+'.')+'</div>';
  var amounts=known.map(function(x){return x.amount}),hi=Math.max.apply(null,[0].concat(amounts)),lo=Math.min.apply(null,[0].concat(amounts));
  if(hi===lo){hi+=1}
  var x0=57,x1=668,y0=25,y1=175,scale=function(v){return y1-(v-lo)/(hi-lo)*(y1-y0)};
@@ -216,7 +217,7 @@ function monthlyTrendMarkup(){
   path+=(active?' L':' M')+point;active=true;
   return axis+'<circle class="pfa-trend-point" cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="5"><title>'+esc(monthLabel(d.key)+' · '+money(d.amount)+' · '+d.count+' transaksi')+'</title></circle>';
  }).join('');
- var note=unresolved.length?'Memuat '+unresolved.length+' bulan lainnya…':skipped.length?skipped.length+' bulan tanpa sumber pembelian; bukan dianggap Rp 0.':'';
+ var note=failed.length?failed.length+' bulan gagal dibaca; coba buka ulang setelah beberapa saat.':unresolved.length?'Memuat '+unresolved.length+' bulan lainnya…':skipped.length?skipped.length+' bulan tanpa sumber pembelian; bukan dianggap Rp 0.':'';
  return'<div class="pfa-monthly-chart" role="img" aria-label="Tren pembelian bulanan Januari sampai '+esc(monthLabel(p))+' dari transaksi kanonis">'+
  '<svg viewBox="0 0 700 212" preserveAspectRatio="xMidYMid meet" aria-hidden="true">'+grids+'<path class="pfa-trend-line" d="'+path+'"/>'+dots+'</svg></div>'+
  '<div class="pfa-trend-foot"><span>Januari–'+esc(monthLabel(p))+'</span><strong>'+esc(known.length)+' dari '+esc(slots.length)+' bulan memiliki hasil pembacaan</strong></div>'+
@@ -271,9 +272,8 @@ function ensureMonthlyTrend(){
   while(index<pending.length){
    var item=pending[index++],cached=purchaseTrendCache[item.key];
    try{var q=await purchasePack(item.key);if(q.error)throw q.error;rememberTrendMonth(item.key,(q.data||{}).rows)}
-   catch(e){failed++;if(!cached)purchaseTrendCache[item.key]={value:null,count:0,seen:Date.now()};if(console&&console.warn)console.warn('Monthly Purchase trend read '+item.key+':',e)}
+   catch(e){failed++;if(!cached)purchaseTrendCache[item.key]={value:null,count:0,seen:Date.now(),error:true};if(console&&console.warn)console.warn('Monthly Purchase trend read '+item.key+':',e)}
    if(token!==trendLoadSequence)return;
-   paintMonthlyTrend();
   }
  }
  Promise.all([worker(),worker(),worker()]).then(function(){if(token===trendLoadSequence){trendLoadingKey='';paintMonthlyTrend();if(failed&&console&&console.warn)console.warn('Purchase trend: '+failed+' months unavailable')}})
