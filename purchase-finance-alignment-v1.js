@@ -305,24 +305,23 @@ function purchaseJournalReconciliation(){
  '. B OPERASIONAL bukan Pembelian kedua.</div>';
 }
 function infographicMarkup(){
- var pages=[['summary','Tren & Porsi'],['items','Kategori & Item'],['payments','Pembayaran & Kontrol'],['reviews','Pemeriksaan']];
- var tabs='<nav class="pfa-view-tabs" role="tablist" aria-label="Kelompok infografis Pembelian">'+pages.map(function(p){
-  return'<button type="button" role="tab" id="pfaTab-'+p[0]+'" aria-controls="pfaPanel-'+p[0]+'" aria-selected="'+(purchaseView===p[0]?'true':'false')+'" class="'+(purchaseView===p[0]?'active':'')+'" data-pfa-view="'+p[0]+'">'+p[1]+'</button>';
- }).join('')+'</nav>';
- return tabs+'<div class="pfa-view-panels">'+
- '<section class="pfa-view-panel" role="tabpanel" id="pfaPanel-summary" aria-labelledby="pfaTab-summary" data-pfa-view-panel="summary"'+(purchaseView==='summary'?'':' hidden')+'>'+
+ // Header quick switch is the sole Owner navigation. Preserve the documentary
+ // entry host (not displayed) until its workflow is migrated into Notifications.
+ return'<div class="pfa-view-panels">'+
+ '<section class="pfa-view-panel" role="region" aria-label="Ringkasan Pembelian" id="pfaPanel-summary" data-pfa-view-panel="summary"'+(purchaseView==='summary'?'':' hidden')+'>'+
  '<div class="pfa-insights-grid"><article class="pfa-insight-panel"><h3>Tren Pembelian Bulanan</h3><p>Nilai Pembelian Januari–'+esc(monthLabel(periodValue()))+'</p><div id="pfaMonthlyTrend">'+monthlyTrendMarkup()+'</div></article>'+
  '<article class="pfa-insight-panel"><h3>Porsi Pembelian</h3><p>Persentase nilai per jenis barang · '+esc(monthLabel(periodValue()))+'</p>'+purchasePieMarkup()+'</article></div></section>'+
- '<section class="pfa-view-panel" role="tabpanel" id="pfaPanel-items" aria-labelledby="pfaTab-items" data-pfa-view-panel="items"'+(purchaseView==='items'?'':' hidden')+'>'+
+ '<section class="pfa-view-panel" role="region" aria-label="Kategori dan Item Pembelian" id="pfaPanel-items" data-pfa-view-panel="items"'+(purchaseView==='items'?'':' hidden')+'>'+
  '<div class="pfa-insight-two"><article class="pfa-insight-panel"><h3>Komposisi Pembelian</h3><p>Nilai per akun Beban untuk '+esc(cutLabel())+'</p>'+chartMarkup()+'</article>'+
  '<article class="pfa-insight-panel"><h3>Top 5 Item Pembelian</h3><p>Urutan berdasarkan total nilai sumber</p>'+purchaseTopMarkup()+'</article></div></section>'+
- '<section class="pfa-view-panel" role="tabpanel" id="pfaPanel-payments" aria-labelledby="pfaTab-payments" data-pfa-view-panel="payments"'+(purchaseView==='payments'?'':' hidden')+'>'+
+ '<section class="pfa-view-panel" role="region" aria-label="Pembayaran dan Kontrol" id="pfaPanel-payments" data-pfa-view-panel="payments"'+(purchaseView==='payments'?'':' hidden')+'>'+
  '<div class="pfa-insight-two"><article class="pfa-insight-panel"><h3>Komposisi Pembayaran</h3><p>Sumber pembiayaan dari transaksi kanonis</p>'+purchasePaymentMarkup()+'</article>'+
  '<article class="pfa-insight-panel"><h3>Kontrol Data Berkualitas</h3><p>Review dan bukti Owner dipisah dari posting</p>'+
- '<div class="pfa-note-banner"><b>'+esc(String(n(control.stock_review_rows)+n(control.provisional_journal_rows)))+' kandidat perlu perhatian</b>. Pemeriksaan bukti Owner dilakukan melalui tombol review di bawah; mengunggah Excel tidak otomatis memposting Stok.</div>'+
- '<button type="button" class="primary" data-pfa-notifications>Periksa di Notifikasi →</button></article></div></section>'+
- '<section class="pfa-view-panel" role="tabpanel" id="pfaPanel-reviews" aria-labelledby="pfaTab-reviews" data-pfa-view-panel="reviews"'+(purchaseView==='reviews'?'':' hidden')+'>'+
- '<div class="pfa-review-list" id="pfaReviewSlot"><div class="pfa-note-banner pfa-review-safety">Penerimaan Stok hanya dibukukan setelah satuan dan bukti diperiksa. Review ini tidak melakukan posting Stok atau jurnal otomatis.</div>'+unitVerificationMarkup()+'</div></section></div>';
+ '<div class="pfa-note-banner"><b>'+esc(String(n(control.stock_review_rows)+n(control.provisional_journal_rows)))+' kandidat perlu perhatian</b>. Lanjutkan pemeriksaan melalui Notifikasi; mengunggah Excel tidak otomatis memposting Stok.</div>'+
+ '<button type="button" class="primary" data-pfa-notifications>Periksa di Notifikasi →</button></article></div></section></div>'+
+ // Review workflows remain mounted for compatibility, not visible or navigable
+ // here. Migrate them to Notifikasi in a separately tested future change.
+ '<div id="pfaReviewSlot" class="pfa-review-list pfa-review-compat" hidden aria-hidden="true"><div class="pfa-note-banner pfa-review-safety">Penerimaan Stok hanya dibukukan setelah satuan dan bukti diperiksa. Review ini tidak melakukan posting Stok atau jurnal otomatis.</div>'+unitVerificationMarkup()+'</div>';
 }
 function mountOwnerControls(root,wrap,markup){
   // A native node move preserves #paPeriod value and Excel input event handlers.
@@ -349,7 +348,8 @@ function purchaseSalesHeader(values,finance){
     '<div class="pfa-purchase-toolbar-right"><span class="pfa-sync '+(finance?'ok':'warn')+'">'+(finance?'TERSINKRON':'PERLU PERIKSA')+'</span>'+
     '<div class="pfa-quick-switch" role="group" aria-label="Tampilan Pembelian">'+
     '<button type="button" data-pfa-view="summary" aria-pressed="'+(purchaseView==='summary'?'true':'false')+'" class="'+(purchaseView==='summary'?'active':'')+'">Ringkasan</button>'+
-    '<button type="button" data-pfa-view="items" aria-pressed="'+(purchaseView==='items'?'true':'false')+'" class="'+(purchaseView==='items'?'active':'')+'">Kategori</button></div></div></div>';
+    '<button type="button" data-pfa-view="items" aria-pressed="'+(purchaseView==='items'?'true':'false')+'" class="'+(purchaseView==='items'?'active':'')+'">Kategori</button>'+
+    '<button type="button" data-pfa-view="payments" aria-pressed="'+(purchaseView==='payments'?'true':'false')+'" class="'+(purchaseView==='payments'?'active':'')+'">Pembayaran &amp; Kontrol</button></div></div></div>';
 }
 function render(){
   if(unitOpen&&!unitAllowed())closeUnitReview();
@@ -451,10 +451,13 @@ function boot(){
     document.addEventListener('click',function(e){
       var view=e.target&&e.target.closest?e.target.closest('[data-pfa-view]'):null;
       if(view){
-        purchaseView=view.getAttribute('data-pfa-view')||'summary';
+        var nextView=view.getAttribute('data-pfa-view');
+        if(['summary','items','payments'].indexOf(nextView)<0)return;
+        purchaseView=nextView;
         document.querySelectorAll('#purchaseFinanceAlignment [data-pfa-view]').forEach(function(b){
           var on=b.getAttribute('data-pfa-view')===purchaseView;
-          b.classList.toggle('active',on);b.setAttribute('aria-selected',on?'true':'false');if(b.hasAttribute&&b.hasAttribute('aria-pressed'))b.setAttribute('aria-pressed',on?'true':'false');
+          b.classList.toggle('active',on);
+          if(b.hasAttribute&&b.hasAttribute('aria-pressed'))b.setAttribute('aria-pressed',on?'true':'false');
         });
         document.querySelectorAll('#purchaseFinanceAlignment [data-pfa-view-panel]').forEach(function(p){p.hidden=p.getAttribute('data-pfa-view-panel')!==purchaseView});
         if(purchaseView==='summary')ensureMonthlyTrend();
