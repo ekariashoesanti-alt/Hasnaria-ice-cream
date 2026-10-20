@@ -14,3 +14,22 @@
   --hasnaria-green-bg:#f7faf9;
   --hasnaria-green-ink:#143c30;
 }
+
+/* Sales first-paint gate: applies from <head>, before the legacy core app can paint.
+ * Owner sees only the canonical Sales board; non-owner entry stays unchanged. */
+body.hasnaria-owner-erp #sales:not(.hidden) > :not(.sale-board){
+  display:none!important;
+}
+body.hasnaria-owner-erp #sales:not(.hidden):not(:has(> .sale-board))::before{
+  content:"Menyiapkan dashboard Penjualan…";
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  min-height:180px;
+  margin:10px 0;
+  border:1px solid #d7e2dc;
+  border-radius:12px;
+  background:#fff;
+  color:#66756e;
+  font-size:13px;
+}

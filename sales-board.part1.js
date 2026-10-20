@@ -268,7 +268,9 @@ ice && STATE.slice.type === 'day' && STATE.slice.id === x.key;
     if (STATE.error) html += '<div class="sb-error">' + esc(STATE.error) + '</div>';
     if (STATE.msg) html += '<div class="sb-ok">' + esc(STATE.msg) + '</div>';
 
-    if (STATE.loading) {
+    // Do not briefly show the empty-data screen before the initial GET resolves.
+    // Keep the same canonical board skeleton until data (or an error) is known.
+    if (STATE.loading || (!STATE.fetched && !STATE.error)) {
       board.innerHTML = html + '<div class="sb-loading">Memuat data penjualan…</div></div>' + renderFormatHelpModal();
       STATE.draw = false; bind(); return;
     }

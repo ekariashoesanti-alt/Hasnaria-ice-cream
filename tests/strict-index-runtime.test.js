@@ -18,14 +18,31 @@ try {
   if (!html.includes('/password-reset-bootstrap.js')) throw new Error('password reset bootstrap script missing');
   if (!html.includes('/owner-shell-guard.js?v=10')) throw new Error('owner shell guard missing from production index');
   if (html.indexOf('/owner-shell-guard.js?v=10') > html.indexOf('/app.js')) throw new Error('owner shell guard must load before app runtime');
-  if (!html.includes('/owner-green.css?v=8')) throw new Error('Owner green palette missing from production index');
-  if (html.indexOf('/owner-green.css?v=8') < html.indexOf('/erp.css')) throw new Error('Owner green palette must load after ERP stylesheet');
+  if (!html.includes('/owner-green.css?v=9')) throw new Error('Owner green palette missing from production index');
+  if (html.indexOf('/owner-green.css?v=9') < html.indexOf('/erp.css')) throw new Error('Owner green palette must load after ERP stylesheet');
 
   const ownerPalette = fs.readFileSync(path.join(root, 'owner-green.css'), 'utf8');
   if (!ownerPalette.includes('--hasnaria-green:#125644')) throw new Error('Hasnaria shell must use the approved #125644 brand green');
   if (!ownerPalette.includes('--hasnaria-accent:#125644')) throw new Error('Hasnaria controls must use the approved brand green');
   if (!ownerPalette.includes('--hasnaria-green-bg:#f7faf9')) throw new Error('Hasnaria workspace must use the green-white background system');
   if (!ownerPalette.includes('--hasnaria-green-ink:#143c30')) throw new Error('Hasnaria text must use dark green ink');
+
+  // First paint must never show the old Sales entry/table or a false empty report.
+  const core = fs.readFileSync(path.join(root, 'core-app.js'), 'utf8');
+  if (!core.includes('if (role !== "owner") $("sales").innerHTML')) throw new Error('Owner still paints legacy Sales UI');
+  if (!ownerPalette.includes('body.hasnaria-owner-erp #sales:not(.hidden) > :not(.sale-board)')) {
+    throw new Error('Critical Sales legacy first-paint CSS gate missing');
+  }
+  if (!ownerPalette.includes(':not(:has(> .sale-board))::before')) {
+    throw new Error('Canonical Sales initial loading placeholder missing');
+  }
+  if (html.indexOf('/owner-green.css?v=9') >= html.indexOf('/app.js')) {
+    throw new Error('First-paint Sales CSS must load before core app');
+  }
+  const salesMarkup = fs.readFileSync(path.join(root, 'sales-board.part1.js'), 'utf8');
+  if (!salesMarkup.includes('STATE.loading || (!STATE.fetched && !STATE.error)')) {
+    throw new Error('Sales must show loading until first data request has resolved');
+  }
 
   for (const name of ['auth-bootstrap.js', 'password-reset-bootstrap.js']) {
     const file = path.join(out, name);
