@@ -40,7 +40,7 @@ db_source() {
 }
 db_recovery() {
  docker exec -e PGPASSWORD="$LOCAL_PASSWORD" "$NAME" \
-  psql -X -qAt -v ON_ERROR_STOP=1 -U postgres -d hasnaria_recovery -c "$1"
+  psql -X -qAt -v ON_ERROR_STOP=1 -U supabase_admin -d hasnaria_recovery -c "$1"
 }
 # Enforce BYPASSRLS with *zero* mutating grants, superuser, database CREATE,
 # CREATE ROLE, or unprivileged reads in managed/Auth/business schemas.
@@ -106,13 +106,13 @@ for _ in $(seq 1 45); do
 done
 [[ "$ready" == 1 ]] || { echo 'BLOCK: ephemeral PostgreSQL start failed'; exit 1; }
 docker exec -e PGPASSWORD="$LOCAL_PASSWORD" -i "$NAME" \
- psql -X -q -v ON_ERROR_STOP=1 -U postgres -d hasnaria_recovery \
+ psql -X -q -v ON_ERROR_STOP=1 -U supabase_admin -d hasnaria_recovery \
  < scripts/hasnaria_ephemeral_pg_bootstrap.sql
 # All-or-nothing restore. If managed extensions cannot be reproduced locally,
 # report BLOCK rather than bypassing errors or declaring recoverability.
 docker exec -e PGPASSWORD="$LOCAL_PASSWORD" "$NAME" \
  pg_restore --single-transaction --exit-on-error --no-owner --no-privileges \
- -U postgres -d hasnaria_recovery /backup/hasnaria.dump \
+ -U supabase_admin -d hasnaria_recovery /backup/hasnaria.dump \
  >"$TMP/restore-stdout" 2>"$TMP/restore-stderr" ||
  { echo 'BLOCK: local Supabase-compatible SQL restore failed (review dependencies)'; exit 1; }
 
