@@ -1,4 +1,5 @@
 name: Hasnaria OCI Protected SQL Backup and Recovery Proof
+# Pre-release fresh SQL backup requested before PR96 production deployment (2026-10-20).
 # One-time protected OCI SQL backup runs on this workflow's main-branch merge.
 # Oracle Object Storage encrypts every object at rest by default; no age keypair.
 # Offline synthetic restore CI runs only on pull requests.
