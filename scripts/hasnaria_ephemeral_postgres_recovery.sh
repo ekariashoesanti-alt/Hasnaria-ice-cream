@@ -9,6 +9,10 @@ RESTORE_IMAGE='supabase/postgres:17.6.1.173'
 REPO='ekariashoesanti-alt/Hasnaria-ice-cream'
 NAME=''
 TMP=''
+# The bundled Supabase image preloads managed auth/storage schemas in POSTGRES_DB.
+# Restore the archive only into a fresh TEMPLATE template0 database within
+# the disposable, --network none container to avoid duplicate-schema failures.
+TARGET_DB='hasnaria_pristine_restore'
 cleanup() {
  [[ -z "$NAME" ]] || docker rm -f "$NAME" >/dev/null 2>&1 || true
  [[ -z "$TMP" ]] || rm -rf "$TMP" >/dev/null 2>&1 || true
@@ -40,7 +44,7 @@ db_source() {
 }
 db_recovery() {
  docker exec -e PGPASSWORD="$LOCAL_PASSWORD" "$NAME" \
-  psql -X -qAt -v ON_ERROR_STOP=1 -U supabase_admin -d hasnaria_recovery -c "$1"
+  psql -X -qAt -v ON_ERROR_STOP=1 -U supabase_admin -d "$TARGET_DB" -c "$1"
 }
 # Enforce BYPASSRLS with *zero* mutating grants, superuser, database CREATE,
 # CREATE ROLE, or unprivileged reads in managed/Auth/business schemas.
@@ -117,14 +121,32 @@ for _ in $(seq 1 60); do
   sleep 2
 done
 [[ "$ready" == 1 ]] || { echo 'BLOCK: ephemeral PostgreSQL start failed after robust readiness'; docker logs --tail 40 "$NAME" 2>&1 | sed -E 's/[^[:print:]\t]//g' | head -n 50 || true; exit 1; }
+# CREATE DATABASE runs only in disposable local Docker, NEVER on Tokyo.
+docker exec -e PGPASSWORD="$LOCAL_PASSWORD" "$NAME" \
+ psql -X -q -v ON_ERROR_STOP=1 -U supabase_admin -d postgres \
+ -c "CREATE DATABASE $TARGET_DB WITH TEMPLATE template0 OWNER supabase_admin;" \
+ || { echo 'BLOCK: pristine disposable restore database creation failed'; exit 1; }
+# Fail closed if managed schemas accidentally leaked into the new target.
+pristine="$(docker exec -e PGPASSWORD="$LOCAL_PASSWORD" "$NAME" \
+ psql -X -qAt -v ON_ERROR_STOP=1 -U supabase_admin -d "$TARGET_DB" \
+ -c "SELECT CASE WHEN EXISTS (SELECT 1 FROM pg_namespace WHERE nspname IN ('auth','storage','private','supabase_migrations')) THEN 'BLOCK' ELSE 'OK' END;")"
+[[ "$pristine" == OK ]] || { echo 'BLOCK: target database is not pristine'; exit 1; }
+# A pristine template0 database contains the system public schema. Remove it
+# only if the archive contains its definition, so pg_restore recreates it.
+if grep -Eq '^[0-9]+;[[:space:]]+[0-9]+[[:space:]]+[0-9]+[[:space:]]+SCHEMA[[:space:]]+-[[:space:]]+public([[:space:]]|$)' "$TMP/toc.txt"; then
+ docker exec -e PGPASSWORD="$LOCAL_PASSWORD" "$NAME" \
+  psql -X -q -v ON_ERROR_STOP=1 -U supabase_admin -d "$TARGET_DB" \
+  -c 'DROP SCHEMA IF EXISTS public CASCADE;' \
+  || { echo 'BLOCK: scratch public schema reset failed'; exit 1; }
+fi
 docker exec -e PGPASSWORD="$LOCAL_PASSWORD" -i "$NAME" \
- psql -X -q -v ON_ERROR_STOP=1 -U supabase_admin -d hasnaria_recovery \
+ psql -X -q -v ON_ERROR_STOP=1 -U supabase_admin -d "$TARGET_DB" \
  < scripts/hasnaria_ephemeral_pg_bootstrap.sql
 # All-or-nothing restore. If managed extensions cannot be reproduced locally,
 # report BLOCK rather than bypassing errors or declaring recoverability.
 docker exec -e PGPASSWORD="$LOCAL_PASSWORD" "$NAME" \
  pg_restore --single-transaction --exit-on-error --no-owner --no-privileges \
- -U supabase_admin -d hasnaria_recovery /backup/hasnaria.dump \
+ -U supabase_admin -d "$TARGET_DB" /backup/hasnaria.dump \
  >"$TMP/restore-stdout" 2>"$TMP/restore-stderr" ||
  { node scripts/hasnaria_restore_error_classifier.js "$TMP/restore-stderr" || true
    echo 'BLOCK: local Supabase-compatible SQL restore failed (category above; no raw SQL logged)'
