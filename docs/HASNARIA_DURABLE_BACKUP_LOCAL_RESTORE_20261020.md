@@ -1,69 +1,70 @@
-# Hasnaria: Durable Encrypted Backup and Independent PostgreSQL Restore
-20 October 2026 | Gate: durable SQL restore only | Tokyo production unchanged
+# Hasnaria backup permanen: OCI Object Storage Batam (tanpa VM)
 
-## Scope
-The old restore-proof required a third Supabase project. The new design restores
-an encrypted object from a dedicated private S3 bucket into a disposable,
-network-isolated Supabase PostgreSQL 17 container; it creates a pristine template0
-database, verifies SHA256, restores transactionally and tests the Finance/Stock,
-Auth SQL, RLS and migration invariants. The container and plaintext are deleted
-at the end. No third Supabase project or production SQL write is involved.
+Status: **kode siap, bucket/credentials belum terverifikasi**. Backup SQL
+sementara dari Tokyo SUKSES pada GitHub Actions run #39366534620.
+Backup terenkripsi OCI **belum ada** sampai workflow nyata sukses.
 
-The previous ephemeral Tokyo dump and restore succeeded in GitHub Actions run
-#39366534620. This does not establish that an encrypted S3 object exists today.
+## Arsitektur sederhana
+Supabase Tokyo read-only → GitHub Actions pg_dump → enkripsi age → bucket
+PRIVATE OCI Object Storage `ap-batam-1` → unduh lagi → verifikasi byte
+sama → (run terpisah) dekripsi dan restore ke PostgreSQL 17 sementara
+`--network none`. Container dan file lokal selalu dihapus.
+Tidak ada VM, tidak ada database ketiga dan tidak memakai bucket AI ROOM.
 
-## Prerequisites (not known to be configured)
-Use a dedicated Hasnaria S3 bucket, NOT an AI ROOM bucket. It must have Block All
-Public Access and Versioning enabled. Versioning is not immutable retention;
-review lifecycle, access and potential AWS costs separately. Use least-privilege
-access restricted to this bucket, with bucket-level GetBucketPublicAccessBlock
-and GetBucketVersioning and object-level PutObject/GetObject for hasnaria/*.
+## Hanya konfigurasi satu kali
+1. Di OCI Console region **Indonesia North (Batam)**, buat satu bucket
+   **khusus Hasnaria**; misalnya `hasnaria-backup-private`.
+   Set **Private (NoPublicAccess)**, **Standard**, dan **Object Versioning: Enabled**.
+   Jangan membuat Pre-Authenticated Request atau memilih bucket AI ROOM.
+   Simpan nama bucket serta *Object Storage namespace* dari OCI Console.
+2. Buat OCI **Customer Secret Key** untuk akun IAM yang hanya mendapat akses
+   baca/tulis object di bucket Hasnaria tersebut. Customer Secret Key menghasilkan
+   pasangan **Access Key + Secret Key** untuk S3-compatible API; itu bukan
+   OCI API signing key biasa. Simpan rahasianya di GitHub Environments, tidak di chat.
+3. Gunakan GitHub Repository → Settings → Environments →
+   `hasnaria-backup-private`. Set nilai-nilai ini:
 
-Generate an age keypair on your own trusted device. Back up the private identity
-outside GitHub in an encrypted safe place. Never paste DB URLs or private keys
-into chats, issues, code, or workflow logs.
+   | Name | Type | Description |
+   |---|---|---|
+   | `HSN_PROD_BACKUP_READONLY_DB_URL` | Secret | Akun Tokyo read-only yang sudah lulus sebelumnya |
+   | `HSN_BACKUP_S3_BUCKET` | Variable | Nama bucket privat Hasnaria di OCI |
+   | `HSN_OCI_NAMESPACE` | Variable | Object Storage namespace OCI |
+   | `AWS_ACCESS_KEY_ID` | Secret | OCI Customer Secret **Access Key** |
+   | `AWS_SECRET_ACCESS_KEY` | Secret | OCI Customer Secret **Secret Key** |
+   | `HSN_BACKUP_AGE_RECIPIENT` | Variable | Public age recipient dari keypair backup |
+   | `HSN_BACKUP_AGE_IDENTITY` | Secret | Private age identity, simpan salinan aman di luar GitHub |
 
-GitHub Settings > Environments > hasnaria-backup-private:
-- SECRET: HSN_PROD_BACKUP_READONLY_DB_URL (existing Tokyo reader)
-- VARIABLE: HSN_BACKUP_AGE_RECIPIENT (public age1... recipient)
-- SECRET: HSN_BACKUP_AGE_IDENTITY (private key matching recipient)
-- VARIABLE: HSN_BACKUP_S3_BUCKET (dedicated private bucket)
-- VARIABLE: AWS_DEFAULT_REGION (actual bucket region)
-- SECRET: AWS_ACCESS_KEY_ID (least privilege)
-- SECRET: AWS_SECRET_ACCESS_KEY (least privilege)
+   GitHub Actions memakai region `ap-batam-1` dan endpoint:
+   `https://<namespace>.compat.objectstorage.ap-batam-1.oraclecloud.com`.
+   Tidak perlu mengatur AWS region, membuat akun AWS, membuat OCI VM atau
+   memasang server. OCI mengenkripsi objek secara bawaan; backup tetap
+   dienkripsi age **sebelum** diunggah.
 
-Limit the protected environment to main, disable bypass where possible, and
-do not create a third Supabase project.
+   Buat age keypair di komputer tepercaya dengan `age-keygen`.
+   Jangan mengirim private identity, DB URL atau Customer Secret ke percakapan.
 
-## Offline CI
-The new Hasnaria Durable Backup Offline Fixture workflow uses fake data only.
-It constructs public and auth test rows in local PG17, exports, encrypts with
-a temporary synthetic age key, decrypts, verifies checksum and SQL-restores
-to another isolated pristine PG17. Require two successes before merge.
+**Catatan keamanan:** endpoint S3-compatible OCI mendukung HeadBucket,
+PutObject, GetObject, tetapi tidak mendukung AWS
+`GetBucketPublicAccessBlock` atau `GetBucketVersioning`.
+Karena itu sifat PRIVATE + Versioning bucket harus diverifikasi di OCI Console;
+workflow hanya memeriksa endpoint/bucket kredensial, mengecek kembali ciphertext,
+mengenkripsi file, dan memulihkan SQL. IAM harus membatasi akses bucket.
 
-## Manual workflow runs after merge (not yet performed)
-GitHub Actions > Hasnaria Encrypted Backup and Recovery Proof > Run workflow:
+## Setelah konfigurasi, satu kali backup nyata + bukti restore
+GitHub Actions → `Hasnaria Encrypted Backup and Recovery Proof`:
 
-Run A:
-- Branch main
-- action encrypted-backup
-- confirmation BACKUP_READONLY
-- Capture the exact non-secret S3 key printed by the successful job.
-- This verifies encrypted ciphertext exists remotely, not SQL recoverability.
+A. Branch main, action `encrypted-backup`, confirmation `BACKUP_READONLY`.
+   Lihat `Encrypted offsite archive verified; object key: hasnaria/<UTC>.age`.
 
-Run B:
-- Branch main
-- action restore-proof
-- confirmation RESTORE_DISPOSABLE
-- backup_key is the exact S3 object key returned by run A.
-- Require PASS for SHA256, isolated PostgreSQL restore, Finance balance,
-  Stock ledger parity, Auth SQL, RLS and migrations.
-- Plaintext/archive/container are cleaned up; encrypted object persists.
+B. Branch main, action `restore-proof`, confirmation `RESTORE_DISPOSABLE`,
+   backup_key = exact object key yang ditampilkan A. Semua restore hanya terjadi
+   di container sementara, **bukan** Tokyo/Singapore.
 
-## Remaining limits
-Only SQL logical recovery is within scope. This is NOT an Auth login/session,
-Supabase runtime/Edge Function, or external Storage object-byte restore.
-The backup job fails safely if Storage objects are present. Complete Singapore
-Owner workflow UAT and explicit production data-write release gate separately.
-See GitHub issue #111. Do not merge live Stock/Purchase changes until these
-remaining gates are explicitly reviewed.
+   **Sukses** bila restore + checksum + keseimbangan jurnal + paritas stok +
+   Auth SQL/RLS/migrations lolos.
+
+## Batasan
+Ini proof SQL backup; bukan pemulihan file Storage eksternal, Auth API/session,
+atau layanan Supabase runtime. Rilis data-write Stok/Pembelian tetap HOLD
+sampai pengujian Owner staging disetujui. Tidak ada biaya VM, tetapi kapasitas
+Object Storage, request dan retensi bisa dikenai biaya di luar kuota gratis.
