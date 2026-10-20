@@ -84,3 +84,47 @@ jobs:
           cmp -s "$tmp/backup.age" "$tmp/downloaded.age" || { echo "BLOCK: remote ciphertext differs from local encrypted backup"; exit 1; }
           echo "Encrypted offsite archive verified; object key: $key"
           echo "STATUS: BACKUP ARCHIVED, NOT YET RESTORE-PROVEN (run restore-proof against disposable DB)"
+  restore-proof:
+    if: ${{ github.event_name == 'workflow_dispatch' && github.repository == 'ekariashoesanti-alt/Hasnaria-ice-cream' && github.ref == 'refs/heads/main' && inputs.action == 'restore-proof' && inputs.confirmation == 'RESTORE_DISPOSABLE' }}
+    # Reuse the PRIVATE encrypted backup environment. No third database.
+    environment: hasnaria-backup-private
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
+      - name: Retrieve encrypted backup and prove SQL restore in isolated local PG17
+        shell: bash
+        env:
+          HSN_BACKUP_AGE_IDENTITY: ${{ secrets.HSN_BACKUP_AGE_IDENTITY }}
+          HSN_BACKUP_S3_BUCKET: ${{ vars.HSN_BACKUP_S3_BUCKET }}
+          AWS_DEFAULT_REGION: ${{ vars.AWS_DEFAULT_REGION }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          RESTORE_KEY: ${{ inputs.backup_key }}
+        run: |
+          set -Eeuo pipefail
+          set +x
+          umask 077
+          tmp="$(mktemp -d)"
+          trap 'rm -rf "$tmp"' EXIT
+          for required in HSN_BACKUP_AGE_IDENTITY HSN_BACKUP_S3_BUCKET AWS_DEFAULT_REGION AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY RESTORE_KEY; do
+            [[ -n "${!required:-}" ]] || { echo 'BLOCK: encrypted key or protected credentials missing'; exit 1; }
+          done
+          [[ "$RESTORE_KEY" =~ ^hasnaria/[0-9]{8}T[0-9]{6}Z\.age$ ]] || { echo 'BLOCK: invalid archive key'; exit 1; }
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq age awscli
+          aws s3api get-public-access-block --bucket "$HSN_BACKUP_S3_BUCKET" --query 'PublicAccessBlockConfiguration.[BlockPublicAcls,IgnorePublicAcls,BlockPublicPolicy,RestrictPublicBuckets]' --output text | grep -Fxq $'True\tTrue\tTrue\tTrue' || { echo 'BLOCK: private backup bucket verification failed'; exit 1; }
+          aws s3api get-object --bucket "$HSN_BACKUP_S3_BUCKET" --key "$RESTORE_KEY" "$tmp/backup.age" >/dev/null
+          test -s "$tmp/backup.age"
+          printf '%s\n' "$HSN_BACKUP_AGE_IDENTITY" > "$tmp/identity.txt"
+          age -d -i "$tmp/identity.txt" -o "$tmp/packed.tar" "$tmp/backup.age"
+          test -s "$tmp/packed.tar"
+          tar -tf "$tmp/packed.tar" | sort > "$tmp/members"
+          printf '%s\n' archive.sha256 hasnaria.dump > "$tmp/allowed-members"
+          cmp -s "$tmp/members" "$tmp/allowed-members" || { echo 'BLOCK: unexpected archive member'; exit 1; }
+          tar -xf "$tmp/packed.tar" -C "$tmp" hasnaria.dump archive.sha256
+          (cd "$tmp" && sha256sum -c archive.sha256 >/dev/null)
+          bash scripts/hasnaria_verify_durable_backup_local.sh --verify-backup "$tmp/hasnaria.dump"
+          echo "PASS: encrypted offsite SQL archive restored inside network-isolated PG17; key: $RESTORE_KEY"
+          echo 'LIMIT: SQL logical recovery; Supabase Auth API/session and remote Storage bytes are separate'
