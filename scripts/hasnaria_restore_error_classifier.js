@@ -9,7 +9,7 @@ function classify(raw) {
  const norm=candidate.toLowerCase();
  const kinds = [
   ['DUPLICATE_SCHEMA',/\bschema\s+"?[\w-]+"?\s+already exists/],
-  ['DUPLICATE_RELATION',/\b(?:relation|table|view|sequence)\s+"?[\w-]+"?\s+already exists/],
+  ['DUPLICATE_RELATION',/\b(?:relation|table|view|sequence)\s+"?[\w.:-]+"?\s+already exists/],
   ['DUPLICATE_TYPE',/\btype\s+"?[\w-]+"?\s+already exists/],
   ['DUPLICATE_EXTENSION',/\bextension\s+"?[\w-]+"?\s+already exists/],
   ['MISSING_EXTENSION',/\bextension\s+"?[\w-]+"?\s+(?:is not available|does not exist)|could not open extension control file/],
