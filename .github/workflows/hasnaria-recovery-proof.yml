@@ -36,8 +36,8 @@ jobs:
         env:
           HSN_PROD_BACKUP_READONLY_DB_URL: ${{ secrets.HSN_PROD_BACKUP_READONLY_DB_URL }}
           HSN_BACKUP_AGE_RECIPIENT: ${{ vars.HSN_BACKUP_AGE_RECIPIENT }}
-          HSN_BACKUP_S3_BUCKET: ${{ vars.HSN_BACKUP_S3_BUCKET }}
-          HSN_OCI_NAMESPACE: ${{ vars.HSN_OCI_NAMESPACE }}
+          HSN_BACKUP_S3_BUCKET: hasnaria-backup-private
+          HSN_OCI_NAMESPACE: axf1xcjq8gsy
           AWS_DEFAULT_REGION: ap-batam-1
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -106,8 +106,8 @@ jobs:
         shell: bash
         env:
           HSN_BACKUP_AGE_IDENTITY: ${{ secrets.HSN_BACKUP_AGE_IDENTITY }}
-          HSN_BACKUP_S3_BUCKET: ${{ vars.HSN_BACKUP_S3_BUCKET }}
-          HSN_OCI_NAMESPACE: ${{ vars.HSN_OCI_NAMESPACE }}
+          HSN_BACKUP_S3_BUCKET: hasnaria-backup-private
+          HSN_OCI_NAMESPACE: axf1xcjq8gsy
           AWS_DEFAULT_REGION: ap-batam-1
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}

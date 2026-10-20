@@ -33,6 +33,8 @@ jobs:
           assert.match(w,/HSN_BACKUP_AGE_IDENTITY/);
           assert.doesNotMatch(w,/get-public-access-block|get-bucket-versioning/);
           assert.match(w,/HSN_OCI_NAMESPACE/);
+          assert.match(w,/HSN_OCI_NAMESPACE: axf1xcjq8gsy/);
+          assert.match(w,/HSN_BACKUP_S3_BUCKET: hasnaria-backup-private/);
           assert.match(w,/oci_s3_endpoint/);
           assert.match(w,/ap-batam-1/);
           assert.match(w,/AI ROOM bucket forbidden/);
