@@ -7,7 +7,7 @@ function build(rows,ops,rawSource=src){
  const db={from(table){
    calls.push(table);
    return {select(){return {eq(){return {eq(){return Promise.resolve({count:5,error:null})}}}}}};
- },rpc(name,args){writes.push({name,args});return Promise.resolve({data:{inserted_rows:args.p_rows.length},error:null})}};
+ },rpc(name,args){if(name==='import_purchase_reviewed_append_v1'&&!args.p_commit)return Promise.resolve({data:{existing_rows:5,existing_non_excel:5,unchanged_rows:0,append_rows:0,conflict_rows:0,append_amount:0},error:null});writes.push({name,args});return Promise.resolve({data:{inserted_rows:args.p_rows.length},error:null})}};
  const document={addEventListener(){},getElementById(){return null},createElement(){return {remove(){},isConnected:false}},body:{appendChild(v){toasts.push(v.textContent)}}};
  const XLSX={utils:{sheet_to_json:ws=>ws.grid,decode_cell(){throw new Error('fake-grid')}},read(){return workbook}};
  const workbook={SheetNames:['BELANJA','B OPERASIONAL'],Sheets:{BELANJA:{grid:rows},'B OPERASIONAL':{grid:ops||[['NO','JENIS','EST OMSET'],[1,'BELANJA BAHAN',0]]}}};

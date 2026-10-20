@@ -202,9 +202,48 @@
     if(check.error)throw check.error;
     if(!Number.isInteger(check.count))throw Error('Jumlah transaksi kanonis periode tidak dapat diverifikasi; upload ditahan.');
     if(check.count!==0){
-      toast('Upload ditahan: '+check.count+' transaksi Pembelian sudah ada untuk '+period+
-        '. Tidak ada penggantian seluruh periode. Perlu mekanisme merge berbukti tanpa menimpa transaksi/Stock lama.','error',12000);
-      console.info(preview);
+      if(previewUsesProductionDatabase())throw Error('Preview memakai database PRODUKSI; tindakan ditahan.');
+      var reviewedRows=p.rows.map(function(z){return{
+        source_file:file.name,row_no:z.row_no,purchase_date:z.purchase_date,item_name:z.item_name,
+        quantity_text:z.quantity==null?'':String(z.quantity),unit_text:z.unit_text||'',
+        unit_price:z.unit_price,total_amount:z.total_amount,payment_method:z.payment_method,
+        notes:'BELANJA · '+(raw(z).analytics_group||'Operasi')+' · '+(raw(z).analytics_category||''),
+        raw_data:Object.assign({},raw(z),{canonical_source_record_key:z.source_record_key,
+          import_scope:'BELANJA_ONLY',ledger_policy:'CXD_FUNDING_EFGH'})
+      }});
+      var args={p_source_period:period,p_rows:reviewedRows,p_expected_count:null,p_commit:false};
+      var dry=await db.rpc('import_purchase_reviewed_append_v1',args);
+      if(dry.error)throw dry.error;
+      var result=dry.data||{};
+      if(Number(result.conflict_rows)>0){
+        toast('Ada '+result.conflict_rows+' baris yang berubah dari histori. Tidak ada data ditimpa; periksa di Notifikasi.','error',12000);
+        if(window.alert)window.alert('UPLOAD ULANG '+period+'\\n'+result.conflict_rows+' baris konflik. Tidak ada data yang disimpan.');
+        return;
+      }
+      var message=preview+'\\n\\nREVIEW UPLOAD ULANG '+period+
+       '\\nData tersimpan '+result.existing_rows+' transaksi (sumber lain '+result.existing_non_excel+')'+
+       '\\nIdentik '+result.unchanged_rows+' baris, baru '+result.append_rows+' baris ('+money(result.append_amount)+')'+
+       '\\nData lama tidak diganti, stok tidak diposting; trigger Finance dapat menyinkronkan jurnal.';
+      if(!Number(result.append_rows)){
+        toast('Tidak ada baris baru; file sudah tercatat. Tidak ada duplikasi.','success',9000);
+        return;
+      }
+      if(!confirm(message+'\\n\\nSetuju TAMBAH baris baru tanpa mengganti transaksi lama?'))return;
+      processing=true;busy(true);
+      try{
+        args.p_expected_count=Number(result.existing_rows);args.p_commit=true;
+        var saved=await db.rpc('import_purchase_reviewed_append_v1',args);
+        if(saved.error)throw saved.error;
+        var done=saved.data||{};
+        if(Number(done.append_rows)!==Number(result.append_rows)||Number(done.replaced_rows)!==0)
+          throw Error('Hasil import berbeda dari pratinjau. Periksa database sebelum mengulang.');
+        toast('Berhasil: '+done.append_rows+' baris BELANJA ditambahkan; '+done.unchanged_rows+' baris identik dilewati. Data Majoo tetap.','success',0);
+        if(typeof window.CustomEvent==='function'&&document.dispatchEvent)
+          document.dispatchEvent(new window.CustomEvent('hasnaria:purchase-imported',{detail:{
+            period:period,rows:done.append_rows,source:'belanja-reviewed-append',
+            stockPosted:false,finance_synced:false
+          }}));
+      }finally{processing=false;busy(false)}
       return;
     }
     if(previewUsesProductionDatabase())throw Error('Preview masih memakai database PRODUKSI. Impor Pembelian diblokir; lakukan UAT melalui staging terisolasi atau tunggu rilis resmi.');
