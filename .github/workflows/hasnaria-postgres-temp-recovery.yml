@@ -44,6 +44,8 @@ jobs:
           const s=fs.readFileSync('scripts/hasnaria_ephemeral_postgres_recovery.sh','utf8');
           assert.match(s,/--network none/);
           assert.match(s,/--single-transaction --exit-on-error/);
+          assert.match(s,/TEMPLATE template0/);
+          assert.match(s,/TARGET_DB='hasnaria_pristine_restore'/);
           assert.match(s,/--no-owner --no-privileges/);
           assert.match(s,/supabase\/postgres:17\.6\.1\.173/);
           assert.match(s,/pg_dump/);
@@ -103,6 +105,29 @@ jobs:
             -U supabase_admin -d ci_recovery_sandbox \
             -c "SELECT CASE WHEN to_regrole('authenticated') IS NOT NULL AND to_regrole('anon') IS NOT NULL THEN 'PASS' ELSE 'BLOCK' END" \
             | grep -Fxq PASS
+          # Isolated, synthetic dump/restore exercise: two new TEMPLATE template0
+          # databases, a public + auth fixture, no credentials or Tokyo data.
+          docker exec "$ci_db" psql -X -q -v ON_ERROR_STOP=1 -U supabase_admin -d postgres \
+            -c 'CREATE DATABASE ci_clean_source WITH TEMPLATE template0 OWNER supabase_admin'
+          docker exec "$ci_db" psql -X -q -v ON_ERROR_STOP=1 -U supabase_admin -d postgres \
+            -c 'CREATE DATABASE ci_clean_target WITH TEMPLATE template0 OWNER supabase_admin'
+          docker exec "$ci_db" psql -X -q -v ON_ERROR_STOP=1 -U supabase_admin -d ci_clean_source \
+            -c 'CREATE SCHEMA auth; CREATE TABLE auth.recovery_probe (id int PRIMARY KEY); INSERT INTO auth.recovery_probe VALUES (17); CREATE TABLE public.recovery_probe (id int PRIMARY KEY); INSERT INTO public.recovery_probe VALUES (25);'
+          docker exec "$ci_db" pg_dump -Fc --no-owner --no-privileges \
+            -n public -n auth -U supabase_admin -d ci_clean_source \
+            -f /tmp/ci_hasnaria_probe.dump
+          docker exec "$ci_db" pg_restore -l /tmp/ci_hasnaria_probe.dump > /tmp/hasnaria_restore_probe_toc.txt
+          docker exec "$ci_db" psql -X -qAt -v ON_ERROR_STOP=1 -U supabase_admin -d ci_clean_target \
+            -c "SELECT CASE WHEN to_regnamespace('auth') IS NULL THEN 'OK' ELSE 'BLOCK' END" | grep -Fxq OK
+          if grep -Eq '^[0-9]+;[[:space:]]+[0-9]+[[:space:]]+[0-9]+[[:space:]]+SCHEMA[[:space:]]+-[[:space:]]+public([[:space:]]|$)' /tmp/hasnaria_restore_probe_toc.txt; then
+            docker exec "$ci_db" psql -X -q -v ON_ERROR_STOP=1 -U supabase_admin -d ci_clean_target \
+              -c 'DROP SCHEMA IF EXISTS public CASCADE'
+          fi
+          docker exec "$ci_db" pg_restore --single-transaction --exit-on-error --no-owner --no-privileges \
+            -U supabase_admin -d ci_clean_target /tmp/ci_hasnaria_probe.dump
+          docker exec "$ci_db" psql -X -qAt -v ON_ERROR_STOP=1 -U supabase_admin -d ci_clean_target \
+            -c "SELECT (SELECT id FROM auth.recovery_probe) + (SELECT id FROM public.recovery_probe)" | grep -Fxq 42
+          echo 'PASS: pristine template0 auth/public synthetic restore'
           echo 'PASS: real Supabase PG17 role/extension bootstrap completed'
   restore-to-temporary-postgres:
     if: ${{ github.event_name == 'workflow_dispatch' && github.repository == 'ekariashoesanti-alt/Hasnaria-ice-cream' && github.ref == 'refs/heads/main' && inputs.confirmation == 'TEMP_POSTGRES_RESTORE_READONLY' }}
