@@ -16,7 +16,7 @@ function allowed(){
 }
 function close(){seq++;opened=false;loading=false;ownerSession=null;data=null;error='';if(modal){modal.remove();modal=null}}
 function entry(){
- var host=document.getElementById('purchaseFinanceAlignment');if(!host)return;
+ var host=document.getElementById('pfaReviewSlot');if(!host)return;
  var btn=host.querySelector('[data-hsn-conversion-entry]');
  if(!owner()){if(btn)btn.remove();if(opened)close();return}
  if(btn)return;
