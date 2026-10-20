@@ -385,6 +385,9 @@
       } catch (e) { $("sMsg").textContent = e.message; }
     });
 
+    // Owner Pembelian belongs exclusively to Purchase analytics/Finance renderers.
+    // Keep the legacy form and its event handlers only for non-owner roles.
+    if (role !== 'owner') {
     var pRows = expenses.filter(function (x) { return ["pembelian","investasi","administrasi","kepegawaian","lainnya"].indexOf(x.category) >= 0 && (x.status === "recorded" || x.status === "approved" || x.status === "pending_approval"); });
     var pTotal = pRows.filter(function (x) { return x.status !== "rejected"; }).reduce(function (a,x){return a+x.amount;},0);
     var pInv = pRows.filter(function(x){return x.category==="investasi" && x.status!=="rejected";}).reduce(function(a,x){return a+x.amount;},0);
@@ -426,6 +429,7 @@
     function purchaseHint(){ if(!$("pCat")||!$("pAmt")||!$("pHint")||!$("pSave"))return; var d=decide(role,$("pCat").value,Number($("pAmt").value||0)); $("pHint").textContent=d.msg; $("pSave").textContent=d.status==="pending_approval"?"Ajukan ke atasan":"Simpan transaksi"; }
     if($("pAmt")){$("pAmt").addEventListener("input",purchaseHint);$("pCat").addEventListener("change",purchaseHint);}
     if($("pSave"))$("pSave").addEventListener("click",async function(){if(!canOps(role))return;var cat=$("pCat").value,amt=Number($("pAmt").value||0),d=decide(role,cat,amt);if(!(amt>0)){ $("pMsg").textContent="Nominal harus lebih dari 0.";return;} $("pMsg").textContent="Menyimpan…";try{var note=($("pVendor").value||"").trim();if($("pNotes").value)note+=(note?" · ":"")+$("pNotes").value.trim();var r=await db.from("expenses").insert({brand_id:BRAND,expense_date:$("pDate").value,category:cat,amount:amt,notes:wrap(d.status,note)});if(r.error)throw r.error;$("pMsg").textContent=d.status==="pending_approval"?"Diajukan. Menunggu persetujuan.":"Transaksi tercatat.";await loadAll();render();}catch(e){$("pMsg").textContent=e.message;}});
+    }
     $("ops").innerHTML = '<div class="warnbox"><b>Pagar wewenang (' + (ROLE_L[role] || role) + ')</b><br>Di atas batas tidak final — naik ke atasan. Owner tidak menerima pertanyaan yang sudah ada aturannya.</div>' +
       '<div class="card"><h2>Pengeluaran Operasional & Koreksi</h2>' + (canOps(role) ? "" : '<p class="small" style="color:var(--d)">Bukan wewenang Anda.</p>') +
       '<div class="form"><div><label>Tanggal</label><input id="oDate" type="date" value="' + today() + '"></div>' +
