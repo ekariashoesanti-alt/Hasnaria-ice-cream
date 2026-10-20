@@ -1,11 +1,17 @@
-name: Hasnaria Encrypted Backup and Recovery Proof
-# Protected real backup/restore is manual; offline fixtures use separate workflow.
+name: Hasnaria OCI Protected SQL Backup and Recovery Proof
+# One-time protected OCI SQL backup runs on this workflow's main-branch merge.
+# Oracle Object Storage encrypts every object at rest by default; no age keypair.
+# Offline synthetic restore CI runs only on pull requests.
 # No third Supabase project or customer data in GitHub artifacts.
 on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/hasnaria-recovery-proof.yml'
   workflow_dispatch:
     inputs:
       action:
-        description: "OCI encrypted backup or disposable PostgreSQL restore"
+        description: "OCI server-side encrypted SQL archive or disposable restore"
         type: choice
         required: true
         options: [encrypted-backup, restore-proof]
@@ -14,7 +20,7 @@ on:
         type: string
         required: true
       backup_key:
-        description: "Existing encrypted S3 key for restore-proof, e.g. hasnaria/20261020T120000Z.age"
+        description: "Existing OCI SQL object key, e.g. hasnaria/20261020T120000Z.dump"
         type: string
         required: false
 permissions:
@@ -24,18 +30,17 @@ concurrency:
   cancel-in-progress: false
 jobs:
   encrypted-backup:
-    if: ${{ github.repository == 'ekariashoesanti-alt/Hasnaria-ice-cream' && github.ref == 'refs/heads/main' && inputs.action == 'encrypted-backup' && inputs.confirmation == 'BACKUP_READONLY' }}
+    if: ${{ github.repository == 'ekariashoesanti-alt/Hasnaria-ice-cream' && github.ref == 'refs/heads/main' && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.action == 'encrypted-backup' && inputs.confirmation == 'BACKUP_READONLY')) }}
     environment: hasnaria-backup-private
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
         with: { persist-credentials: false }
-      - name: Export encrypted archive and verify remote ciphertext (no public artifacts)
+      - name: Read-only Tokyo SQL backup, private OCI upload, and isolated restore verification
         shell: bash
         env:
           HSN_PROD_BACKUP_READONLY_DB_URL: ${{ secrets.HSN_PROD_BACKUP_READONLY_DB_URL }}
-          HSN_BACKUP_AGE_RECIPIENT: ${{ vars.HSN_BACKUP_AGE_RECIPIENT }}
           HSN_BACKUP_S3_BUCKET: hasnaria-backup-private
           HSN_OCI_NAMESPACE: axf1xcjq8gsy
           AWS_DEFAULT_REGION: ap-batam-1
@@ -46,13 +51,13 @@ jobs:
           umask 077
           tmp="$(mktemp -d)"
           trap 'rm -rf "$tmp"' EXIT
-          for required in HSN_PROD_BACKUP_READONLY_DB_URL HSN_BACKUP_AGE_RECIPIENT HSN_BACKUP_S3_BUCKET HSN_OCI_NAMESPACE AWS_DEFAULT_REGION AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY; do
+          for required in HSN_PROD_BACKUP_READONLY_DB_URL HSN_BACKUP_S3_BUCKET HSN_OCI_NAMESPACE AWS_DEFAULT_REGION AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY; do
             [[ -n "${!required:-}" ]] || { echo "BLOCK: missing required backup secret/variable"; exit 1; }
           done
           # Read-only source role cannot change production even if a dump command is compromised.
           node scripts/hasnaria_backup_connection_guard.js
           sudo apt-get update -qq
-          sudo apt-get install -y -qq age awscli
+          sudo apt-get install -y -qq awscli
           docker pull postgres:17 >/dev/null
           db() { docker run --rm --network host -e HSN_PROD_BACKUP_READONLY_DB_URL postgres:17 psql -X -qAt -v ON_ERROR_STOP=1 -d "$HSN_PROD_BACKUP_READONLY_DB_URL" -c "$1"; }
           role_guard="select case when coalesce((select rolsuper or rolcreaterole or rolcreatedb or rolreplication from pg_roles where rolname=current_user),true) or has_database_privilege(current_user,current_database(),'CREATE') or exists(select 1 from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname in ('public','private','auth','storage','supabase_migrations') and c.relkind in ('r','p') and has_table_privilege(current_user,c.oid,'INSERT,UPDATE,DELETE,TRUNCATE')) then 'DENY' else 'OK' end"
@@ -66,18 +71,17 @@ jobs:
           [[ "$(db "$full_read_guard")" == 'OK' ]] || { echo "BLOCK: dedicated full-backup READ-ONLY role cannot read Auth/Storage/migration metadata; no partial archive published"; exit 1; }
           # Supabase Storage object bytes are external to SQL dump. Never claim complete backup if present.
           [[ "$(db 'select count(*) from storage.objects')" == '0' ]] || { echo "BLOCK: Storage blob backup procedure is separately required"; exit 1; }
-          docker run --rm --network host -e HSN_PROD_BACKUP_READONLY_DB_URL -v "$tmp:/out" postgres:17 sh -c 'pg_dump --format=custom --no-owner --no-privileges --schema=public --schema=private --schema=auth --schema=storage --schema=supabase_migrations --file=/out/hasnaria.dump "$HSN_PROD_BACKUP_READONLY_DB_URL"' >/dev/null 2>&1 || { echo "BLOCK: PostgreSQL 17 scoped dump failed; source permissions or managed schema need DBA review"; exit 1; }
+          docker run --rm --network host --user "$(id -u):$(id -g)" -e HSN_PROD_BACKUP_READONLY_DB_URL -v "$tmp:/out" postgres:17 sh -c 'pg_dump --format=custom --no-owner --no-privileges --schema=public --schema=private --schema=auth --schema=storage --schema=supabase_migrations --file=/out/hasnaria.dump "$HSN_PROD_BACKUP_READONLY_DB_URL"' >/dev/null 2>&1 || { echo "BLOCK: PostgreSQL 17 scoped dump failed; source permissions or managed schema need DBA review"; exit 1; }
           test -s "$tmp/hasnaria.dump"
           docker run --rm -v "$tmp:/out:ro" postgres:17 pg_restore --list /out/hasnaria.dump > "$tmp/toc.txt"
           for required in 'TABLE DATA public products' 'TABLE DATA public offline_purchase_history' 'TABLE DATA auth users' 'TABLE DATA supabase_migrations schema_migrations'; do
             grep -Fq "$required" "$tmp/toc.txt" || { echo "BLOCK: expected schema/data missing from backup archive"; exit 1; }
           done
-          # Live queries are not the snapshot used by pg_dump; do not store misleading source counts.
-          # Restore-proof verifies data from the transaction-consistent archive itself.
-          (cd "$tmp" && sha256sum hasnaria.dump > archive.sha256 && tar -cf packed.tar hasnaria.dump archive.sha256)
-          age -r "$HSN_BACKUP_AGE_RECIPIENT" -o "$tmp/backup.age" "$tmp/packed.tar"
+          # Single custom-format archive is a consistent snapshot. OCI applies AES-256
+          # server-side encryption automatically. No age/private-key setup required.
+          archive_sha="$(sha256sum "$tmp/hasnaria.dump" | cut -d' ' -f1)"
           stamp="$(date -u +%Y%m%dT%H%M%SZ)"
-          key="hasnaria/$stamp.age"
+          key="hasnaria/$stamp.dump"
           # OCI S3 compatibility does not expose AWS bucket access-block/versioning APIs.
           # Configure a private, versioned Hasnaria-only bucket in OCI Console.
           [[ "$HSN_OCI_NAMESPACE" =~ ^[a-z0-9]{5,64}$ ]] || { echo 'BLOCK: bad OCI namespace'; exit 1; }
@@ -88,11 +92,15 @@ jobs:
           aws configure set default.s3.addressing_style path
           aws --endpoint-url "$oci_s3_endpoint" s3api head-bucket --bucket "$HSN_BACKUP_S3_BUCKET" >/dev/null ||
             { echo 'BLOCK: dedicated OCI bucket absent or inaccessible'; exit 1; }
-          aws --endpoint-url "$oci_s3_endpoint" s3api put-object --bucket "$HSN_BACKUP_S3_BUCKET" --key "$key" --body "$tmp/backup.age" >/dev/null
-          aws --endpoint-url "$oci_s3_endpoint" s3api get-object --bucket "$HSN_BACKUP_S3_BUCKET" --key "$key" "$tmp/downloaded.age" >/dev/null
-          cmp -s "$tmp/backup.age" "$tmp/downloaded.age" || { echo "BLOCK: remote ciphertext differs from local encrypted backup"; exit 1; }
-          echo "Encrypted offsite archive verified; object key: $key"
-          echo "STATUS: BACKUP ARCHIVED, NOT YET RESTORE-PROVEN (run restore-proof against disposable DB)"
+          aws --endpoint-url "$oci_s3_endpoint" s3api put-object --bucket "$HSN_BACKUP_S3_BUCKET" --key "$key" --body "$tmp/hasnaria.dump" >/dev/null
+          aws --endpoint-url "$oci_s3_endpoint" s3api get-object --bucket "$HSN_BACKUP_S3_BUCKET" --key "$key" "$tmp/downloaded.dump" >/dev/null
+          cmp -s "$tmp/hasnaria.dump" "$tmp/downloaded.dump" || { echo 'BLOCK: downloaded OCI backup bytes mismatch'; exit 1; }
+          mkdir -m 700 "$tmp/verify"
+          mv "$tmp/downloaded.dump" "$tmp/verify/hasnaria.dump"
+          bash scripts/hasnaria_verify_durable_backup_local.sh --verify-backup "$tmp/verify/hasnaria.dump"
+          echo "PASS: private OCI SQL backup and independent isolated PostgreSQL restore, sha256=$archive_sha"
+          echo "OCI_BACKUP_KEY=$key"
+          echo 'LIMIT: OCI server-side AES-256 only; not independently client-encrypted, Auth API/session or external Storage blobs'
   restore-proof:
     if: ${{ github.event_name == 'workflow_dispatch' && github.repository == 'ekariashoesanti-alt/Hasnaria-ice-cream' && github.ref == 'refs/heads/main' && inputs.action == 'restore-proof' && inputs.confirmation == 'RESTORE_DISPOSABLE' }}
     # Reuse the PRIVATE encrypted backup environment. No third database.
@@ -102,10 +110,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with: { persist-credentials: false }
-      - name: Retrieve encrypted backup and prove SQL restore in isolated local PG17
+      - name: Retrieve OCI protected SQL backup and prove disposable PostgreSQL restore
         shell: bash
         env:
-          HSN_BACKUP_AGE_IDENTITY: ${{ secrets.HSN_BACKUP_AGE_IDENTITY }}
           HSN_BACKUP_S3_BUCKET: hasnaria-backup-private
           HSN_OCI_NAMESPACE: axf1xcjq8gsy
           AWS_DEFAULT_REGION: ap-batam-1
@@ -118,12 +125,12 @@ jobs:
           umask 077
           tmp="$(mktemp -d)"
           trap 'rm -rf "$tmp"' EXIT
-          for required in HSN_BACKUP_AGE_IDENTITY HSN_BACKUP_S3_BUCKET HSN_OCI_NAMESPACE AWS_DEFAULT_REGION AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY RESTORE_KEY; do
+          for required in HSN_BACKUP_S3_BUCKET HSN_OCI_NAMESPACE AWS_DEFAULT_REGION AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY RESTORE_KEY; do
             [[ -n "${!required:-}" ]] || { echo 'BLOCK: encrypted key or protected credentials missing'; exit 1; }
           done
-          [[ "$RESTORE_KEY" =~ ^hasnaria/[0-9]{8}T[0-9]{6}Z\.age$ ]] || { echo 'BLOCK: invalid archive key'; exit 1; }
+          [[ "$RESTORE_KEY" =~ ^hasnaria/[0-9]{8}T[0-9]{6}Z\.dump$ ]] || { echo 'BLOCK: invalid archive key'; exit 1; }
           sudo apt-get update -qq
-          sudo apt-get install -y -qq age awscli
+          sudo apt-get install -y -qq awscli
           # OCI S3 compatibility does not expose AWS bucket access-block/versioning APIs.
           # Configure a private, versioned Hasnaria-only bucket in OCI Console.
           [[ "$HSN_OCI_NAMESPACE" =~ ^[a-z0-9]{5,64}$ ]] || { echo 'BLOCK: bad OCI namespace'; exit 1; }
@@ -134,16 +141,8 @@ jobs:
           aws configure set default.s3.addressing_style path
           aws --endpoint-url "$oci_s3_endpoint" s3api head-bucket --bucket "$HSN_BACKUP_S3_BUCKET" >/dev/null ||
             { echo 'BLOCK: dedicated OCI bucket absent or inaccessible'; exit 1; }
-          aws --endpoint-url "$oci_s3_endpoint" s3api get-object --bucket "$HSN_BACKUP_S3_BUCKET" --key "$RESTORE_KEY" "$tmp/backup.age" >/dev/null
-          test -s "$tmp/backup.age"
-          printf '%s\n' "$HSN_BACKUP_AGE_IDENTITY" > "$tmp/identity.txt"
-          age -d -i "$tmp/identity.txt" -o "$tmp/packed.tar" "$tmp/backup.age"
-          test -s "$tmp/packed.tar"
-          tar -tf "$tmp/packed.tar" | sort > "$tmp/members"
-          printf '%s\n' archive.sha256 hasnaria.dump > "$tmp/allowed-members"
-          cmp -s "$tmp/members" "$tmp/allowed-members" || { echo 'BLOCK: unexpected archive member'; exit 1; }
-          tar -xf "$tmp/packed.tar" -C "$tmp" hasnaria.dump archive.sha256
-          (cd "$tmp" && sha256sum -c archive.sha256 >/dev/null)
+          aws --endpoint-url "$oci_s3_endpoint" s3api get-object --bucket "$HSN_BACKUP_S3_BUCKET" --key "$RESTORE_KEY" "$tmp/hasnaria.dump" >/dev/null
+          test -s "$tmp/hasnaria.dump" || { echo 'BLOCK: OCI archive empty'; exit 1; }
           bash scripts/hasnaria_verify_durable_backup_local.sh --verify-backup "$tmp/hasnaria.dump"
-          echo "PASS: encrypted offsite SQL archive restored inside network-isolated PG17; key: $RESTORE_KEY"
-          echo 'LIMIT: SQL logical recovery; Supabase Auth API/session and remote Storage bytes are separate'
+          echo "PASS: OCI server-side-encrypted SQL archive restored inside network-isolated PG17; key: $RESTORE_KEY"
+          echo 'LIMIT: OCI server-side AES-256 only; SQL logical recovery does not restore Auth API/session or external Storage bytes'
