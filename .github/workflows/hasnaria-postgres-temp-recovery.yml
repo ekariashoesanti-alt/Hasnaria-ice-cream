@@ -66,15 +66,28 @@ jobs:
             -e POSTGRES_DB=ci_recovery_sandbox \
             supabase/postgres:17.6.1.173 \
             postgres -c config_file=/etc/postgresql/postgresql.conf >/dev/null
+          # Robust readiness: container must stay running and answer SELECT 1
+          # several times in a row. pg_isready alone races with Supabase image
+          # init/restart cycles that produce "database system is shutting down".
           ready=0
-          for i in $(seq 1 50); do
-            if docker exec "$ci_db" pg_isready -U postgres -d ci_recovery_sandbox >/dev/null 2>&1; then ready=1; break; fi
+          consecutive=0
+          for i in $(seq 1 60); do
+            if ! docker inspect -f '{{.State.Running}}' "$ci_db" 2>/dev/null | grep -q true; then
+              echo "BLOCK: container exited during startup (attempt $i)"
+              break
+            fi
+            if docker exec "$ci_db" psql -X -qAt -v ON_ERROR_STOP=1 -U postgres -d ci_recovery_sandbox -c "SELECT 1" >/dev/null 2>&1; then
+              consecutive=$((consecutive+1))
+              if [[ $consecutive -ge 3 ]]; then ready=1; break; fi
+            else
+              consecutive=0
+            fi
             sleep 2
           done
           if [[ "$ready" != 1 ]]; then
-            echo "BLOCK: PostgreSQL sandbox startup failed; local container diagnostic follows"
-            docker ps -a --filter "name=$ci_db" --format 'CONTAINER {{.Status}}'
-            docker logs --tail 45 "$ci_db" 2>&1 | sed -E 's/[^[:print:]\t]//g' || true
+            echo "BLOCK: PostgreSQL sandbox startup failed after robust readiness; local container diagnostic follows"
+            docker ps -a --filter "name=$ci_db" --format 'CONTAINER {{.Status}}' || true
+            docker logs --tail 60 "$ci_db" 2>&1 | sed -E 's/[^[:print:]\t]//g' | head -n 80 || true
             exit 1
           fi
           docker exec "$ci_db" psql -X -qAt -v ON_ERROR_STOP=1 -U postgres -d ci_recovery_sandbox \
