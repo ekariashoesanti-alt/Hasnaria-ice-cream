@@ -322,7 +322,7 @@ function infographicMarkup(){
  '<div class="pfa-note-banner"><b>'+esc(String(n(control.stock_review_rows)+n(control.provisional_journal_rows)))+' kandidat perlu perhatian</b>. Pemeriksaan bukti Owner dilakukan melalui tombol review di bawah; mengunggah Excel tidak otomatis memposting Stok.</div>'+
  '<button type="button" class="primary" data-pfa-notifications>Periksa di Notifikasi →</button></article></div></section>'+
  '<section class="pfa-view-panel" role="tabpanel" id="pfaPanel-reviews" aria-labelledby="pfaTab-reviews" data-pfa-view-panel="reviews"'+(purchaseView==='reviews'?'':' hidden')+'>'+
- '<div class="pfa-review-list" id="pfaReviewSlot">'+unitVerificationMarkup()+'</div></section></div>';
+ '<div class="pfa-review-list" id="pfaReviewSlot"><div class="pfa-note-banner pfa-review-safety">Penerimaan Stok hanya dibukukan setelah satuan dan bukti diperiksa. Review ini tidak melakukan posting Stok atau jurnal otomatis.</div>'+unitVerificationMarkup()+'</div></section></div>';
 }
 function mountOwnerControls(root,wrap,markup){
   // A native node move preserves #paPeriod value and Excel input event handlers.
