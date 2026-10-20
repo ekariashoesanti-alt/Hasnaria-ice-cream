@@ -1,70 +1,30 @@
-# Hasnaria backup permanen: OCI Object Storage Batam (tanpa VM)
+# Backup Hasnaria ke OCI Batam — tanpa VM dan tanpa kunci tambahan
 
-Status: **kode siap, bucket/credentials belum terverifikasi**. Backup SQL
-sementara dari Tokyo SUKSES pada GitHub Actions run #39366534620.
-Backup terenkripsi OCI **belum ada** sampai workflow nyata sukses.
+Status: mekanisme siap diuji. Backup permanen pertama hanya boleh dinyatakan BERHASIL setelah ada run GitHub Actions yang sukses.
 
-## Arsitektur sederhana
-Supabase Tokyo read-only → GitHub Actions pg_dump → enkripsi age → bucket
-PRIVATE OCI Object Storage `ap-batam-1` → unduh lagi → verifikasi byte
-sama → (run terpisah) dekripsi dan restore ke PostgreSQL 17 sementara
-`--network none`. Container dan file lokal selalu dihapus.
-Tidak ada VM, tidak ada database ketiga dan tidak memakai bucket AI ROOM.
+## Arsitektur
+Supabase Tokyo (akun baca saja) → GitHub Actions pg_dump → bucket **OCI Private** `hasnaria-backup-private` (namespace `axf1xcjq8gsy`, region `ap-batam-1`) → unduh kembali → cocokkan byte → restore di Docker PostgreSQL 17 sementara tanpa jaringan → hapus salinan sementara.
 
-## Hanya konfigurasi satu kali
-1. Di OCI Console region **Indonesia North (Batam)**, buat satu bucket
-   **khusus Hasnaria**; misalnya `hasnaria-backup-private`.
-   Set **Private (NoPublicAccess)**, **Standard**, dan **Object Versioning: Enabled**.
-   Jangan membuat Pre-Authenticated Request atau memilih bucket AI ROOM.
-   Simpan nama bucket serta *Object Storage namespace* dari OCI Console.
-2. Buat OCI **Customer Secret Key** untuk akun IAM yang hanya mendapat akses
-   baca/tulis object di bucket Hasnaria tersebut. Customer Secret Key menghasilkan
-   pasangan **Access Key + Secret Key** untuk S3-compatible API; itu bukan
-   OCI API signing key biasa. Simpan rahasianya di GitHub Environments, tidak di chat.
-3. Gunakan GitHub Repository → Settings → Environments →
-   `hasnaria-backup-private`. Set nilai-nilai ini:
+**Enkripsi:** seluruh objek di OCI Object Storage terenkripsi AES-256 saat disimpan dengan kunci yang dikelola Oracle (default, tidak dapat dimatikan), dan pemindahan file menggunakan HTTPS. Tidak ada lapisan age/client-side encryption pada jalur sederhana ini; artinya pemilik kredensial OCI yang sah dapat mengunduh serta mendekripsi file. Pakai bucket PRIVAT, least-privilege IAM, lindungi GitHub Environment, dan jangan buat Pre-Authenticated Request.
 
-   | Name | Type | Description |
-   |---|---|---|
-   | `HSN_PROD_BACKUP_READONLY_DB_URL` | Secret | Akun Tokyo read-only yang sudah lulus sebelumnya |
-   | `HSN_BACKUP_S3_BUCKET` | Variable | Nama bucket privat Hasnaria di OCI |
-   | `HSN_OCI_NAMESPACE` | Variable | Object Storage namespace OCI |
-   | `AWS_ACCESS_KEY_ID` | Secret | OCI Customer Secret **Access Key** |
-   | `AWS_SECRET_ACCESS_KEY` | Secret | OCI Customer Secret **Secret Key** |
-   | `HSN_BACKUP_AGE_RECIPIENT` | Variable | Public age recipient dari keypair backup |
-   | `HSN_BACKUP_AGE_IDENTITY` | Secret | Private age identity, simpan salinan aman di luar GitHub |
+## Yang sudah diketahui dan tidak perlu diisi lagi
+- Nama bucket: `hasnaria-backup-private`
+- Namespace: `axf1xcjq8gsy`
+- Region: `ap-batam-1`
+- Customer Secret Keys OCI dibuat pengguna; pengguna melaporkan `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` telah dimasukkan ke GitHub Environment `hasnaria-backup-private` (keberadaan/nilainya belum dapat dibaca oleh konektor).
+- Akun read-only Tokyo: `HSN_PROD_BACKUP_READONLY_DB_URL`, yang pernah lulus uji restore sementara.
 
-   GitHub Actions memakai region `ap-batam-1` dan endpoint:
-   `https://<namespace>.compat.objectstorage.ap-batam-1.oraclecloud.com`.
-   Tidak perlu mengatur AWS region, membuat akun AWS, membuat OCI VM atau
-   memasang server. OCI mengenkripsi objek secara bawaan; backup tetap
-   dienkripsi age **sebelum** diunggah.
+## Kapan berjalan
+Workflow `.github/workflows/hasnaria-recovery-proof.yml` menjalankan **satu kali backup** otomatis setelah perubahan workflow itu di-merge ke `main`. Bisa dijalankan ulang manual (Actions → Hasnaria OCI Protected SQL Backup and Recovery Proof → encrypted-backup, konfirmasi BACKUP_READONLY). Hanya branch `main` yang diperbolehkan.
 
-   Buat age keypair di komputer tepercaya dengan `age-keygen`.
-   Jangan mengirim private identity, DB URL atau Customer Secret ke percakapan.
+Job memerlukan variabel private Environment hanya untuk kredensial database Tokyo dan Customer Secret Key OCI. Bila belum ada atau izin ditolak, job **BLOCK**, tidak boleh mengaku bahwa file sudah dibackup. Bucket OCI harus sudah Private dan sebaiknya Versioning aktif (cek pengaturan OCI Console; HeadBucket saja tidak memverifikasi pengaturan ini).
 
-**Catatan keamanan:** endpoint S3-compatible OCI mendukung HeadBucket,
-PutObject, GetObject, tetapi tidak mendukung AWS
-`GetBucketPublicAccessBlock` atau `GetBucketVersioning`.
-Karena itu sifat PRIVATE + Versioning bucket harus diverifikasi di OCI Console;
-workflow hanya memeriksa endpoint/bucket kredensial, mengecek kembali ciphertext,
-mengenkripsi file, dan memulihkan SQL. IAM harus membatasi akses bucket.
+Ketika lulus, log akan mencatat `PASS: private OCI SQL backup and independent isolated PostgreSQL restore`, checksum SHA256 dan object key `OCI_BACKUP_KEY=hasnaria/YYYYMMDDTHHMMSSZ.dump`. Objek di OCI tidak otomatis terhapus oleh pembersihan runner; kunci disimpan dalam bucket yang terpisah dari AI ROOM.
 
-## Setelah konfigurasi, satu kali backup nyata + bukti restore
-GitHub Actions → `Hasnaria Encrypted Backup and Recovery Proof`:
-
-A. Branch main, action `encrypted-backup`, confirmation `BACKUP_READONLY`.
-   Lihat `Encrypted offsite archive verified; object key: hasnaria/<UTC>.age`.
-
-B. Branch main, action `restore-proof`, confirmation `RESTORE_DISPOSABLE`,
-   backup_key = exact object key yang ditampilkan A. Semua restore hanya terjadi
-   di container sementara, **bukan** Tokyo/Singapore.
-
-   **Sukses** bila restore + checksum + keseimbangan jurnal + paritas stok +
-   Auth SQL/RLS/migrations lolos.
+Workflow manual `restore-proof` dapat menguji objek lama berdasarkan object key tersebut tanpa menulis apa pun ke Tokyo/Singapore.
 
 ## Batasan
-Ini proof SQL backup; bukan pemulihan file Storage eksternal, Auth API/session,
-atau layanan Supabase runtime. Rilis data-write Stok/Pembelian tetap HOLD
-sampai pengujian Owner staging disetujui. Tidak ada biaya VM, tetapi kapasitas
-Object Storage, request dan retensi bisa dikenai biaya di luar kuota gratis.
+- Ini SQL logical backup+restore, bukan recovery Supabase Auth API, token sesi, Storage blob luar SQL, konfigurasi Edge Functions atau secrets aplikasi.
+- Workflow menolak backup bila tabel `storage.objects` berisi entri yang memerlukan prosedur file tersendiri.
+- Tidak ada VM atau proyek database Supabase ketiga.
+- Rilis operasional Stok/Pembelian tetap HOLD sampai uji Owner staging dan persetujuan rilis terpisah selesai; lihat Issue #111.
