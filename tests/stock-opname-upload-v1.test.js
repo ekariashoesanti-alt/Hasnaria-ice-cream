@@ -4,7 +4,7 @@ const vm=require('node:vm'),fs=require('node:fs');
 const source=fs.readFileSync('stock-opname-upload-v1.js','utf8');
 
 function harness(inputRows,opts={}){
- const calls=[],writes=new Map(),sku=[
+ const calls=[],rpcArgs=[],writes=new Map(),sku=[
   {id:'sku-1',item_name:'ODENG',unit:'porsi',category:'Makanan'},
   {id:'sku-2',item_name:'ICE CREAM MATCHA',unit:'pcs',category:'Ice Cream'}
  ];
@@ -25,12 +25,13 @@ function harness(inputRows,opts={}){
       else rows=sku.map((x,i)=>({id:'row-'+(i+1),inventory_item_id:x.id}));
      }
      if(table==='inventory_items')rows=sku;
+     if(table==='user_profiles')rows=opts.noStaff?[]:[{id:'staff-1',display_name:'UAT Staff'}];
      return Promise.resolve({data:rows,error:null}).then(done,fail);
     }
    };return builder
   },
   async rpc(name,args){
-   calls.push('rpc:'+name);
+   calls.push('rpc:'+name);rpcArgs.push({name,args});
    if(name==='create_stock_opname_run')return {data:'run-1',error:null};
    if(name==='set_operational_run_item'){
      const id=sku[Number(args.p_item_id.split('-')[1])-1].id;
@@ -50,10 +51,10 @@ function harness(inputRows,opts={}){
  const doc={addEventListener(){},dispatchEvent(){},createElement(){return{innerHTML:'',addEventListener(){},remove(){}}},body:{appendChild(){}}};
  const ctx={window:win,document:doc,Number,Date,Math,Promise,Map,Set,String,JSON,Uint8Array,Array,
   setTimeout(fn){return 0},console,CustomEvent:class{constructor(type,init){this.type=type;this.detail=init.detail}}};
- const exposed=source.replace(/\}\)\(\);\s*$/, '\nwindow.__test={parseFile,stage,st,today,setMaster:function(v){master=v}};\n})();');
+ const exposed=source.replace(/\}\)\(\);\s*$/, '\nwindow.__test={parseFile,stage,st,today,loadAssignees,setMaster:function(v){master=v}};\n})();');
  vm.runInNewContext(exposed,ctx,{filename:'stock-opname-upload-v1.js'});
  win.__test.setMaster(sku);
- return {api:win.__test,calls,writes,sku,win};
+ return {api:win.__test,calls,rpcArgs,writes,sku,win};
 }
 const sheet=(rows)=>[['INVENTORY_ITEM_ID','ITEM_NAME','UNIT','PHYSICAL_QTY'],...rows];
 const file=(name='stock.xlsx')=>({name,size:40,arrayBuffer:async()=>new Uint8Array([1,2,3]).buffer});
@@ -86,16 +87,19 @@ test('reject invalid unit, duplicate SKU, negative count, unknown explicit ID',a
 test('staging saves only an auditable operational draft; no ledger posting',async()=>{
  const f=harness(sheet([['sku-1','ODENG','porsi',2]]));
  f.api.st.rows=(await f.api.parseFile(file())).rows;
- Object.assign(f.api.st,{date:f.api.today(),file:file(),hash:'abcdef9876543210',runId:'',busy:false});
+ await f.api.loadAssignees();
+ Object.assign(f.api.st,{date:f.api.today(),file:file(),hash:'abcdef9876543210',runId:'',busy:false,assignee:'staff-1'});
  await f.api.stage();
  assert.equal(f.writes.get('sku-1'),2);
  assert.equal(f.api.st.runId,'run-1');
+ assert.equal(f.rpcArgs.find(x=>x.name==='create_stock_opname_run').args.p_assigned_to,'staff-1','draft must be editable by the selected Staff, not implicitly assigned to Owner');
  assert.match(f.api.st.notice,/draft/i);
  assert.ok(!f.calls.some(x=>/approve_stock_opname_run|post_inventory_movement|resolve_physical_stock_opname/.test(x)),'draft must not post actual Stock');
 });
 test('duplicate import is stopped before any write',async()=>{
  const f=harness(sheet([['sku-1','ODENG','porsi',4]]),{duplicate:true});
- Object.assign(f.api.st,{rows:(await f.api.parseFile(file())).rows,date:f.api.today(),file:file(),hash:'ffffeeeeaaaabbbb',runId:'',busy:false});
+ await f.api.loadAssignees();
+ Object.assign(f.api.st,{rows:(await f.api.parseFile(file())).rows,date:f.api.today(),file:file(),hash:'ffffeeeeaaaabbbb',runId:'',busy:false,assignee:'staff-1'});
  await f.api.stage();
  assert.ok(!f.calls.some(x=>x.startsWith('rpc:')));
  assert.match(f.api.st.error,/sudah pernah masuk/);
@@ -109,9 +113,39 @@ test('staff cannot stage an opname',async()=>{
 test('PR preview connected to live Supabase cannot stage any Stock mutation',async()=>{
  const f=harness(sheet([['sku-1','ODENG','porsi',2]]),{preview:true});
  f.api.st.rows=(await f.api.parseFile(file())).rows;
- Object.assign(f.api.st,{date:f.api.today(),file:file(),hash:'abcxyz',runId:'',busy:false});
+ await f.api.loadAssignees();
+ Object.assign(f.api.st,{date:f.api.today(),file:file(),hash:'abcxyz',runId:'',busy:false,assignee:'staff-1'});
  await f.api.stage();
  assert.equal(f.calls.length,0,'preview guard must reject before even checking canonical runs');
  assert.match(f.api.st.error,/PRODUKSI/);
  assert.equal(f.api.st.runId,'');
+});
+
+test('Owner upload must not silently assign new draft to Owner when no Staff selected',async()=>{
+ const f=harness(sheet([['sku-1','ODENG','porsi',2]]));
+ f.api.st.rows=(await f.api.parseFile(file())).rows;
+ Object.assign(f.api.st,{date:f.api.today(),file:file(),hash:'assign-first',runId:'',busy:false});
+ await f.api.stage();
+ assert.match(f.api.st.error,/Pilih Staff aktif/);
+ assert.equal(f.calls.filter(x=>x.startsWith('rpc:')).length,0);
+ await f.api.loadAssignees();
+ assert.equal(f.api.st.assignee,'','Staff must be explicitly selected by Owner');
+});
+test('Owner upload refuses stale or cross-brand Staff IDs before any write',async()=>{
+ const f=harness(sheet([['sku-1','ODENG','porsi',2]]));
+ f.api.st.rows=(await f.api.parseFile(file())).rows;
+ await f.api.loadAssignees();
+ Object.assign(f.api.st,{date:f.api.today(),file:file(),hash:'different-staff',runId:'',busy:false,assignee:'outside-brand-user'});
+ await f.api.stage();
+ assert.match(f.api.st.error,/Pilih Staff aktif/);
+ assert.ok(!f.calls.some(x=>x.startsWith('rpc:')));
+});
+test('No active Staff in brand: save stays blocked without creating Owner-assigned draft',async()=>{
+ const f=harness(sheet([['sku-1','ODENG','porsi',2]]),{noStaff:true});
+ f.api.st.rows=(await f.api.parseFile(file())).rows;
+ await f.api.loadAssignees();
+ Object.assign(f.api.st,{date:f.api.today(),file:file(),hash:'no-staff',runId:'',busy:false});
+ await f.api.stage();
+ assert.match(f.api.st.error,/Pilih Staff aktif/);
+ assert.ok(!f.calls.some(x=>x.startsWith('rpc:')));
 });
