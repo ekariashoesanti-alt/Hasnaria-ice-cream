@@ -1123,3 +1123,102 @@
 @media(max-width:900px){
  #pembelian #purchaseFinanceAlignment .pfa-payment-svg{min-height:150px!important;max-height:240px!important}
 }
+
+
+/* Purchase mockup parity: compact clean infographic — Owner only.
+   Smaller KPI metrics/2 header buttons, perfectly aligned 2x2 panels.
+   Descriptive footnotes are omitted visually in JS but preserved as accessible
+   chart descriptions. Payment and trend panels share one column width. */
+@media(min-width:901px){
+ html body.hasnaria-owner-erp #app>main.wrap #pembelian #purchaseFinanceAlignment .pfa-sales-head .pfa-summary-detail,
+ html body.hasnaria-owner-erp #app>main.wrap #pembelian #purchaseFinanceAlignment .pfa-upload-slot #purchaseExcelBtn{
+  height:27px!important;min-height:27px!important;max-height:27px!important;
+  padding:3px 12px!important;font-size:9.2px!important;line-height:1.15!important;
+  border-radius:8px!important;box-sizing:border-box!important;
+ }
+ html body.hasnaria-owner-erp #app>main.wrap #pembelian #purchaseFinanceAlignment>.pfa-cards{
+  margin-top:5px!important;gap:8px!important;
+ }
+ html body.hasnaria-owner-erp #app>main.wrap #pembelian #purchaseFinanceAlignment .pfa-cards>.pfa-card{
+  height:49px!important;min-height:49px!important;max-height:49px!important;
+  padding:4px 7px!important;border-radius:10px!important;
+  gap:5px!important;overflow:hidden!important;
+ }
+ html body.hasnaria-owner-erp #app>main.wrap #pembelian #purchaseFinanceAlignment .pfa-card-copy{
+  display:flex!important;flex-direction:column!important;justify-content:center!important;
+  min-width:0!important;gap:0!important;
+ }
+ html body.hasnaria-owner-erp #app>main.wrap #pembelian #purchaseFinanceAlignment .pfa-card strong{
+  font-size:13px!important;line-height:1.1!important;margin:1px 0!important;
+  white-space:nowrap!important;
+ }
+ html body.hasnaria-owner-erp #app>main.wrap #pembelian #purchaseFinanceAlignment .pfa-card span{
+  font-size:8px!important;line-height:1.08!important;
+ }
+ html body.hasnaria-owner-erp #app>main.wrap #pembelian #purchaseFinanceAlignment .pfa-card small{
+  font-size:7.8px!important;line-height:1.08!important;
+ }
+ html body.hasnaria-owner-erp #app>main.wrap #pembelian #purchaseFinanceAlignment .pfa-card-icon{
+  width:24px!important;height:24px!important;flex:0 0 24px!important;
+ }
+ html body.hasnaria-owner-erp #app>main.wrap #pembelian #purchaseFinanceAlignment .pfa-card-icon svg{
+  width:14px!important;height:14px!important;
+ }
+ html body.hasnaria-owner-erp #app>main.wrap #pembelian #purchaseFinanceAlignment>.pfa-view-panels{
+  margin-top:7px!important;
+ }
+ html body.hasnaria-owner-erp #app>main.wrap #pembelian #purchaseFinanceAlignment .pfa-view-panel:not([hidden])>.pfa-insights-grid.pfa-four-infographics{
+  display:grid!important;grid-template-columns:minmax(0,1.65fr) minmax(270px,.85fr)!important;
+  grid-template-rows:minmax(0,1fr)!important;gap:10px!important;min-width:0!important;
+ }
+ html body.hasnaria-owner-erp #app>main.wrap #pembelian #purchaseFinanceAlignment .pfa-four-infographics .pfa-summary-stack{
+  display:grid!important;grid-template-rows:repeat(2,minmax(0,1fr))!important;
+  width:100%!important;min-width:0!important;height:100%!important;gap:9px!important;
+ }
+ html body.hasnaria-owner-erp #app>main.wrap #pembelian #purchaseFinanceAlignment .pfa-four-infographics .pfa-summary-stack>.pfa-insight-panel{
+  width:100%!important;max-width:100%!important;height:100%!important;
+  min-height:0!important;box-sizing:border-box!important;
+  padding:9px 12px!important;overflow:hidden!important;
+ }
+ html body.hasnaria-owner-erp #app>main.wrap #pembelian #purchaseFinanceAlignment .pfa-four-infographics .pfa-summary-stack>.pfa-insight-panel h3{
+  font-size:13px!important;line-height:1.15!important;margin:0 0 3px!important;
+ }
+ html body.hasnaria-owner-erp #app>main.wrap #pembelian #purchaseFinanceAlignment .pfa-four-infographics .pfa-summary-stack>.pfa-insight-panel>p{
+  font-size:9px!important;line-height:1.2!important;margin:0 0 4px!important;
+ }
+ html body.hasnaria-owner-erp #app>main.wrap #pembelian #purchaseFinanceAlignment .pfa-summary-trend .pfa-monthly-chart svg{
+  max-height:none!important;min-height:0!important;height:100%!important;
+ }
+ html body.hasnaria-owner-erp #app>main.wrap #pembelian #purchaseFinanceAlignment .pfa-summary-payment .pfa-payment-svg{
+  max-height:none!important;min-height:0!important;height:100%!important;
+ }
+}
+/* Chart notes are not part of the compact visual UI. Renderers retain context
+   in aria-labels and SVG titles instead of relying on a hidden overflow strip. */
+#pembelian #purchaseFinanceAlignment .pfa-summary-trend .pfa-trend-foot,
+#pembelian #purchaseFinanceAlignment .pfa-summary-trend .pfa-trend-note,
+#pembelian #purchaseFinanceAlignment .pfa-summary-payment .pfa-payment-caveat{
+ display:none!important;
+}
+/* Native progress needs both browser engines explicitly styled to avoid
+   default system-blue bars; same #125644 → #289b7a as Porsi/curve palette. */
+#pembelian #purchaseFinanceAlignment .pfa-summary-top .pfa-share-row progress{
+ appearance:none!important;-webkit-appearance:none!important;
+ width:100%!important;background:#e5eeea!important;border:0!important;
+ border-radius:7px!important;overflow:hidden!important;accent-color:#125644!important;
+}
+#pembelian #purchaseFinanceAlignment .pfa-summary-top .pfa-share-row progress::-webkit-progress-bar{
+ background:#e5eeea!important;border-radius:7px!important;
+}
+#pembelian #purchaseFinanceAlignment .pfa-summary-top .pfa-share-row progress::-webkit-progress-value{
+ background:linear-gradient(90deg,#125644,#289b7a)!important;border-radius:7px!important;
+}
+#pembelian #purchaseFinanceAlignment .pfa-summary-top .pfa-share-row progress::-moz-progress-bar{
+ background:linear-gradient(90deg,#125644,#289b7a)!important;border-radius:7px!important;
+}
+@media(max-width:900px){
+ /* Keep comfortable touch targets on phones; compact height is desktop-only. */
+ #pembelian #purchaseFinanceAlignment .pfa-summary-stack>.pfa-insight-panel{
+  width:100%!important;max-width:100%!important;
+ }
+}
