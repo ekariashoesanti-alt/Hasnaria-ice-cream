@@ -57,9 +57,19 @@
   if(!document.getElementById('hasnaria-purchase-finance-alignment-js')){
     var af=document.createElement('script');
     af.id='hasnaria-purchase-finance-alignment-js';
-    af.src='/purchase-finance-alignment-v1.js?v=26';
+    af.src='/purchase-finance-alignment-v1.js?v=27';
     af.async=true;
     document.head.appendChild(af);
+  }
+
+  /* Owner-only Review KPI correction dialog. Loaded after the canonical
+     reporting module; never intercepts Excel upload handlers. */
+  if(!document.getElementById('hasnaria-purchase-review-amount-js')){
+    var rv=document.createElement('script');
+    rv.id='hasnaria-purchase-review-amount-js';
+    rv.src='/purchase-review-amount-v1.js?v=1';
+    rv.async=true;
+    document.head.appendChild(rv);
   }
 
   /* Owner Finance/Stock is intentionally NOT loaded here.

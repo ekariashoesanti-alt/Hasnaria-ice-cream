@@ -1222,3 +1222,113 @@
   width:100%!important;max-width:100%!important;
  }
 }
+
+
+/* Purchase Review amount correction modal. Scoped and isolated from one-view
+   dashboard heights; the dialog is appended to body by review runtime. */
+#pembelian #purchaseFinanceAlignment .pfa-card.review[data-pfa-review-correction-open="1"]{
+ cursor:pointer!important;text-align:left!important;transition:box-shadow .14s ease;
+}
+#pembelian #purchaseFinanceAlignment .pfa-card.review[data-pfa-review-correction-open="1"]:hover{
+ box-shadow:0 0 0 2px rgba(26,124,94,.18),0 4px 14px rgba(0,0,0,.06)!important;
+}
+#pembelian #purchaseFinanceAlignment .pfa-card.review[data-pfa-review-correction-open="1"]:focus-visible{
+ outline:2px solid #168263!important;outline-offset:3px!important;
+}
+#hasnaria-review-correction-root{
+ position:fixed!important;inset:0!important;z-index:999997!important;
+ display:flex!important;align-items:center!important;justify-content:center!important;
+ padding:18px!important;box-sizing:border-box!important;
+ font-family:inherit!important;color:#134e3d!important;
+}
+#hasnaria-review-correction-root .hsn-rv-shade{
+ position:absolute;inset:0;background:rgba(8,35,28,.54);
+}
+#hasnaria-review-correction-root .hsn-rv-dialog{
+ position:relative;z-index:1;width:min(900px,100%);max-height:min(82vh,740px);
+ display:flex;flex-direction:column;overflow:hidden;min-height:0;
+ background:#fff;border:1px solid #d5e5dd;border-radius:16px;
+ box-shadow:0 16px 65px rgba(0,27,18,.24);
+}
+#hasnaria-review-correction-root .hsn-rv-head{
+ display:flex;justify-content:space-between;align-items:flex-start;gap:12px;
+ padding:16px 19px 11px;border-bottom:1px solid #e4efea;flex:0 0 auto;
+}
+#hasnaria-review-correction-root .hsn-rv-eyebrow{font-size:10px;letter-spacing:.08em;font-weight:850;color:#128267}
+#hasnaria-review-correction-root .hsn-rv-head h3{margin:2px 0;font-size:19px;line-height:1.2;color:#124938}
+#hasnaria-review-correction-root .hsn-rv-head p{margin:0;font-size:11px;color:#63877a}
+#hasnaria-review-correction-root .hsn-rv-close{
+ border:0;background:#eaf3ef;width:30px;height:30px;border-radius:50%;
+ font-size:22px;line-height:1;cursor:pointer;color:#205d4c;
+}
+#hasnaria-review-correction-root .hsn-rv-hint{
+ margin:0;padding:9px 19px;color:#516e62;font-size:11px;line-height:1.4;flex:0 0 auto;
+}
+#hasnaria-review-correction-root .hsn-rv-scroll{
+ min-height:0;overflow:auto;flex:1 1 auto;margin:0 17px;border:1px solid #e2ece7;border-radius:10px;
+}
+#hasnaria-review-correction-root table{
+ width:100%;border-collapse:collapse;table-layout:fixed;margin:0;font-size:11px;
+}
+#hasnaria-review-correction-root th{
+ position:sticky;top:0;z-index:1;background:#edf6f1;
+ text-align:left;padding:10px 11px;font-size:10px;color:#2b6654;white-space:nowrap;
+}
+#hasnaria-review-correction-root td{padding:8px 11px;border-top:1px solid #edf2ef;vertical-align:middle}
+#hasnaria-review-correction-root th:nth-child(1){width:42%}
+#hasnaria-review-correction-root th:nth-child(2){width:19%}
+#hasnaria-review-correction-root th:nth-child(3){width:25%}
+#hasnaria-review-correction-root th:nth-child(4){width:14%}
+#hasnaria-review-correction-root td strong{
+ display:block;font-weight:750;line-height:1.2;overflow:hidden;text-overflow:ellipsis;
+}
+#hasnaria-review-correction-root td small{display:block;color:#759385;font-size:9px;margin-top:3px}
+#hasnaria-review-correction-root .hsn-rv-now{font-weight:800;white-space:nowrap}
+#hasnaria-review-correction-root input[data-hsn-rv-value]{
+ display:block;box-sizing:border-box;width:100%;height:29px;border:1px solid #cfe0d5;
+ border-radius:7px;background:#fff;color:#173f33;padding:5px 8px;font:inherit;font-size:11px;
+}
+#hasnaria-review-correction-root input[data-hsn-rv-value]:focus{outline:2px solid #a1d8c3}
+#hasnaria-review-correction-root .hsn-rv-save{
+ min-width:40px;max-width:100%;border:1px solid #b8d4c8;border-radius:7px;
+ background:#f0f7f3;color:#18634d;font-size:11px;font-weight:850;
+ padding:6px 8px;cursor:pointer;white-space:nowrap;
+}
+#hasnaria-review-correction-root .hsn-rv-save.staged{
+ background:#116b50;color:white;border-color:#116b50;
+}
+#hasnaria-review-correction-root .hsn-rv-save:disabled{cursor:default;opacity:.65}
+#hasnaria-review-correction-root .hsn-rv-footer{
+ display:flex;gap:14px;align-items:center;justify-content:space-between;
+ padding:12px 18px 16px;border-top:1px solid #e1ece6;background:#f9fcfa;
+ flex:0 0 auto;
+}
+#hasnaria-review-correction-root .hsn-rv-footer>div{
+ min-width:0;display:flex;flex-direction:column;gap:3px;
+}
+#hasnaria-review-correction-root .hsn-rv-footer b{font-size:12px;color:#125742}
+#hasnaria-review-correction-root .hsn-rv-footer small{font-size:10px;color:#60796f}
+#hasnaria-review-correction-root .hsn-rv-footer [role=status]{font-size:10px;color:#168063}
+#hasnaria-review-correction-root .hsn-rv-submit{
+ border:0;border-radius:9px;background:#0c785b;color:white;min-height:35px;
+ padding:8px 16px;white-space:nowrap;font:inherit;font-size:11px;font-weight:850;
+ cursor:pointer;flex:0 0 auto;
+}
+#hasnaria-review-correction-root .hsn-rv-submit:disabled{opacity:.48;cursor:default}
+@media(max-width:680px){
+ #hasnaria-review-correction-root{padding:8px!important}
+ #hasnaria-review-correction-root .hsn-rv-dialog{max-height:91vh;border-radius:12px}
+ #hasnaria-review-correction-root .hsn-rv-head{padding:12px}
+ #hasnaria-review-correction-root .hsn-rv-head h3{font-size:15px}
+ #hasnaria-review-correction-root .hsn-rv-hint{padding:8px 12px}
+ #hasnaria-review-correction-root .hsn-rv-scroll{margin:0 8px}
+ #hasnaria-review-correction-root table{font-size:9px}
+ #hasnaria-review-correction-root th,#hasnaria-review-correction-root td{padding:7px 5px}
+ #hasnaria-review-correction-root th:nth-child(1){width:35%}
+ #hasnaria-review-correction-root th:nth-child(2){width:22%}
+ #hasnaria-review-correction-root th:nth-child(3){width:25%}
+ #hasnaria-review-correction-root th:nth-child(4){width:18%}
+ #hasnaria-review-correction-root .hsn-rv-save{font-size:9px;min-width:0;padding:6px 3px}
+ #hasnaria-review-correction-root .hsn-rv-footer{padding:9px;gap:8px}
+ #hasnaria-review-correction-root .hsn-rv-submit{font-size:10px;padding:7px 10px}
+}

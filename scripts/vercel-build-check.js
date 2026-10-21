@@ -242,6 +242,7 @@ run(process.execPath, ['tests/purchase-unified-card.test.js']);
 run(process.execPath, ['tests/purchase-ytd-category-pie.test.js']);
 run(process.execPath, ['tests/purchase-sales-header-parity.test.js']);
 run(process.execPath, ['tests/purchase-single-top-nav.test.js']);
+run(process.execPath, ['tests/purchase-review-amount-correction.test.js']);
 run(process.execPath, ['tests/purchase-compact-sales-parity.test.js']);
 run(process.execPath, ['tests/purchase-summary-four-infographics.test.js']);
 run(process.execPath, ['tests/purchase-compact-captionless-mockup.test.js']);
