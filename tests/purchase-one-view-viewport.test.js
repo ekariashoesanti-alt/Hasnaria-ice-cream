@@ -42,10 +42,10 @@ assert.match(app,/hasnaria:purchase-imported/);
 assert.match(app,/data-pfa-detail-open/);
 assert.match(app,/data-pfa-unit-open/);
 
-for(const path of ['purchase-analytics.css?v=1','purchase-finance-alignment-v1.css?v=5','purchase-dual-source.css?v=1','owner-insight-v1.css?v=1','owner-one-view.css?v=10']){
+for(const path of ['purchase-analytics.css?v=1','purchase-finance-alignment-v1.css?v=5','purchase-dual-source.css?v=1','owner-insight-v1.css?v=1','owner-one-view.css?v=11']){
  assert.ok(palette.includes(path),'first-paint Owner CSS preloads '+path);
 }
-assert.match(preload,/purchase-finance-alignment-v1\.js\?v=24/);
+assert.match(preload,/purchase-finance-alignment-v1\.js\?v=25/);
 assert.match(shell,/data-purchase-pending/);
 console.log('Owner Purchase one-view and anti-flicker contract: PASS');
 

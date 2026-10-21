@@ -228,10 +228,8 @@ function monthlyTrendMarkup(){
   return axis+'<circle class="pfa-trend-point" cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="5"><title>'+esc(monthLabel(d.key)+' · '+money(d.amount)+' · '+d.count+' transaksi')+'</title></circle>';
  }).join('');
  var note=failed.length?failed.length+' bulan gagal dibaca; coba buka ulang setelah beberapa saat.':unresolved.length?'Memuat '+unresolved.length+' bulan lainnya…':skipped.length?skipped.length+' bulan tanpa sumber pembelian; bukan dianggap Rp 0.':'';
- return'<div class="pfa-monthly-chart" role="img" aria-label="Tren pembelian bulanan Januari sampai '+esc(monthLabel(p))+' dari transaksi kanonis">'+
- '<svg viewBox="0 0 700 212" preserveAspectRatio="xMidYMid meet" aria-hidden="true">'+grids+'<path class="pfa-trend-line" d="'+path+'"/>'+dots+'</svg></div>'+
- '<div class="pfa-trend-foot"><span>Januari–'+esc(monthLabel(p))+'</span><strong>'+esc(known.length)+' dari '+esc(slots.length)+' bulan memiliki hasil pembacaan</strong></div>'+
- (note?'<div class="pfa-trend-note" role="status">'+esc(note)+'</div>':'');
+ return'<div class="pfa-monthly-chart" role="img" aria-label="Tren pembelian bulanan Januari sampai '+esc(monthLabel(p))+' dari transaksi kanonis. '+known.length+' dari '+slots.length+' bulan memiliki data. '+esc(note)+'">'+
+ '<svg viewBox="0 0 700 212" preserveAspectRatio="xMidYMid meet" aria-hidden="true">'+grids+'<path class="pfa-trend-line" d="'+path+'"/>'+dots+'</svg></div>';
 }
 function goodsKind(r){
  var c=String(r.analytics_category||'').trim().toUpperCase().replace(/\s+/g,' ');
@@ -367,9 +365,7 @@ function monthlyPaymentMarkup(){
  });
  svg+='</svg>';
  var note=missing?(failed?failed+' bulan gagal dibaca. ':'')+(missing-failed-empty)+' bulan tanpa sumber; '+empty+' bulan tanpa transaksi positif. Bukan dianggap 0%.':'';
- return'<div class="pfa-payment-chart" aria-label="Diagram kolom bertumpuk 100% pembayaran per bulan">'+legend+svg+
- (note?'<p class="pfa-payment-caveat" role="status">'+esc(note)+'</p>':'')+
- '<p class="pfa-payment-caveat">Persentase dari nilai transaksi positif per bulan, bukan volume transaksi. Multi-sumber tanpa rincian tetap Belum Dipetakan.</p></div>';
+ return'<div class="pfa-payment-chart" role="group" aria-label="Diagram kolom bertumpuk 100% pembayaran per bulan. '+esc(note)+' Persentase nilai transaksi positif, bukan jumlah transaksi. Multi-sumber tanpa rincian tetap Belum Dipetakan.">'+legend+svg+'</div>';
 }
 function purchaseJournalReconciliation(){
  var canonical=n(control.purchase_rows),journal=n(control.journal_rows),gap=n(control.purchase_journal_delta);

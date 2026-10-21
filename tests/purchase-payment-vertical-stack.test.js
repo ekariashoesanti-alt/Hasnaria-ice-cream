@@ -26,7 +26,7 @@ f.rememberTrendMonth('2026-10',[{total_amount:500,payment_method:'TRANSFER'}]);
 const markup=f.monthlyPaymentMarkup();
 assert.match(markup,/class="pfa-payment-svg"/);
 assert.match(markup,/viewBox="0 0 710 190"/);
-assert.match(markup,/aria-label="Diagram kolom bertumpuk 100% pembayaran per bulan"/);
+assert.match(markup,/aria-label="Diagram kolom bertumpuk 100% pembayaran per bulan\./,'Readable chart retains extended explanation');
 assert.equal((markup.match(/class="pfa-payment-month-tick"/g)||[]).length,10,'Jan-Oct x-axis labels');
 assert.equal((markup.match(/class="pfa-payment-axis"/g)||[]).length,5,'0–100% y-axis tick labels');
 for(const label of ['0%','25%','50%','75%','100%'])assert.ok(markup.includes('>'+label+'</text>'),'Y axis: '+label);
