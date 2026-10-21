@@ -32,7 +32,8 @@ const two=make('2026-03',[],[{period_start:'2026-01-01'},{period_start:'2026-03-
 two.functions.rememberTrendMonth('2026-01',[{total_amount:100}]);
 two.functions.rememberTrendMonth('2026-03',[{total_amount:900}]);
 let trend=two.functions.monthlyTrendMarkup();
-assert.match(trend,/Januari–Maret 2026/);
+assert.match(trend,/Januari sampai Maret 2026/);
+assert.doesNotMatch(trend,/class="pfa-trend-foot"|class="pfa-trend-note"/);
 assert.match(trend,/Rp 100/);
 assert.match(trend,/Rp 900/);
 assert.match(trend,/bulan tanpa sumber pembelian/,'missing February is not recorded as Rp 0');
