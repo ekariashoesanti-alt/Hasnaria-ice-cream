@@ -43,16 +43,23 @@ f.rememberTrendMonth('2026-03',[
 ]);
 state.periods=['2026-01','2026-03'].map(x=>({period_start:x+'-01'}));
 const markup=f.monthlyPaymentMarkup();
-assert.equal((markup.match(/class="pfa-payment-month(?: pfa-payment-unavailable)?"/g)||[]).length,4,
- 'Only Jan through selected April, not full year');
-assert.equal((markup.match(/class="pfa-payment-segment/g)||[]).length,6,
- 'Jan has 4 nonzero components; March has 2');
+assert.equal((markup.match(/class="pfa-payment-month-tick"/g)||[]).length,4,
+ 'Exactly 4 labels on x-axis, Jan through selected April');
+assert.equal((markup.match(/class="pfa-payment-slice/g)||[]).length,6,
+ 'Jan has 4 nonzero stacked rectangles; March has 2');
 assert.match(markup,/Januari 2026/);
 assert.match(markup,/Maret 2026/);
 assert.match(markup,/50/);
 assert.match(markup,/25/);
 assert.match(markup,/15/);
-assert.match(markup,/bulan belum memiliki sumber; bukan 0%/);
+assert.match(markup,/bulan tanpa sumber/);
+assert.match(markup,/Bukan dianggap 0%/);
+assert.match(markup,/pfa-payment-svg/);
+assert.match(markup,/0%<\/text>/);
+assert.match(markup,/25%<\/text>/);
+assert.match(markup,/50%<\/text>/);
+assert.match(markup,/75%<\/text>/);
+assert.match(markup,/100%<\/text>/);
 assert.match(markup,/Multi-sumber tanpa rincian tetap Belum Dipetakan/);
 assert.doesNotMatch(markup,/Mei 2026|Oktober 2026/);
 assert.ok(!markup.includes('NaN%'));
@@ -75,7 +82,9 @@ assert.match(pay,/Kontrol Data Berkualitas/);
 assert.match(render,/id="pfaReviewSlot"/,'Deferred reviews remain');
 assert.match(css,/\.pfa-summary-left\{grid-template-rows:minmax\(0,42fr\) minmax\(0,58fr\)/);
 assert.match(css,/\.pfa-summary-right\{grid-template-rows:minmax\(0,48fr\) minmax\(0,52fr\)/);
-assert.match(css,/\.pfa-payment-segment/);
+assert.match(css,/\.pfa-payment-slice/);
+assert.match(css,/\.pfa-payment-svg/);
+assert.doesNotMatch(css,/grid-template-rows:repeat\(10,minmax\(0,1fr\)\)/,'horizontal layout rule removed');
 assert.match(css,/\.pfa-pie-color-3/,'Payment and Pie share palette');
 assert.match(source,/Promise\.all\(\[worker\(\),worker\(\),worker\(\)\]\)/,'No unbounded historical queries');
 console.log('Purchase 2x2 one-view, 100% monthly payment and relocation: PASS');
