@@ -19,14 +19,11 @@ assert.match(css,/flex:1 1 0!important/);
 assert.match(css,/#purchaseFinanceAlignment\.pfa-period-loading::after/);
 assert.match(css,/max-height:100%!important/);
 
-for(const view of ['summary','items','payments']){
- assert.ok(app.includes("data-pfa-view-panel=\""+view+"\""),view+' content stays accessible');
- assert.ok(app.includes("data-pfa-view=\""+view+"\""),view+' quick switch is defined');
-}
+assert.ok(app.includes('data-pfa-view-panel="summary"'),'permanent summary is the only view');
+assert.doesNotMatch(app,/data-pfa-view-panel="items"|data-pfa-view-panel="payments"|data-pfa-view="/,'no separate category/payment views or navigation');
 assert.doesNotMatch(app,/class="pfa-view-tabs"/,'duplicate lower navigation must not render');
 assert.doesNotMatch(app,/data-pfa-view-panel="reviews"/,'Pemeriksaan is no longer a Purchase view');
-assert.match(app,/role="group"/);
-assert.match(app,/aria-pressed/);
+assert.match(app,/pfa-purchase-toolbar/);
 assert.match(app,/\.setAttribute\('data-pfa-ready','1'\)/);
 assert.match(app,/if\(wrap\.__pfaCanonicalMarkup!==nextMarkup\)/);
 assert.match(app,/wrap\.__pfaCanonicalMarkup=nextMarkup/);
