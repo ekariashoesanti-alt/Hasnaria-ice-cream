@@ -13,7 +13,19 @@ function runUpload(existing,opts={}){
  const XLSX={read(){return workbook},utils:{sheet_to_json:ws=>ws.grid,decode_cell(){throw Error('Unexpected real SheetJS cell')}}};
  const db={from(table){assert.equal(table,'offline_purchase_history');return{
    select(_cols,opts){assert.equal(opts.head,true);return {eq(){return {eq(){return Promise.resolve({count:existing,error:null})}}}}}
-  }},rpc(name,args){if(name==='import_purchase_reviewed_append_v1'&&!args.p_commit)return Promise.resolve({data:{existing_rows:existing,existing_excel:0,existing_non_excel:existing,unchanged_rows:1,append_rows:0,conflict_rows:0,append_amount:0},error:null});writes.push({name,args});return Promise.resolve({data:{inserted_rows:args.p_rows.length,replaced_rows:0,finance_synced:false},error:null})}};
+  }},rpc(name,args){
+   assert.equal(name,'import_purchase_reviewed_append_v1');
+   if(!args.p_commit)return Promise.resolve({data:{
+      existing_rows:existing,existing_excel:existing,existing_non_excel:0,
+      incoming_rows:args.p_rows.length,unchanged_rows:existing?1:0,
+      append_rows:existing?0:args.p_rows.length,conflict_rows:0,
+      append_amount:existing?0:1000,can_commit:true
+   },error:null});
+   writes.push({name,args});return Promise.resolve({data:{
+      mode:'REVIEWED_APPEND_COMMITTED',existing_rows:existing,
+      append_rows:args.p_rows.length,replaced_rows:0,finance_synced:false
+   },error:null});
+  }};
  const dom={addEventListener(){},dispatchEvent(e){events.push(e)},getElementById(){return null},
   createElement(){return {isConnected:false,remove(){},textContent:''}},body:{appendChild(){}}};
  const w={XLSX,__HASNARIA_DB:db,
@@ -29,7 +41,7 @@ function runUpload(existing,opts={}){
 }
 test('empty month creates one canonical Purchase transaction, then refreshes dashboards from database',async()=>{
  const result=await runUpload(0).process();
- assert.deepEqual(result.writes.map(x=>x.name),['import_purchase_empty_period_v1']);
+ assert.deepEqual(result.writes.map(x=>x.name),['import_purchase_reviewed_append_v1']);
  const req=result.writes[0].args;
  assert.equal(req.p_source_period,'2026-11-01');
  assert.equal(req.p_rows.length,1);
@@ -37,6 +49,7 @@ test('empty month creates one canonical Purchase transaction, then refreshes das
  assert.equal(req.p_rows[0].raw_data.funding_breakdown.cash,1000);
  assert.equal(result.events.filter(x=>x.type==='hasnaria:purchase-imported').length,1);
  assert.equal(result.events[0].detail.period,'2026-11-01');
+ assert.equal(result.writes[0].args.p_expected_count,0,'server confirms truly empty period');
 });
 test('existing canonical month never invokes any mutating import RPC',async()=>{
  const result=await runUpload(2).process();
@@ -71,6 +84,6 @@ test('all Owner reporting areas refresh on canonical Purchase import, with hones
 test('preview that still targets production Supabase cannot import BELANJA',async()=>{
  const f=runUpload(0,{preview:true});
  await assert.rejects(()=>f.process(),/PRODUKSI/);
- assert.equal(f.writes.length,0,'preview must not invoke even the create-only canonical RPC');
+ assert.equal(f.writes.length,0,'preview must not invoke the reviewed canonical RPC');
  assert.equal(f.events.length,0);
 });
