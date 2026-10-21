@@ -13,7 +13,7 @@ function runUpload(existing,opts={}){
  const XLSX={read(){return workbook},utils:{sheet_to_json:ws=>ws.grid,decode_cell(){throw Error('Unexpected real SheetJS cell')}}};
  const db={from(table){assert.equal(table,'offline_purchase_history');return{
    select(_cols,opts){assert.equal(opts.head,true);return {eq(){return {eq(){return Promise.resolve({count:existing,error:null})}}}}}
-  }},rpc(name,args){if(name==='import_purchase_reviewed_append_v1'&&!args.p_commit)return Promise.resolve({data:{existing_rows:existing,unchanged_rows:1,append_rows:0,conflict_rows:0,append_amount:0},error:null});writes.push({name,args});return Promise.resolve({data:{inserted_rows:args.p_rows.length,replaced_rows:0,finance_synced:false},error:null})}};
+  }},rpc(name,args){if(name==='import_purchase_reviewed_append_v1'&&!args.p_commit)return Promise.resolve({data:{existing_rows:existing,existing_excel:0,existing_non_excel:existing,unchanged_rows:1,append_rows:0,conflict_rows:0,append_amount:0},error:null});writes.push({name,args});return Promise.resolve({data:{inserted_rows:args.p_rows.length,replaced_rows:0,finance_synced:false},error:null})}};
  const dom={addEventListener(){},dispatchEvent(e){events.push(e)},getElementById(){return null},
   createElement(){return {isConnected:false,remove(){},textContent:''}},body:{appendChild(){}}};
  const w={XLSX,__HASNARIA_DB:db,
