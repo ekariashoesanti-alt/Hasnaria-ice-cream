@@ -14,14 +14,12 @@ const head=vm.runInNewContext('('+source.slice(hStart,hEnd).trim()+')',{
   esc(v){return String(v)},n(v){return Number(v)},purchaseView:'summary'
 });
 const markup=head({purchase_rows:57},false);
-for(const token of ['PURCHASE INTELLIGENCE','Dashboard Pembelian','upload Excel.','Lihat Detail Pembelian','2026-10-01 s/d 2026-10-31','57 transaksi','PERLU PERIKSA','Ringkasan','Kategori','pfa-upload-slot','pfa-controls-slot']){
+for(const token of ['PURCHASE INTELLIGENCE','Dashboard Pembelian','upload Excel.','Lihat Detail Pembelian','2026-10-01 s/d 2026-10-31','57 transaksi','PERLU PERIKSA','pfa-upload-slot','pfa-controls-slot']){
  assert.ok(markup.includes(token),'missing expected Sales-style layout: '+token);
 }
 assert.doesNotMatch(markup,/Format & Multi-Periode|Review Faktur Majoo/,'unrequested/legacy actions cannot be reintroduced');
 assert.equal((markup.match(/data-pfa-detail-open="1"/g)||[]).length,1,'one detail action only');
-assert.match(markup,/data-pfa-view="summary"/);
-assert.match(markup,/data-pfa-view="items"/);
-assert.match(markup,/data-pfa-view="payments"/);
+assert.doesNotMatch(markup,/data-pfa-view=|pfa-quick-switch|Pembayaran &amp; Kontrol/,'navigation removed from header');
 assert.doesNotMatch(markup,/Pemeriksaan/);
 const move=vm.runInNewContext('('+source.slice(mStart,mEnd).trim()+')');
 const select={value:'2026-10',onchange(){return true}};
@@ -57,7 +55,7 @@ assert.equal(select.value,'2026-10','month value unaffected');
 assert.match(source,/function monthlyTrendMarkup\(/,'merged PR #129 YTD trend remains');
 assert.match(source,/function purchasePieMarkup\(/,'merged PR #129 goods pie remains');
 assert.match(source,/if\(wrap\.__pfaCanonicalMarkup!==nextMarkup\)/,'render guard remains');
-assert.match(source,/if\(b\.hasAttribute&&b\.hasAttribute\('aria-pressed'\)\)/,'top segmented control synchronizes with all tab navigation');
+assert.doesNotMatch(source,/purchaseView|closest\('\[data-pfa-view\]'\)/,'obsolete navigation event removed');
 assert.match(upload,/if\(mb&&mf\)mb\.onclick/,'Staff Majoo handler remains unaffected');
 assert.match(style,/Owner Pembelian – Sales-inspired compact top dashboard/);
 assert.match(style,/\.pfa-purchase-toolbar/);
