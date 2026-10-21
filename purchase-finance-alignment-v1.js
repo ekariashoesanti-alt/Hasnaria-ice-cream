@@ -369,7 +369,7 @@ function monthlyPaymentMarkup(){
  var note=missing?(failed?failed+' bulan gagal dibaca. ':'')+(missing-failed-empty)+' bulan tanpa sumber; '+empty+' bulan tanpa transaksi positif. Bukan dianggap 0%.':'';
  return'<div class="pfa-payment-chart" aria-label="Diagram kolom bertumpuk 100% pembayaran per bulan">'+legend+svg+
  (note?'<p class="pfa-payment-caveat" role="status">'+esc(note)+'</p>':'')+
- '<p class="pfa-payment-caveat">Persentase nilai transaksi positif; multi-sumber tanpa rincian tetap Belum Dipetakan.</p></div>';
+ '<p class="pfa-payment-caveat">Persentase dari nilai transaksi positif per bulan, bukan volume transaksi. Multi-sumber tanpa rincian tetap Belum Dipetakan.</p></div>';
 }
 function purchaseJournalReconciliation(){
  var canonical=n(control.purchase_rows),journal=n(control.journal_rows),gap=n(control.purchase_journal_delta);
