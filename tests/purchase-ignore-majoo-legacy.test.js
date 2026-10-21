@@ -51,7 +51,7 @@ function simulate(response){
  const invalid=simulate({existing_excel:0,existing_non_excel:12});
  await assert.rejects(()=>invalid.run(),/Hasil pemeriksaan sumber berbeda dari file/);
  assert.equal(invalid.writes.length,0,'fail closed on inconsistent snapshot');
- const conflict=simulate({conflict_rows:1});
+ const conflict=simulate({append_rows:1,conflict_rows:1,can_commit:false});
  await conflict.run();
  assert.equal(conflict.writes.length,0,'conflicts never write');
  assert.match(report,/get_purchase_control_period_v1/);
