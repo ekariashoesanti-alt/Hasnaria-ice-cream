@@ -72,7 +72,8 @@ test('No unguarded two-step old mutation paths remain in importer',()=>{
  assert.doesNotMatch(src,/check\.count!==0/);
  assert.match(src,/if\(p\.invalid\)/);
  assert.match(src,/if\(p\.unmapped\)/);
- assert.match(src,/import_purchase_reviewed_append_v1/);\n assert.doesNotMatch(src,/import_purchase_empty_period_v1/);
+ assert.match(src,/import_purchase_reviewed_append_v1/);
+ assert.doesNotMatch(src,/import_purchase_empty_period_v1/);
  assert.doesNotMatch(src,/replace_purchase_canonical_period_v1/);
  assert.doesNotMatch(src,/db\.from\(EVID\)\.update/);
  assert.doesNotMatch(src,/db\.from\(EVID\)\.insert/);
