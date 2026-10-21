@@ -365,7 +365,7 @@ function monthlyPaymentMarkup(){
  });
  svg+='</svg>';
  var note=missing?(failed?failed+' bulan gagal dibaca. ':'')+(missing-failed-empty)+' bulan tanpa sumber; '+empty+' bulan tanpa transaksi positif. Bukan dianggap 0%.':'';
- return'<div class="pfa-payment-chart" role="group" aria-label="Diagram kolom bertumpuk 100% pembayaran per bulan. '+esc(note)+' Persentase nilai transaksi positif, bukan jumlah transaksi. Sumber tanpa rincian tetap Belum Dipetakan.">'+legend+svg+'</div>';
+ return'<div class="pfa-payment-chart" role="group" aria-label="Diagram kolom bertumpuk 100% pembayaran per bulan. '+esc(note)+' Persentase nilai transaksi positif, bukan jumlah transaksi. Multi-sumber tanpa rincian tetap Belum Dipetakan.">'+legend+svg+'</div>';
 }
 function purchaseJournalReconciliation(){
  var canonical=n(control.purchase_rows),journal=n(control.journal_rows),gap=n(control.purchase_journal_delta);
