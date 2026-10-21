@@ -37,7 +37,7 @@
   if(!document.getElementById('hasnaria-purchase-excel-safe-merge-v3-js')){
     var sm=document.createElement('script');
     sm.id='hasnaria-purchase-excel-safe-merge-v3-js';
-    sm.src='/purchase-excel-safe-merge-v3.js?v=7';
+    sm.src='/purchase-excel-safe-merge-v3.js?v=8';
     sm.async=true;
     sm.onload=loadDualSourceV2;
     sm.onerror=function(){console.error('Pengaman upload BELANJA gagal dimuat; tombol Excel harus ditahan.');window.__HASNARIA_PURCHASE_SAFE_IMPORT_FAILED=true;loadDualSourceV2();};

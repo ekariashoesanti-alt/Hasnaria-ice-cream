@@ -220,15 +220,25 @@
         if(window.alert)window.alert('UPLOAD ULANG '+period+'\\n'+result.conflict_rows+' baris konflik. Tidak ada data yang disimpan.');
         return;
       }
-      var message=preview+'\\n\\nREVIEW UPLOAD ULANG '+period+
-       '\\nData tersimpan '+result.existing_rows+' transaksi (sumber lain '+result.existing_non_excel+')'+
-       '\\nIdentik '+result.unchanged_rows+' baris, baru '+result.append_rows+' baris ('+money(result.append_amount)+')'+
-       '\\nData lama tidak diganti, stok tidak diposting; trigger Finance dapat menyinkronkan jurnal.';
+      var existingBelanja=Number(result.existing_excel),historical=Number(result.existing_non_excel);
+      if(!Number.isInteger(existingBelanja)||existingBelanja<0||
+         !Number.isInteger(historical)||historical<0||
+         existingBelanja+historical!==Number(result.existing_rows))
+        throw Error('Ringkasan sumber Pembelian tidak konsisten. Impor ditahan untuk pemeriksaan.');
+      // A month with only legacy Majoo history is NOT an existing BELANJA
+      // month. The server still checks ALL rows for safe concurrency, but
+      // source-other history is ignored for BELANJA summary/reporting.
+      var sourceNote=historical>0?
+       '\\n'+historical+' transaksi sumber lain tersimpan terpisah (Majoo tidak masuk dashboard Pembelian).':'';
+      var message=preview+'\\n\\nREVIEW BELANJA '+period+
+       '\\nBELANJA sebelumnya '+existingBelanja+' baris'+sourceNote+
+       '\\nBELANJA identik '+result.unchanged_rows+' baris, BELANJA baru '+result.append_rows+' baris ('+money(result.append_amount)+')'+
+       '\\nTidak menimpa Majoo/histori lain. Stok tidak diposting otomatis; trigger Finance dapat menyinkronkan jurnal.';
       if(!Number(result.append_rows)){
-        toast('Tidak ada baris baru; file sudah tercatat. Tidak ada duplikasi.','success',9000);
+        toast('Tidak ada BELANJA baru; file sudah tercatat. Sumber Majoo tidak ikut dihitung.','success',9000);
         return;
       }
-      if(!confirm(message+'\\n\\nSetuju TAMBAH baris baru tanpa mengganti transaksi lama?'))return;
+      if(!confirm(message+'\\n\\nSetuju menambahkan '+result.append_rows+' baris BELANJA saja, tanpa menghapus atau menjumlahkan Majoo?'))return;
       processing=true;busy(true);
       try{
         args.p_expected_count=Number(result.existing_rows);args.p_commit=true;
@@ -237,7 +247,7 @@
         var done=saved.data||{};
         if(Number(done.append_rows)!==Number(result.append_rows)||Number(done.replaced_rows)!==0)
           throw Error('Hasil import berbeda dari pratinjau. Periksa database sebelum mengulang.');
-        toast('Berhasil: '+done.append_rows+' baris BELANJA ditambahkan; '+done.unchanged_rows+' baris identik dilewati. Data Majoo tetap.','success',0);
+        toast('Berhasil: '+done.append_rows+' BELANJA baru disimpan. '+done.unchanged_rows+' duplikat dilewati; Majoo tetap terpisah dan tidak masuk dashboard.','success',0);
         if(typeof window.CustomEvent==='function'&&document.dispatchEvent)
           document.dispatchEvent(new window.CustomEvent('hasnaria:purchase-imported',{detail:{
             period:period,rows:done.append_rows,source:'belanja-reviewed-append',
