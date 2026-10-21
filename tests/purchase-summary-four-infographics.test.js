@@ -82,6 +82,7 @@ assert.match(pay,/Kontrol Data Berkualitas/);
 assert.match(render,/id="pfaReviewSlot"/,'Deferred reviews remain');
 assert.match(css,/\.pfa-summary-left\{grid-template-rows:minmax\(0,42fr\) minmax\(0,58fr\)/);
 assert.match(css,/\.pfa-summary-right\{grid-template-rows:minmax\(0,48fr\) minmax\(0,52fr\)/);
+assert.match(css,/grid-template-rows:repeat\(2,minmax\(0,1fr\)\)!important/,'same two rows in both columns');
 assert.match(css,/\.pfa-payment-slice/);
 assert.match(css,/\.pfa-payment-svg/);
 assert.doesNotMatch(css,/grid-template-rows:repeat\(10,minmax\(0,1fr\)\)/,'horizontal layout rule removed');
