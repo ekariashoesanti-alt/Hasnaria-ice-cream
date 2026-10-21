@@ -9,7 +9,6 @@ var CAT_LABEL={'Beban Administrasi':'6100 · Administrasi','Beban Pemeliharaan':
 var MONTHS=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
 var infographicMode='value';
 var purchaseTrendCache={},trendLoadSequence=0,trendLoadingKey='';
-var purchaseView='summary'; // stable desktop one-view, user-selected secondary insight page
 var db=null,rows=[],control={},overview=null,chartRows=[],periods=[],loading=false,error='',observer=null,timer=0,loadedAt=0,loadedPeriod='',syncingStock=false,lastStockSync='',category='all',modalOpen=false,requestSeq=0,syncing=false,unitOpen=false,unitBusy=false,unitError='',unitNotice='',unitQueue=[],unitSelected='',unitPreview=null,unitPeriod='',unitDraft={sourceUnit:'',factor:'',evidence:'',reason:''},unitSession=null,unitSeq=0;
 
 function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
@@ -287,7 +286,6 @@ function ensureMonthlyTrend(){
  Promise.all([worker(),worker(),worker()]).then(function(){if(token===trendLoadSequence){trendLoadingKey='';paintMonthlyTrend();if(failed&&console&&console.warn)console.warn('Purchase trend: '+failed+' months unavailable')}})
 }
 function paintMonthlyTrend(){
- if(purchaseView!=='summary')return;
  var slot=document.getElementById('pfaMonthlyTrend');
  if(slot){var markup=monthlyTrendMarkup();if(slot.innerHTML!==markup)slot.innerHTML=markup}
  var paymentSlot=document.getElementById('pfaMonthlyPayments');
@@ -379,20 +377,14 @@ function infographicMarkup(){
  // Owner Ringkasan: two compact stacks of equal combined height. Historical
  // payment percentages reuse the bounded canonical monthly reads of the trend.
  return'<div class="pfa-view-panels">'+
- '<section class="pfa-view-panel" role="region" aria-label="Ringkasan Pembelian" id="pfaPanel-summary" data-pfa-view-panel="summary"'+(purchaseView==='summary'?'':' hidden')+'>'+
+ '<section class="pfa-view-panel" role="region" aria-label="Pembelian" id="pfaPanel-summary" data-pfa-view-panel="summary">'+
  '<div class="pfa-insights-grid pfa-four-infographics">'+
  '<div class="pfa-summary-stack pfa-summary-left">'+
  '<article class="pfa-insight-panel pfa-summary-trend"><h3>Tren Pembelian Bulanan</h3><p>Nilai Pembelian Januari–'+esc(monthLabel(periodValue()))+'</p><div id="pfaMonthlyTrend">'+monthlyTrendMarkup()+'</div></article>'+
  '<article class="pfa-insight-panel pfa-summary-payment"><h3>Komposisi Pembayaran</h3><p>Persentase sumber pembiayaan per bulan</p><div id="pfaMonthlyPayments">'+monthlyPaymentMarkup()+'</div></article></div>'+
  '<div class="pfa-summary-stack pfa-summary-right">'+
  '<article class="pfa-insight-panel pfa-summary-pie"><h3>Porsi Pembelian</h3><p>Persentase nilai per jenis barang · '+esc(monthLabel(periodValue()))+'</p>'+purchasePieMarkup()+'</article>'+
- '<article class="pfa-insight-panel pfa-summary-top"><h3>Top 5 Item Pembelian</h3><p>Urutan berdasarkan total nilai sumber</p>'+purchaseTopMarkup()+'</article></div></div></section>'+
- '<section class="pfa-view-panel" role="region" aria-label="Kategori dan Item Pembelian" id="pfaPanel-items" data-pfa-view-panel="items"'+(purchaseView==='items'?'':' hidden')+'>'+
- '<div class="pfa-insight-two pfa-one-panel"><article class="pfa-insight-panel"><h3>Komposisi Pembelian</h3><p>Nilai per akun Beban untuk '+esc(cutLabel())+'</p>'+chartMarkup()+'</article></div></section>'+
- '<section class="pfa-view-panel" role="region" aria-label="Pembayaran dan Kontrol" id="pfaPanel-payments" data-pfa-view-panel="payments"'+(purchaseView==='payments'?'':' hidden')+'>'+
- '<div class="pfa-insight-two pfa-one-panel"><article class="pfa-insight-panel"><h3>Kontrol Data Berkualitas</h3><p>Review dan bukti Owner dipisah dari posting</p>'+
- '<div class="pfa-note-banner"><b>'+esc(String(n(control.stock_review_rows)+n(control.provisional_journal_rows)))+' kandidat perlu perhatian</b>. Lanjutkan pemeriksaan melalui Notifikasi; mengunggah Excel tidak otomatis memposting Stok.</div>'+
- '<button type="button" class="primary" data-pfa-notifications>Periksa di Notifikasi →</button></article></div></section></div>'+
+ '<article class="pfa-insight-panel pfa-summary-top"><h3>Top 5 Item Pembelian</h3><p>Urutan berdasarkan total nilai sumber</p>'+purchaseTopMarkup()+'</article></div></div></section></div>'+
  // Keep legacy review module mount intact but invisible until Notifications migration.
  '<div id="pfaReviewSlot" class="pfa-review-list pfa-review-compat" hidden aria-hidden="true"><div class="pfa-note-banner pfa-review-safety">Penerimaan Stok hanya dibukukan setelah satuan dan bukti diperiksa. Review ini tidak melakukan posting Stok atau jurnal otomatis.</div>'+unitVerificationMarkup()+'</div>';
 }
@@ -419,10 +411,7 @@ function purchaseSalesHeader(values,finance){
     '<div class="pfa-purchase-toolbar"><div class="pfa-purchase-period-left"><div class="pfa-controls-slot"></div>'+
     '<span class="pfa-purchase-period-meta">'+period+' · '+n(values.purchase_rows).toLocaleString('id-ID')+' transaksi</span></div>'+
     '<div class="pfa-purchase-toolbar-right"><span class="pfa-sync '+(finance?'ok':'warn')+'">'+(finance?'TERSINKRON':'PERLU PERIKSA')+'</span>'+
-    '<div class="pfa-quick-switch" role="group" aria-label="Tampilan Pembelian">'+
-    '<button type="button" data-pfa-view="summary" aria-pressed="'+(purchaseView==='summary'?'true':'false')+'" class="'+(purchaseView==='summary'?'active':'')+'">Ringkasan</button>'+
-    '<button type="button" data-pfa-view="items" aria-pressed="'+(purchaseView==='items'?'true':'false')+'" class="'+(purchaseView==='items'?'active':'')+'">Kategori</button>'+
-    '<button type="button" data-pfa-view="payments" aria-pressed="'+(purchaseView==='payments'?'true':'false')+'" class="'+(purchaseView==='payments'?'active':'')+'">Pembayaran &amp; Kontrol</button></div></div></div>';
+    '</div></div>';
 }
 function render(){
   if(unitOpen&&!unitAllowed())closeUnitReview();
@@ -523,20 +512,6 @@ function boot(){
     observer=new MutationObserver(schedule);observer.observe(host,{childList:true,subtree:false});
     document.addEventListener('change',function(e){if(!e.target)return;if(e.target.id==='paPeriod'){resetData();lastStockSync='';load(true);return}if(e.target.id==='pfaCategory'){category=e.target.value;render()}},true);
     document.addEventListener('click',function(e){
-      var view=e.target&&e.target.closest?e.target.closest('[data-pfa-view]'):null;
-      if(view){
-        var nextView=view.getAttribute('data-pfa-view');
-        if(['summary','items','payments'].indexOf(nextView)<0)return;
-        purchaseView=nextView;
-        document.querySelectorAll('#purchaseFinanceAlignment [data-pfa-view]').forEach(function(b){
-          var on=b.getAttribute('data-pfa-view')===purchaseView;
-          b.classList.toggle('active',on);
-          if(b.hasAttribute&&b.hasAttribute('aria-pressed'))b.setAttribute('aria-pressed',on?'true':'false');
-        });
-        document.querySelectorAll('#purchaseFinanceAlignment [data-pfa-view-panel]').forEach(function(p){p.hidden=p.getAttribute('data-pfa-view-panel')!==purchaseView});
-        if(purchaseView==='summary')ensureMonthlyTrend();
-        return;
-      }
       var mode=e.target&&e.target.closest?e.target.closest('[data-pfa-mode]'):null;
       if(mode){infographicMode=mode.getAttribute('data-pfa-mode')==='count'?'count':'value';render();return}
       var notice=e.target&&e.target.closest?e.target.closest('[data-pfa-notifications]'):null;
