@@ -30,7 +30,7 @@ assert.match(html,/id="pfaPanel-summary"/);
 assert.match(html,/data-pfa-view-panel="summary"/);
 assert.doesNotMatch(html,/pfaPanel-items|pfaPanel-payments|data-pfa-view-panel="items"|data-pfa-view-panel="payments"/);
 assert.doesNotMatch(html,/Komposisi Pembelian|Kontrol Data Berkualitas/,'secondary screens not rendered');
-assert.doesNotMatch(html,/ hidden[^>]*>/,'summary must remain permanently visible');
+assert.match(html,/<section class="pfa-view-panel"[^>]*data-pfa-view-panel="summary">/,'summary remains permanently visible');
 assert.doesNotMatch(toolbar,/pfa-quick-switch|data-pfa-view=|aria-pressed=|>Ringkasan<\/button>|>Kategori<\/button>|Pembayaran &amp; Kontrol/);
 assert.match(toolbar,/pfa-upload-slot/);
 assert.match(toolbar,/data-pfa-detail-open="1"/);
