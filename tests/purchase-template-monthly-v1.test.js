@@ -7,7 +7,7 @@ function build(rows,ops,rawSource=src){
  const db={from(table){
    calls.push(table);
    return {select(){return {eq(){return {eq(){return Promise.resolve({count:5,error:null})}}}}}};
- },rpc(name,args){if(name==='import_purchase_reviewed_append_v1'&&!args.p_commit)return Promise.resolve({data:{existing_rows:5,existing_excel:0,existing_non_excel:5,unchanged_rows:0,append_rows:0,conflict_rows:0,append_amount:0},error:null});writes.push({name,args});return Promise.resolve({data:{inserted_rows:args.p_rows.length},error:null})}};
+ },rpc(name,args){if(name==='import_purchase_reviewed_append_v1'&&!args.p_commit)return Promise.resolve({data:{existing_rows:5,existing_excel:5,existing_non_excel:0,incoming_rows:args.p_rows.length,unchanged_rows:args.p_rows.length,append_rows:0,conflict_rows:0,append_amount:0,can_commit:true},error:null});writes.push({name,args});return Promise.resolve({data:{inserted_rows:args.p_rows.length},error:null})}};
  const document={addEventListener(){},getElementById(){return null},createElement(){return {remove(){},isConnected:false}},body:{appendChild(v){toasts.push(v.textContent)}}};
  const XLSX={utils:{sheet_to_json:ws=>ws.grid,decode_cell(){throw new Error('fake-grid')}},read(){return workbook}};
  const workbook={SheetNames:['BELANJA','B OPERASIONAL'],Sheets:{BELANJA:{grid:rows},'B OPERASIONAL':{grid:ops||[['NO','JENIS','EST OMSET'],[1,'BELANJA BAHAN',0]]}}};
@@ -63,16 +63,16 @@ test('October: H=related-party Jas Hujan, B OPERASIONAL review is not a second t
 test('Existing canonical month: never call destructive replacement RPC, even if input exactly matches',async()=>{
  const wb=build([heading,['2026-09-01','SIRUP',1,1000,1000,0,0,'']]);
  await wb.process();
- assert.deepEqual(wb.calls,['offline_purchase_history']);
+ assert.deepEqual(wb.calls,[],'no RLS-visible history preflight');
  assert.equal(wb.writes.length,0);
 });
 test('No unguarded two-step old mutation paths remain in importer',()=>{
  assert.doesNotMatch(src,/function mergeEvidence\(/);
  assert.doesNotMatch(src,/function materialize\(/);
- assert.match(src,/check\.count!==0/);
+ assert.doesNotMatch(src,/check\.count!==0/);
  assert.match(src,/if\(p\.invalid\)/);
  assert.match(src,/if\(p\.unmapped\)/);
- assert.match(src,/import_purchase_empty_period_v1/);
+ assert.match(src,/import_purchase_reviewed_append_v1/);\n assert.doesNotMatch(src,/import_purchase_empty_period_v1/);
  assert.doesNotMatch(src,/replace_purchase_canonical_period_v1/);
  assert.doesNotMatch(src,/db\.from\(EVID\)\.update/);
  assert.doesNotMatch(src,/db\.from\(EVID\)\.insert/);
