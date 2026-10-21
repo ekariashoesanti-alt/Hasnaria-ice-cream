@@ -13,9 +13,7 @@ function simulate(response){
  }};
  const XLSX={read:()=>workbook,utils:{sheet_to_json:w=>w.grid,decode_cell:()=>{throw Error('Sheet mock requires no range expansion')}}};
  const db={
-  from(table){assert.equal(table,'offline_purchase_history');return{select(s,opts){
-   assert.equal(opts.head,true);return{eq(){return{eq(){return Promise.resolve({count:13,error:null})}}}}
-  }}},
+  from(table){throw Error('RLS browser preflight must never be used: '+table)},
   async rpc(name,args){calls.push({name,args:JSON.parse(JSON.stringify(args))});
    assert.equal(name,'import_purchase_reviewed_append_v1');
    if(!args.p_commit)return{data:Object.assign({existing_rows:13,existing_excel:0,existing_non_excel:13,append_rows:2,append_amount:17500,unchanged_rows:0,conflict_rows:0,replaced_rows:0,incoming_rows:2,can_commit:true},response||{}),error:null};
@@ -58,6 +56,7 @@ function simulate(response){
  assert.equal(conflict.writes.length,0,'conflicts never write');
  assert.match(report,/get_purchase_control_period_v1/);
  assert.doesNotMatch(src,/import_purchase_empty_period_v1/,'client always uses database-authoritative preview');
+ assert.doesNotMatch(src,/\.from\('offline_purchase_history'\)/,'Authoritative preview is used even if RLS hides Majoo');
  assert.doesNotMatch(src,/\.delete\(/,'never delete Majoo history');
  console.log('Legacy Majoo ignored in reviewed BELANJA upload, idempotent source safety: PASS');
 })().catch(e=>{console.error(e);process.exitCode=1});
