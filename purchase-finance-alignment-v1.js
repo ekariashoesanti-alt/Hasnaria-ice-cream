@@ -324,25 +324,52 @@ function paymentParts(list){
 function monthlyPaymentMarkup(){
  var slots=trendMonths(periodValue());
  if(!slots.length)return'<div class="pfa-empty">Pilih periode untuk melihat komposisi pembayaran.</div>';
- var labels=['Tunai','Transfer','Paylater','Belum Dipetakan'],colors=['pfa-pie-color-0','pfa-pie-color-1','pfa-pie-color-2','pfa-pie-color-3'];
- var legend='<div class="pfa-payment-legend" aria-label="Legenda pembayaran">'+labels.map(function(k,i){return'<span><i class="'+colors[i]+'"></i>'+esc(k)+'</span>'}).join('')+'</div>';
- var missing=0,failed=0,positiveMonths=0,unmapped=0;
- var html=slots.map(function(m){
-  var value=purchaseTrendCache[m.key],known=!!(value&&value.payments&&!value.error),p=known?value.payments:null;
-  var name=esc(m.label),label=esc(monthLabel(m.key));
-  if(!known){missing++;if(value&&value.error)failed++;
-   return'<div class="pfa-payment-month pfa-payment-unavailable"><span class="pfa-payment-month-label">'+name+'</span><div class="pfa-payment-track" aria-label="'+label+' belum tersedia"><span class="pfa-payment-no-data"></span></div><small>—</small></div>';
+ var labels=['Tunai','Transfer','Paylater','Belum Dipetakan'];
+ var colors=['pfa-pie-color-0','pfa-pie-color-1','pfa-pie-color-2','pfa-pie-color-3'];
+ var legend='<div class="pfa-payment-legend" aria-label="Legenda pembayaran">'+labels.map(function(k,i){
+  return'<span><i class="'+colors[i]+'"></i>'+esc(k)+'</span>';
+ }).join('')+'</div>';
+ // SVG coordinates make the 0–100% y-axis and monthly x-axis deterministic.
+ // Empty months are hatched and never represented as zero or a percentage.
+ var xMin=54,xMax=686,yTop=18,yBottom=153,height=yBottom-yTop;
+ var spacing=(xMax-xMin)/slots.length,barWidth=Math.min(38,spacing*.59);
+ var missing=0,failed=0,empty=0;
+ var svg='<svg class="pfa-payment-svg" viewBox="0 0 710 190" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Komposisi persentase sumber pembayaran, Januari sampai '+esc(monthLabel(periodValue()))+'; bulan tanpa data diberi arsiran">'+
+ '<defs><pattern id="pfa-payment-nodata" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="7" height="7" fill="#f2f5f2"/><line x1="0" y1="0" x2="0" y2="7" stroke="#c5d6cb" stroke-width="3"/></pattern></defs>';
+ [100,75,50,25,0].forEach(function(t){
+  var y=yBottom-(t/100)*height;
+  svg+='<line class="pfa-payment-gridline" x1="'+xMin+'" y1="'+y.toFixed(2)+'" x2="'+xMax+'" y2="'+y.toFixed(2)+'"/>'+
+   '<text class="pfa-payment-axis" x="'+(xMin-9)+'" y="'+(y+3).toFixed(2)+'" text-anchor="end">'+t+'%</text>';
+ });
+ slots.forEach(function(m,i){
+  var x=xMin+spacing*(i+.5)-barWidth/2;
+  var cached=purchaseTrendCache[m.key],valid=!!(cached&&cached.payments&&!cached.error&&cached.payments.total>0);
+  var title=monthLabel(m.key);
+  svg+='<text class="pfa-payment-month-tick" x="'+(x+barWidth/2).toFixed(2)+'" y="171" text-anchor="middle">'+esc(m.label)+'</text>';
+  if(!valid){
+   missing++;
+   if(cached&&cached.error)failed++;
+   else if(cached&&cached.payments)empty++;
+   svg+='<rect class="pfa-payment-missing" x="'+x.toFixed(2)+'" y="'+yTop+'" width="'+barWidth.toFixed(2)+'" height="'+height+'" fill="url(#pfa-payment-nodata)"><title>'+esc(title)+' · '+(cached&&cached.error?'gagal dibaca':cached&&cached.payments?'belum ada transaksi positif':'sumber belum tersedia')+'; bukan 0%</title></rect>';
+   return;
   }
-  if(p.total<=0)return'<div class="pfa-payment-month pfa-payment-unavailable"><span class="pfa-payment-month-label">'+name+'</span><div class="pfa-payment-track"><span class="pfa-payment-no-data"></span></div><small>—</small></div>';
-  positiveMonths++;unmapped+=p.totals['Belum Dipetakan'];
-  var parts=labels.map(function(k,i){var amount=p.totals[k],pct=amount/p.total*100;if(!amount)return'';
-   return'<span class="pfa-payment-segment '+colors[i]+'" style="width:'+pct.toFixed(4)+'%" title="'+esc(k+' · '+pct.toLocaleString('id-ID',{maximumFractionDigits:1})+'% · '+money(amount))+'"></span>'}).join('');
-  return'<div class="pfa-payment-month"><span class="pfa-payment-month-label">'+name+'</span><div class="pfa-payment-track" role="img" aria-label="'+label+' · '+labels.map(function(k){return k+' '+(p.totals[k]/p.total*100).toFixed(1)+'%'}).join(', ')+'">'+parts+'</div><small>100%</small></div>';
- }).join('');
- var note=missing?(failed?failed+' bulan gagal dibaca. ':'')+(missing-failed)+' bulan belum memiliki sumber; bukan 0%.':'';
- return'<div class="pfa-payment-chart" aria-label="Komposisi persen pembayaran per bulan Januari sampai '+esc(monthLabel(periodValue()))+'">'+legend+'<div class="pfa-payment-months">'+html+'</div>'+
+  var p=cached.payments,used=0;
+  labels.forEach(function(k,j){
+   var amount=Math.max(0,n(p.totals[k]));
+   if(amount<=0)return;
+   var share=amount/p.total,segmentHeight=Math.min(height-used,height*share);
+   if(segmentHeight<=0)return;
+   var y=yBottom-used-segmentHeight;
+   svg+='<rect class="pfa-payment-slice '+colors[j]+'" x="'+x.toFixed(2)+'" y="'+y.toFixed(3)+'" width="'+barWidth.toFixed(2)+'" height="'+segmentHeight.toFixed(3)+'">'+
+    '<title>'+esc(title+' · '+k+' · '+(share*100).toLocaleString('id-ID',{maximumFractionDigits:1})+'% · '+money(amount))+'</title></rect>';
+   used+=segmentHeight;
+  });
+ });
+ svg+='</svg>';
+ var note=missing?(failed?failed+' bulan gagal dibaca. ':'')+(missing-failed-empty)+' bulan tanpa sumber; '+empty+' bulan tanpa transaksi positif. Bukan dianggap 0%.':'';
+ return'<div class="pfa-payment-chart" aria-label="Diagram kolom bertumpuk 100% pembayaran per bulan">'+legend+svg+
  (note?'<p class="pfa-payment-caveat" role="status">'+esc(note)+'</p>':'')+
- '<p class="pfa-payment-caveat">Persentase dari nilai transaksi positif per bulan, bukan volume transaksi. Multi-sumber tanpa rincian tetap Belum Dipetakan.</p></div>';
+ '<p class="pfa-payment-caveat">Persentase nilai transaksi positif; multi-sumber tanpa rincian tetap Belum Dipetakan.</p></div>';
 }
 function purchaseJournalReconciliation(){
  var canonical=n(control.purchase_rows),journal=n(control.journal_rows),gap=n(control.purchase_journal_delta);
