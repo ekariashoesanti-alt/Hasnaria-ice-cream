@@ -127,7 +127,7 @@ function send(name,e){for(let f of handlers[name]||[])f(e)}
  assert.match(appended.innerHTML,/Semua 2 transaksi sudah diajukan/);
  assert.match(appended.innerHTML,/0 perlu koreksi/);
  assert.match(appended.innerHTML,/data-hsn-rv-success/);
- assert.doesNotMatch(appended.innerHTML,/<strong>ODENG<\\/strong>/);
+ assert.doesNotMatch(appended.innerHTML,new RegExp('<strong>ODENG</strong>'));
  send('click',{target:target('history')});
  assert.match(appended.innerHTML,/Riwayat pengajuan/);
  assert.match(appended.innerHTML,/ODENG/);
