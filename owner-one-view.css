@@ -1407,3 +1407,18 @@
  #hasnaria-review-correction-root .hsn-rv-list-tools{margin:0 9px 7px;flex-wrap:wrap;gap:5px}
  #hasnaria-review-correction-root .hsn-rv-list-tools button{margin-left:0}
 }
+
+/* Owner-reviewed finance settlement is distinct from ordinary submit. */
+#hasnaria-review-correction-root .hsn-rv-list-tools .hsn-rv-apply{
+ background:#0c785b!important;color:#fff!important;border-color:#0c785b!important;
+ font-weight:800!important;
+}
+#hasnaria-review-correction-root .hsn-rv-list-tools .hsn-rv-apply:hover{
+ background:#0b664e!important;
+}
+#hasnaria-review-correction-root .hsn-rv-list-tools .hsn-rv-apply:disabled{
+ opacity:.6!important;cursor:default!important;
+}
+#hasnaria-review-correction-root .hsn-rv-save:disabled{
+ opacity:.9!important;color:#256449!important;
+}
