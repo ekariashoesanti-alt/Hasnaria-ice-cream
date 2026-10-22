@@ -7,7 +7,7 @@ const css=fs.readFileSync('stock-readable-density.css','utf8');
 
 assert(!shim.includes('stock-recall-v4.js'),'owner shim must not load legacy Stock recall v4');
 assert(shim.includes('stock-v3-runtime-fix.js'),'owner shim must load the canonical Stock v3 bridge');
-assert(bridge.includes("/stock-control-v3.js?v=13"),'canonical bridge must load Stock Control v3');
+assert(bridge.includes("/stock-control-v3.js?v=14"),'canonical bridge must load Stock Control v3');
 assert(bridge.includes("setAttribute('data-stock-v4','1')"),'canonical shell must satisfy the existing owner guard marker');
 assert(css.includes('#stok .sc3-table{width:100%;min-width:0;table-layout:fixed;font-size:8.3px}'),'desktop Stock table must keep the readable fixed-width density override');
 assert(!css.includes('font-size:5.4px'),'readable override must not regress to the previous ultra-small status text');
@@ -31,6 +31,19 @@ assert(!ui4.includes("' + renderActivity() + '</article>'"),'Stock one-view must
 const greenCss=fs.readFileSync('stock-control-v3.css','utf8');
 assert(greenCss.includes('#stok .sc6-grid') && greenCss.includes('#stok .sc6-value-layout'),'updated green panels stay scoped to Stock');
 assert(greenCss.includes('#125644'),'Stock palette must match the Hasnaria sidebar');
+
+assert(ui4.includes('sc5-head sc7-head'),'Stage-1 Stock header must be compact');
+assert(ui4.includes('sc7-actions')&&ui4.includes('sc7-tools'),'Stock action and period controls must share header');
+assert(ui4.includes('data-sc4-action="upload-opname"')&&ui4.includes('data-sc4-action="opname"'),'Stock upload and manual opname must remain accessible');
+assert(ui4.includes('data-sc4-modal="position"')&&ui4.includes('data-sc4-modal="ledger"'),'Stock detail and ledger must remain accessible');
+assert(ui4.includes('data-sc4-action="upload-purchase"'),'Existing purchase upload route must remain');
+assert(!ui4.includes('sc5-footer-actions'),'Floating footer button bar should be absent');
+assert(ui4.indexOf('sc6-trend-panel')<ui4.indexOf('sc6-category-panel'),'Trend must remain immediately above category');
+assert(ui4.includes('/stock-control-v3.css?v=8'),'Stage-1 CSS cache version must be fresh');
+assert(greenCss.includes('.sc7-head') && greenCss.includes('min-height:64px!important'),'Stock header spacing is compact');
+assert(greenCss.includes('background:#fff!important') && greenCss.includes('sc6-grid'),'White toolbar must be isolated from green sidebar');
+assert(greenCss.includes('.sc6-main-column')&&greenCss.includes('.sc6-side-column'),'Both two-row Stock grid columns remain available');
+
 
 
 const notifications = fs.readFileSync('owner-notifications-v1.js','utf8');

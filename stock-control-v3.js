@@ -208,7 +208,7 @@
     var l = document.createElement('link');
     l.id = 'stock-control-v3-css';
     l.rel = 'stylesheet';
-    l.href = '/stock-control-v3.css?v=7';
+    l.href = '/stock-control-v3.css?v=8';
     document.head.appendChild(l);
   }
 
@@ -862,14 +862,21 @@
       var k=monthKey(x.period_start||x.period_key);
       return '<option value="'+esc(k)+'"'+(k===S.period?' selected':'')+'>'+esc(monthLabel(k))+'</option>';
     }).join('');
-    return '<header class="sc5-head"><div class="sc5-head-copy"><span class="sc5-eyebrow">STOCK INTELLIGENCE</span>'+
-      '<h2>Dashboard Stok</h2><p>Ringkasan persediaan, kondisi opname, dan pergerakan berdasarkan backend Hasnaria.</p></div>'+
-      '<div class="sc5-head-right"><div class="sc5-head-buttons">'+
-      (isOwner()?'<button type="button" class="sc5-primary" data-sc4-action="upload-opname">⇧ Upload Excel Stok</button>':'')+
-      '<button type="button" class="sc5-secondary" data-sc4-modal="position">▣ Lihat Detail Stok</button></div>'+
-      '<div class="sc5-head-filters"><label><span>Bulan</span><select id="sc4Period" data-month-filter="stok">'+options+'</select></label>'+
-      (isOwner()?'<button type="button" class="sc5-text-btn" data-sc4-action="upload-purchase">Upload Pembelian</button>':'')+
-      '<button type="button" class="sc5-refresh" data-sc3-action="refresh" aria-label="Refresh data Stok">↻</button></div></div></header>';
+    // Tahap 1: one compact toolbar. Existing actions keep their
+    // original identifiers to preserve upload, ledger and opname routing.
+    return '<header class="sc5-head sc7-head"><div class="sc5-head-copy"><span class="sc5-eyebrow">STOK</span>'+
+      '<h2>Dashboard Stok</h2><p>Persediaan &amp; aktivitas terkini</p></div>'+
+      '<div class="sc5-head-right sc7-head-right">'+
+      '<div class="sc5-head-buttons sc7-actions">'+
+        (isOwner()?'<button type="button" class="sc5-primary" data-sc4-action="upload-opname">⇧ Upload Excel Stok</button>':'')+
+        '<button type="button" class="sc5-secondary" data-sc4-modal="position">▣ Detail Stok</button>'+
+        (isOwner()?'<button type="button" class="sc5-secondary" data-sc4-action="opname">＋ Input Opname</button>':'')+
+      '</div><div class="sc5-head-filters sc7-tools">'+
+        '<label><span>Bulan</span><select id="sc4Period" data-month-filter="stok">'+options+'</select></label>'+
+        '<button type="button" class="sc5-text-btn" data-sc4-modal="ledger">Ledger Periode</button>'+
+        (isOwner()?'<button type="button" class="sc5-text-btn" data-sc4-action="upload-purchase">Upload Pembelian</button>':'')+
+        '<button type="button" class="sc5-refresh" data-sc3-action="refresh" aria-label="Refresh data Stok">↻</button>'+
+      '</div></div></header>';
   }
 
   function renderFormula() {
@@ -1307,11 +1314,7 @@
           '</div>'+
         '</div>'+
       '</div>'+
-      '<div class="sc5-footer-actions"><span>Detail transaksi dan ledger tersedia melalui tombol berikut, tanpa tabel panjang di dashboard.</span>'+
-        '<div><button type="button" data-sc4-modal="position">Lihat Detail SKU</button>'+
-        '<button type="button" data-sc4-modal="ledger">Lihat Ledger Periode</button>'+
-        (isOwner()?'<button type="button" class="primary" data-sc4-action="opname">Input Opname</button>':'')+
-        '</div></div>'+renderModal();
+      renderModal();
     bind(host);
     host.__sc3Rendering = false;
   }
