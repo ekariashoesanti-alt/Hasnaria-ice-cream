@@ -67,7 +67,7 @@
   if(!document.getElementById('hasnaria-purchase-review-amount-js')){
     var rv=document.createElement('script');
     rv.id='hasnaria-purchase-review-amount-js';
-    rv.src='/purchase-review-amount-v1.js?v=1';
+    rv.src='/purchase-review-amount-v1.js?v=2';
     rv.async=true;
     document.head.appendChild(rv);
   }
