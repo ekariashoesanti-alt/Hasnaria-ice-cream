@@ -64,3 +64,102 @@ html body #app #pembelian .pa-root:has(>#purchaseFinanceAlignment)>.pa-controls{
   .pfa-unit-entry{align-items:stretch}
   .pfa-unit-entry button{width:100%}
 }
+
+
+/* Detail Pembelian: body portal, above the fixed Owner sidebar. Only the
+   transaction table scrolls; title, filter, and close button remain visible. */
+#hasnaria-purchase-detail-portal > .pfa-modal-backdrop{
+  position:fixed!important;
+  inset:0!important;
+  z-index:2147482000!important;
+  box-sizing:border-box;
+  display:flex!important;
+  justify-content:center!important;
+  align-items:center!important;
+  padding:clamp(10px,2vw,22px)!important;
+  overflow:hidden!important;
+  isolation:isolate;
+}
+#hasnaria-purchase-detail-portal > .pfa-modal-backdrop > .pfa-modal{
+  box-sizing:border-box!important;
+  position:relative!important;
+  display:flex!important;
+  flex-direction:column!important;
+  flex:0 1 1340px!important;
+  width:min(1340px,100%)!important;
+  min-width:0!important;
+  min-height:0!important;
+  max-height:calc(100dvh - 36px)!important;
+  max-height:calc(100vh - 36px);
+  margin:0!important;
+  padding:clamp(12px,1.4vw,20px)!important;
+  overflow:hidden!important;
+  border-radius:18px!important;
+}
+#hasnaria-purchase-detail-portal .pfa-modal-head,
+#hasnaria-purchase-detail-portal .pfa-modal-tools{
+  flex:0 0 auto!important;
+  min-width:0!important;
+}
+#hasnaria-purchase-detail-portal .pfa-modal-head{
+  display:flex!important;
+  flex-wrap:nowrap!important;
+  align-items:center!important;
+  gap:10px!important;
+}
+#hasnaria-purchase-detail-portal .pfa-modal-head > div{
+  min-width:0!important;
+}
+#hasnaria-purchase-detail-portal .pfa-modal-head h3{
+  font-size:19px!important;
+  line-height:1.2!important;
+  overflow-wrap:anywhere;
+}
+#hasnaria-purchase-detail-portal .pfa-modal-head .pfa-close{
+  flex:0 0 44px!important;
+  width:44px!important;
+  height:44px!important;
+  cursor:pointer;
+}
+#hasnaria-purchase-detail-portal .pfa-modal-body{
+  display:flex!important;
+  flex-direction:column!important;
+  flex:1 1 auto!important;
+  min-height:0!important;
+  min-width:0!important;
+  overflow:hidden!important;
+}
+#hasnaria-purchase-detail-portal .pfa-modal-body > .pfa-table-scroll{
+  flex:1 1 auto!important;
+  min-height:0!important;
+  max-height:none!important;
+  width:100%!important;
+  overflow:auto!important;
+  overscroll-behavior:contain;
+  scrollbar-gutter:stable;
+}
+#hasnaria-purchase-detail-portal .pfa-modal-body .pfa-table{
+  min-width:940px;
+}
+#hasnaria-purchase-detail-portal .pfa-modal-body .pfa-table thead th{
+  position:sticky;
+  top:0;
+  z-index:2;
+  background:#f5f9f7;
+}
+#hasnaria-purchase-detail-portal .pfa-modal-body > .pfa-more{
+  flex:0 0 auto;
+}
+@media(max-width:760px){
+  #hasnaria-purchase-detail-portal > .pfa-modal-backdrop{padding:8px!important}
+  #hasnaria-purchase-detail-portal > .pfa-modal-backdrop > .pfa-modal{
+    width:100%!important;
+    max-height:calc(100dvh - 16px)!important;
+    padding:12px!important;
+    border-radius:13px!important;
+  }
+  #hasnaria-purchase-detail-portal .pfa-modal-head h3{font-size:16px!important}
+  #hasnaria-purchase-detail-portal .pfa-modal-tools{padding-top:8px!important}
+  #hasnaria-purchase-detail-portal .pfa-modal-filter,
+  #hasnaria-purchase-detail-portal .pfa-modal-filter select{width:100%!important}
+}
