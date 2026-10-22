@@ -8,7 +8,7 @@ const base=path.join(__dirname,'..');
 const read=n=>fs.readFileSync(path.join(base,n),'utf8');
 test('Owner navigation has one section and lazy Notifications below Stock',()=>{
  const s=read('owner-shell-guard.js');
- assert.match(s,/OWNER_TABS=\\[[^\\]]*'pembelian','stok'/);
+ assert.match(s,/OWNER_TABS=\[[^\]]*'pembelian','stok'/);
  assert.match(s,/purchaseNav\.nextElementSibling!==stockNav/);
  assert.match(s,/tabs\.insertBefore\(stockNav,purchaseNav\.nextElementSibling\)/);
  assert.match(s,/SECTION_IDS=\[[^\]]*'stok','notifikasi'/);
