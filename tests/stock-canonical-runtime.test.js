@@ -37,8 +37,7 @@ assert(ui4.includes('sc7-actions')&&ui4.includes('sc7-tools'),'Stock action and 
 assert(ui4.includes('data-sc4-action="upload-opname"')&&ui4.includes('data-sc4-action="opname"'),'Stock upload and manual opname must remain accessible');
 assert(ui4.includes('data-sc4-modal="position"')&&ui4.includes('data-sc4-modal="ledger"'),'Stock detail and ledger must remain accessible');
 assert(ui4.includes('data-sc4-action="upload-purchase"'),'Existing purchase upload route must remain');
-assert(!ui4.includes("'<'+'div class=\"sc5-footer-actions"),'Legacy footer must not be injected'); 
-assert(!ui4.includes("'<'+'div class=\"sc5-footer-actions\"><span>"),'No floating footer action row');
+assert(!ui4.includes('sc5-footer-actions'),'Floating footer button bar should be absent');
 assert(ui4.indexOf('sc6-trend-panel')<ui4.indexOf('sc6-category-panel'),'Trend must remain immediately above category');
 assert(ui4.includes('/stock-control-v3.css?v=8'),'Stage-1 CSS cache version must be fresh');
 assert(greenCss.includes('.sc7-head') && greenCss.includes('min-height:64px!important'),'Stock header spacing is compact');
