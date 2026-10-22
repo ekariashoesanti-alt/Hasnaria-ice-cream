@@ -57,7 +57,7 @@
   if(!document.getElementById('hasnaria-purchase-finance-alignment-js')){
     var af=document.createElement('script');
     af.id='hasnaria-purchase-finance-alignment-js';
-    af.src='/purchase-finance-alignment-v1.js?v=27';
+    af.src='/purchase-finance-alignment-v1.js?v=28';
     af.async=true;
     document.head.appendChild(af);
   }
@@ -67,7 +67,7 @@
   if(!document.getElementById('hasnaria-purchase-review-amount-js')){
     var rv=document.createElement('script');
     rv.id='hasnaria-purchase-review-amount-js';
-    rv.src='/purchase-review-amount-v1.js?v=4';
+    rv.src='/purchase-review-amount-v1.js?v=5';
     rv.async=true;
     document.head.appendChild(rv);
   }
