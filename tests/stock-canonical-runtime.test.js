@@ -7,7 +7,7 @@ const css=fs.readFileSync('stock-readable-density.css','utf8');
 
 assert(!shim.includes('stock-recall-v4.js'),'owner shim must not load legacy Stock recall v4');
 assert(shim.includes('stock-v3-runtime-fix.js'),'owner shim must load the canonical Stock v3 bridge');
-assert(bridge.includes("/stock-control-v3.js?v=15"),'canonical bridge must load Stock Control v3');
+assert(bridge.includes("/stock-control-v3.js?v=16"),'canonical bridge must load Stock Control v3');
 assert(bridge.includes("setAttribute('data-stock-v4','1')"),'canonical shell must satisfy the existing owner guard marker');
 assert(css.includes('#stok .sc3-table{width:100%;min-width:0;table-layout:fixed;font-size:8.3px}'),'desktop Stock table must keep the readable fixed-width density override');
 assert(!css.includes('font-size:5.4px'),'readable override must not regress to the previous ultra-small status text');
@@ -51,6 +51,40 @@ assert(!ui4.includes('Rp 18,73 jt')&&!ui4.includes('4.321'),'No demo values in r
 assert(ui4.includes('/stock-control-v3.css?v=9'),'Fresh Stage-2 CSS must load');
 assert(greenCss.includes('.sc8-kpis')&&greenCss.includes('.sc8-kpi-icon')&&greenCss.includes('.sc8-kpi-value'),'Modern green stock cards are scoped');
 assert(greenCss.includes('max-height:88px!important')&&greenCss.includes('grid-template-columns:repeat(2,minmax(0,1fr))'),'One-view equal-height desktop and responsive mobile KPI cards');
+
+const vm = require('vm');
+assert.doesNotThrow(()=>new vm.Script(ui4),'Stock frontend JavaScript must parse');
+const trendStart=ui4.indexOf('function monthlyTrendInfographic(){');
+const trendEnd=ui4.indexOf('function attentionSkuInfographic(){',trendStart);
+assert(trendStart>=0&&trendEnd>trendStart,'Monthly ledger function must be present');
+const trendSource=ui4.slice(trendStart,trendEnd).trim();
+const fmtID=n=>Number(n).toLocaleString('id-ID',{maximumFractionDigits:0});
+const renderTrend=records=>vm.runInNewContext(trendSource+';monthlyTrendInfographic()',{
+  S:{period:'2026-09',periodLoading:false,trend:records},
+  num:v=>Number(v)||0,fmt:fmtID,esc:v=>String(v)
+});
+const trendMock=[
+ {period_month:'2026-09-01',movement_rows:44},
+ {period_month:'2026-09-01',movement_rows:189},
+ {period_month:'2026-09-01',movement_rows:88},
+ {period_month:'2026-09-01',movement_rows:591},
+ {period_month:'2026-04-01',movement_rows:1458},
+];
+const renderedTrend=renderTrend(trendMock);
+assert(renderedTrend.includes('2.370'),'Summary totals recorded events across months');
+assert(renderedTrend.includes('912'),'September must aggregate all four real ledger activity groups');
+assert(renderedTrend.includes('1.458'),'April label must use native Indonesian number formatting');
+assert.strictEqual((renderedTrend.match(/class="sc9-month(?:\s|")/g)||[]).length,10,'Exactly ten monthly columns');
+assert(renderedTrend.includes('sc9-month-current'),'Selected month needs stronger emphasis');
+assert(renderedTrend.includes('sc9-month-missing'),'No-data months should be distinguished');
+assert(renderedTrend.includes('Tanda — = belum ada catatan'),'Missing source data must not be presented as confirmed zero');
+assert(!renderedTrend.includes('Rp '),'Activity ledger chart must not pretend to be stock value');
+assert(!renderedTrend.includes('NaN'),'Valid trend does not yield a NaN tick');
+assert(renderTrend([]).includes('Belum ada aktivitas ledger'),'Entirely empty history should show honest empty state');
+assert(ui4.includes('/stock-control-v3.css?v=10'),'Fresh Stage-3 CSS cache pin must be loaded');
+assert(greenCss.includes('.sc9-guide-lines')&&greenCss.includes('.sc9-y-labels')&&greenCss.includes('.sc9-month-current'),'Stage-3 chart needs guides, axis and current month emphasis');
+assert(greenCss.includes('.sc9-bar')&&greenCss.includes('.sc9-count'),'Stage-3 count labels follow actual bar height');
+
 
 
 

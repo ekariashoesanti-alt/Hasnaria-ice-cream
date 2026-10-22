@@ -208,7 +208,7 @@
     var l = document.createElement('link');
     l.id = 'stock-control-v3-css';
     l.rel = 'stylesheet';
-    l.href = '/stock-control-v3.css?v=9';
+    l.href = '/stock-control-v3.css?v=10';
     document.head.appendChild(l);
   }
 
@@ -1244,19 +1244,66 @@
       '<p class="sc5-caption">Komposisi jumlah SKU, bukan nilai rupiah atau total unit berbeda satuan.</p>';
   }
   function monthlyTrendInfographic(){
-    if(S.periodLoading&&!S.trend.length)return '<div class="sc5-empty">Memuat tren aktivitas backend…</div>';
-    if(!S.period)return '<div class="sc5-empty">Pilih periode yang tersedia.</div>';
-    var y=Number(S.period.slice(0,4)),m=Number(S.period.slice(5,7))-1,dict={};
-    (S.trend||[]).forEach(function(x){dict[x.period_month]=(dict[x.period_month]||0)+num(x.movement_rows)});
+    if(S.periodLoading&&!S.trend.length)return '<div class="sc5-empty">Memuat aktivitas ledger stok…</div>';
+    if(!S.period)return '<div class="sc5-empty">Pilih periode untuk melihat tren aktivitas.</div>';
+    var year=Number(S.period.slice(0,4)),month=Number(S.period.slice(5,7))-1;
+    if(!Number.isFinite(year)||!Number.isFinite(month)||month<0||month>11)
+      return '<div class="sc5-empty">Periode aktivitas tidak valid.</div>';
+    // Sum source event rows per period, never add inventory quantities or prices.
+    var totals={},seen={};
+    (S.trend||[]).forEach(function(x){
+      var key=String(x.period_month||'').slice(0,10);
+      var value=Number(x.movement_rows);
+      if(!/^\d{4}-\d{2}-01$/.test(key)||!Number.isFinite(value)||value<0)return;
+      totals[key]=(totals[key]||0)+value;
+      seen[key]=true;
+    });
     var labels=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
-    var months=[];for(var i=9;i>=0;i--){var d=new Date(Date.UTC(y,m-i,1)),key=d.toISOString().slice(0,10);months.push({key:key,month:labels[d.getUTCMonth()],value:dict[key]||0})}
-    var max=Math.max.apply(null,months.map(function(x){return x.value}).concat([1]));
-    return '<div class="sc5-trend"><div class="sc5-trend-plots">'+months.map(function(x){
-      var pct=x.value?Math.max(5,x.value/max*100):0;
-      return '<div class="sc5-trend-col" title="'+esc(x.month+': '+fmt(x.value)+' movement')+'"><span>'+ (x.value?fmt(x.value):'–') +'</span>'+
-        '<div class="sc5-trend-track"><i style="height:'+pct.toFixed(2)+'%"></i></div>'+
-        '<small>'+esc(x.month)+'</small></div>';
-    }).join('')+'</div></div><p class="sc5-caption">Jumlah event ledger per bulan, bukan nilai stok atau penjumlahan unit beda satuan.</p>';
+    var months=[];
+    for(var i=9;i>=0;i--){
+      var d=new Date(Date.UTC(year,month-i,1)),key=d.toISOString().slice(0,10);
+      months.push({key:key,month:labels[d.getUTCMonth()],year:d.getUTCFullYear(),
+        hasData:!!seen[key],value:totals[key]||0});
+    }
+    var actual=months.filter(function(x){return x.hasData});
+    if(!actual.length)return '<div class="sc9-no-data"><strong>Belum ada aktivitas ledger dalam 10 bulan ini</strong>'+
+       '<small>Grafik akan terbentuk dari transaksi stok yang benar-benar tercatat di backend.</small></div>';
+    var peak=Math.max.apply(null,actual.map(function(x){return x.value}).concat([0]));
+    var total=actual.reduce(function(sum,x){return sum+x.value},0);
+    var base=Math.pow(10,Math.floor(Math.log10(Math.max(1,peak)/4)));
+    var tick=Math.max(1,Math.ceil((peak/4)/base)*base);
+    var top=Math.max(4,4*tick);
+    var steps=[4,3,2,1,0].map(function(n){
+      return '<span style="bottom:'+(n*25)+'%">'+esc(fmt(n*tick))+'</span>';
+    }).join('');
+    var bars=months.map(function(x,i){
+      var pct=x.hasData&&x.value>0?100*x.value/top:0;
+      var highlight=x.key===S.period+'-01';
+      var number=x.hasData?fmt(x.value):'—';
+      var label=x.month+(x.month==='Jan'||i===0?' '+String(x.year).slice(-2):'');
+      return '<div class="sc9-month'+(highlight?' sc9-month-current':'')+
+        (!x.hasData?' sc9-month-missing':'')+'" title="'+esc(
+          x.month+' '+x.year+': '+(x.hasData?fmt(x.value)+' aktivitas ledger':'belum ada catatan aktivitas')
+        )+'">'+
+        '<div class="sc9-bar-stage"><span class="sc9-bar-shell">'+
+          '<i class="sc9-bar" style="height:'+pct.toFixed(2)+'%">'+
+            '<b class="sc9-count">'+esc(number)+'</b></i></span></div>'+
+        '<span class="sc9-month-label">'+esc(label)+'</span></div>';
+    }).join('');
+    return '<div class="sc9-trend" role="group" aria-label="Grafik jumlah aktivitas ledger stok selama 10 bulan">'+
+      '<div class="sc9-trend-summary"><span>Aktivitas ledger · 10 bulan</span>'+
+        '<strong>'+esc(fmt(total))+' <small>event tercatat</small></strong></div>'+
+      '<div class="sc9-chart">'+
+        '<div class="sc9-y-labels" aria-hidden="true">'+steps+'</div>'+
+        '<div class="sc9-plot">'+
+          '<div class="sc9-guide-lines" aria-hidden="true">'+[0,25,50,75,100].map(function(p){
+            return '<i style="bottom:'+p+'%"></i>';
+          }).join('')+'</div>'+
+          '<div class="sc9-bars">'+bars+'</div>'+
+        '</div>'+
+      '</div>'+
+      '<p class="sc5-caption sc9-caption">Jumlah event pada ledger (bukan nilai stok atau total unit). Tanda — = belum ada catatan pada bulan tersebut.</p>'+
+    '</div>';
   }
   function attentionSkuInfographic(){
     if(!S.baseLoaded)return '<div class="sc5-empty">Memuat prioritas item…</div>';
