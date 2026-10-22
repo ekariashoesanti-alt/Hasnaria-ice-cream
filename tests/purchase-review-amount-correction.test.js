@@ -119,6 +119,10 @@ function send(name,e){for(let f of handlers[name]||[])f(e)}
  assert.equal(writes[0].args.p_changes[1].corrected_amount,10800);
  assert.equal(writes[0].args.p_changes[1].corrected_payment_method,'TRANSFER');
  assert.match(appended.innerHTML,/Menunggu verifikasi Finance/);
- assert.match(appended.innerHTML,/Terkirim/);
+ assert.match(appended.innerHTML,/Berhasil! 2 transaksi telah diajukan/);
+ assert.match(appended.innerHTML,/Semua 2 transaksi sudah diajukan/);
+ assert.match(appended.innerHTML,/0 perlu koreksi/);
+ assert.match(appended.innerHTML,/data-hsn-rv-success/);
+ assert.doesNotMatch(appended.innerHTML,/<strong>ODENG<\\/strong>/);
  console.log('Purchase Review modal: compact header, amount+payment/payment-only staged and submitted safely PASS');
 })().catch(e=>{console.error(e);process.exitCode=1});
