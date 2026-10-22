@@ -305,10 +305,11 @@ function paymentClass(r){
  if(k==='TUNAI'||k==='CASH'||k==='KAS'||k==='CASH ON HAND')return'Tunai';
  if(k==='TRANSFER'||k==='BANK'||k==='TRANSFER BANK'||k==='BANK TRANSFER')return'Transfer';
  if(k==='PAYLATER'||k==='PAY LATER'||k==='UTANG'||k==='HUTANG'||k==='KREDIT')return'Paylater';
+ if(k==='PINJAMAN USAHA LAIN'||k==='PINJAMAN JAS HUJAN')return'Pinjaman Usaha Lain';
  return'Belum Dipetakan';
 }
 function paymentParts(list){
- var labels=['Tunai','Transfer','Paylater','Belum Dipetakan'],totals={},positive=0,corrections=0;
+ var labels=['Tunai','Transfer','Paylater','Belum Dipetakan','Pinjaman Usaha Lain'],totals={},positive=0,corrections=0;
  labels.forEach(function(k){totals[k]=0});
  (Array.isArray(list)?list:[]).forEach(function(r){
   var v=n(r.total_amount);
@@ -320,8 +321,8 @@ function paymentParts(list){
 function monthlyPaymentMarkup(){
  var slots=trendMonths(periodValue());
  if(!slots.length)return'<div class="pfa-empty">Pilih periode untuk melihat komposisi pembayaran.</div>';
- var labels=['Tunai','Transfer','Paylater','Belum Dipetakan'];
- var colors=['pfa-pie-color-0','pfa-pie-color-1','pfa-pie-color-2','pfa-pie-color-3'];
+ var labels=['Tunai','Transfer','Paylater','Belum Dipetakan','Pinjaman Usaha Lain'];
+ var colors=['pfa-pie-color-0','pfa-pie-color-1','pfa-pie-color-2','pfa-pie-color-3','pfa-pie-color-4'];
  var legend='<div class="pfa-payment-legend" aria-label="Legenda pembayaran">'+labels.map(function(k,i){
   return'<span><i class="'+colors[i]+'"></i>'+esc(k)+'</span>';
  }).join('')+'</div>';
