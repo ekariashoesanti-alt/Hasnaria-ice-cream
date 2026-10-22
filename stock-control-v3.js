@@ -208,7 +208,7 @@
     var l = document.createElement('link');
     l.id = 'stock-control-v3-css';
     l.rel = 'stylesheet';
-    l.href = '/stock-control-v3.css?v=8';
+    l.href = '/stock-control-v3.css?v=9';
     document.head.appendChild(l);
   }
 
@@ -1067,19 +1067,43 @@
       '</div>';
   }
 
+  function stockKpiIcon(kind){
+    var paths={
+      package:'<path d="m12 3 8 4.5v9L12 21 4 16.5v-9L12 3Z"/><path d="M12 12 4 7.5M12 12l8-4.5M12 12v9"/>',
+      value:'<ellipse cx="12" cy="5.5" rx="7" ry="3"/><path d="M5 5.5v6c0 1.7 3.1 3 7 3s7-1.3 7-3v-6"/><path d="M5 11.5v6c0 1.7 3.1 3 7 3s7-1.3 7-3v-6"/>',
+      warning:'<path d="M10.3 3.7a2 2 0 0 1 3.4 0l8.1 14.4a2 2 0 0 1-1.7 3H3.9a2 2 0 0 1-1.7-3l8.1-14.4Z"/><path d="M12 9v5"/><path d="M12 17.5h.01"/>',
+      opname:'<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4.5A2.5 2.5 0 0 1 11.5 2h1A2.5 2.5 0 0 1 15 4.5V6H9V4.5Z"/><path d="M9 11h6M9 15h6"/>'
+    };
+    return '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+(paths[kind]||paths.package)+'</svg>';
+  }
   function overviewKpis() {
-    var items=S.items||[],pending=!S.baseLoaded&&S.baseLoading;
+    var items=S.items||[],loading=!S.baseLoaded;
     var need=items.filter(function(x){return x.ui_status==='critical'||x.ui_status==='order'}).length;
     var untracked=items.filter(function(x){return x.ui_status==='untracked'}).length;
-    var v=S.valuation;
-    var coverage=v&&items.length?num(v.valued_items)/items.length*100:0;
-    function numlabel(x){return pending?'…':fmt(x)}
-    return '<div class="sc5-kpis sc6-kpis">'+
-      '<article class="sc5-kpi"><span class="sc5-kpi-icon">▣</span><div><span>Total Item (SKU)</span><strong>'+numlabel(items.length)+'</strong><small>Master SKU dari backend</small></div></article>'+
-      '<article class="sc5-kpi"><span class="sc5-kpi-icon">◉</span><div><span>Nilai Stok Terverifikasi</span><strong>'+(S.valuationLoading?'…':!S.valuationLoaded?'—':esc(stockMoney(v.inventory_value,true)))+'</strong><small>'+ (S.valuationLoaded?('Baru '+fmt(v.valued_items)+'/'+fmt(v.inventory_items)+' SKU ('+coverage.toLocaleString('id-ID',{maximumFractionDigits:1})+'%); parsial'):'Menunggu data harga pokok terverifikasi')+'</small></div></article>'+
-      '<article class="sc5-kpi sc5-kpi-urgent"><span class="sc5-kpi-icon">△</span><div><span>Item Stok Rendah</span><strong>'+numlabel(need)+'</strong><small>Kritis dan di bawah minimum</small></div></article>'+
-      '<article class="sc5-kpi"><span class="sc5-kpi-icon">◯</span><div><span>Belum Opname Awal</span><strong>'+numlabel(untracked)+'</strong><small>Belum memiliki checkpoint aktif</small></div></article>'+
-    '</div>';
+    var v=S.valuation,valuationReady=!!(S.valuationLoaded&&v);
+    var coverage=valuationReady&&items.length?num(v.valued_items)/items.length*100:0;
+    function quantity(n){return loading?'…':fmt(n)}
+    var cards=[
+      {kind:'package',label:'Total Item (SKU)',value:quantity(items.length),
+       note:loading?'Memuat master stok…':'Item terdaftar di backend'},
+      {kind:'value',label:'Nilai Stok Terverifikasi',
+       value:S.valuationLoading?'…':!valuationReady?'—':stockMoney(v.inventory_value,true),
+       note:valuationReady?('Parsial · '+fmt(v.valued_items)+' dari '+fmt(v.inventory_items)+' SKU ('+
+         coverage.toLocaleString('id-ID',{maximumFractionDigits:1})+'%)'):
+         (S.valuationError?'Data valuasi belum tersedia':'Menunggu biaya terverifikasi'),
+       partial:valuationReady&&num(v.valued_items)<num(v.inventory_items)},
+      {kind:'warning',label:'Item Stok Rendah',value:quantity(need),
+       note:loading?'Memuat status stok…':'Kritis atau di bawah minimum'},
+      {kind:'opname',label:'Belum Opname Awal',value:quantity(untracked),
+       note:loading?'Memuat status opname…':'Belum ada checkpoint awal'}
+    ];
+    return '<div class="sc5-kpis sc6-kpis sc8-kpis" aria-label="Ringkasan empat KPI stok">'+cards.map(function(c){
+      return '<article class="sc5-kpi sc8-kpi sc8-kpi-'+c.kind+'">'+
+        '<span class="sc5-kpi-icon sc8-kpi-icon">'+stockKpiIcon(c.kind)+'</span>'+
+        '<div class="sc8-kpi-copy"><span class="sc8-kpi-label">'+esc(c.label)+'</span>'+
+        '<strong class="sc8-kpi-value">'+esc(c.value)+'</strong>'+
+        '<small class="sc8-kpi-note">'+esc(c.note)+'</small></div></article>';
+    }).join('')+'</div>';
   }
 
   function activityName(type) {

@@ -7,7 +7,7 @@ const css=fs.readFileSync('stock-readable-density.css','utf8');
 
 assert(!shim.includes('stock-recall-v4.js'),'owner shim must not load legacy Stock recall v4');
 assert(shim.includes('stock-v3-runtime-fix.js'),'owner shim must load the canonical Stock v3 bridge');
-assert(bridge.includes("/stock-control-v3.js?v=14"),'canonical bridge must load Stock Control v3');
+assert(bridge.includes("/stock-control-v3.js?v=15"),'canonical bridge must load Stock Control v3');
 assert(bridge.includes("setAttribute('data-stock-v4','1')"),'canonical shell must satisfy the existing owner guard marker');
 assert(css.includes('#stok .sc3-table{width:100%;min-width:0;table-layout:fixed;font-size:8.3px}'),'desktop Stock table must keep the readable fixed-width density override');
 assert(!css.includes('font-size:5.4px'),'readable override must not regress to the previous ultra-small status text');
@@ -43,6 +43,14 @@ assert(ui4.includes('/stock-control-v3.css?v=8'),'Stage-1 CSS cache version must
 assert(greenCss.includes('.sc7-head') && greenCss.includes('min-height:64px!important'),'Stock header spacing is compact');
 assert(greenCss.includes('background:#fff!important') && greenCss.includes('sc6-grid'),'White toolbar must be isolated from green sidebar');
 assert(greenCss.includes('.sc6-main-column')&&greenCss.includes('.sc6-side-column'),'Both two-row Stock grid columns remain available');
+assert(ui4.includes('sc8-kpis')&&ui4.includes('stockKpiIcon('),'Stage-2 KPI cards must have crisp icons');
+assert(ui4.includes('sc8-kpi-label')&&ui4.includes('sc8-kpi-value')&&ui4.includes('sc8-kpi-note'),'Every KPI has clear label, value and note');
+assert(ui4.includes('Parsial · '),'Cost coverage is still disclosed clearly');
+assert(ui4.includes('Menunggu biaya terverifikasi'),'Cost error/empty state is not an invented value');
+assert(!ui4.includes('Rp 18,73 jt')&&!ui4.includes('4.321'),'No demo values in real KPI');
+assert(ui4.includes('/stock-control-v3.css?v=9'),'Fresh Stage-2 CSS must load');
+assert(greenCss.includes('.sc8-kpis')&&greenCss.includes('.sc8-kpi-icon')&&greenCss.includes('.sc8-kpi-value'),'Modern green stock cards are scoped');
+assert(greenCss.includes('max-height:88px!important')&&greenCss.includes('grid-template-columns:repeat(2,minmax(0,1fr))'),'One-view equal-height desktop and responsive mobile KPI cards');
 
 
 
