@@ -17,7 +17,7 @@ assert.doesNotMatch(schemaV2,/\bUPDATE public\.offline_purchase_history\b|\bTRUN
 assert.match(css,/\.hsn-rv-chip/);
 assert.match(css,/select\[data-hsn-rv-payment\]/);
 
-assert.match(preload,/purchase-review-amount-v1\.js\?v=2/);
+assert.match(preload,/purchase-review-amount-v1\.js\?v=3/);
 assert.match(css,/#hasnaria-review-correction-root/);
 assert.match(css,/\.hsn-rv-scroll/);
 assert.match(schema,/private\.owner_stock_review_assert_v1\(\)/);
