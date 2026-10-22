@@ -72,7 +72,7 @@ for (const task of data.tasks) {
   }
 }
 
-assert(appSource.includes("var OWNER_SHELL = '/owner-shell-guard.js?v=10';"), 'owner navigation guard cache version is current');
+assert(appSource.includes("var OWNER_SHELL = '/owner-shell-guard.js?v=11';"), 'owner navigation guard cache version is current');
 assert(!appSource.includes("load('/xlsx-preload.js?v=6');"), 'Purchase/XLSX must not load unconditionally at startup');
 assert(appSource.includes('window.__HASNARIA_LOAD_PURCHASE=ensurePurchaseRuntime'), 'Purchase runtime must be exposed as a lazy loader');
 assert(appSource.includes('window.__HASNARIA_LOAD_STOCK=ensureStockRuntime'), 'Stock runtime must be exposed as a lazy loader');

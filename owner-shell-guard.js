@@ -11,7 +11,7 @@
      deliberately NOT loaded because it used to take ownership of every tab. */
   var EXEC_SRC='/owner-executive-v1.js?v=1';
   var DASH_SRC='/owner-dashboard-one-view.js?v=8';
-  var OWNER_TABS=['dashboard','sales','pembelian','operasional','administrasi','ops','stok','notifikasi'];
+  var OWNER_TABS=['dashboard','sales','pembelian','stok','operasional','administrasi','ops','notifikasi'];
   var SECTION_IDS=['dashboard','sales','pembelian','operasional','administrasi','ops','stok','notifikasi','shift','social','approval','team','sistem','karyawan'];
   var state={active:'dashboard',initialized:false,scheduled:false,salesRetries:0,finStockLoad:null,operationalLoad:null,adminLoad:null,dashboardLoad:null,notificationsLoad:null};
   var tries=0;
@@ -48,6 +48,14 @@
     if(b){b.textContent='Operasional';b.setAttribute('aria-label','Operasional');b.style.display=''}
     var ab=tabs&&tabs.querySelector('.tab[data-tab="administrasi"]');if(tabs&&!ab){ab=document.createElement('button');ab.type='button';ab.className='tab';ab.setAttribute('data-tab','administrasi');ab.textContent='Administrasi';ab.setAttribute('aria-label','Administrasi');var finance3=tabs.querySelector('.tab[data-tab="ops"]');tabs.insertBefore(ab,finance3||null)}
     if(ab){ab.textContent='Administrasi';ab.setAttribute('aria-label','Administrasi');ab.style.display=''}
+    // Visual order only: keep Stok directly after Pembelian, independent of
+    // section mounting, role permissions, Finance, and active-tab state.
+    // Guard is essential because this runs under a childList MutationObserver.
+    var purchaseNav=tabs&&tabs.querySelector('.tab[data-tab="pembelian"]');
+    var stockNav=tabs&&tabs.querySelector('.tab[data-tab="stok"]');
+    if(purchaseNav&&stockNav&&purchaseNav.nextElementSibling!==stockNav){
+      tabs.insertBefore(stockNav,purchaseNav.nextElementSibling);
+    }
     var labels={dashboard:'Ringkasan CEO',sales:'Penjualan',pembelian:'Pembelian',operasional:'Operasional',administrasi:'Administrasi',ops:'Keuangan',stok:'Stok',notifikasi:'Notifikasi'};
     Object.keys(labels).forEach(function(id){var x=tabs&&tabs.querySelector('.tab[data-tab="'+id+'"]');if(x){if(x.textContent!==labels[id])x.textContent=labels[id];if(x.style.display!=='')x.style.display=''}});
     return h;
