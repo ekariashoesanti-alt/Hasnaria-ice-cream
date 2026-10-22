@@ -17,7 +17,7 @@ assert.doesNotMatch(schemaV2,/\bUPDATE public\.offline_purchase_history\b|\bTRUN
 assert.match(css,/\.hsn-rv-chip/);
 assert.match(css,/select\[data-hsn-rv-payment\]/);
 
-assert.match(preload,/purchase-review-amount-v1\.js\?v=3/);
+assert.match(preload,/purchase-review-amount-v1\.js\?v=4/);
 assert.match(css,/#hasnaria-review-correction-root/);
 assert.match(css,/\.hsn-rv-scroll/);
 assert.match(schema,/private\.owner_stock_review_assert_v1\(\)/);
@@ -122,9 +122,9 @@ function send(name,e){for(let f of handlers[name]||[])f(e)}
  assert.equal(writes[0].args.p_changes[1].current_amount,10800);
  assert.equal(writes[0].args.p_changes[1].corrected_amount,10800);
  assert.equal(writes[0].args.p_changes[1].corrected_payment_method,'TRANSFER');
- assert.match(appended.innerHTML,/Menunggu verifikasi Finance/);
- assert.match(appended.innerHTML,/Berhasil! 2 transaksi telah diajukan/);
- assert.match(appended.innerHTML,/Semua 2 transaksi sudah diajukan/);
+ assert.match(appended.innerHTML,/belum diproses/);
+ assert.match(appended.innerHTML,/Pengajuan tersimpan: 2 transaksi/);
+ assert.match(appended.innerHTML,/Semua transaksi sudah diajukan/);
  assert.match(appended.innerHTML,/0 perlu koreksi/);
  assert.match(appended.innerHTML,/data-hsn-rv-success/);
  assert.doesNotMatch(appended.innerHTML,new RegExp('<strong>ODENG</strong>'));
@@ -135,7 +135,7 @@ function send(name,e){for(let f of handlers[name]||[])f(e)}
  const close=target('close'); send('click',{target:close});
  send('click',{target:target('card'),preventDefault(){}});
  await new Promise(resolve=>setImmediate(resolve));
- assert.match(appended.innerHTML,/Semua 2 transaksi sudah diajukan/);
+ assert.match(appended.innerHTML,/Semua transaksi sudah diajukan/);
  assert.equal(calls.filter(x=>x.name==='submit_purchase_review_corrections_v2').length,1);
  console.log('Purchase Review submission UX and reopen persisted queue PASS');
 })().catch(e=>{console.error(e);process.exitCode=1});
