@@ -44,6 +44,7 @@
     period: '',
     overview: null,
     activity: [],
+    trend: [],
     periodLoading: false,
     periodError: '',
     modal: '',
@@ -201,7 +202,7 @@
     var l = document.createElement('link');
     l.id = 'stock-control-v3-css';
     l.rel = 'stylesheet';
-    l.href = '/stock-control-v3.css?v=5';
+    l.href = '/stock-control-v3.css?v=6';
     document.head.appendChild(l);
   }
 
@@ -540,24 +541,32 @@
         await loadPendingUploads(seq);
         S.overview = null;
         S.activity = [];
+        S.trend = [];
         return;
       }
       var month = S.period + '-01';
       var oq = qs({ brand_id: 'eq.' + BRAND, period_month: 'eq.' + month, select: '*', limit: '1' });
       var aq = qs({ brand_id: 'eq.' + BRAND, period_month: 'eq.' + month, select: 'movement_type,movement_rows,sku_count', order: 'movement_rows.desc' });
+      var y=Number(S.period.slice(0,4)),m=Number(S.period.slice(5,7))-1;
+      var fromMonth=new Date(Date.UTC(y,m-9,1)).toISOString().slice(0,10);
+      var tq=qs({brand_id:'eq.'+BRAND,period_month:'gte.'+fromMonth,
+        select:'period_month,movement_rows',order:'period_month.desc',limit:'100'});
       var pair = await Promise.all([
         request('ui_stock_overview_v1?' + oq),
         request('ui_stock_activity_chart_v1?' + aq),
-        loadPendingUploads(seq)
+        loadPendingUploads(seq),
+        request('ui_stock_activity_chart_v1?' + tq).catch(function(){return []})
       ]);
       if (seq !== S.periodSeq) return;
       S.overview = pair[0] && pair[0][0] ? pair[0][0] : null;
       S.activity = pair[1] || [];
+      S.trend = (pair[3]||[]).filter(function(x){return x.period_month && x.period_month<=month});
     } catch (e) {
       if (seq !== S.periodSeq) return;
       S.periodError = e && e.message ? e.message : String(e);
       S.overview = null;
       S.activity = [];
+      S.trend = [];
     } finally {
       if (seq === S.periodSeq) {
         S.periodLoading = false;
@@ -843,12 +852,18 @@
   }
 
   function renderHeader() {
-    var options = (S.periods || []).map(function (x) {
-      var k = monthKey(x.period_start || x.period_key);
-      return '<option value="' + esc(k) + '"' + (k === S.period ? ' selected' : '') + '>' + esc(monthLabel(k)) + '</option>';
+    var options=(S.periods||[]).map(function(x){
+      var k=monthKey(x.period_start||x.period_key);
+      return '<option value="'+esc(k)+'"'+(k===S.period?' selected':'')+'>'+esc(monthLabel(k))+'</option>';
     }).join('');
-    return '<div class="sc3-head"><div><div class="sc3-eyebrow">STOK · ' + esc(cutLabel()) + '</div><h2>Stok &amp; Pergerakan Material</h2><p>Ringkasan periode menampilkan jumlah SKU dan aktivitas. Quantity antar satuan tidak dijumlahkan menjadi satu angka.</p></div>' +
-      '<div class="sc4-head-tools"><label><span>Bulan</span><select id="sc4Period" data-month-filter="stok">' + options + '</select></label><div class="sc3-actions"><button type="button" class="sc3-btn" data-sc4-action="upload-opname">Upload Opname →</button><button type="button" class="sc3-btn" data-sc4-action="upload-purchase">Upload Pembelian →</button><button type="button" class="sc3-btn" data-sc3-action="refresh">↻ Refresh</button></div></div></div>';
+    return '<header class="sc5-head"><div class="sc5-head-copy"><span class="sc5-eyebrow">STOCK INTELLIGENCE</span>'+
+      '<h2>Dashboard Stok</h2><p>Ringkasan persediaan, kondisi opname, dan pergerakan berdasarkan backend Hasnaria.</p></div>'+
+      '<div class="sc5-head-right"><div class="sc5-head-buttons">'+
+      (isOwner()?'<button type="button" class="sc5-primary" data-sc4-action="upload-opname">⇧ Upload Excel Stok</button>':'')+
+      '<button type="button" class="sc5-secondary" data-sc4-modal="position">▣ Lihat Detail Stok</button></div>'+
+      '<div class="sc5-head-filters"><label><span>Periode</span><select id="sc4Period" data-month-filter="stok">'+options+'</select></label>'+
+      (isOwner()?'<button type="button" class="sc5-text-btn" data-sc4-action="upload-purchase">Upload Pembelian</button>':'')+
+      '<button type="button" class="sc5-refresh" data-sc3-action="refresh" aria-label="Refresh data Stok">↻</button></div></div></header>';
   }
 
   function renderFormula() {
@@ -948,14 +963,16 @@
   }
 
   function overviewKpis() {
-    var v = S.overview || {};
-    var pending = S.periodLoading && !S.overview;
-    function val(x) { return pending ? '…' : fmt(num(x)); }
-    return '<div class="sc3-kpis sc4-kpis">' +
-      '<div class="sc3-kpi"><span>SKU Tercatat</span><strong>' + val(v.sku_count) + '</strong><small>SKU pada posisi akhir periode</small></div>' +
-      '<div class="sc3-kpi"><span>Saldo Positif</span><strong>' + val(v.positive_skus) + '</strong><small>SKU dengan closing &gt; 0</small></div>' +
-      '<div class="sc3-kpi sc3-kpi-muted"><span>Saldo Nol</span><strong>' + val(v.zero_skus) + '</strong><small>SKU closing = 0</small></div>' +
-      '<div class="sc3-kpi sc4-history"><span>Historical discrepancy</span><strong>' + val(v.negative_skus) + '</strong><small>saldo negatif historis · informasional</small></div>' +
+    var items=S.items||[],pending=!S.baseLoaded&&S.baseLoading;
+    var tracked=items.filter(function(x){return !!x.tracking_active}).length;
+    var need=items.filter(function(x){return x.ui_status==='critical'||x.ui_status==='order'}).length;
+    var untracked=items.filter(function(x){return x.ui_status==='untracked'}).length;
+    function v(n){return pending?'…':fmt(n)}
+    return '<div class="sc5-kpis">'+
+      '<article class="sc5-kpi"><span class="sc5-kpi-icon">▣</span><div><span>Total Item (SKU)</span><strong>'+v(items.length)+'</strong><small>Master SKU terdaftar di backend</small></div></article>'+
+      '<article class="sc5-kpi"><span class="sc5-kpi-icon">◎</span><div><span>Sudah Opname</span><strong>'+v(tracked)+'</strong><small>SKU dengan tracking aktif</small></div></article>'+
+      '<article class="sc5-kpi sc5-kpi-urgent"><span class="sc5-kpi-icon">△</span><div><span>Perlu Tindakan</span><strong>'+v(need)+'</strong><small>Kritis dan perlu dibeli</small></div></article>'+
+      '<article class="sc5-kpi"><span class="sc5-kpi-icon">◯</span><div><span>Belum Opname Awal</span><strong>'+v(untracked)+'</strong><small>Belum ada posisi yang terverifikasi</small></div></article>'+
     '</div>';
   }
 
@@ -1074,6 +1091,96 @@
     return'<div class="sc4-anomaly">'+items.map(function(z){return'<div><b>'+esc(z[0])+'</b><span>'+esc(z[1])+'</span></div>'}).join('')+
        (isOwner()?'<button type="button" class="sc4-btn-small" data-sc4-notifications>Periksa di Notifikasi →</button>':'')+'</div>';
   }
+
+  var SC5_COLORS=['#09563f','#187957','#35a374','#5abd91','#83ca72','#b4dfab'];
+  function sc5Donut(parts,center,label) {
+    var total=parts.reduce(function(a,x){return a+x.value},0);
+    if(!total)return '<div class="sc5-empty">Belum ada data yang dapat ditampilkan.</div>';
+    var pos=0,stops=[];
+    parts.forEach(function(x,i){if(!x.value)return;var next=pos+x.value/total*100;
+      stops.push(SC5_COLORS[i%SC5_COLORS.length]+' '+pos.toFixed(3)+'% '+next.toFixed(3)+'%');pos=next});
+    return '<div class="sc5-donut-row"><div class="sc5-donut" style="background:conic-gradient('+stops.join(',')+')">'+
+      '<div class="sc5-donut-hole"><strong>'+fmt(center)+'</strong><small>'+esc(label)+'</small></div></div>'+
+      '<div class="sc5-donut-legend">'+parts.filter(function(x){return x.value>0}).map(function(x){
+        var i=parts.indexOf(x);
+        return '<div><span class="sc5-legend-name"><i style="background:'+SC5_COLORS[i%SC5_COLORS.length]+'"></i>'+esc(x.label)+'</span><b>'+fmt(x.value)+' <small>'+Math.round(100*x.value/total)+'%</small></b></div>';
+      }).join('')+'</div></div>';
+  }
+  function categoryInfographic(){
+    if(!S.baseLoaded)return '<div class="sc5-empty">Memuat kategori SKU dari backend…</div>';
+    var dict={};S.items.forEach(function(x){var k=String(x.category||'Lainnya').trim().toUpperCase();dict[k]=(dict[k]||0)+1});
+    var parts=Object.keys(dict).map(function(k){return {label:k,value:dict[k]}}).sort(function(a,b){return b.value-a.value});
+    return sc5Donut(parts,S.items.length,'SKU master')+
+      '<p class="sc5-caption">Komposisi jumlah SKU, bukan nilai rupiah atau total unit berbeda satuan.</p>';
+  }
+  function monthlyTrendInfographic(){
+    if(S.periodLoading&&!S.trend.length)return '<div class="sc5-empty">Memuat tren aktivitas backend…</div>';
+    if(!S.period)return '<div class="sc5-empty">Pilih periode yang tersedia.</div>';
+    var y=Number(S.period.slice(0,4)),m=Number(S.period.slice(5,7))-1,dict={};
+    (S.trend||[]).forEach(function(x){dict[x.period_month]=(dict[x.period_month]||0)+num(x.movement_rows)});
+    var labels=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+    var months=[];for(var i=9;i>=0;i--){var d=new Date(Date.UTC(y,m-i,1)),key=d.toISOString().slice(0,10);months.push({key:key,month:labels[d.getUTCMonth()],value:dict[key]||0})}
+    var max=Math.max.apply(null,months.map(function(x){return x.value}).concat([1]));
+    return '<div class="sc5-trend"><div class="sc5-trend-plots">'+months.map(function(x){
+      var pct=x.value?Math.max(5,x.value/max*100):0;
+      return '<div class="sc5-trend-col" title="'+esc(x.month+': '+fmt(x.value)+' movement')+'"><span>'+ (x.value?fmt(x.value):'–') +'</span>'+
+        '<div class="sc5-trend-track"><i style="height:'+pct.toFixed(2)+'%"></i></div>'+
+        '<small>'+esc(x.month)+'</small></div>';
+    }).join('')+'</div></div><p class="sc5-caption">Jumlah event ledger per bulan, bukan nilai stok atau penjumlahan unit beda satuan.</p>';
+  }
+  function attentionSkuInfographic(){
+    if(!S.baseLoaded)return '<div class="sc5-empty">Memuat prioritas item…</div>';
+    var rank={critical:0,order:1};
+    var items=S.items.filter(function(x){return Object.prototype.hasOwnProperty.call(rank,x.ui_status)})
+      .sort(function(a,b){return rank[a.ui_status]-rank[b.ui_status]||
+        num(a.system_qty)-num(b.system_qty)}).slice(0,5);
+    if(!items.length)return '<div class="sc5-empty">Tidak ada SKU kritis atau perlu beli.</div>';
+    return '<div class="sc5-top-list">'+items.map(function(x,i){
+      var label=x.ui_status==='critical'?'Kritis':'Perlu beli';
+      return '<div class="sc5-top-row"><span class="sc5-top-name">'+(i+1)+'. '+esc(x.item_name||'SKU')+'</span>'+
+        '<b>'+esc(fmt(x.system_qty))+' '+esc(x.unit||'unit')+'</b>'+
+        '<small>'+label+' · '+esc(x.category||'Lainnya')+'</small>'+
+        '<div class="sc5-top-track"><i style="width:'+(x.ui_status==='critical'?95:68)+'%"></i></div></div>';
+    }).join('')+'</div><p class="sc5-caption">Prioritas berdasarkan status backend; tanpa estimasi nilai stok.</p>';
+  }
+  function healthInfographic(){
+    if(!S.baseLoaded)return '<div class="sc5-empty">Memuat status stok…</div>';
+    var c={ok:0,critical:0,order:0,incoming:0,untracked:0};
+    S.items.forEach(function(x){c[x.ui_status]=(c[x.ui_status]||0)+1});
+    return '<div class="sc5-status-grid">'+
+      '<div class="sc5-status-tile sc5-status-ok"><span>Normal / Aman</span><strong>'+fmt(c.ok)+'</strong><small>SKU tercatat aman</small></div>'+
+      '<div class="sc5-status-tile sc5-status-critical"><span>Kritis / Habis</span><strong>'+fmt(c.critical)+'</strong><small>Perlu penanganan</small></div>'+
+      '<div class="sc5-status-tile sc5-status-order"><span>Perlu Beli</span><strong>'+fmt(c.order)+'</strong><small>Di bawah minimum</small></div>'+
+      '<div class="sc5-status-tile sc5-status-untracked"><span>Belum Opname</span><strong>'+fmt(c.untracked)+'</strong><small>Belum terverifikasi</small></div>'+
+      (c.incoming?'<div class="sc5-status-tile"><span>Dalam Pesanan</span><strong>'+fmt(c.incoming)+'</strong></div>':'')+'</div>';
+  }
+  function periodCompositionInfographic(){
+    var v=S.overview||{},parts=[
+      {label:'Saldo positif',value:Math.max(0,num(v.positive_skus))},
+      {label:'Saldo nol',value:Math.max(0,num(v.zero_skus))},
+      {label:'Negatif historis',value:Math.max(0,num(v.negative_skus))}
+    ];
+    if(S.periodLoading&&!S.overview)return '<div class="sc5-empty">Memuat posisi periode…</div>';
+    var total=parts.reduce(function(a,x){return a+x.value},0);
+    return sc5Donut(parts,total,'SKU pada periode')+
+      '<p class="sc5-caption">Posisi dari laporan historis '+esc(monthLabel(S.period))+'. Jangan disamakan dengan jumlah SKU master.</p>';
+  }
+  function opnameControlInfographic(){
+    if(!S.baseLoaded)return '<div class="sc5-empty">Memuat status opname…</div>';
+    var dates=S.items.map(function(x){return x.last_opname_date}).filter(Boolean).sort();
+    var latest=dates.length?dateLabel(dates[dates.length-1]):'Belum ada';
+    var tracked=S.items.filter(function(x){return !!x.tracking_active}).length;
+    var diff=S.ledgerAudit||{};
+    var audit=diff.state==='unavailable'?'Belum dapat diperiksa':
+      diff.state==='loading'?'Memuat…':fmt(diff.count)+' SKU';
+    return '<div class="sc5-control-list">'+
+      '<div><span>Opname terakhir</span><strong>'+esc(latest)+'</strong></div>'+
+      '<div><span>SKU aktif dengan checkpoint</span><strong>'+fmt(tracked)+' / '+fmt(S.items.length)+'</strong></div>'+
+      '<div><span>Selisih rekonsiliasi vs ledger</span><strong>'+esc(audit)+'</strong></div>'+
+      '<div><span>Opname dalam periode</span><strong>'+fmt((S.overview||{}).opname_rows||0)+' baris</strong></div>'+
+      '</div><p class="sc5-caption">Data kedaluwarsa dan valuasi belum ditampilkan tanpa sumber terverifikasi.</p>';
+  }
+
   function render() {
     var host = document.getElementById('stok');
     if (!host) return;
@@ -1089,13 +1196,23 @@
     var pAlert = S.periodError ? '<div class="sc3-alert">' + esc(S.periodError) + '</div>' : '';
     var loading = S.baseLoading && !S.baseLoaded ? '<div class="sc3-loading">Memuat posisi SKU terkini…</div>' : '';
     shell.innerHTML = renderHeader() + renderCorrectionPanel() + renderLedgerAudit() + renderUploadStatus() + pAlert + overviewKpis() + alert + loading +
-      '<div class="sc4-infographic-main"><article class="sc4-panel"><div class="sc4-panel-head"><div><h3>Tren Aktivitas Stok</h3><p>Jumlah movement per jenis dalam periode; bukan quantity gabungan.</p></div></div>' + renderActivity() + '</article>'+
-      '<div class="sc4-side-stack"><article class="sc4-panel"><div class="sc4-panel-head"><div><h3>Komposisi Posisi Stok</h3><p>Distribusi SKU menurut saldo akhir periode.</p></div></div>' + compositionInfographic() + '</article>'+
-      '<article class="sc4-panel"><div class="sc4-panel-head"><div><h3>Kontrol Periode</h3><p>' + esc(cutLabel()) + '</p></div></div>' + renderPeriodControl() + '<div class="sc4-info">Saldo negatif historis hanya informasional. Periksa transaksi setelah cutoff opname untuk error aktif.</div></article></div></div>'+
-      '<div class="sc4-infographic-bottom"><article class="sc4-panel"><div class="sc4-panel-head"><div><h3>Top SKU Movement</h3><p>5 SKU teratas menurut jumlah movement; ledger dimuat bila diperlukan.</p></div></div>' + topSkuInfographic() + '</article>'+
-      '<article class="sc4-panel"><div class="sc4-panel-head"><div><h3>Anomali &amp; Tindak Lanjut</h3><p>Temuan yang memerlukan review dan opname.</p></div></div>' + anomalyInfographic() + '</article></div>'+
-      '<div class="sc4-actions-row"><div><b>Detail dipisahkan dari halaman utama</b><span>Pilih posisi SKU terkini atau ledger periode saat dibutuhkan.</span></div><div><button type="button" data-sc4-modal="position">Lihat Detail SKU</button><button type="button" data-sc4-modal="ledger">Lihat Ledger Periode</button>' + (isOwner() ? '<button type="button" class="primary" data-sc4-action="opname">Input Opname</button>' : '') + '</div></div>' +
-      renderModal();
+      '<div class="sc5-dashboard" aria-label="Infografis Stok Hasnaria">'+
+        '<div class="sc5-grid-top">'+
+          '<article class="sc5-panel"><h3>▣ Komposisi SKU per Kategori</h3>'+categoryInfographic()+'</article>'+
+          '<article class="sc5-panel"><h3>↗ Tren Aktivitas Stok Bulanan</h3>'+monthlyTrendInfographic()+'</article>'+
+          '<article class="sc5-panel"><h3>▤ Top 5 SKU Prioritas</h3>'+attentionSkuInfographic()+'</article>'+
+        '</div>'+
+        '<div class="sc5-grid-bottom">'+
+          '<article class="sc5-panel"><h3>▣ Status Stok</h3>'+healthInfographic()+'</article>'+
+          '<article class="sc5-panel"><h3>◉ Komposisi Posisi Stok</h3>'+periodCompositionInfographic()+'</article>'+
+          '<article class="sc5-panel"><h3>▦ Kontrol Opname &amp; Kualitas Data</h3>'+opnameControlInfographic()+'</article>'+
+        '</div>'+
+      '</div>'+
+      '<div class="sc5-footer-actions"><span>Detail transaksi dan ledger tersedia melalui tombol berikut, tanpa tabel panjang di dashboard.</span>'+
+        '<div><button type="button" data-sc4-modal="position">Lihat Detail SKU</button>'+
+        '<button type="button" data-sc4-modal="ledger">Lihat Ledger Periode</button>'+
+        (isOwner()?'<button type="button" class="primary" data-sc4-action="opname">Input Opname</button>':'')+
+        '</div></div>'+renderModal();
     bind(host);
     host.__sc3Rendering = false;
   }
