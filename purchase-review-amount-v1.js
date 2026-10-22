@@ -47,7 +47,17 @@
    return !state.pending[String(r.source_history_id)];
   }),pendingRows=all.filter(function(r){
    return !!state.pending[String(r.source_history_id)];
+
   }),visible=state.historyOpen?pendingRows:rows;
+  var waitingRows=pendingRows.filter(function(r){return state.pending[String(r.source_history_id)].status==='pending_finance_review'});
+  var appliedRows=pendingRows.filter(function(r){return state.pending[String(r.source_history_id)].status==='applied'});
+  var readyBatch=waitingRows.length?String(state.pending[String(waitingRows[0].source_history_id)].batch_id||''):'';
+  var batchRows=waitingRows.filter(function(r){return String(state.pending[String(r.source_history_id)].batch_id||'')===readyBatch});
+  var eligible=readyBatch&&batchRows.length&&batchRows.every(function(r){
+    var x=state.pending[String(r.source_history_id)];
+    return x.proposed_payment_method==='PINJAMAN_USAHA_LAIN'&&
+      Number(x.proposed_amount)===Number(r.total_amount);
+  });
   var body=visible.map(function(r){
    var id=String(r.source_history_id),current=Number(r.total_amount||0),existing=state.pending[id];
    var locked=!!existing||state.busy,staged=state.staged[id],value=existing?existing.proposed_amount:
@@ -67,7 +77,7 @@
        ' aria-label="Jenis pembayaran '+esc(r.item_name||'transaksi')+'">'+options+'</select></td>'+
      '<td><button type="button" class="hsn-rv-save'+(staged?' staged':'')+'" '+
        'data-hsn-rv-stage="'+esc(id)+'"'+(locked?' disabled':'')+' title="Simpan baris">'+
-       (existing?'Menunggu':staged?'✓ Tersimpan':'✓')+'</button></td></tr>';
+       (existing?(existing.status==='applied'?'Selesai':'Diajukan'):staged?'✓ Tersimpan':'✓')+'</button></td></tr>';
   }).join('');
   overlay.innerHTML='<div class="hsn-rv-shade" data-hsn-rv-close="1"></div>'+
    '<section class="hsn-rv-dialog" role="dialog" aria-modal="true" aria-labelledby="hsnRvTitle">'+
@@ -75,19 +85,21 @@
    '<h3 id="hsnRvTitle">Koreksi Transaksi</h3>'+
    '<div class="hsn-rv-meta"><span class="hsn-rv-chip">Periode <b>'+esc(state.period)+'</b></span>'+
    '<span class="hsn-rv-chip"><b>'+rows.length+'</b> perlu koreksi</span>'+
-   '<span class="hsn-rv-chip"><b>'+pendingRows.length+'</b> menunggu Finance</span>'+
+   '<span class="hsn-rv-chip"><b>'+waitingRows.length+'</b> belum diproses</span>'+
+   '<span class="hsn-rv-chip"><b>'+appliedRows.length+'</b> selesai</span>'+
    '<span class="hsn-rv-chip">Total Review <b>'+esc(amt(all.reduce(function(a,b){return a+Number(b.total_amount||0)},0)))+'</b></span></div></div>'+
    '<button type="button" class="hsn-rv-close" data-hsn-rv-close="1" aria-label="Tutup dialog">×</button></header>'+
    (state.success?'<div class="hsn-rv-success" role="status" data-hsn-rv-success="1"><span class="hsn-rv-success-icon" aria-hidden="true">✓</span><div><b>'+esc(state.success.title)+'</b><span>'+esc(state.success.detail)+'</span></div></div>':'')+
-   '<p class="hsn-rv-hint">Ubah nominal <b>dan/atau</b> jenis pembayaran → <b>✓ Simpan baris</b> → <b>Submit ke Database</b>. Pengajuan menunggu verifikasi Finance dan tidak langsung mengubah jurnal.</p>'+
+   '<p class="hsn-rv-hint">Ubah nominal dan/atau jenis pembayaran → ✓ Simpan baris → Submit. Pinjaman Jas Hujan yang tervalidasi akan dijurnalkan otomatis; jika validasi gagal, usulan tetap tersimpan untuk diperbaiki.</p>'+
    '<div class="hsn-rv-list-tools"><strong>'+esc(state.historyOpen?'Riwayat pengajuan':'Daftar perlu koreksi')+'</strong><span>'+
-   rows.length+' perlu koreksi · '+pendingRows.length+' menunggu Finance</span>'+
-   (pendingRows.length?'<button type="button" data-hsn-rv-history="1" aria-pressed="'+(state.historyOpen?'true':'false')+'">'+(state.historyOpen?'← Kembali ke koreksi':'Lihat riwayat terkirim ('+pendingRows.length+')')+'</button>':'')+'</div>'+
+   rows.length+' perlu koreksi · '+waitingRows.length+' belum diproses · '+appliedRows.length+' selesai</span>'+
+   (pendingRows.length?'<button type="button" data-hsn-rv-history="1" aria-pressed="'+(state.historyOpen?'true':'false')+'">'+(state.historyOpen?'← Kembali ke koreksi':'Lihat riwayat ('+pendingRows.length+')')+'</button>':'')+
+   (eligible?'<button type="button" class="hsn-rv-apply" data-hsn-rv-apply="'+esc(readyBatch)+'"'+(state.busy?' disabled':'')+'>✓ Proses Otomatis & Jurnalkan ('+batchRows.length+')</button>':'')+'</div>'+
    '<div class="hsn-rv-scroll"><table><thead><tr><th>Transaksi</th><th>Nilai Saat Ini</th><th>Nilai Koreksi</th><th>Jenis Pembayaran</th><th>'+(state.historyOpen?'Status':'✓ Simpan')+'</th></tr></thead>'+
    '<tbody>'+(state.loading?'<tr><td colspan="5">Memuat transaksi Review…</td></tr>':body||
-    '<tr><td colspan="5" class="hsn-rv-empty">'+(state.historyOpen?'Belum ada pengajuan yang menunggu Finance.':pendingRows.length?'Semua '+pendingRows.length+' transaksi sudah diajukan. Tidak ada lagi baris yang perlu dikoreksi. Menunggu verifikasi Finance.':'Tidak ada transaksi yang perlu dikoreksi pada periode ini.')+'</td></tr>')+'</tbody></table></div>'+
+    '<tr><td colspan="5" class="hsn-rv-empty">'+(state.historyOpen?'Belum ada riwayat koreksi.':waitingRows.length?'Semua transaksi sudah diajukan; '+waitingRows.length+' belum diproses.':appliedRows.length?'Seluruh '+appliedRows.length+' koreksi selesai dan tercatat di jurnal.':'Tidak ada transaksi yang perlu dikoreksi pada periode ini.')+'</td></tr>')+'</tbody></table></div>'+
    '<footer class="hsn-rv-footer"><div><b data-hsn-rv-count>'+Object.keys(state.staged).length+' baris disimpan</b>'+
-   '<small>Submit menyimpan usulan koreksi di database. Nilai transaksi dan jurnal asli tidak langsung berubah.</small>'+
+   '<small>Koreksi pinjaman yang tervalidasi diposting secara atomik ke Finance. Stok fisik tidak diubah.</small>'+
    (state.notice?'<span role="status">'+esc(state.notice)+'</span>':'')+'</div>'+
    '<button type="button" class="hsn-rv-submit" data-hsn-rv-submit="1"'+
      (!Object.keys(state.staged).length||state.busy||state.loading?' disabled':'')+'>'+
@@ -114,11 +126,12 @@
    r.forEach(function(v){if(v.error)throw v.error});
    if(!state.open||state.req!==seq||session!==window.__HASNARIA_CONTEXT||state.period!==month())return;
    var pack=r[0].data||{};
+   (Array.isArray(r[1].data)?r[1].data:[]).forEach(function(x){if(x.source_history_id)state.pending[String(x.source_history_id)]=x});
    state.rows=(Array.isArray(pack.rows)?pack.rows:[]).filter(function(x){
-     return(x.expense_account_code==='1990'||x.category_status==='provisional')&&
+     return (x.expense_account_code==='1990'||x.category_status==='provisional'||
+       !!state.pending[String(x.source_history_id)])&&
       /^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(String(x.source_history_id||''));
    });
-   (Array.isArray(r[1].data)?r[1].data:[]).forEach(function(x){if(x.source_history_id)state.pending[String(x.source_history_id)]=x});
   }catch(e){if(state.open&&state.req===seq)state.notice='Gagal memuat Review: '+(e.message||String(e))}
   finally{if(state.open&&state.req===seq){state.loading=false;render()}}
  }
@@ -137,6 +150,30 @@
     corrected_payment_method:paymentChanged?payment:null};
   state.notice='✓ '+String(r.item_name||'Transaksi')+' disimpan di formulir, belum ke database.';render();
  }
+ async function applyBatch(batch,automatic){
+  if(!state.open||state.busy||!isOwner()||!batch)return false;
+  if(!automatic&&!window.confirm('Validasi sumber dana dan catat jurnal pembelian otomatis untuk batch '+batch.slice(0,8)+'? Jika jurnal tidak berimbang, seluruh proses dibatalkan.'))return false;
+  state.busy=true;state.notice='Memvalidasi sumber dana dan menjurnalkan batch '+batch.slice(0,8)+'…';render();
+  try{
+   var result=await db().rpc('apply_purchase_review_owner_v1',{p_batch:batch});
+   if(result.error)throw result.error;
+   var x=result.data||{};
+   if(x.status!=='applied'||!x.finance_posted&&x.already_applied!==true)throw Error('Konfirmasi posting Finance belum lengkap');
+   Object.keys(state.pending).forEach(function(id){
+    if(String(state.pending[id].batch_id)===batch)state.pending[id].status='applied';
+   });
+   state.success={title:'Selesai — '+x.applied_rows+' transaksi tercatat di Finance.',
+     detail:'Batch '+batch.slice(0,8)+' · Jurnal debit dan kredit seimbang '+amt(x.debit||x.credit||0)+'. Akun pinjaman Jas Hujan 2110, tanpa perubahan Stock.'};
+   state.notice='';state.historyOpen=true;
+   if(typeof window.__HASNARIA_PURCHASE_FINANCE_REFRESH==='function'){
+    window.__HASNARIA_PURCHASE_FINANCE_REFRESH();
+   }
+   return true;
+  }catch(e){
+   state.success=null;state.notice='Koreksi tersimpan, tetapi jurnal BELUM diterapkan: '+(e.message||String(e))+'. Periksa lalu gunakan tombol Proses Otomatis & Jurnalkan.';
+   return false;
+  }finally{state.busy=false;render()}
+ }
  async function submit(){
   if(!state.open||state.busy||state.loading||!isOwner())return;
   var list=Object.keys(state.staged).map(function(k){return state.staged[k]});
@@ -144,21 +181,24 @@
   if(state.period!==month()){state.notice='Periode berubah; buka ulang formulir.';render();return}
   if(!window.confirm('Kirim '+list.length+' usulan koreksi nominal/pembayaran untuk verifikasi Finance? Transaksi dan jurnal asli tidak berubah.'))return;
   state.busy=true;state.success=null;state.notice='Mengirim koreksi…';render();
+  var outBatch='';
   try{
    var r=await db().rpc('submit_purchase_review_corrections_v2',{
     p_period:state.period+'-01',p_changes:list
    });
    if(r.error)throw r.error;
-   var out=r.data||{};
+   var out=r.data||{};outBatch=String(out.batch_id||'');
    if(out.status!=='pending_finance_review'||Number(out.submitted_rows)!==list.length)
      throw Error('Respons database tidak sesuai jumlah koreksi. Periksa sebelum mencoba ulang.');
-   list.forEach(function(item){state.pending[item.source_history_id]={proposed_amount:item.corrected_amount,proposed_payment_method:item.corrected_payment_method,status:'pending_finance_review'}});
+   list.forEach(function(item){state.pending[item.source_history_id]={proposed_amount:item.corrected_amount,proposed_payment_method:item.corrected_payment_method,status:'pending_finance_review',batch_id:String(out.batch_id||'')}});
    state.staged={};state.fields={};state.paymentFields={};state.historyOpen=false;
    state.notice='';
-   state.success={title:'Berhasil! '+list.length+' transaksi telah diajukan.',
-     detail:'Batch '+String(out.batch_id||'').slice(0,8)+' · Menunggu verifikasi Finance. Seluruh transaksi terkirim dipindahkan dari daftar koreksi ke riwayat pengajuan.'};
+   state.success={title:'Pengajuan tersimpan: '+list.length+' transaksi.',
+     detail:'Batch '+String(out.batch_id||'').slice(0,8)+' · Selanjutnya validasi dan posting otomatis untuk pinjaman Jas Hujan.'};
   }catch(e){state.notice='Submit gagal: '+(e.message||String(e))}
   finally{state.busy=false;render()}
+  var automatic=list.every(function(a){return a.corrected_payment_method==='PINJAMAN_USAHA_LAIN'&&a.corrected_amount===a.current_amount});
+  if(automatic&&state.open&&state.success&&outBatch)await applyBatch(outBatch,true);
  }
  document.addEventListener('click',function(e){
   var k=e.target.closest&&e.target.closest('#pembelian #purchaseFinanceAlignment .pfa-card.review');
@@ -166,6 +206,8 @@
   if(!overlay)return;
   var z=e.target.closest&&e.target.closest('[data-hsn-rv-close]');
   if(z){if(z===e.target)close();return}
+  var apply=e.target.closest&&e.target.closest('[data-hsn-rv-apply]');
+  if(apply){applyBatch(apply.getAttribute('data-hsn-rv-apply'),false);return}
   var history=e.target.closest&&e.target.closest('[data-hsn-rv-history]');
   if(history){state.historyOpen=!state.historyOpen;render();return}
   var row=e.target.closest&&e.target.closest('[data-hsn-rv-stage]');
