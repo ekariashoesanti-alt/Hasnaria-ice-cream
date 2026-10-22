@@ -6,7 +6,7 @@
  if(window.__HASNARIA_PURCHASE_REVIEW_CORRECTION_V1)return;
  window.__HASNARIA_PURCHASE_REVIEW_CORRECTION_V1=true;
  var state={open:false,busy:false,loading:false,period:'',rows:[],pending:{},
-   fields:{},paymentFields:{},staged:{},notice:'',req:0},overlay=null;
+   fields:{},paymentFields:{},staged:{},notice:'',success:null,historyOpen:false,req:0},overlay=null;
  function esc(x){return String(x==null?'':x).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
  function amt(n){return'Rp '+Number(n||0).toLocaleString('id-ID',{maximumFractionDigits:2})}
  var paymentOptions=[
@@ -43,8 +43,12 @@
  function render(){
   if(!state.open)return;
   if(!overlay){overlay=document.createElement('div');overlay.id='hasnaria-review-correction-root';document.body.appendChild(overlay)}
-  var rows=state.rows||[];
-  var body=rows.map(function(r){
+  var all=state.rows||[],rows=all.filter(function(r){
+   return !state.pending[String(r.source_history_id)];
+  }),pendingRows=all.filter(function(r){
+   return !!state.pending[String(r.source_history_id)];
+  }),visible=state.historyOpen?pendingRows:rows;
+  var body=visible.map(function(r){
    var id=String(r.source_history_id),current=Number(r.total_amount||0),existing=state.pending[id];
    var locked=!!existing||state.busy,staged=state.staged[id],value=existing?existing.proposed_amount:
      Object.prototype.hasOwnProperty.call(state.fields,id)?state.fields[id]:'';
@@ -63,19 +67,25 @@
        ' aria-label="Jenis pembayaran '+esc(r.item_name||'transaksi')+'">'+options+'</select></td>'+
      '<td><button type="button" class="hsn-rv-save'+(staged?' staged':'')+'" '+
        'data-hsn-rv-stage="'+esc(id)+'"'+(locked?' disabled':'')+' title="Simpan baris">'+
-       (existing?'Terkirim':staged?'✓ Tersimpan':'✓')+'</button></td></tr>';
+       (existing?'Menunggu':staged?'✓ Tersimpan':'✓')+'</button></td></tr>';
   }).join('');
   overlay.innerHTML='<div class="hsn-rv-shade" data-hsn-rv-close="1"></div>'+
    '<section class="hsn-rv-dialog" role="dialog" aria-modal="true" aria-labelledby="hsnRvTitle">'+
    '<header class="hsn-rv-head"><div class="hsn-rv-heading"><span class="hsn-rv-eyebrow">PEMBELIAN <span aria-hidden="true">/</span> REVIEW</span>'+
    '<h3 id="hsnRvTitle">Koreksi Transaksi</h3>'+
    '<div class="hsn-rv-meta"><span class="hsn-rv-chip">Periode <b>'+esc(state.period)+'</b></span>'+
-   '<span class="hsn-rv-chip"><b>'+rows.length+'</b> transaksi</span>'+
-   '<span class="hsn-rv-chip">Total saat ini <b>'+esc(amt(rows.reduce(function(a,b){return a+Number(b.total_amount||0)},0)))+'</b></span></div></div>'+
+   '<span class="hsn-rv-chip"><b>'+rows.length+'</b> perlu koreksi</span>'+
+   '<span class="hsn-rv-chip"><b>'+pendingRows.length+'</b> menunggu Finance</span>'+
+   '<span class="hsn-rv-chip">Total Review <b>'+esc(amt(all.reduce(function(a,b){return a+Number(b.total_amount||0)},0)))+'</b></span></div></div>'+
    '<button type="button" class="hsn-rv-close" data-hsn-rv-close="1" aria-label="Tutup dialog">×</button></header>'+
-   '<p class="hsn-rv-hint">Ubah nominal <b>dan/atau</b> jenis pembayaran → <b>✓ Simpan baris</b> → <b>Submit ke Database</b>. Perubahan tetap menunggu verifikasi Finance.</p>'+
-   '<div class="hsn-rv-scroll"><table><thead><tr><th>Transaksi</th><th>Nilai Saat Ini</th><th>Nilai Koreksi</th><th>Jenis Pembayaran</th><th>✓ Simpan</th></tr></thead>'+
-   '<tbody>'+(state.loading?'<tr><td colspan="5">Memuat transaksi Review…</td></tr>':body||'<tr><td colspan="5">Tidak ada transaksi Review pada periode ini.</td></tr>')+'</tbody></table></div>'+
+   (state.success?'<div class="hsn-rv-success" role="status" data-hsn-rv-success="1"><span class="hsn-rv-success-icon" aria-hidden="true">✓</span><div><b>'+esc(state.success.title)+'</b><span>'+esc(state.success.detail)+'</span></div></div>':'')+
+   '<p class="hsn-rv-hint">Ubah nominal <b>dan/atau</b> jenis pembayaran → <b>✓ Simpan baris</b> → <b>Submit ke Database</b>. Pengajuan menunggu verifikasi Finance dan tidak langsung mengubah jurnal.</p>'+
+   '<div class="hsn-rv-list-tools"><strong>'+esc(state.historyOpen?'Riwayat pengajuan':'Daftar perlu koreksi')+'</strong><span>'+
+   rows.length+' perlu koreksi · '+pendingRows.length+' menunggu Finance</span>'+
+   (pendingRows.length?'<button type="button" data-hsn-rv-history="1" aria-pressed="'+(state.historyOpen?'true':'false')+'">'+(state.historyOpen?'← Kembali ke koreksi':'Lihat riwayat terkirim ('+pendingRows.length+')')+'</button>':'')+'</div>'+
+   '<div class="hsn-rv-scroll"><table><thead><tr><th>Transaksi</th><th>Nilai Saat Ini</th><th>Nilai Koreksi</th><th>Jenis Pembayaran</th><th>'+(state.historyOpen?'Status':'✓ Simpan')+'</th></tr></thead>'+
+   '<tbody>'+(state.loading?'<tr><td colspan="5">Memuat transaksi Review…</td></tr>':body||
+    '<tr><td colspan="5" class="hsn-rv-empty">'+(state.historyOpen?'Belum ada pengajuan yang menunggu Finance.':pendingRows.length?'Semua '+pendingRows.length+' transaksi sudah diajukan. Tidak ada lagi baris yang perlu dikoreksi. Menunggu verifikasi Finance.':'Tidak ada transaksi yang perlu dikoreksi pada periode ini.')+'</td></tr>')+'</tbody></table></div>'+
    '<footer class="hsn-rv-footer"><div><b data-hsn-rv-count>'+Object.keys(state.staged).length+' baris disimpan</b>'+
    '<small>Submit menyimpan usulan koreksi di database. Nilai transaksi dan jurnal asli tidak langsung berubah.</small>'+
    (state.notice?'<span role="status">'+esc(state.notice)+'</span>':'')+'</div>'+
@@ -85,7 +95,7 @@
  }
  function clear(){
   state.open=false;state.loading=false;state.busy=false;state.rows=[];state.staged={};
-  state.fields={};state.paymentFields={};state.pending={};state.req++;state.notice='';
+  state.fields={};state.paymentFields={};state.pending={};state.req++;state.notice='';state.success=null;state.historyOpen=false;
   if(overlay){overlay.remove();overlay=null}
  }
  function close(){if(state.busy)return;if(Object.keys(state.staged).length&&!window.confirm('Batal dan buang koreksi yang belum disubmit?'))return;clear()}
@@ -94,7 +104,7 @@
   if(state.open||!isOwner())return;
   var period=month(),api=db();if(!period||!api)return;
   state.open=true;state.period=period;state.loading=true;state.rows=[];
-  state.fields={};state.paymentFields={};state.staged={};state.pending={};state.notice='';render();
+  state.fields={};state.paymentFields={};state.staged={};state.pending={};state.notice='';state.success=null;state.historyOpen=false;render();
   var seq=++state.req,session=window.__HASNARIA_CONTEXT;
   try{
    var r=await Promise.all([
@@ -133,7 +143,7 @@
   if(!list.length)return;
   if(state.period!==month()){state.notice='Periode berubah; buka ulang formulir.';render();return}
   if(!window.confirm('Kirim '+list.length+' usulan koreksi nominal/pembayaran untuk verifikasi Finance? Transaksi dan jurnal asli tidak berubah.'))return;
-  state.busy=true;state.notice='Mengirim koreksi…';render();
+  state.busy=true;state.success=null;state.notice='Mengirim koreksi…';render();
   try{
    var r=await db().rpc('submit_purchase_review_corrections_v2',{
     p_period:state.period+'-01',p_changes:list
@@ -143,8 +153,10 @@
    if(out.status!=='pending_finance_review'||Number(out.submitted_rows)!==list.length)
      throw Error('Respons database tidak sesuai jumlah koreksi. Periksa sebelum mencoba ulang.');
    list.forEach(function(item){state.pending[item.source_history_id]={proposed_amount:item.corrected_amount,proposed_payment_method:item.corrected_payment_method,status:'pending_finance_review'}});
-   state.staged={};state.fields={};state.paymentFields={};
-   state.notice='Berhasil mengirim '+list.length+' baris ke database. Menunggu verifikasi Finance. Batch '+String(out.batch_id||'').slice(0,8)+'.';
+   state.staged={};state.fields={};state.paymentFields={};state.historyOpen=false;
+   state.notice='';
+   state.success={title:'Berhasil! '+list.length+' transaksi telah diajukan.',
+     detail:'Batch '+String(out.batch_id||'').slice(0,8)+' · Menunggu verifikasi Finance. Seluruh transaksi terkirim dipindahkan dari daftar koreksi ke riwayat pengajuan.'};
   }catch(e){state.notice='Submit gagal: '+(e.message||String(e))}
   finally{state.busy=false;render()}
  }
@@ -154,6 +166,8 @@
   if(!overlay)return;
   var z=e.target.closest&&e.target.closest('[data-hsn-rv-close]');
   if(z){if(z===e.target)close();return}
+  var history=e.target.closest&&e.target.closest('[data-hsn-rv-history]');
+  if(history){state.historyOpen=!state.historyOpen;render();return}
   var row=e.target.closest&&e.target.closest('[data-hsn-rv-stage]');
   if(row){stage(row.getAttribute('data-hsn-rv-stage'));return}
   if(e.target.closest&&e.target.closest('[data-hsn-rv-submit]'))submit();

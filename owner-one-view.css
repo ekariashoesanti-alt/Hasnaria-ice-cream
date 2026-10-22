@@ -1368,3 +1368,42 @@
  #hasnaria-review-correction-root .hsn-rv-footer{padding:9px;gap:8px}
  #hasnaria-review-correction-root .hsn-rv-submit{font-size:10px;padding:7px 10px}
 }
+
+/* Pembelian Review: visible post-submit confirmation and separate pending history. */
+#hasnaria-review-correction-root .hsn-rv-success{
+ display:flex;align-items:center;gap:10px;margin:12px 18px 0;padding:11px 13px;
+ border:1px solid #9acbb6;background:#ecf8f1;border-radius:9px;
+ font-size:12px;color:#155e45;flex:0 0 auto;
+}
+#hasnaria-review-correction-root .hsn-rv-success-icon{
+ display:inline-flex;align-items:center;justify-content:center;
+ background:#177c58;border-radius:50%;color:#fff;font-size:16px;font-weight:800;
+ flex:0 0 27px;width:27px;height:27px;
+}
+#hasnaria-review-correction-root .hsn-rv-success>div{display:flex;flex-direction:column;gap:3px;min-width:0}
+#hasnaria-review-correction-root .hsn-rv-success b{font-size:12px;color:#134d3a;font-weight:800}
+#hasnaria-review-correction-root .hsn-rv-success span:last-child{font-size:11px;line-height:1.4}
+#hasnaria-review-correction-root .hsn-rv-list-tools{
+ display:flex;align-items:center;gap:12px;margin:0 18px 7px;
+ color:#2c6954;font-size:11px;flex:0 0 auto;min-height:28px;
+}
+#hasnaria-review-correction-root .hsn-rv-list-tools strong{font-size:12px;color:#174f3a}
+#hasnaria-review-correction-root .hsn-rv-list-tools>span{color:#6b8a7d}
+#hasnaria-review-correction-root .hsn-rv-list-tools button{
+ margin-left:auto;padding:5px 10px;border:1px solid #b6d4c5;border-radius:7px;
+ background:#f3faf6;color:#176248;font:inherit;font-size:11px;font-weight:700;
+ cursor:pointer;white-space:nowrap;
+}
+#hasnaria-review-correction-root .hsn-rv-list-tools button:hover{background:#e6f3eb}
+#hasnaria-review-correction-root .hsn-rv-list-tools button:focus-visible{
+ outline:2px solid #168263;outline-offset:2px;
+}
+#hasnaria-review-correction-root .hsn-rv-empty{
+ text-align:center!important;padding:28px 12px!important;color:#477263!important;
+ font-weight:650;line-height:1.6;
+}
+@media(max-width:760px){
+ #hasnaria-review-correction-root .hsn-rv-success{margin:9px 9px 0;padding:9px}
+ #hasnaria-review-correction-root .hsn-rv-list-tools{margin:0 9px 7px;flex-wrap:wrap;gap:5px}
+ #hasnaria-review-correction-root .hsn-rv-list-tools button{margin-left:0}
+}
