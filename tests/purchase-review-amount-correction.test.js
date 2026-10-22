@@ -30,7 +30,7 @@ assert.match(schema,/source_history_id/);
 assert.doesNotMatch(schema,/\bUPDATE public\.offline_purchase_history\b|\bDELETE FROM public\.offline_purchase_history\b|\bTRUNCATE\b/);
 assert.match(core,/card\('Review',money\(v\.review_amount\)/,'KPI remains linked to canonical Review');
 const handlers={},el=[],calls=[],validId='9b75434d-6c04-42dd-b6cc-a98d88ea54a5',paymentOnlyId='9b75434d-6c04-42dd-b6cc-a98d88ea54a6';
-let appended=null;
+let appended=null,submitted=[];
 const card={attributes:{},getAttribute(k){return this.attributes[k]},setAttribute(k,v){this.attributes[k]=v},tabIndex:0};
 const host={};
 const period={value:'2026-10'};
@@ -55,9 +55,11 @@ const w={
  __HASNARIA_DB:{async rpc(name,args){
   calls.push({name,args});
   if(name==='get_purchase_control_period_v1')return{data:{rows:view},error:null};
-  if(name==='get_purchase_review_amount_requests_v1')return{data:[],error:null};
-  if(name==='submit_purchase_review_corrections_v2')
+  if(name==='get_purchase_review_amount_requests_v1')return{data:submitted,error:null};
+  if(name==='submit_purchase_review_corrections_v2'){
+   submitted=args.p_changes.map(x=>({source_history_id:x.source_history_id,proposed_amount:x.corrected_amount,proposed_payment_method:x.corrected_payment_method,status:'pending_finance_review'}));
    return{data:{status:'pending_finance_review',submitted_rows:args.p_changes.length,batch_id:'abc123456789'},error:null};
+  }
   throw Error('Unexpected '+name);
  }},
  confirm:()=>true
@@ -75,6 +77,8 @@ function target(looked,id,value){
    if(looked==='payment'&&sel==='[data-hsn-rv-payment]')return{getAttribute:()=>id,value};
    if(looked==='stage'&&sel==='[data-hsn-rv-stage]')return{getAttribute:()=>id};
    if(looked==='submit'&&sel==='[data-hsn-rv-submit]')return{};
+   if(looked==='history'&&sel==='[data-hsn-rv-history]')return{};
+   if(looked==='close'&&sel==='[data-hsn-rv-close]')return this;
    return null;
   }
  }
@@ -124,5 +128,14 @@ function send(name,e){for(let f of handlers[name]||[])f(e)}
  assert.match(appended.innerHTML,/0 perlu koreksi/);
  assert.match(appended.innerHTML,/data-hsn-rv-success/);
  assert.doesNotMatch(appended.innerHTML,/<strong>ODENG<\\/strong>/);
- console.log('Purchase Review modal: compact header, amount+payment/payment-only staged and submitted safely PASS');
+ send('click',{target:target('history')});
+ assert.match(appended.innerHTML,/Riwayat pengajuan/);
+ assert.match(appended.innerHTML,/ODENG/);
+ send('click',{target:target('history')});
+ const close=target('close'); send('click',{target:close});
+ send('click',{target:target('card'),preventDefault(){}});
+ await new Promise(resolve=>setImmediate(resolve));
+ assert.match(appended.innerHTML,/Semua 2 transaksi sudah diajukan/);
+ assert.equal(calls.filter(x=>x.name==='submit_purchase_review_corrections_v2').length,1);
+ console.log('Purchase Review submission UX and reopen persisted queue PASS');
 })().catch(e=>{console.error(e);process.exitCode=1});
