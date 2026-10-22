@@ -208,7 +208,7 @@
     var l = document.createElement('link');
     l.id = 'stock-control-v3-css';
     l.rel = 'stylesheet';
-    l.href = '/stock-control-v3.css?v=11';
+    l.href = '/stock-control-v3.css?v=12';
     document.head.appendChild(l);
   }
 
@@ -1082,30 +1082,47 @@
       bars+'</div></div>'+coverageMarkup;
   }
   function stockValueTopFive(){
-    if(S.valuationLoading||!S.baseLoaded)return '<div class="sc5-empty">Memuat peringkat nilai terverifikasi…</div>';
-    if(!S.valuationLoaded)return '<div class="sc5-empty">Daftar nilai stok belum dapat dimuat.</div>';
+    if(S.valuationLoading||!S.baseLoaded)return '<div class="sc5-empty">Memuat nilai item terverifikasi…</div>';
+    if(!S.valuationLoaded)return '<div class="sc5-empty">Daftar nilai item belum dapat dimuat.</div>';
     var ranks=verifiedValuationRows().sort(function(a,b){return b.value-a.value}).slice(0,5);
-    if(!ranks.length)return '<div class="sc5-empty">Belum ada SKU dengan nilai terverifikasi.</div>';
-    var max=Math.max(1,ranks[0].value);
-    return '<div class="sc6-top-values">'+ranks.map(function(x,i){
-      return '<div class="sc6-top-row" title="'+esc(x.name+' — '+stockMoney(x.value))+'">'+
-       '<div class="sc6-top-meta"><b>'+(i+1)+'. '+esc(x.name)+'</b><small>'+esc(x.qty.toLocaleString('id-ID',{maximumFractionDigits:3})+' '+x.unit)+'</small></div>'+
-       '<div class="sc6-top-track"><i style="width:'+(100*x.value/max).toFixed(1)+'%"></i></div>'+
-       '<strong>'+esc(stockMoney(x.value,true))+'</strong></div>';
-    }).join('')+'</div><p class="sc5-caption">Hanya SKU dengan biaya yang sudah diverifikasi. Tidak mengisi 5 posisi dengan harga perkiraan.</p>';
+    var available=(S.verifiedCosts||[]).length,visible=ranks.length;
+    if(!visible)return '<div class="sc11-top-empty"><strong>Belum ada nilai item yang dapat ditampilkan</strong>'+
+      '<span>Periksa saldo dan harga pokok yang sudah terverifikasi.</span></div>';
+    var maximum=Math.max(1,ranks[0].value);
+    return '<div class="sc11-top-wrap" aria-label="Peringkat nilai persediaan dengan biaya terverifikasi">'+
+      '<div class="sc11-top-head"><span>Nilai item terverifikasi</span><strong>'+fmt(visible)+' dari maks. 5</strong></div>'+
+      '<div class="sc11-top-list">'+ranks.map(function(x,i){
+        var width=Math.max(0,Math.min(100,100*x.value/maximum));
+        return '<div class="sc11-top-item" title="'+esc(x.name+' — '+stockMoney(x.value,false))+'">'+
+          '<div class="sc11-top-item-line"><span class="sc11-rank">'+(i+1)+'</span>'+
+            '<div class="sc11-item-desc"><strong>'+esc(x.name)+'</strong>'+
+            '<small>'+esc(x.qty.toLocaleString('id-ID',{maximumFractionDigits:3})+' '+x.unit)+'</small></div>'+
+            '<b class="sc11-item-money">'+esc(stockMoney(x.value,true))+'</b></div>'+
+          '<div class="sc11-item-bar" role="img" aria-label="'+esc(x.name+' — '+stockMoney(x.value,false))+'">'+
+            '<i style="width:'+width.toFixed(1)+'%"></i></div>'+
+        '</div>';
+      }).join('')+'</div>'+
+      '<p class="sc11-top-foot">Hanya item dengan saldo dan harga pokok terverifikasi; item lain tidak diisi dengan harga perkiraan.</p>'+
+    '</div>';
   }
   function expiryAndOpnamePanel(){
-    if(!S.baseLoaded)return '<div class="sc5-empty">Memuat kontrol stok…</div>';
+    if(!S.baseLoaded)return '<div class="sc5-empty">Memuat kondisi data dan opname…</div>';
     var dates=S.items.map(function(x){return x.last_opname_date}).filter(Boolean).sort();
     var latest=dates.length?dateLabel(dates[dates.length-1]):'Belum ada';
     var tracked=S.items.filter(function(x){return !!x.tracking_active}).length;
-    var bad=S.items.filter(function(x){return x.ui_status==='critical'||x.ui_status==='order'}).length;
-    return '<div class="sc6-condition-list">'+
-      '<div class="sc6-expiry-empty"><span>▦</span><div><strong>Data kedaluwarsa belum tersedia</strong><small>Backend belum memiliki tanggal kedaluwarsa per batch; tidak ada hitungan fiktif.</small></div></div>'+
-      '<div><span>Opname terakhir</span><strong>'+esc(latest)+'</strong></div>'+
-      '<div><span>SKU dengan checkpoint</span><strong>'+fmt(tracked)+' / '+fmt(S.items.length)+'</strong></div>'+
-      '<div><span>Stok kritis / perlu beli</span><strong>'+fmt(bad)+' SKU</strong></div>'+
-      '</div>';
+    return '<div class="sc11-health-list" aria-label="Kondisi data persediaan dan opname">'+
+      '<div class="sc11-health-row sc11-health-warning">'+
+        '<span class="sc11-health-icon" aria-hidden="true">▦</span>'+
+        '<div class="sc11-health-copy"><strong>Data kedaluwarsa belum tersedia</strong>'+
+        '<small>Belum ada tanggal kedaluwarsa per batch di backend.</small></div>'+
+      '</div>'+
+      '<div class="sc11-health-row">'+
+        '<span class="sc11-health-label">Opname terakhir</span>'+
+        '<strong class="sc11-health-value">'+esc(latest)+'</strong></div>'+
+      '<div class="sc11-health-row sc11-health-alt">'+
+        '<span class="sc11-health-label">SKU dengan checkpoint</span>'+
+        '<strong class="sc11-health-value">'+fmt(tracked)+' / '+fmt(S.items.length)+'</strong></div>'+
+    '</div>';
   }
 
   function stockKpiIcon(kind){
@@ -1422,7 +1439,7 @@
           '</div>'+
           '<div class="sc6-column sc6-side-column">'+
             '<article class="sc5-panel sc6-top-panel"><h3>▤ Top 5 Item Nilai Stok</h3>'+stockValueTopFive()+'</article>'+
-            '<article class="sc5-panel sc6-expiry-panel"><h3>▦ Kondisi Kadaluwarsa &amp; Opname</h3>'+expiryAndOpnamePanel()+'</article>'+
+            '<article class="sc5-panel sc6-expiry-panel"><h3>▦ Kondisi Data &amp; Opname</h3>'+expiryAndOpnamePanel()+'</article>'+
           '</div>'+
         '</div>'+
       '</div>'+
