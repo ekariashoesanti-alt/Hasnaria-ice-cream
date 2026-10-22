@@ -9,5 +9,5 @@
   }
   load('hasnaria-finance-accuracy-v6-js','/finance-accuracy-v6.js?v=5');
   load('hasnaria-finance-purchase-basis-v1-js','/finance-purchase-basis-v1.js?v=7');
-  load('hasnaria-stock-v3-runtime-fix-js','/stock-v3-runtime-fix.js?v=3');
+  load('hasnaria-stock-v3-runtime-fix-js','/stock-v3-runtime-fix.js?v=4');
 })();
