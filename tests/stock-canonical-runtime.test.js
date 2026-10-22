@@ -7,7 +7,7 @@ const css=fs.readFileSync('stock-readable-density.css','utf8');
 
 assert(!shim.includes('stock-recall-v4.js'),'owner shim must not load legacy Stock recall v4');
 assert(shim.includes('stock-v3-runtime-fix.js'),'owner shim must load the canonical Stock v3 bridge');
-assert(bridge.includes("/stock-control-v3.js?v=16"),'canonical bridge must load Stock Control v3');
+assert(bridge.includes("/stock-control-v3.js?v=17"),'canonical bridge must load Stock Control v3');
 assert(bridge.includes("setAttribute('data-stock-v4','1')"),'canonical shell must satisfy the existing owner guard marker');
 assert(css.includes('#stok .sc3-table{width:100%;min-width:0;table-layout:fixed;font-size:8.3px}'),'desktop Stock table must keep the readable fixed-width density override');
 assert(!css.includes('font-size:5.4px'),'readable override must not regress to the previous ultra-small status text');
@@ -29,7 +29,7 @@ assert(ui4.includes("request('ui_stock_activity_chart_v1?' + tq)") && ui4.includ
 assert(!ui4.includes("18,73 jt") && !ui4.includes("4.321"),'No invented inventory valuations or demo SKU counts');
 assert(!ui4.includes("' + renderActivity() + '</article>'"),'Stock one-view must not show the legacy panel layout');
 const greenCss=fs.readFileSync('stock-control-v3.css','utf8');
-assert(greenCss.includes('#stok .sc6-grid') && greenCss.includes('#stok .sc6-value-layout'),'updated green panels stay scoped to Stock');
+assert(greenCss.includes('#stok .sc6-grid') && greenCss.includes('#stok .sc10-category-layout'),'updated Stock category panel stays scoped and horizontal');
 assert(greenCss.includes('#125644'),'Stock palette must match the Hasnaria sidebar');
 
 assert(ui4.includes('sc5-head sc7-head'),'Stage-1 Stock header must be compact');
@@ -39,7 +39,7 @@ assert(ui4.includes('data-sc4-modal="position"')&&ui4.includes('data-sc4-modal="
 assert(ui4.includes('data-sc4-action="upload-purchase"'),'Existing purchase upload route must remain');
 assert(!ui4.includes('sc5-footer-actions'),'Floating footer button bar should be absent');
 assert(ui4.indexOf('sc6-trend-panel')<ui4.indexOf('sc6-category-panel'),'Trend must remain immediately above category');
-assert(ui4.includes('/stock-control-v3.css?v=8'),'Stage-1 CSS cache version must be fresh');
+
 assert(greenCss.includes('.sc7-head') && greenCss.includes('min-height:64px!important'),'Stock header spacing is compact');
 assert(greenCss.includes('background:#fff!important') && greenCss.includes('sc6-grid'),'White toolbar must be isolated from green sidebar');
 assert(greenCss.includes('.sc6-main-column')&&greenCss.includes('.sc6-side-column'),'Both two-row Stock grid columns remain available');
@@ -48,7 +48,7 @@ assert(ui4.includes('sc8-kpi-label')&&ui4.includes('sc8-kpi-value')&&ui4.include
 assert(ui4.includes('Parsial · '),'Cost coverage is still disclosed clearly');
 assert(ui4.includes('Menunggu biaya terverifikasi'),'Cost error/empty state is not an invented value');
 assert(!ui4.includes('Rp 18,73 jt')&&!ui4.includes('4.321'),'No demo values in real KPI');
-assert(ui4.includes('/stock-control-v3.css?v=9'),'Fresh Stage-2 CSS must load');
+
 assert(greenCss.includes('.sc8-kpis')&&greenCss.includes('.sc8-kpi-icon')&&greenCss.includes('.sc8-kpi-value'),'Modern green stock cards are scoped');
 assert(greenCss.includes('max-height:88px!important')&&greenCss.includes('grid-template-columns:repeat(2,minmax(0,1fr))'),'One-view equal-height desktop and responsive mobile KPI cards');
 
@@ -81,9 +81,47 @@ assert(renderedTrend.includes('Tanda — = belum ada catatan'),'Missing source d
 assert(!renderedTrend.includes('Rp '),'Activity ledger chart must not pretend to be stock value');
 assert(!renderedTrend.includes('NaN'),'Valid trend does not yield a NaN tick');
 assert(renderTrend([]).includes('Belum ada aktivitas ledger'),'Entirely empty history should show honest empty state');
-assert(ui4.includes('/stock-control-v3.css?v=10'),'Fresh Stage-3 CSS cache pin must be loaded');
+
 assert(greenCss.includes('.sc9-guide-lines')&&greenCss.includes('.sc9-y-labels')&&greenCss.includes('.sc9-month-current'),'Stage-3 chart needs guides, axis and current month emphasis');
 assert(greenCss.includes('.sc9-bar')&&greenCss.includes('.sc9-count'),'Stage-3 count labels follow actual bar height');
+
+assert(ui4.includes('/stock-control-v3.css?v=11'),'Fresh Stage-4 category CSS must load');
+assert(ui4.includes('sc10-category-layout')&&ui4.includes('sc10-category-progress'),'Horizontal Stock category layout must be used');
+assert(ui4.includes('Cakupan harga pokok'),'Category coverage must be disclosed');
+assert(greenCss.includes('.sc10-value-hero')&&greenCss.includes('.sc10-coverage-track'),'Compact verified-value and coverage UI must be styled');
+const categoryStart=ui4.indexOf('function stockValueByCategory(){');
+const categoryEnd=ui4.indexOf('function stockValueTopFive(){',categoryStart);
+assert(categoryStart>=0&&categoryEnd>categoryStart,'Stage-4 Stock category function must exist');
+const categorySource=ui4.slice(categoryStart,categoryEnd).trim();
+assert(!categorySource.includes('sc6-value-donut'),'Category HTML must not render old donut chart');
+assert(!categorySource.includes('conic-gradient'),'Category composition must be horizontal, not donut');
+const renderCategory=(rows,valued=1,all=198)=>vm.runInNewContext(categorySource+';stockValueByCategory()',{
+  S:{valuationLoading:false,baseLoaded:true,valuationLoaded:true,
+    valuation:{valued_items:valued,inventory_items:all},items:Array(all).fill({})},
+  verifiedValuationRows:()=>rows,
+  num:v=>Number(v)||0,
+  fmt:n=>Number(n).toLocaleString('id-ID'),
+  esc:v=>String(v),
+  stockMoney:(v)=>'Rp '+Math.round(Number(v)||0).toLocaleString('id-ID')
+});
+const singleCategory=renderCategory([{category:'BUMBU',value:3163500}]);
+assert(singleCategory.includes('Rp 3.163.500'),'Verified total must use ledger costs, not invented overall valuation');
+assert(singleCategory.includes('BUMBU'),'Real verified item category must be visible');
+assert(singleCategory.includes('100% dari nilai terverifikasi'),'100% must refer only to verified portion');
+assert(singleCategory.includes('1 dari 198 SKU · 0,5%'),'Cost coverage must clearly state only 0.5% SKU coverage');
+assert(singleCategory.includes('Bukan total nilai seluruh persediaan'),'User must see accurate partial valuation disclaimer');
+assert(!singleCategory.includes('sc6-value-donut'),'Single-category case must not render a donut');
+const groupedCategory=renderCategory([
+ {category:'BUMBU',value:50},{category:'MAKANAN',value:25},
+ {category:'MINUMAN',value:15},{category:'ES KRIM',value:5},
+ {category:'KEMASAN',value:5}
+],5,198);
+assert(groupedCategory.includes('Kategori lainnya'),'Long category lists are grouped to prevent overflow');
+assert.strictEqual((groupedCategory.match(/class="sc10-category-row"/g)||[]).length,4,'Show no more than four category bars');
+assert(!groupedCategory.includes('NaN'),'No invalid chart percentages');
+const noBalance=renderCategory([]);
+assert(noBalance.includes('Belum ada saldo bernilai positif'),'Do not fabricate values when no positive verified inventory is available');
+
 
 
 
