@@ -707,3 +707,121 @@
   #stok .sc7-actions button,#stok .sc7-tools button{flex:0 1 auto!important}
   #stok .sc6-grid{display:flex;flex-direction:column;height:auto}
 }
+
+
+/* STOK Tahap 2: KPI system — equal compact cards with clear visual hierarchy.
+   Visual only, no inventory calculation or backend change. */
+#stok .sc8-kpis{
+  display:grid!important;
+  grid-template-columns:repeat(4,minmax(0,1fr))!important;
+  gap:10px!important;
+  margin:0!important;
+  min-width:0!important;
+  flex:0 0 auto!important;
+}
+#stok .sc8-kpi{
+  position:relative;
+  display:grid!important;
+  grid-template-columns:38px minmax(0,1fr)!important;
+  align-items:center!important;
+  column-gap:11px!important;
+  min-width:0!important;
+  height:88px!important;
+  min-height:88px!important;
+  max-height:88px!important;
+  padding:10px 13px!important;
+  box-sizing:border-box!important;
+  background:#fff!important;
+  border:1px solid #dcebe2!important;
+  border-radius:12px!important;
+  box-shadow:0 2px 8px rgba(16,77,53,.03)!important;
+}
+#stok .sc8-kpi-icon{
+  display:grid!important;
+  place-items:center!important;
+  width:38px!important;
+  height:38px!important;
+  min-width:38px!important;
+  min-height:38px!important;
+  flex:none!important;
+  color:#145d43!important;
+  background:#e2f3e9!important;
+  border-radius:11px!important;
+  font-size:inherit!important;
+}
+#stok .sc8-kpi-icon svg{display:block;width:22px;height:22px;flex:none}
+#stok .sc8-kpi-copy{
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:flex-start!important;
+  justify-content:center!important;
+  gap:2px!important;
+  min-width:0!important;
+  width:100%!important;
+  overflow:hidden;
+}
+#stok .sc8-kpi .sc8-kpi-label{
+  display:block!important;
+  max-width:100%;
+  color:#395d4c!important;
+  font-weight:750!important;
+  font-size:10px!important;
+  line-height:1.15!important;
+  white-space:nowrap!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+}
+#stok .sc8-kpi .sc8-kpi-value{
+  display:block!important;
+  max-width:100%;
+  margin:1px 0!important;
+  color:#113f2d!important;
+  font-weight:850!important;
+  font-size:clamp(19px,1.55vw,26px)!important;
+  letter-spacing:-.035em!important;
+  line-height:1.05!important;
+  font-variant-numeric:tabular-nums;
+  white-space:nowrap!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+}
+#stok .sc8-kpi .sc8-kpi-note{
+  display:block!important;
+  max-width:100%;
+  line-height:1.22!important;
+  color:#688476!important;
+  font-size:9px!important;
+  font-weight:500!important;
+  white-space:normal!important;
+  overflow-wrap:anywhere;
+}
+#stok .sc8-kpi-value .sc8-kpi-icon{background:#e2f5ed!important}
+#stok .sc8-kpi-warning{border-color:#d9e8ce!important;background:#fbfdf8!important}
+#stok .sc8-kpi-warning .sc8-kpi-icon{color:#4b753b!important;background:#ecf5df!important}
+#stok .sc8-kpi-opname .sc8-kpi-icon{background:#e9f5ed!important}
+@media(min-width:901px) and (max-height:780px){
+  #stok .sc8-kpi{
+    height:73px!important;min-height:73px!important;max-height:73px!important;
+    padding:7px 10px!important;column-gap:8px!important;grid-template-columns:32px minmax(0,1fr)!important;
+  }
+  #stok .sc8-kpi-icon{width:32px!important;height:32px!important;min-width:32px!important;min-height:32px!important}
+  #stok .sc8-kpi-icon svg{width:19px;height:19px}
+  #stok .sc8-kpi .sc8-kpi-value{font-size:20px!important}
+  #stok .sc8-kpi .sc8-kpi-note{font-size:8px!important}
+}
+@media(min-width:701px) and (max-width:1120px){
+  #stok .sc8-kpis{gap:7px!important}
+  #stok .sc8-kpi{height:78px!important;min-height:78px!important;max-height:78px!important;padding:8px 9px!important;grid-template-columns:30px minmax(0,1fr)!important;column-gap:7px!important}
+  #stok .sc8-kpi-icon{height:30px!important;width:30px!important;min-width:30px!important;min-height:30px!important}
+  #stok .sc8-kpi-icon svg{width:18px;height:18px}
+  #stok .sc8-kpi .sc8-kpi-label{font-size:9px!important}
+  #stok .sc8-kpi .sc8-kpi-value{font-size:19px!important}
+  #stok .sc8-kpi .sc8-kpi-note{font-size:8px!important}
+}
+@media(max-width:700px){
+  #stok .sc8-kpis{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important}
+  #stok .sc8-kpi{height:86px!important;min-height:86px!important;max-height:86px!important;padding:9px!important;grid-template-columns:31px minmax(0,1fr)!important;gap:7px!important}
+  #stok .sc8-kpi-icon{width:31px!important;height:31px!important;min-width:31px!important;min-height:31px!important}
+  #stok .sc8-kpi-icon svg{width:18px;height:18px}
+  #stok .sc8-kpi .sc8-kpi-value{font-size:20px!important}
+}
