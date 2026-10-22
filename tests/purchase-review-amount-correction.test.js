@@ -29,7 +29,7 @@ assert.match(script,/data-hsn-rv-apply/);
 assert.match(script,/finance_posted/);
 
 
-assert.match(preload,/purchase-review-amount-v1\.js\?v=4/);
+assert.match(preload,/purchase-review-amount-v1\.js\?v=5/);
 assert.match(css,/#hasnaria-review-correction-root/);
 assert.match(css,/\.hsn-rv-scroll/);
 assert.match(schema,/private\.owner_stock_review_assert_v1\(\)/);
