@@ -290,3 +290,215 @@
 #stok .sc4-upload-state b{color:#174e3c}
 #stok .sc4-upload-state button{border:1px solid #b0cbbb;border-radius:7px;background:#f8fcf8;padding:6px 9px;font-size:10px;color:#265e47;cursor:pointer}
 @media(max-width:700px){#stok .sc4-upload-state{flex-wrap:wrap}#stok .sc4-upload-state button{width:100%}}
+
+
+/* HSN Stock Green v5: canonical backend metrics, mockup-aligned composition.
+   Scoped to #stok so existing sidebar/owner palette is not changed. */
+#stok .sc3-shell:has(.sc5-dashboard){
+  display:flex!important;flex-direction:column!important;gap:8px!important;
+  box-sizing:border-box!important;min-width:0!important;min-height:0!important;
+  height:100%!important;max-height:100%!important;overflow:hidden!important;
+  color:#143c30;background:#f8fcfa;
+}
+#stok .sc5-head{
+  display:flex;flex:0 0 auto;align-items:center;justify-content:space-between;
+  min-width:0;gap:13px;margin:0 0 2px;padding:2px 4px 0;
+}
+#stok .sc5-head-copy{min-width:0}
+#stok .sc5-eyebrow{display:block;color:#11664d;font-size:8px;font-weight:900;letter-spacing:.08em}
+#stok .sc5-head h2{font-size:24px;line-height:1.05;letter-spacing:-.03em;color:#112f26;margin:3px 0 5px}
+#stok .sc5-head p{font-size:10.5px;color:#607a6d;margin:0;line-height:1.3}
+#stok .sc5-head-right{display:flex;flex-direction:column;align-items:flex-end;gap:6px;min-width:0}
+#stok .sc5-head-buttons,#stok .sc5-head-filters{display:flex;align-items:center;gap:7px}
+#stok .sc5-head-buttons button{
+  display:inline-flex;align-items:center;justify-content:center;
+  white-space:nowrap;height:34px;min-height:34px;min-width:0;padding:0 12px;
+  font:inherit;font-size:10px;font-weight:800;border-radius:9px;cursor:pointer;
+}
+#stok .sc5-primary{border:1px solid #125644;background:#125644;color:#fff}
+#stok .sc5-secondary{border:1px solid #bad7c8;background:#edf9f3;color:#125644}
+#stok .sc5-head-filters label{display:flex;align-items:center;gap:5px;color:#507165;font-size:9px;font-weight:750}
+#stok .sc5-head-filters select{
+  height:25px;min-height:25px;min-width:118px;width:auto;max-width:160px;
+  border:1px solid #d5e6dc;border-radius:7px;background:#fff;
+  color:#184c39;padding:3px 7px;font-size:10px;
+}
+#stok .sc5-text-btn,#stok .sc5-refresh{
+  height:25px;padding:2px 7px;border:1px solid #d3e4db;border-radius:7px;
+  background:#fff;color:#25664c;font-size:9px;font-weight:750;cursor:pointer;
+}
+#stok .sc5-refresh{font-size:17px;line-height:1}
+#stok .sc5-kpis{
+  display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;
+  gap:9px!important;margin:0!important;flex:0 0 auto;min-width:0;
+}
+#stok .sc5-kpi{
+  display:flex;gap:9px;align-items:center;min-width:0;min-height:80px;
+  box-sizing:border-box;background:#fff;border:1px solid #d9e9e0;
+  border-radius:12px;padding:10px 12px;box-shadow:0 3px 10px rgba(16,76,51,.025);
+}
+#stok .sc5-kpi-icon{
+  display:grid;place-items:center;flex:0 0 40px;height:40px;
+  border-radius:50%;background:#def3e9;color:#125644;
+  font-size:20px;font-weight:850;
+}
+#stok .sc5-kpi>div{display:flex;flex-direction:column;min-width:0}
+#stok .sc5-kpi>div>span{font-size:9.5px;font-weight:850;color:#183e31}
+#stok .sc5-kpi strong{font-size:25px;font-weight:900;line-height:1.1;color:#0c4d38;margin:3px 0}
+#stok .sc5-kpi small{font-size:8px;color:#6b8276;line-height:1.25}
+#stok .sc5-kpi-urgent{background:#f5fcf7;border-color:#d4e7d5}
+#stok .sc5-kpi-urgent .sc5-kpi-icon{background:#e1f5dc}
+#stok .sc5-dashboard{
+  display:flex;flex:1 1 auto;flex-direction:column;
+  min-height:0;min-width:0;gap:9px;overflow:hidden;
+}
+#stok .sc5-grid-top,#stok .sc5-grid-bottom{
+  display:grid;flex:1 1 0;min-height:0;min-width:0;gap:9px;
+  grid-template-columns:minmax(0,1.25fr) minmax(0,1.14fr) minmax(0,.9fr);
+}
+#stok .sc5-grid-bottom{grid-template-columns:minmax(0,.9fr) minmax(0,1.25fr) minmax(0,.9fr)}
+#stok .sc5-panel{
+  min-height:0;min-width:0;display:flex;flex-direction:column;
+  overflow:hidden;box-sizing:border-box;border:1px solid #dfece5;
+  border-radius:12px;background:#fff;padding:12px 13px;
+}
+#stok .sc5-panel h3{
+  flex:0 0 auto;font-size:11.5px;font-weight:850;color:#164533;
+  margin:0 0 9px;line-height:1.24;letter-spacing:-.01em;
+}
+#stok .sc5-donut-row{
+  display:flex;align-items:center;justify-content:space-between;
+  min-height:0;min-width:0;gap:12px;flex:1 1 auto;
+}
+#stok .sc5-donut{
+  display:grid;place-items:center;flex:0 0 auto;position:relative;
+  width:clamp(96px,11.4vw,152px);height:clamp(96px,11.4vw,152px);
+  border-radius:50%;aspect-ratio:1;
+}
+#stok .sc5-donut-hole{
+  position:absolute;inset:24%;border-radius:50%;background:#fff;
+  display:flex;align-items:center;justify-content:center;flex-direction:column;
+  color:#174632;text-align:center;
+}
+#stok .sc5-donut-hole strong{font-size:21px;line-height:1.1}
+#stok .sc5-donut-hole small{font-size:7.5px;line-height:1.2;color:#738a7d}
+#stok .sc5-donut-legend{
+  display:grid;gap:5px;align-content:center;flex:1 1 auto;min-width:0;
+  max-height:100%;overflow:auto;scrollbar-width:thin;
+}
+#stok .sc5-donut-legend>div{
+  display:flex;justify-content:space-between;align-items:center;gap:8px;
+  font-size:9px;line-height:1.3;color:#4b7461;
+}
+#stok .sc5-legend-name{min-width:0;display:flex;align-items:center;gap:5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#stok .sc5-legend-name i{flex:0 0 8px;width:8px;height:8px;border-radius:50%}
+#stok .sc5-donut-legend b{font-size:9px;white-space:nowrap;color:#164b38}
+#stok .sc5-donut-legend small{font-weight:500;color:#6a8d7a}
+#stok .sc5-caption{font-size:8px;line-height:1.25;color:#738a7e;margin:7px 0 0;flex:0 0 auto}
+#stok .sc5-empty{display:grid;place-items:center;flex:1 1 auto;min-height:0;color:#678374;font-size:11px;text-align:center}
+#stok .sc5-trend{flex:1 1 auto;min-height:0}
+#stok .sc5-trend-plots{
+  display:grid;grid-template-columns:repeat(10,minmax(0,1fr));
+  align-items:stretch;gap:5px;height:100%;min-height:95px;
+}
+#stok .sc5-trend-col{
+  display:flex;flex-direction:column;align-items:center;justify-content:end;
+  min-height:0;min-width:0;gap:3px;
+}
+#stok .sc5-trend-col>span{font-size:8px;color:#2a684d;white-space:nowrap}
+#stok .sc5-trend-col>small{font-size:8px;color:#5d786c;white-space:nowrap}
+#stok .sc5-trend-track{
+  position:relative;flex:1 1 auto;min-height:0;min-width:0;width:100%;
+  border-radius:5px 5px 1px 1px;background:linear-gradient(to top,#eef7f1,#fff);
+  border-bottom:1px solid #c0daca;overflow:hidden;
+}
+#stok .sc5-trend-track i{
+  position:absolute;bottom:0;left:8%;width:84%;
+  background:linear-gradient(#1a815d,#b7e7ce);border-radius:4px 4px 0 0;
+}
+#stok .sc5-top-list{display:grid;flex:1 1 auto;gap:7px;align-content:center;min-height:0}
+#stok .sc5-top-row{
+  display:grid;grid-template-columns:minmax(0,1fr) auto;
+  gap:2px 6px;min-width:0;align-items:center;
+}
+#stok .sc5-top-name{
+  font-size:9.5px;font-weight:800;white-space:nowrap;overflow:hidden;
+  text-overflow:ellipsis;color:#1c503a;
+}
+#stok .sc5-top-row b{font-size:9px;color:#14553d;white-space:nowrap}
+#stok .sc5-top-row small{grid-column:1/-1;font-size:7.5px;color:#748d7b}
+#stok .sc5-top-track{grid-column:1/-1;height:6px;background:#e7f5ed;border-radius:6px;overflow:hidden}
+#stok .sc5-top-track i{display:block;height:100%;border-radius:6px;background:#258b63}
+#stok .sc5-status-grid{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;
+  flex:1 1 auto;min-height:0;
+}
+#stok .sc5-status-tile{
+  display:flex;flex-direction:column;justify-content:center;gap:3px;
+  min-height:0;padding:9px;border-radius:10px;
+  background:#edfaf3;color:#0e4733;
+}
+#stok .sc5-status-tile span{font-size:9px;font-weight:850}
+#stok .sc5-status-tile strong{font-size:23px;line-height:1.1}
+#stok .sc5-status-tile small{font-size:7px;color:#4b765f}
+#stok .sc5-status-ok{background:#d8f4e5}
+#stok .sc5-status-critical{background:#ecf8df}
+#stok .sc5-status-order{background:#e5f4df}
+#stok .sc5-status-untracked{background:#eaf8f2}
+#stok .sc5-control-list{
+  display:flex;flex:1 1 auto;min-height:0;flex-direction:column;justify-content:center;gap:7px;
+}
+#stok .sc5-control-list>div{
+  display:flex;align-items:center;justify-content:space-between;gap:8px;
+  padding:7px 9px;border-radius:8px;background:#eef8f2;color:#426d58;
+  font-size:9px;
+}
+#stok .sc5-control-list strong{font-size:11px;color:#124d37;white-space:nowrap}
+#stok .sc5-footer-actions{
+  flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;
+  min-width:0;gap:12px;padding:4px 7px;color:#658071;font-size:8.5px;
+}
+#stok .sc5-footer-actions>div{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+#stok .sc5-footer-actions button{
+  min-height:27px;padding:3px 10px;border:1px solid #c4ddce;
+  border-radius:8px;background:#f3fbf6;color:#13553c;
+  font-size:9px;font-weight:800;cursor:pointer;
+}
+#stok .sc5-footer-actions button.primary{background:#125644;color:#fff;border-color:#125644}
+@media(min-width:901px) and (max-height:800px){
+ #stok .sc5-head h2{font-size:20px}
+ #stok .sc5-head p{font-size:9px}
+ #stok .sc5-head-buttons button{height:28px;min-height:28px}
+ #stok .sc5-kpi{min-height:67px;padding:7px 9px}
+ #stok .sc5-kpi strong{font-size:20px}
+ #stok .sc5-kpi-icon{flex-basis:32px;height:32px}
+ #stok .sc5-panel{padding:8px 10px}
+ #stok .sc5-panel h3{margin-bottom:5px;font-size:10px}
+ #stok .sc5-donut{width:100px;height:100px}
+ #stok .sc5-top-list{gap:4px}
+ #stok .sc5-trend-plots{min-height:70px}
+ #stok .sc5-caption{font-size:7px;margin-top:3px}
+ #stok .sc5-control-list{gap:3px}
+ #stok .sc5-control-list>div{padding:4px 6px}
+}
+@media(max-width:1100px) and (min-width:701px){
+ #stok .sc5-grid-top,#stok .sc5-grid-bottom{grid-template-columns:repeat(2,minmax(0,1fr))}
+ #stok .sc5-grid-top>article:last-child,#stok .sc5-grid-bottom>article:last-child{grid-column:1/-1}
+ #stok .sc3-shell:has(.sc5-dashboard){height:auto!important;max-height:none!important;overflow:auto!important}
+ #stok .sc5-dashboard{overflow:visible}
+ #stok .sc5-grid-top,#stok .sc5-grid-bottom{flex:0 0 auto}
+ #stok .sc5-panel{min-height:200px}
+}
+@media(max-width:700px){
+ #stok .sc3-shell:has(.sc5-dashboard){height:auto!important;max-height:none!important;overflow:visible!important}
+ #stok .sc5-head{flex-wrap:wrap;align-items:flex-start}
+ #stok .sc5-head-right{width:100%;align-items:stretch}
+ #stok .sc5-head-buttons,#stok .sc5-head-filters{justify-content:space-between}
+ #stok .sc5-head-buttons button{flex:1}
+ #stok .sc5-kpis{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+ #stok .sc5-dashboard{overflow:visible}
+ #stok .sc5-grid-top,#stok .sc5-grid-bottom{grid-template-columns:1fr;flex:0 0 auto}
+ #stok .sc5-panel{min-height:230px}
+ #stok .sc5-donut{width:138px;height:138px}
+ #stok .sc5-footer-actions{flex-wrap:wrap}
+}
