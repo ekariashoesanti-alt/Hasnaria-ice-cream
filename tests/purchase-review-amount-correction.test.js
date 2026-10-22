@@ -16,6 +16,18 @@ assert.match(schemaV2,/finance_posted',false/);
 assert.doesNotMatch(schemaV2,/\bUPDATE public\.offline_purchase_history\b|\bTRUNCATE\b/);
 assert.match(css,/\.hsn-rv-chip/);
 assert.match(css,/select\[data-hsn-rv-payment\]/);
+const settlement=fs.readFileSync('supabase/migrations/20261022123000_owner_purchase_related_party_auto_journal_v1.sql','utf8');
+assert.match(settlement,/apply_purchase_review_owner_v1/);
+assert.match(settlement,/private.owner_stock_review_assert_v1\(\)/);
+assert.match(settlement,/2110/);
+assert.match(settlement,/finance_journal_entries/);
+assert.match(settlement,/reconcile_purchase_classification_internal_v3/);
+assert.match(settlement,/v_debit<>v_posted_total OR v_credit<>v_posted_total/);
+assert.match(settlement,/WHEN EXISTS/);
+assert.match(script,/apply_purchase_review_owner_v1/);
+assert.match(script,/data-hsn-rv-apply/);
+assert.match(script,/finance_posted/);
+
 
 assert.match(preload,/purchase-review-amount-v1\.js\?v=4/);
 assert.match(css,/#hasnaria-review-correction-root/);
