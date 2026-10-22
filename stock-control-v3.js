@@ -1285,8 +1285,9 @@
         (!x.hasData?' sc9-month-missing':'')+'" title="'+esc(
           x.month+' '+x.year+': '+(x.hasData?fmt(x.value)+' aktivitas ledger':'belum ada catatan aktivitas')
         )+'">'+
-        '<div class="sc9-bar-stage"><span class="sc9-count">'+esc(number)+'</span>'+
-          '<span class="sc9-bar-shell"><i class="sc9-bar" style="height:'+pct.toFixed(2)+'%"></i></span>'+
+        '<div class="sc9-bar-stage"><span class="sc9-bar-shell">'+
+          '<i class="sc9-bar" style="height:'+pct.toFixed(2)+'%">'+
+            '<b class="sc9-count">'+esc(number)+'</b></i></span></div>'+
         '</div><span class="sc9-month-label">'+esc(label)+'</span></div>';
     }).join('');
     return '<div class="sc9-trend" role="group" aria-label="Grafik jumlah aktivitas ledger stok selama 10 bulan">'+
