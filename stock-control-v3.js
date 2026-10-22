@@ -1254,7 +1254,7 @@
     (S.trend||[]).forEach(function(x){
       var key=String(x.period_month||'').slice(0,10);
       var value=Number(x.movement_rows);
-      if(!/^\\d{4}-\\d{2}-01$/.test(key)||!Number.isFinite(value)||value<0)return;
+      if(!/^\d{4}-\d{2}-01$/.test(key)||!Number.isFinite(value)||value<0)return;
       totals[key]=(totals[key]||0)+value;
       seen[key]=true;
     });
@@ -1288,7 +1288,7 @@
         '<div class="sc9-bar-stage"><span class="sc9-bar-shell">'+
           '<i class="sc9-bar" style="height:'+pct.toFixed(2)+'%">'+
             '<b class="sc9-count">'+esc(number)+'</b></i></span></div>'+
-        '</div><span class="sc9-month-label">'+esc(label)+'</span></div>';
+        '<span class="sc9-month-label">'+esc(label)+'</span></div>';
     }).join('');
     return '<div class="sc9-trend" role="group" aria-label="Grafik jumlah aktivitas ledger stok selama 10 bulan">'+
       '<div class="sc9-trend-summary"><span>Aktivitas ledger · 10 bulan</span>'+
