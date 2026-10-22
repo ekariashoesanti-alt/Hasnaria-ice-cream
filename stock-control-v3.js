@@ -861,7 +861,7 @@
       '<div class="sc5-head-right"><div class="sc5-head-buttons">'+
       (isOwner()?'<button type="button" class="sc5-primary" data-sc4-action="upload-opname">⇧ Upload Excel Stok</button>':'')+
       '<button type="button" class="sc5-secondary" data-sc4-modal="position">▣ Lihat Detail Stok</button></div>'+
-      '<div class="sc5-head-filters"><label><span>Periode</span><select id="sc4Period" data-month-filter="stok">'+options+'</select></label>'+
+      '<div class="sc5-head-filters"><label><span>Bulan</span><select id="sc4Period" data-month-filter="stok">'+options+'</select></label>'+
       (isOwner()?'<button type="button" class="sc5-text-btn" data-sc4-action="upload-purchase">Upload Pembelian</button>':'')+
       '<button type="button" class="sc5-refresh" data-sc3-action="refresh" aria-label="Refresh data Stok">↻</button></div></div></header>';
   }
