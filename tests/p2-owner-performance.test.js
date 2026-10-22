@@ -52,13 +52,13 @@ assert.match(sales, /MutationObserver\(schedule\)\.observe\(host, \{ childList: 
 
 assert.match(app, /SALES_UI = '\/sales-ui-patch\.js\?v=13'/,
   'Sales performance patch must be cache-busted');
-assert.match(index, /\/app\.js\?v=p073/,
+assert.match(index, /\/app\.js\?v=p074/,
   'application runtime must be cache-busted');
 assert.match(index, /\/nav-patch\.js\?v=16/,
   'navigation runtime must be cache-busted');
 assert.match(shell, /\/administration-v1\.js\?v=6/,
   'Administration runtime must be cache-busted');
-assert.match(buildIndex, /owner-shell-guard\.js\?v=11/,
+assert.match(buildIndex, /owner-shell-guard\.js\?v=12/,
   'production Owner shell must be cache-busted');
 
 console.log('P2 Owner runtime performance contracts: PASS');
