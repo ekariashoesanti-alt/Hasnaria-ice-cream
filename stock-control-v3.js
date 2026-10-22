@@ -60,7 +60,13 @@
     lastVerifiedAt: '',
     pendingStockRefresh: false,
     verifiedRefreshing: false,
-    pendingUploadRuns: null
+    pendingUploadRuns: null,
+    valuation: null,
+    verifiedCosts: [],
+    valuationLoaded: false,
+    valuationLoading: false,
+    valuationError: '',
+    valuationSeq: 0
   };
 
   function esc(value) {
@@ -202,7 +208,7 @@
     var l = document.createElement('link');
     l.id = 'stock-control-v3-css';
     l.rel = 'stylesheet';
-    l.href = '/stock-control-v3.css?v=6';
+    l.href = '/stock-control-v3.css?v=7';
     document.head.appendChild(l);
   }
 
@@ -503,7 +509,7 @@
       if (seq === S.loadSeq) {
         S.baseLoading = false;
         render();
-        if (S.baseLoaded) scheduleAux(seq);
+        if (S.baseLoaded) {scheduleAux(seq);loadVerifiedValuation();}
         schedulePendingCommittedRefresh();
       }
     }
@@ -962,17 +968,110 @@
     '</div>';
   }
 
+
+  // Current valuation is intentionally partial: only explicitly verified costs.
+  // Never infer prices from raw purchase spending or unverified conversions.
+  function stockMoney(v,compact){
+    if(v===null||v===undefined||!Number.isFinite(Number(v)))return '—';
+    var n=Number(v);
+    if(compact&&Math.abs(n)>=1000000)return 'Rp '+(n/1000000).toLocaleString('id-ID',{maximumFractionDigits:2})+' jt';
+    if(compact&&Math.abs(n)>=1000)return 'Rp '+(n/1000).toLocaleString('id-ID',{maximumFractionDigits:1})+' rb';
+    return 'Rp '+n.toLocaleString('id-ID',{maximumFractionDigits:0});
+  }
+  async function loadVerifiedValuation(){
+    if(S.valuationLoading)return;
+    var seq=++S.valuationSeq;
+    S.valuationLoading=true;
+    S.valuationError='';
+    try{
+      var rs=await Promise.all([
+        request('inventory_valuation_verified_summary?'+qs({brand_id:'eq.'+BRAND,select:'inventory_items,valued_items,cost_coverage_pct,inventory_value',limit:'1'})),
+        request('inventory_verified_cost_current?'+qs({brand_id:'eq.'+BRAND,select:'inventory_item_id,unit_cost',limit:'500'}))
+      ]);
+      if(seq!==S.valuationSeq)return;
+      S.valuation=rs[0]&&rs[0][0]?rs[0][0]:null;
+      S.verifiedCosts=(rs[1]||[]).filter(function(x){
+        return x.inventory_item_id&&Number.isFinite(Number(x.unit_cost))&&Number(x.unit_cost)>0;
+      });
+      S.valuationLoaded=true;
+    }catch(e){
+      if(seq!==S.valuationSeq)return;
+      S.valuationError=e&&e.message?e.message:String(e);
+      S.valuationLoaded=false;
+      S.valuation=null;S.verifiedCosts=[];
+    }finally{
+      if(seq===S.valuationSeq){S.valuationLoading=false;render()}
+    }
+  }
+  function verifiedValuationRows(){
+    if(!S.baseLoaded||!S.valuationLoaded)return [];
+    var byId={};
+    (S.items||[]).forEach(function(x){byId[x.inventory_item_id]=x});
+    return (S.verifiedCosts||[]).map(function(c){
+      var item=byId[c.inventory_item_id];
+      if(!item||!item.tracking_active)return null;
+      var cost=Number(c.unit_cost),quantity=Math.max(0,num(item.system_qty));
+      return {name:item.item_name||'SKU',category:item.category||'Lainnya',
+        unit:item.unit||'unit',qty:quantity,value:Math.max(0,cost*quantity)};
+    }).filter(function(x){return x&&x.value>0&&Number.isFinite(x.value)});
+  }
+  function stockValueByCategory(){
+    if(S.valuationLoading||!S.baseLoaded)return '<div class="sc5-empty">Memuat valuasi harga pokok terverifikasi…</div>';
+    if(!S.valuationLoaded)return '<div class="sc5-empty">Nilai Stok belum dapat dimuat. Periksa koneksi dan muat ulang.</div>';
+    var verified=verifiedValuationRows(),groups={},palette=['#0b6046','#209769','#53b785','#8ed4a8','#b9e8ce','#d8eee0'];
+    verified.forEach(function(r){var k=String(r.category).toUpperCase();groups[k]=(groups[k]||0)+r.value});
+    var parts=Object.keys(groups).map(function(k){return {name:k,value:groups[k]}}).sort(function(a,b){return b.value-a.value});
+    var total=parts.reduce(function(a,x){return a+x.value},0),pos=0,stops=[];
+    parts.forEach(function(x,i){var end=pos+100*x.value/total;stops.push(palette[i%palette.length]+' '+pos.toFixed(3)+'% '+end.toFixed(3)+'%');pos=end});
+    var coverage=S.valuation||{},coverageCount=num(coverage.valued_items),denominator=num(coverage.inventory_items)||S.items.length;
+    var caption='<p class="sc5-caption sc6-valuation-disclaimer">Valuasi parsial: '+fmt(coverageCount)+' dari '+fmt(denominator)+' SKU memiliki harga pokok terverifikasi'+
+      (denominator?' ('+(100*coverageCount/denominator).toLocaleString('id-ID',{maximumFractionDigits:1})+'%)':'')+'. Bukan total nilai seluruh persediaan.</p>';
+    if(!parts.length)return '<div class="sc5-empty">Belum ada SKU dengan saldo positif dan biaya terverifikasi.</div>'+caption;
+    var bar='<div class="sc6-value-donut" style="background:conic-gradient('+stops.join(',')+')"><div class="sc6-value-hole"><strong>'+esc(stockMoney(total,true))+'</strong><small>Valuasi parsial</small></div></div>';
+    var legend='<div class="sc6-value-legend">'+parts.map(function(x,i){
+      return '<div><span><i style="background:'+palette[i%palette.length]+'"></i>'+esc(x.name)+'</span><strong>'+esc(stockMoney(x.value,true))+'</strong><small>'+(100*x.value/total).toLocaleString('id-ID',{maximumFractionDigits:1})+'%</small></div>';
+    }).join('')+'</div>';
+    return '<div class="sc6-value-layout">'+bar+legend+'</div>'+caption;
+  }
+  function stockValueTopFive(){
+    if(S.valuationLoading||!S.baseLoaded)return '<div class="sc5-empty">Memuat peringkat nilai terverifikasi…</div>';
+    if(!S.valuationLoaded)return '<div class="sc5-empty">Daftar nilai stok belum dapat dimuat.</div>';
+    var ranks=verifiedValuationRows().sort(function(a,b){return b.value-a.value}).slice(0,5);
+    if(!ranks.length)return '<div class="sc5-empty">Belum ada SKU dengan nilai terverifikasi.</div>';
+    var max=Math.max(1,ranks[0].value);
+    return '<div class="sc6-top-values">'+ranks.map(function(x,i){
+      return '<div class="sc6-top-row" title="'+esc(x.name+' — '+stockMoney(x.value))+'">'+
+       '<div class="sc6-top-meta"><b>'+(i+1)+'. '+esc(x.name)+'</b><small>'+esc(x.qty.toLocaleString('id-ID',{maximumFractionDigits:3})+' '+x.unit)+'</small></div>'+
+       '<div class="sc6-top-track"><i style="width:'+(100*x.value/max).toFixed(1)+'%"></i></div>'+
+       '<strong>'+esc(stockMoney(x.value,true))+'</strong></div>';
+    }).join('')+'</div><p class="sc5-caption">Hanya SKU dengan biaya yang sudah diverifikasi. Tidak mengisi 5 posisi dengan harga perkiraan.</p>';
+  }
+  function expiryAndOpnamePanel(){
+    if(!S.baseLoaded)return '<div class="sc5-empty">Memuat kontrol stok…</div>';
+    var dates=S.items.map(function(x){return x.last_opname_date}).filter(Boolean).sort();
+    var latest=dates.length?dateLabel(dates[dates.length-1]):'Belum ada';
+    var tracked=S.items.filter(function(x){return !!x.tracking_active}).length;
+    var bad=S.items.filter(function(x){return x.ui_status==='critical'||x.ui_status==='order'}).length;
+    return '<div class="sc6-condition-list">'+
+      '<div class="sc6-expiry-empty"><span>▦</span><div><strong>Data kedaluwarsa belum tersedia</strong><small>Backend belum memiliki tanggal kedaluwarsa per batch; tidak ada hitungan fiktif.</small></div></div>'+
+      '<div><span>Opname terakhir</span><strong>'+esc(latest)+'</strong></div>'+
+      '<div><span>SKU dengan checkpoint</span><strong>'+fmt(tracked)+' / '+fmt(S.items.length)+'</strong></div>'+
+      '<div><span>Stok kritis / perlu beli</span><strong>'+fmt(bad)+' SKU</strong></div>'+
+      '</div>';
+  }
+
   function overviewKpis() {
     var items=S.items||[],pending=!S.baseLoaded&&S.baseLoading;
-    var tracked=items.filter(function(x){return !!x.tracking_active}).length;
     var need=items.filter(function(x){return x.ui_status==='critical'||x.ui_status==='order'}).length;
     var untracked=items.filter(function(x){return x.ui_status==='untracked'}).length;
-    function v(n){return pending?'…':fmt(n)}
-    return '<div class="sc5-kpis">'+
-      '<article class="sc5-kpi"><span class="sc5-kpi-icon">▣</span><div><span>Total Item (SKU)</span><strong>'+v(items.length)+'</strong><small>Master SKU terdaftar di backend</small></div></article>'+
-      '<article class="sc5-kpi"><span class="sc5-kpi-icon">◎</span><div><span>Sudah Opname</span><strong>'+v(tracked)+'</strong><small>SKU dengan tracking aktif</small></div></article>'+
-      '<article class="sc5-kpi sc5-kpi-urgent"><span class="sc5-kpi-icon">△</span><div><span>Perlu Tindakan</span><strong>'+v(need)+'</strong><small>Kritis dan perlu dibeli</small></div></article>'+
-      '<article class="sc5-kpi"><span class="sc5-kpi-icon">◯</span><div><span>Belum Opname Awal</span><strong>'+v(untracked)+'</strong><small>Belum ada posisi yang terverifikasi</small></div></article>'+
+    var v=S.valuation;
+    var coverage=v&&items.length?num(v.valued_items)/items.length*100:0;
+    function numlabel(x){return pending?'…':fmt(x)}
+    return '<div class="sc5-kpis sc6-kpis">'+
+      '<article class="sc5-kpi"><span class="sc5-kpi-icon">▣</span><div><span>Total Item (SKU)</span><strong>'+numlabel(items.length)+'</strong><small>Master SKU dari backend</small></div></article>'+
+      '<article class="sc5-kpi"><span class="sc5-kpi-icon">◉</span><div><span>Nilai Stok Terverifikasi</span><strong>'+(S.valuationLoading?'…':!S.valuationLoaded?'—':esc(stockMoney(v.inventory_value,true)))+'</strong><small>'+ (S.valuationLoaded?('Baru '+fmt(v.valued_items)+'/'+fmt(v.inventory_items)+' SKU ('+coverage.toLocaleString('id-ID',{maximumFractionDigits:1})+'%); parsial'):'Menunggu data harga pokok terverifikasi')+'</small></div></article>'+
+      '<article class="sc5-kpi sc5-kpi-urgent"><span class="sc5-kpi-icon">△</span><div><span>Item Stok Rendah</span><strong>'+numlabel(need)+'</strong><small>Kritis dan di bawah minimum</small></div></article>'+
+      '<article class="sc5-kpi"><span class="sc5-kpi-icon">◯</span><div><span>Belum Opname Awal</span><strong>'+numlabel(untracked)+'</strong><small>Belum memiliki checkpoint aktif</small></div></article>'+
     '</div>';
   }
 
@@ -1196,16 +1295,16 @@
     var pAlert = S.periodError ? '<div class="sc3-alert">' + esc(S.periodError) + '</div>' : '';
     var loading = S.baseLoading && !S.baseLoaded ? '<div class="sc3-loading">Memuat posisi SKU terkini…</div>' : '';
     shell.innerHTML = renderHeader() + renderCorrectionPanel() + renderLedgerAudit() + renderUploadStatus() + pAlert + overviewKpis() + alert + loading +
-      '<div class="sc5-dashboard" aria-label="Infografis Stok Hasnaria">'+
-        '<div class="sc5-grid-top">'+
-          '<article class="sc5-panel"><h3>▣ Komposisi SKU per Kategori</h3>'+categoryInfographic()+'</article>'+
-          '<article class="sc5-panel"><h3>↗ Tren Aktivitas Stok Bulanan</h3>'+monthlyTrendInfographic()+'</article>'+
-          '<article class="sc5-panel"><h3>▤ Top 5 SKU Prioritas</h3>'+attentionSkuInfographic()+'</article>'+
-        '</div>'+
-        '<div class="sc5-grid-bottom">'+
-          '<article class="sc5-panel"><h3>▣ Status Stok</h3>'+healthInfographic()+'</article>'+
-          '<article class="sc5-panel"><h3>◉ Komposisi Posisi Stok</h3>'+periodCompositionInfographic()+'</article>'+
-          '<article class="sc5-panel"><h3>▦ Kontrol Opname &amp; Kualitas Data</h3>'+opnameControlInfographic()+'</article>'+
+      '<div class="sc5-dashboard sc6-dashboard" aria-label="Infografis Stok Hasnaria">'+
+        '<div class="sc6-grid">'+
+          '<div class="sc6-column sc6-main-column">'+
+            '<article class="sc5-panel sc6-trend-panel"><h3>↗ Tren Aktivitas Stok Bulanan</h3>'+monthlyTrendInfographic()+'</article>'+
+            '<article class="sc5-panel sc6-category-panel"><h3>▣ Nilai Stok per Kategori</h3>'+stockValueByCategory()+'</article>'+
+          '</div>'+
+          '<div class="sc6-column sc6-side-column">'+
+            '<article class="sc5-panel sc6-top-panel"><h3>▤ Top 5 Item Nilai Stok</h3>'+stockValueTopFive()+'</article>'+
+            '<article class="sc5-panel sc6-expiry-panel"><h3>▦ Kondisi Kadaluwarsa &amp; Opname</h3>'+expiryAndOpnamePanel()+'</article>'+
+          '</div>'+
         '</div>'+
       '</div>'+
       '<div class="sc5-footer-actions"><span>Detail transaksi dan ledger tersedia melalui tombol berikut, tanpa tabel panjang di dashboard.</span>'+
@@ -1369,6 +1468,7 @@
     render();
     if (!S.periods.length && !S.periodLoading) loadPeriodData(false);
     if (!S.baseLoaded && !S.baseLoading) loadBase();
+    else if(S.baseLoaded&&!S.valuationLoaded&&!S.valuationLoading)loadVerifiedValuation();
   }
 
   function watch() {
