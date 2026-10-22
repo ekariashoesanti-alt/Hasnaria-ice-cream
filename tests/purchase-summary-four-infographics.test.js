@@ -84,5 +84,9 @@ assert.match(css,/\.pfa-payment-slice/);
 assert.match(css,/\.pfa-payment-svg/);
 assert.doesNotMatch(css,/grid-template-rows:repeat\(10,minmax\(0,1fr\)\)/,'horizontal layout rule removed');
 assert.match(css,/\.pfa-pie-color-3/,'Payment and Pie share palette');
+assert.match(source,/PINJAMAN USAHA LAIN/,'related-party loan funding must have dedicated classification');
+assert.match(source,/Pinjaman Usaha Lain/,'related-party loan must be shown in monthly payment legend');
+assert.match(source,/pfa-pie-color-4/,'loan funding must have dedicated palette entry');
+
 assert.match(source,/Promise\.all\(\[worker\(\),worker\(\),worker\(\)\]\)/,'No unbounded historical queries');
 console.log('Purchase 2x2 one-view, 100% monthly payment and relocation: PASS');

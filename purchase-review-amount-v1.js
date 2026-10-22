@@ -87,7 +87,7 @@
    '<span class="hsn-rv-chip"><b>'+rows.length+'</b> perlu koreksi</span>'+
    '<span class="hsn-rv-chip"><b>'+waitingRows.length+'</b> belum diproses</span>'+
    '<span class="hsn-rv-chip"><b>'+appliedRows.length+'</b> selesai</span>'+
-   '<span class="hsn-rv-chip">Total Review <b>'+esc(amt(all.reduce(function(a,b){return a+Number(b.total_amount||0)},0)))+'</b></span></div></div>'+
+   '<span class="hsn-rv-chip">Nilai transaksi tercatat <b>'+esc(amt(all.reduce(function(a,b){return a+Number(b.total_amount||0)},0)))+'</b></span></div></div>'+
    '<button type="button" class="hsn-rv-close" data-hsn-rv-close="1" aria-label="Tutup dialog">×</button></header>'+
    (state.success?'<div class="hsn-rv-success" role="status" data-hsn-rv-success="1"><span class="hsn-rv-success-icon" aria-hidden="true">✓</span><div><b>'+esc(state.success.title)+'</b><span>'+esc(state.success.detail)+'</span></div></div>':'')+
    '<p class="hsn-rv-hint">Ubah nominal dan/atau jenis pembayaran → ✓ Simpan baris → Submit. Pinjaman Jas Hujan yang tervalidasi akan dijurnalkan otomatis; jika validasi gagal, usulan tetap tersimpan untuk diperbaiki.</p>'+
@@ -163,7 +163,7 @@
     if(String(state.pending[id].batch_id)===batch)state.pending[id].status='applied';
    });
    state.success={title:'Selesai — '+x.applied_rows+' transaksi tercatat di Finance.',
-     detail:'Batch '+batch.slice(0,8)+' · Jurnal debit dan kredit seimbang '+amt(x.debit||x.credit||0)+'. Akun pinjaman Jas Hujan 2110, tanpa perubahan Stock.'};
+     detail:x.already_applied?'Batch '+batch.slice(0,8)+' sudah diproses sebelumnya dan tercatat di Finance.':('Batch '+batch.slice(0,8)+' · Jurnal debit dan kredit seimbang '+amt(x.debit||x.credit||0)+'. Akun pinjaman Jas Hujan 2110, tanpa perubahan Stock.')};
    state.notice='';state.historyOpen=true;
    if(typeof window.__HASNARIA_PURCHASE_FINANCE_REFRESH==='function'){
     window.__HASNARIA_PURCHASE_FINANCE_REFRESH();
