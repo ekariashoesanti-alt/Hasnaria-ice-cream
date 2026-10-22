@@ -7,7 +7,7 @@ ALTER TABLE public.purchase_review_amount_requests_v1
 
 -- v1 enforced that the amount always changed, blocking payment-only review.
 ALTER TABLE public.purchase_review_amount_requests_v1
- DROP CONSTRAINT IF EXISTS purchase_review_amount_requests_v1_proposed_amount_check;
+ DROP CONSTRAINT IF EXISTS purchase_review_amount_requests_v1_check;
 ALTER TABLE public.purchase_review_amount_requests_v1
  ADD CONSTRAINT purchase_review_correction_has_change_v2
  CHECK(proposed_amount>0 AND (proposed_amount<>original_amount OR proposed_payment_method IS NOT NULL));
