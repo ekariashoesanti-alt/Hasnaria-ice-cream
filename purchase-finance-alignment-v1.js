@@ -81,9 +81,28 @@ function syncMarkup(){
 function modalMarkup(){
   if(!modalOpen)return'';
   var a=detailRows();
-  return'<div class="pfa-modal-backdrop" data-pfa-detail-close="1"><section class="pfa-modal" role="dialog" aria-modal="true" aria-labelledby="pfaModalTitle"><div class="pfa-modal-head"><div><div class="pfa-eyebrow">DETAIL PEMBELIAN</div><h3 id="pfaModalTitle">'+esc(monthLabel(periodValue()))+'</h3><p>'+a.length.toLocaleString('id-ID')+' transaksi · '+esc(money(total(a)))+'</p></div><button type="button" class="pfa-close" data-pfa-detail-close="1" aria-label="Tutup">×</button></div><div class="pfa-modal-tools">'+filterMarkup()+'</div>'+table(a)+'</section></div>'
+  return'<div class="pfa-modal-backdrop" data-pfa-detail-close="1"><section class="pfa-modal" role="dialog" aria-modal="true" aria-labelledby="pfaModalTitle"><div class="pfa-modal-head"><div><div class="pfa-eyebrow">DETAIL PEMBELIAN</div><h3 id="pfaModalTitle">'+esc(monthLabel(periodValue()))+'</h3><p>'+a.length.toLocaleString('id-ID')+' transaksi · '+esc(money(total(a)))+'</p></div><button type="button" class="pfa-close" data-pfa-detail-close="1" aria-label="Tutup">×</button></div><div class="pfa-modal-tools">'+filterMarkup()+'</div><div class="pfa-modal-body">'+table(a)+'</div></section></div>'
 }
 
+function syncDetailModal(){
+  // Body portal sits outside fixed sidebar and one-view dashboard overflow.
+  var node=document.getElementById('hasnaria-purchase-detail-portal');
+  var host=document.getElementById('pembelian');
+  if(!modalOpen||!host||host.classList.contains('hidden')){
+    if(node)node.remove();
+    return;
+  }
+  var markup=modalMarkup();
+  if(!node){
+    node=document.createElement('div');
+    node.id='hasnaria-purchase-detail-portal';
+    document.body.appendChild(node);
+  }
+  if(node.__markup!==markup){
+    node.innerHTML=markup;
+    node.__markup=markup;
+  }
+}
 function ownerUnitRole(){var c=window.__HASNARIA_CONTEXT;return!!(c&&c.role==='owner')}
 function unitAllowed(){
  var app=document.getElementById('app'),panel=document.getElementById('pembelian');
@@ -416,8 +435,8 @@ function purchaseSalesHeader(values,finance){
 }
 function render(){
   if(unitOpen&&!unitAllowed())closeUnitReview();
-  var root=document.getElementById('paRoot');if(!root)return;patchCore(root);syncPeriodOptions();
-  var target=root.querySelector('.pa-controls');if(!target)return;
+  var root=document.getElementById('paRoot');if(!root){syncDetailModal();return}patchCore(root);syncPeriodOptions();
+  var target=root.querySelector('.pa-controls');if(!target){syncDetailModal();return}
   var wrap=document.getElementById('purchaseFinanceAlignment');
   if(!wrap){wrap=document.createElement('section');wrap.id='purchaseFinanceAlignment';wrap.className='pfa-wrap';target.insertAdjacentElement('afterend',wrap)}
   if(loading){
@@ -442,8 +461,7 @@ function render(){
     '</div>'+ 
     // The reconciliation warning has its permanent home in Notifications;
     // the header status pill remains visible without consuming chart space.
-    infographicMarkup()+
-    modalMarkup();
+    infographicMarkup();
   // Review controls mount asynchronously into #pfaReviewSlot. Avoid comparing live
   // innerHTML to the template: add-on controls make them differ on every repaint.
   if(wrap.__pfaCanonicalMarkup!==nextMarkup){
@@ -454,6 +472,7 @@ function render(){
   wrap.setAttribute('data-pfa-period',periodValue());
   wrap.setAttribute('aria-busy','false');
   wrap.classList.remove('pfa-period-loading','pfa-updating');
+  syncDetailModal();
 }
 async function loadPeriods(){
   db=db||window.__HASNARIA_DB;if(!db)return;
@@ -504,13 +523,16 @@ async function syncReport(){
 }
 function registerSync(){var s=window.__HASNARIA_DATA_SYNC;if(s)s.register('owner-purchase-report',syncReport)}
 registerSync();window.addEventListener('hasnaria:data-sync-ready',registerSync);
-function resetData(){trendLoadSequence++;trendLoadingKey='';rows=[];control={};overview=null;chartRows=[];loadedAt=0;loadedPeriod='';category='all';modalOpen=false;closeUnitReview()}
+function resetData(){trendLoadSequence++;trendLoadingKey='';rows=[];control={};overview=null;chartRows=[];loadedAt=0;loadedPeriod='';category='all';modalOpen=false;syncDetailModal();closeUnitReview()}
 function schedule(){clearTimeout(timer);timer=setTimeout(function(){if(!document.getElementById('paRoot'))return;if(!document.getElementById('purchaseFinanceAlignment'))render();if(!loading&&(loadedPeriod!==periodValue()||(loadedAt&&Date.now()-loadedAt>60000)))load(false)},80)}
 window.__HASNARIA_PURCHASE_FINANCE_REFRESH=syncReport;
 function boot(){
   db=window.__HASNARIA_DB||null;var tries=0;
   (function wait(){db=db||window.__HASNARIA_DB||null;var host=document.getElementById('pembelian');if(db&&host){
     observer=new MutationObserver(schedule);observer.observe(host,{childList:true,subtree:false});
+    new MutationObserver(function(){
+      if(host.classList.contains('hidden')&&modalOpen){modalOpen=false;syncDetailModal()}
+    }).observe(host,{attributes:true,attributeFilter:['class']});
     document.addEventListener('change',function(e){if(!e.target)return;if(e.target.id==='paPeriod'){resetData();lastStockSync='';load(true);return}if(e.target.id==='pfaCategory'){category=e.target.value;render()}},true);
     document.addEventListener('click',function(e){
       var mode=e.target&&e.target.closest?e.target.closest('[data-pfa-mode]'):null;
