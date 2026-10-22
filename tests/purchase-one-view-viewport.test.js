@@ -4,6 +4,7 @@ const assert=require('node:assert/strict');
 const read=n=>fs.readFileSync(n,'utf8');
 const css=read('owner-one-view.css');
 const palette=read('owner-green.css');
+const detailCss=read('purchase-finance-alignment-v1.css');
 const app=read('purchase-finance-alignment-v1.js');
 const preload=read('xlsx-preload.js');
 const shell=read('owner-shell-guard.js');
@@ -31,6 +32,19 @@ assert.match(app,/id="pfaReviewSlot"/);
 assert.match(app,/pfa-review-compat" hidden aria-hidden="true"/);
 assert.match(css,/\.pfa-review-compat\[hidden\]/);
 assert.match(app,/data-pfa-detail-open="1"/);
+
+assert.match(app,/function syncDetailModal\(\)/,'detail popup must use its own portal lifecycle');
+assert.match(app,/document\.body\.appendChild\(node\)/,'popup must be mounted outside clipped Purchase panel');
+assert.match(app,/id='hasnaria-purchase-detail-portal'/,'portal must have a stable ID');
+assert.match(app,/node\.remove\(\)/,'popup closes cleanly when tab is hidden');
+assert.match(app,/class="pfa-modal-body"/,'scroll-only table body must exist');
+assert.doesNotMatch(app,/infographicMarkup\(\)\s*\+\s*modalMarkup\(\)/,'popup must not be nested under dashboard');
+assert.match(detailCss,/#hasnaria-purchase-detail-portal > \.pfa-modal-backdrop/,'fullscreen overlay scoped to modal only');
+assert.match(detailCss,/z-index:2147482000!important/,'modal must be above Owner sidebar');
+assert.match(detailCss,/\.pfa-modal-body > \.pfa-table-scroll/,'only inner table scrolls');
+assert.match(detailCss,/position:sticky/,'table headers should remain visible when scrolling');
+assert.match(preload,/purchase-finance-alignment-v1\.css\?v=6/,'latest modal CSS cache version must load');
+
 assert.match(app,/wrap\.classList\.toggle\('pfa-period-loading'/);
 assert.match(app,/if\(!document\.getElementById\('purchaseFinanceAlignment'\)\)render\(\)/);
 assert.doesNotMatch(app,/if\(b\.matches\('#paUpload,#purchaseExcelBtn,#purchaseMajooBtn'\)\)setTimeout\(function\(\)\{resetData\(\)/,
@@ -42,7 +56,7 @@ assert.match(app,/data-pfa-unit-open/);
 for(const path of ['purchase-analytics.css?v=1','purchase-finance-alignment-v1.css?v=5','purchase-dual-source.css?v=1','owner-insight-v1.css?v=1','owner-one-view.css?v=12']){
  assert.ok(palette.includes(path),'first-paint Owner CSS preloads '+path);
 }
-assert.match(preload,/purchase-finance-alignment-v1\.js\?v=28/);
+assert.match(preload,/purchase-finance-alignment-v1\.js\?v=29/);
 assert.match(shell,/data-purchase-pending/);
 console.log('Owner Purchase one-view and anti-flicker contract: PASS');
 
