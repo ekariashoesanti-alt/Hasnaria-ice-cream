@@ -32,6 +32,20 @@ const greenCss=fs.readFileSync('stock-control-v3.css','utf8');
 assert(greenCss.includes('#stok .sc6-grid') && greenCss.includes('#stok .sc6-value-layout'),'updated green panels stay scoped to Stock');
 assert(greenCss.includes('#125644'),'Stock palette must match the Hasnaria sidebar');
 
+assert(ui4.includes('sc5-head sc7-head'),'Stage-1 Stock header must be compact');
+assert(ui4.includes('sc7-actions')&&ui4.includes('sc7-tools'),'Stock action and period controls must share header');
+assert(ui4.includes('data-sc4-action="upload-opname"')&&ui4.includes('data-sc4-action="opname"'),'Stock upload and manual opname must remain accessible');
+assert(ui4.includes('data-sc4-modal="position"')&&ui4.includes('data-sc4-modal="ledger"'),'Stock detail and ledger must remain accessible');
+assert(ui4.includes('data-sc4-action="upload-purchase"'),'Existing purchase upload route must remain');
+assert(!ui4.includes("'<'+'div class=\"sc5-footer-actions"),'Legacy footer must not be injected'); 
+assert(!ui4.includes("'<'+'div class=\"sc5-footer-actions\"><span>"),'No floating footer action row');
+assert(ui4.indexOf('sc6-trend-panel')<ui4.indexOf('sc6-category-panel'),'Trend must remain immediately above category');
+assert(ui4.includes('/stock-control-v3.css?v=8'),'Stage-1 CSS cache version must be fresh');
+assert(greenCss.includes('.sc7-head') && greenCss.includes('min-height:64px!important'),'Stock header spacing is compact');
+assert(greenCss.includes('background:#fff!important') && greenCss.includes('sc6-grid'),'White toolbar must be isolated from green sidebar');
+assert(greenCss.includes('.sc6-main-column')&&greenCss.includes('.sc6-side-column'),'Both two-row Stock grid columns remain available');
+
+
 
 const notifications = fs.readFileSync('owner-notifications-v1.js','utf8');
 const ownerShell = fs.readFileSync('owner-shell-guard.js','utf8');
