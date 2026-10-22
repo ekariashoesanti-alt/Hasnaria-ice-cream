@@ -57,7 +57,7 @@
   if(!document.getElementById('hasnaria-purchase-finance-alignment-js')){
     var af=document.createElement('script');
     af.id='hasnaria-purchase-finance-alignment-js';
-    af.src='/purchase-finance-alignment-v1.js?v=28';
+    af.src='/purchase-finance-alignment-v1.js?v=29';
     af.async=true;
     document.head.appendChild(af);
   }
