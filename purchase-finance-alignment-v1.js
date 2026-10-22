@@ -434,6 +434,7 @@ function purchaseSalesHeader(values,finance){
     '</div></div>';
 }
 function render(){
+  if(!modalOpen)syncDetailModal();
   if(unitOpen&&!unitAllowed())closeUnitReview();
   var root=document.getElementById('paRoot');if(!root){syncDetailModal();return}patchCore(root);syncPeriodOptions();
   var target=root.querySelector('.pa-controls');if(!target){syncDetailModal();return}
@@ -445,12 +446,13 @@ function render(){
       // Keep the current DOM and controls mounted; only mask the old period when it changes.
       wrap.classList.toggle('pfa-period-loading',wrap.getAttribute('data-pfa-period')!==periodValue());
       wrap.classList.toggle('pfa-updating',wrap.getAttribute('data-pfa-period')===periodValue());
+      syncDetailModal();
       return;
     }
     if(!wrap.querySelector('.pfa-firstload'))mountOwnerControls(root,wrap,'<div class="pfa-firstload" role="status"><div class="pfa-head pfa-sales-head"><div><div class="pfa-eyebrow">PURCHASE INTELLIGENCE</div><h2>Dashboard Pembelian</h2><p>Menyiapkan ringkasan pembelian…</p></div><div class="pfa-upload-slot"></div></div><div class="pfa-purchase-toolbar"><div class="pfa-purchase-period-left"><div class="pfa-controls-slot"></div></div></div><div class="pfa-firstload-cards"></div><div class="pfa-firstload-panel">Memuat data pembelian…</div></div>');
     return;
   }
-  if(error){wrap.__pfaCanonicalMarkup=null;wrap.classList.remove('pfa-period-loading','pfa-updating');wrap.removeAttribute('data-pfa-ready');wrap.removeAttribute('aria-busy');mountOwnerControls(root,wrap,'<div class="pfa-head pfa-sales-head"><div><div class="pfa-eyebrow">PURCHASE INTELLIGENCE</div><h2>Dashboard Pembelian</h2><p class="pfa-error">'+esc(error)+'</p></div><div class="pfa-head-actions"><div class="pfa-upload-slot"></div><button id="pfaRetry" type="button">Muat ulang</button></div></div><div class="pfa-purchase-toolbar"><div class="pfa-purchase-period-left"><div class="pfa-controls-slot"></div></div></div>');var rb=document.getElementById('pfaRetry');if(rb)rb.onclick=function(){load(true)};return}
+  if(error){wrap.__pfaCanonicalMarkup=null;wrap.classList.remove('pfa-period-loading','pfa-updating');wrap.removeAttribute('data-pfa-ready');wrap.removeAttribute('aria-busy');mountOwnerControls(root,wrap,'<div class="pfa-head pfa-sales-head"><div><div class="pfa-eyebrow">PURCHASE INTELLIGENCE</div><h2>Dashboard Pembelian</h2><p class="pfa-error">'+esc(error)+'</p></div><div class="pfa-head-actions"><div class="pfa-upload-slot"></div><button id="pfaRetry" type="button">Muat ulang</button></div></div><div class="pfa-purchase-toolbar"><div class="pfa-purchase-period-left"><div class="pfa-controls-slot"></div></div></div>');var rb=document.getElementById('pfaRetry');if(rb)rb.onclick=function(){load(true)};syncDetailModal();return}
   var v=summaryValues(),finance=control.finance_link_status==='MATCH';
   var nextMarkup=purchaseSalesHeader(v,finance)+
     '<div class="pfa-cards">'+
