@@ -1425,6 +1425,8 @@
     S.viewSeq++;
     ensureCss();
     host.__sc3Rendering = true;
+    var currentDialog=host.querySelector('.sc4-modal');
+    var preserveDialogFocus=!!(S.modal&&currentDialog&&currentDialog.contains(document.activeElement));
     var shell = host.querySelector('.sc3-shell,[data-stock-v3-boot="1"]');
     if (!shell) { shell = document.createElement('div'); host.replaceChildren(shell); }
     shell.className = 'sc3-shell';
@@ -1448,6 +1450,8 @@
       '</div>'+
       renderModal();
     bind(host);
+    // Data refresh may rebuild the dialog; keep keyboard focus within the dialog.
+    if(preserveDialogFocus)stockDialogFocus(host);
     host.__sc3Rendering = false;
   }
 
