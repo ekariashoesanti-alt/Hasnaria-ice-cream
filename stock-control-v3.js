@@ -66,7 +66,12 @@
     valuationLoaded: false,
     valuationLoading: false,
     valuationError: '',
-    valuationSeq: 0
+    valuationSeq: 0,
+    movingLoading: false,
+    movingLoaded: false,
+    movingRows: [],
+    movingError: '',
+    movingSeq: 0
   };
 
   function esc(value) {
@@ -208,7 +213,7 @@
     var l = document.createElement('link');
     l.id = 'stock-control-v3-css';
     l.rel = 'stylesheet';
-    l.href = '/stock-control-v3.css?v=18';
+    l.href = '/stock-control-v3.css?v=19';
     document.head.appendChild(l);
   }
 
@@ -549,6 +554,8 @@
         S.overview = null;
         S.activity = [];
         S.trend = [];
+        S.movingRows = [];
+        S.movingLoaded = false;
         return;
       }
       var month = S.period + '-01';
@@ -568,6 +575,7 @@
       S.overview = pair[0] && pair[0][0] ? pair[0][0] : null;
       S.activity = pair[1] || [];
       S.trend = (pair[3]||[]).filter(function(x){return x.period_month && x.period_month<=month});
+      loadMovingStatus(S.period);
     } catch (e) {
       if (seq !== S.periodSeq) return;
       S.periodError = e && e.message ? e.message : String(e);
@@ -1148,24 +1156,67 @@
       '<p class="sc14-low-note">Saldo berdasarkan ledger; satuan antar-SKU berbeda. Nilai negatif perlu direkonsiliasi.</p>'+
     '</div>';
   }
-  function expiryAndOpnamePanel(){
-    if(!S.baseLoaded)return '<div class="sc5-empty">Memuat kondisi data dan opname…</div>';
-    var dates=S.items.map(function(x){return x.last_opname_date}).filter(Boolean).sort();
-    var latest=dates.length?dateLabel(dates[dates.length-1]):'Belum ada';
-    var tracked=S.items.filter(function(x){return !!x.tracking_active}).length;
-    return '<div class="sc11-health-list" aria-label="Kondisi data persediaan dan opname">'+
-      '<div class="sc11-health-row sc11-health-warning">'+
-        '<span class="sc11-health-icon" aria-hidden="true">▦</span>'+
-        '<div class="sc11-health-copy"><strong>Data kedaluwarsa belum tersedia</strong>'+
-        '<small>Belum ada tanggal kedaluwarsa per batch di backend.</small></div>'+
-      '</div>'+
-      '<div class="sc11-health-row">'+
-        '<span class="sc11-health-label">Opname terakhir</span>'+
-        '<strong class="sc11-health-value">'+esc(latest)+'</strong></div>'+
-      '<div class="sc11-health-row sc11-health-alt">'+
-        '<span class="sc11-health-label">SKU dengan checkpoint</span>'+
-        '<strong class="sc11-health-value">'+fmt(tracked)+' / '+fmt(S.items.length)+'</strong></div>'+
+  function stockMovingPanel(){
+    if(!S.period)return '<div class="sc15-moving-empty">Pilih bulan untuk menghitung perputaran stok.</div>';
+    if(S.movingLoading&&!S.movingLoaded)return '<div class="sc15-moving-empty">Menghitung batch pembelian dan pengeluaran stok (FIFO)…</div>';
+    if(S.movingError)return '<div class="sc15-moving-error"><strong>Data moving belum dapat dimuat</strong>'+
+      '<small>'+esc(S.movingError)+'</small></div>';
+    if(!S.movingLoaded)return '<div class="sc15-moving-empty">Memuat perputaran stok terverifikasi…</div>';
+
+    var rows=S.movingRows||[],groups={fast:0,normal:0,slow:0,unknown:0,untracked:0};
+    var latest='';
+    rows.forEach(function(r){
+      var k=String(r.moving_status||'unknown');
+      if(!(k in groups))k='unknown';
+      groups[k]++;
+      if(r.latest_sale_date&&String(r.latest_sale_date)>latest)latest=String(r.latest_sale_date);
+    });
+    var total=rows.length,unknown=groups.unknown+groups.untracked;
+    var types=[
+      {kind:'fast',name:'Fast Moving',days:'Batch habis dalam 0–7 hari',icon:'↗'},
+      {kind:'normal',name:'Normal Moving',days:'Batch habis dalam 8–30 hari',icon:'→'},
+      {kind:'slow',name:'Slow Moving',days:'Batch habis setelah 30 hari',icon:'↘'}
+    ];
+    var cards=types.map(function(t){
+      return '<div class="sc15-moving-row sc15-moving-'+t.kind+'">'+
+        '<span class="sc15-moving-symbol" aria-hidden="true">'+t.icon+'</span>'+
+        '<div class="sc15-moving-copy"><strong>'+t.name+'</strong><small>'+t.days+'</small></div>'+
+        '<strong class="sc15-moving-count">'+fmt(groups[t.kind])+'<small> SKU</small></strong>'+
+      '</div>';
+    }).join('');
+    var stale=latest&&monthKey(latest)<S.period;
+    var footer='FIFO estimasi dari pembelian hingga batch habis terpakai (90 hari terakhir).';
+    if(stale)footer+=' Pemakaian ledger terbaru '+dateLabel(latest)+'; periode terpilih belum lengkap.';
+    return '<div class="sc15-moving-wrap" aria-label="Status kecepatan pengeluaran stok setelah pembelian">'+
+      '<div class="sc15-moving-heading"><span>Perputaran berdasarkan batch pembelian</span>'+
+        '<strong>'+fmt(total)+' SKU</strong></div>'+
+      '<div class="sc15-moving-cards">'+cards+'</div>'+
+      '<div class="sc15-moving-unclassified"><span>Belum dapat dihitung</span>'+
+        '<strong>'+fmt(unknown)+' SKU</strong></div>'+
+      '<p class="sc15-moving-foot">'+esc(footer)+
+        (groups.untracked?' '+fmt(groups.untracked)+' SKU belum opname.':'')+'</p>'+
     '</div>';
+  }
+
+  async function loadMovingStatus(period){
+    if(!period)return;
+    var seq=++S.movingSeq;
+    S.movingLoading=true;
+    S.movingLoaded=false;
+    S.movingRows=[];
+    S.movingError='';
+    render();
+    try{
+      var rows=await rpc('get_stock_moving_fifo_v1',{p_brand:BRAND,p_period:period+'-01'});
+      if(seq!==S.movingSeq||S.period!==period)return;
+      S.movingRows=Array.isArray(rows)?rows:[];
+      S.movingLoaded=true;
+    }catch(e){
+      if(seq!==S.movingSeq||S.period!==period)return;
+      S.movingError=e&&e.message?e.message:String(e);
+    }finally{
+      if(seq===S.movingSeq){S.movingLoading=false;render();}
+    }
   }
 
   function stockKpiIcon(kind){
@@ -1511,7 +1562,7 @@
           '</div>'+
           '<div class="sc6-column sc6-side-column">'+
             '<article class="sc5-panel sc6-top-panel"><h3>▤ Top 5 Item Stok Terendah</h3>'+lowestStockFive()+'</article>'+
-            '<article class="sc5-panel sc6-expiry-panel"><h3>▦ Kondisi Data &amp; Opname</h3>'+expiryAndOpnamePanel()+'</article>'+
+            '<article class="sc5-panel sc6-expiry-panel sc15-moving-panel"><h3>↗ Status Pergerakan Stok</h3>'+stockMovingPanel()+'</article>'+
           '</div>'+
         '</div>'+
       '</div>'+
@@ -1645,6 +1696,9 @@
         S.ledgerPage = 1;
         S.modal = '';
         S.trend = [];
+        S.movingRows = [];
+        S.movingLoaded = false;
+        S.movingError = '';
         loadPeriodData(false);
         return;
       }
