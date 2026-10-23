@@ -7,7 +7,7 @@ const css=fs.readFileSync('stock-readable-density.css','utf8');
 
 assert(!shim.includes('stock-recall-v4.js'),'owner shim must not load legacy Stock recall v4');
 assert(shim.includes('stock-v3-runtime-fix.js'),'owner shim must load the canonical Stock v3 bridge');
-assert(bridge.includes("/stock-control-v3.js?v=23"),'canonical bridge must load Stock Control v3');
+assert(bridge.includes("/stock-control-v3.js?v=24"),'canonical bridge must load Stock Control v3');
 assert(bridge.includes("setAttribute('data-stock-v4','1')"),'canonical shell must satisfy the existing owner guard marker');
 assert(css.includes('#stok .sc3-table{width:100%;min-width:0;table-layout:fixed;font-size:8.3px}'),'desktop Stock table must keep the readable fixed-width density override');
 assert(!css.includes('font-size:5.4px'),'readable override must not regress to the previous ultra-small status text');
@@ -116,7 +116,7 @@ assert(greenCss.includes('.sc12-ledger-chart')&&greenCss.includes('.sc12-ledger-
   'New SVG chart uses a single scoped green visual system');
 assert(greenCss.includes('#stok .sc12-chart-frame')&&greenCss.includes('min-height:125px'),
   'SVG chart has a definite positive visible area');
-assert(ui4.includes('/stock-control-v3.css?v=17'),'New chart stylesheet cache version must be fresh');
+assert(ui4.includes('/stock-control-v3.css?v=18'),'New chart stylesheet cache version must be fresh');
 assert(ui4.includes('sc12-status-strip')&&greenCss.includes('.sc12-status-strip'),
   'Healthy audit/upload state displays compactly to give dashboard more space');
 
@@ -144,10 +144,13 @@ assert(singleCategory.includes('BUMBU'),'Current real BUMBU category is displaye
 assert(singleCategory.includes('100%'),'A single category composes 100% of verified value only');
 assert(singleCategory.includes('1 dari 198 SKU · 0,5%'),'Coverage clarifies only one of 198 SKUs is verified');
 assert(singleCategory.includes('Bukan total nilai seluruh persediaan'),'Do not imply entire stock has verified costs');
-assert(singleCategory.includes('sc13-donut-ring')&&singleCategory.includes('conic-gradient('),
-  'Single-category verified value creates a circular green ring');
-assert(singleCategory.includes('#076b49 0.000% 100.000%'),
-  'One-category donut shows a complete segment, not fabricated slices');
+assert(singleCategory.includes('sc13-donut-svg')&&singleCategory.includes('<svg'),
+  'Single-category donut must use SVG with explicit viewBox, not collapsing conic-gradient');
+assert(singleCategory.includes('stroke="#076b49"')&&singleCategory.includes('stroke-dasharray="100.000 0.000"'),
+  'One verified category renders complete full green ring with a nonzero SVG path');
+assert(singleCategory.includes('width="220" height="220"'),
+  'SVG always has intrinsic dimensions even when parent flex dimensions are constrained');
+assert(!singleCategory.includes('conic-gradient('),'Retired CSS-only donut must not be present');
 assert.strictEqual((singleCategory.match(/class="sc13-legend-row"/g)||[]).length,1,
   'Do not invent additional category rows');
 const groupedCategory=renderCategory([
@@ -158,12 +161,15 @@ const groupedCategory=renderCategory([
 assert(groupedCategory.includes('Kategori lainnya'),'Overflowing categories grouped as Other');
 assert.strictEqual((groupedCategory.match(/class="sc13-legend-row"/g)||[]).length,4,
   'Support four compact category legend rows');
-assert(groupedCategory.includes('#076b49 0.000% 50.000%'),'Real distribution must match verified values');
+assert(groupedCategory.includes('stroke="#076b49"')&&groupedCategory.includes('stroke-dasharray="49.550 50.450"'),
+  'Multiple values create a proportional SVG half-ring rather than fake amounts');
+assert.strictEqual((groupedCategory.match(/class="sc13-donut-sector"/g)||[]).length,4,
+  'SVG has one independently colored sector per grouped verified category');
 assert(!groupedCategory.includes('NaN'),'Percentages must be valid');
 const noBalance=renderCategory([]);
 assert(noBalance.includes('Belum ada nilai terverifikasi')&&noBalance.includes('sc13-donut-empty'),
   'No real verified balance must never create fake pie segments');
-assert(!noBalance.includes('conic-gradient('),'Empty values have no fabricated chart');
+assert(!noBalance.includes('sc13-donut-svg'),'Empty values must not display a fabricated SVG ring');
 
 const topStart=ui4.indexOf('function lowestStockFive(){');
 const topEnd=ui4.indexOf('function expiryAndOpnamePanel(){',topStart);
@@ -218,6 +224,13 @@ const noTracked=renderTop([trackedItem('NO OPNAME',-30,'pcs',5,false)]);
 assert(noTracked.includes('Belum ada saldo SKU yang terpantau'),'Empty state must not invent ranking');
 assert(renderTop([],false).includes('Memuat saldo SKU terpantau'),'Loading state must remain honest');
 assert(ui4.includes('Top 5 Item Stok Terendah'),'New right panel title reflects SKU balances');
+assert(greenCss.includes('#stok .sc13-donut-visual')&&greenCss.includes('min-height:118px'),
+  'Donut ring must retain a definite rendered height independent of flexbox sizing');
+assert(greenCss.includes('#stok .sc13-donut-svg')&&greenCss.includes('visibility:visible!important'),
+  'The actual SVG drawing must not be hidden by layout inherited styles');
+assert(!greenCss.includes('.sc13-donut-ring'),'Broken CSS conic-gradient ring should be removed entirely');
+assert(greenCss.includes('#stok .sc14-low-list{')&&greenCss.includes('justify-content:flex-start'),
+  'Stock Top 5 list starts at first SKU rather than clipping its first row');
 assert(greenCss.includes('.sc14-low-list')&&greenCss.includes('.sc14-low-quantity')&&greenCss.includes('.sc14-low-negative'),
   'Right-side low-stock ranking must have compact responsive error styling');
 const health=vm.runInNewContext(healthSource+';expiryAndOpnamePanel()',{
