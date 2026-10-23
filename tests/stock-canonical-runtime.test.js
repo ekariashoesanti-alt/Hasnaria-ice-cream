@@ -7,7 +7,7 @@ const css=fs.readFileSync('stock-readable-density.css','utf8');
 
 assert(!shim.includes('stock-recall-v4.js'),'owner shim must not load legacy Stock recall v4');
 assert(shim.includes('stock-v3-runtime-fix.js'),'owner shim must load the canonical Stock v3 bridge');
-assert(bridge.includes("/stock-control-v3.js?v=18"),'canonical bridge must load Stock Control v3');
+assert(bridge.includes("/stock-control-v3.js?v=19"),'canonical bridge must load Stock Control v3');
 assert(bridge.includes("setAttribute('data-stock-v4','1')"),'canonical shell must satisfy the existing owner guard marker');
 assert(css.includes('#stok .sc3-table{width:100%;min-width:0;table-layout:fixed;font-size:8.3px}'),'desktop Stock table must keep the readable fixed-width density override');
 assert(!css.includes('font-size:5.4px'),'readable override must not regress to the previous ultra-small status text');
@@ -85,7 +85,7 @@ assert(renderTrend([]).includes('Belum ada aktivitas ledger'),'Entirely empty hi
 assert(greenCss.includes('.sc9-guide-lines')&&greenCss.includes('.sc9-y-labels')&&greenCss.includes('.sc9-month-current'),'Stage-3 chart needs guides, axis and current month emphasis');
 assert(greenCss.includes('.sc9-bar')&&greenCss.includes('.sc9-count'),'Stage-3 count labels follow actual bar height');
 
-assert(ui4.includes('/stock-control-v3.css?v=12'),'Stage-5 style cache version should be fresh');
+assert(ui4.includes('/stock-control-v3.css?v=13'),'Stage-5 style cache version should be fresh');
 assert(ui4.includes('sc10-category-layout')&&ui4.includes('sc10-category-progress'),'Horizontal Stock category layout must be used');
 assert(ui4.includes('Cakupan harga pokok'),'Category coverage must be disclosed');
 assert(greenCss.includes('.sc10-value-hero')&&greenCss.includes('.sc10-coverage-track'),'Compact verified-value and coverage UI must be styled');
@@ -164,6 +164,87 @@ assert(greenCss.includes('#stok .sc9-bar-stage')&&greenCss.includes('sc9-bar-she
 
 
 
+
+
+/* Stage 6–7: action routing, fresh valuation, dialog accessibility and one view. */
+assert(ui4.includes('loadVerifiedValuation(true);'),'Refresh must reload valuation data');
+assert(ui4.includes('if(S.valuationLoading&&!force)return'),'Forced refresh may replace obsolete valuation request');
+assert(ui4.includes("S.valuationLoaded=false;"),'Refreshing cost may clear stale valuation ready flag');
+assert(ui4.includes("S.trend = [];"),'Period switch must not briefly show old chart data');
+assert(ui4.includes('aria-haspopup="dialog"'),'Detail buttons must describe their popup purpose');
+assert(ui4.includes('stockCloseDialog(host)')&&ui4.includes('stockDialogFocus(host)'),
+  'Closing modal must restore focus and opening must focus dialog');
+assert(ui4.includes('stockNavigate(\'pembelian\')'),'Purchase button has sidebar navigation fallback');
+const focStart=ui4.indexOf('function stockDialogFocus(host)');
+const focEnd=ui4.indexOf('function bind(host)',focStart);
+assert(focStart>=0&&focEnd>focStart,'Keyboard modal helpers must be present');
+let focusCount=0,returnCount=0;
+const focusContext={
+ S:{modal:'position'},render:()=>{returnCount++},
+ window:{__HASNARIA_OWNER_SHELL:{navigate:()=>{}}},
+ document:{querySelector:()=>null}
+};
+const stockHelpers=vm.runInNewContext(
+  ui4.slice(focStart,focEnd)+';({stockDialogFocus,stockCloseDialog,stockNavigate})',
+  focusContext
+);
+const mockHost={querySelector:selector=>{
+ if(selector==='.sc4-modal .sc4-close')return {focus:()=>{focusCount++}};
+ if(selector==='[data-sc4-modal="position"]')return {focus:()=>{focusCount++}};
+ return null;
+}};
+stockHelpers.stockDialogFocus(mockHost);
+assert.strictEqual(focusCount,1,'Opening Stock modal focuses its close button');
+stockHelpers.stockCloseDialog(mockHost);
+assert.strictEqual(focusCount,2,'Closing Stock modal restores its trigger focus');
+assert.strictEqual(focusContext.S.modal,'','Closing Stock modal clears dialog state');
+assert.strictEqual(returnCount,1,'Close action re-renders once');
+const bindStart=ui4.indexOf('function bind(host)');
+const bindEnd=ui4.indexOf('function exportCsv()',bindStart);
+assert(bindStart>=0&&bindEnd>bindStart,'Delegated toolbar handlers must be present');
+let refreshed=[0,0,0],ledgerOpened=0;
+const fakeState={modal:'',correction:null,ledgerLoading:false,period:'2026-10'};
+const testHost={};
+const bindContext={
+ S:fakeState,
+ loadBase:()=>refreshed[0]++,
+ loadPeriodData:()=>refreshed[1]++,
+ loadVerifiedValuation:force=>{assert.strictEqual(force,true);refreshed[2]++},
+ stockDialogFocus:()=>{},
+ stockCloseDialog:()=>{},
+ loadLedger:()=>{ledgerOpened++},
+ render:()=>{},stockNavigate:()=>true,
+ window:{__HASNARIA_STOCK_UPLOAD_V1:{open:()=>{}}},
+ openOpname:()=>{},
+ isOwner:()=>true
+};
+const mockBind=vm.runInNewContext(ui4.slice(bindStart,bindEnd)+';bind',bindContext);
+mockBind(testHost);
+const buttonFor=(attribute,value)=>({
+ closest:selector=>{
+  if(selector==='[data-sc4-action]'&&attribute==='data-sc4-action')return {getAttribute:()=>value};
+  if(selector==='[data-sc4-modal]'&&attribute==='data-sc4-modal')return {getAttribute:()=>value};
+  if(selector==='button'&&attribute==='data-sc3-action')return {hasAttribute:()=>false,getAttribute:()=>value};
+  return null;
+ }
+});
+testHost.onclick({target:buttonFor('data-sc3-action','refresh')});
+assert.deepStrictEqual(refreshed,[1,1,1],'Refresh calls stocks, current month and verified costs together');
+testHost.onclick({target:buttonFor('data-sc4-modal','ledger')});
+assert.strictEqual(ledgerOpened,1,'Ledger button requests canonical ledger data');
+assert.strictEqual(fakeState.modal,'ledger','Ledger button opens modal');
+assert(ui4.includes("if (el.id === 'sc4Period')"),'Month dropdown handler must remain');
+assert(ui4.includes("if (e.key === 'Escape' && S.modal)"),'Keyboard Escape closes detail');
+assert(ui4.includes("data-sc4-action=\"upload-opname\"")&&ui4.includes("data-sc4-action=\"opname\""),
+  'Upload and manual Opname Owner actions remain');
+assert(greenCss.includes('max-height:min(88dvh,calc(100dvh - 20px))'),
+  'Dialog is bounded to viewport height');
+assert(greenCss.includes('#stok .sc4-modal-body')&&greenCss.includes('overflow:auto!important'),
+  'Long modal content scrolls internally without clipping its header');
+assert(greenCss.includes('@media(min-width:701px) and (max-width:1120px)')&&greenCss.includes('height:100%!important;max-height:100%!important'),
+  'Mid-width desktop does not regress to full-page scroll mode');
+assert(greenCss.includes('sc6-grid .sc5-panel>h3')&&greenCss.includes('min-height:16px!important'),
+  'Panel headings have reserved height and do not overlap panel contents');
 
 const notifications = fs.readFileSync('owner-notifications-v1.js','utf8');
 const ownerShell = fs.readFileSync('owner-shell-guard.js','utf8');

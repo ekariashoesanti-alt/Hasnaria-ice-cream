@@ -208,7 +208,7 @@
     var l = document.createElement('link');
     l.id = 'stock-control-v3-css';
     l.rel = 'stylesheet';
-    l.href = '/stock-control-v3.css?v=12';
+    l.href = '/stock-control-v3.css?v=13';
     document.head.appendChild(l);
   }
 
@@ -466,6 +466,7 @@
     S.verifiedRefreshing=true;S.pendingStockRefresh=false;
     try{
       await Promise.all([loadBase(),loadPeriodData(true)]);
+      await loadVerifiedValuation(true);
       if(S.modal==='ledger')await loadLedger();
     }finally{
       S.verifiedRefreshing=false;
@@ -869,11 +870,11 @@
       '<div class="sc5-head-right sc7-head-right">'+
       '<div class="sc5-head-buttons sc7-actions">'+
         (isOwner()?'<button type="button" class="sc5-primary" data-sc4-action="upload-opname">⇧ Upload Excel Stok</button>':'')+
-        '<button type="button" class="sc5-secondary" data-sc4-modal="position">▣ Detail Stok</button>'+
+        '<button type="button" class="sc5-secondary" data-sc4-modal="position" aria-haspopup="dialog">▣ Detail Stok</button>'+
         (isOwner()?'<button type="button" class="sc5-secondary" data-sc4-action="opname">＋ Input Opname</button>':'')+
       '</div><div class="sc5-head-filters sc7-tools">'+
         '<label><span>Bulan</span><select id="sc4Period" data-month-filter="stok">'+options+'</select></label>'+
-        '<button type="button" class="sc5-text-btn" data-sc4-modal="ledger">Ledger Periode</button>'+
+        '<button type="button" class="sc5-text-btn" data-sc4-modal="ledger" aria-haspopup="dialog">Ledger Periode</button>'+
         (isOwner()?'<button type="button" class="sc5-text-btn" data-sc4-action="upload-purchase">Upload Pembelian</button>':'')+
         '<button type="button" class="sc5-refresh" data-sc3-action="refresh" aria-label="Refresh data Stok">↻</button>'+
       '</div></div></header>';
@@ -985,10 +986,12 @@
     if(compact&&Math.abs(n)>=1000)return 'Rp '+(n/1000).toLocaleString('id-ID',{maximumFractionDigits:1})+' rb';
     return 'Rp '+n.toLocaleString('id-ID',{maximumFractionDigits:0});
   }
-  async function loadVerifiedValuation(){
-    if(S.valuationLoading)return;
+  async function loadVerifiedValuation(force){
+    // Force invalidates an in-flight request so Refresh cannot retain stale cost coverage.
+    if(S.valuationLoading&&!force)return;
     var seq=++S.valuationSeq;
     S.valuationLoading=true;
+    if(force)S.valuationLoaded=false;
     S.valuationError='';
     try{
       var rs=await Promise.all([
@@ -1225,7 +1228,7 @@
     var body = S.modal === 'ledger'
       ? renderLedgerTable()
       : renderFormula() + renderAuxState() + renderFilters() + renderTable();
-    return '<div class="sc4-modal-backdrop" data-sc4-close="1"><section class="sc4-modal" role="dialog" aria-modal="true" aria-labelledby="sc4ModalTitle"><div class="sc4-modal-head"><div><div class="sc3-eyebrow">DETAIL STOK</div><h3 id="sc4ModalTitle">' + esc(title) + '</h3><p>' + (S.modal === 'ledger' ? 'Movement periode terpilih; quantity tetap dalam satuan masing-masing SKU.' : 'Saldo terkini, opname, incoming, kebutuhan dan days cover.') + '</p></div><button type="button" data-sc4-close="1" class="sc4-close" aria-label="Tutup">×</button></div><div class="sc4-modal-body">' + body + '</div></section></div>';
+    return '<div class="sc4-modal-backdrop" data-sc4-close="1"><section class="sc4-modal" role="dialog" aria-modal="true" aria-labelledby="sc4ModalTitle" tabindex="-1"><div class="sc4-modal-head"><div><div class="sc3-eyebrow">DETAIL STOK</div><h3 id="sc4ModalTitle">' + esc(title) + '</h3><p>' + (S.modal === 'ledger' ? 'Movement periode terpilih; quantity tetap dalam satuan masing-masing SKU.' : 'Saldo terkini, opname, incoming, kebutuhan dan days cover.') + '</p></div><button type="button" data-sc4-close="1" class="sc4-close" aria-label="Tutup">×</button></div><div class="sc4-modal-body">' + body + '</div></section></div>';
   }
 
   function openOpname() {
@@ -1422,6 +1425,8 @@
     S.viewSeq++;
     ensureCss();
     host.__sc3Rendering = true;
+    var currentDialog=host.querySelector('.sc4-modal');
+    var preserveDialogFocus=!!(S.modal&&currentDialog&&currentDialog.contains(document.activeElement));
     var shell = host.querySelector('.sc3-shell,[data-stock-v3-boot="1"]');
     if (!shell) { shell = document.createElement('div'); host.replaceChildren(shell); }
     shell.className = 'sc3-shell';
@@ -1445,13 +1450,38 @@
       '</div>'+
       renderModal();
     bind(host);
+    // Data refresh may rebuild the dialog; keep keyboard focus within the dialog.
+    if(preserveDialogFocus)stockDialogFocus(host);
     host.__sc3Rendering = false;
+  }
+
+
+  // Preserve keyboard navigation when the modal DOM is replaced by a Stock render.
+  function stockDialogFocus(host) {
+    var close=host.querySelector('.sc4-modal .sc4-close');
+    if(close&&close.focus)close.focus({preventScroll:true});
+  }
+  function stockCloseDialog(host) {
+    var previous=S.modal;
+    S.modal='';
+    render();
+    var source=host.querySelector('[data-sc4-modal="'+previous+'"]');
+    if(source&&source.focus)source.focus({preventScroll:true});
+  }
+  function stockNavigate(target){
+    if(window.__HASNARIA_OWNER_SHELL&&window.__HASNARIA_OWNER_SHELL.navigate){
+      window.__HASNARIA_OWNER_SHELL.navigate(target);return true;
+    }
+    var nav=document.querySelector('[data-tab="'+target+'"]')||
+      document.querySelector('[data-page="'+target+'"]');
+    if(nav&&nav.click){nav.click();return true}
+    return false;
   }
 
   function bind(host) {
     host.onclick = function (e) {
       var auditButton = e.target && e.target.closest ? e.target.closest('[data-sc4-audit]') : null;
-      if(auditButton){S.modal='position';S.status='ledger-diff';S.page=1;render();return;}
+      if(auditButton){S.modal='position';S.status='ledger-diff';S.page=1;render();stockDialogFocus(host);return;}
       var correction = e.target && e.target.closest ? e.target.closest('[data-sc4-correction]') : null;
       if (correction && S.correction) {
         if (correction.getAttribute('data-sc4-correction') === 'cancel') { S.correction = null; render(); }
@@ -1460,8 +1490,7 @@
       }
       var close = e.target && e.target.closest ? e.target.closest('[data-sc4-close]') : null;
       if (close && (e.target === close || close.classList.contains('sc4-close'))) {
-        S.modal = '';
-        render();
+        stockCloseDialog(host);
         return;
       }
       var modal = e.target && e.target.closest ? e.target.closest('[data-sc4-modal]') : null;
@@ -1469,6 +1498,7 @@
         S.modal = modal.getAttribute('data-sc4-modal') || '';
         if (S.modal === 'ledger' && !S.ledgerLoading) loadLedger();
         else render();
+        stockDialogFocus(host);
         return;
       }
       var lp = e.target && e.target.closest ? e.target.closest('[data-sc4-ledger-page]') : null;
@@ -1485,7 +1515,7 @@
       if (mode) { topSkuMode=mode.getAttribute('data-sc4-top-mode')==='out'?'out':'in'; render(); return; }
       var ui4 = e.target && e.target.closest ? e.target.closest('[data-sc4-action]') : null;
       if (ui4 && ui4.getAttribute('data-sc4-action') === 'open-operasional') {
-        if(window.__HASNARIA_OWNER_SHELL)window.__HASNARIA_OWNER_SHELL.navigate('operasional');
+        stockNavigate('operasional');
         return;
       }
       if (ui4 && ui4.getAttribute('data-sc4-action') === 'upload-opname') {
@@ -1494,7 +1524,7 @@
         return;
       }
       if (ui4 && ui4.getAttribute('data-sc4-action') === 'upload-purchase') {
-        if(window.__HASNARIA_OWNER_SHELL)window.__HASNARIA_OWNER_SHELL.navigate('pembelian');
+        if(!stockNavigate('pembelian'))window.alert('Menu Pembelian tidak ditemukan. Buka melalui sidebar Hasnaria.');
         return;
       }
       if (ui4 && ui4.getAttribute('data-sc4-action') === 'opname') {
@@ -1515,7 +1545,7 @@
         return;
       }
       var action = button.getAttribute('data-sc3-action');
-      if (action === 'refresh') { loadBase(); loadPeriodData(true); }
+      if (action === 'refresh') { loadBase(); loadPeriodData(true); loadVerifiedValuation(true); }
       if (action === 'export' && S.baseLoaded) exportCsv();
     };
     host.oninput = function (e) {
@@ -1547,6 +1577,7 @@
         S.ledger = [];
         S.ledgerPage = 1;
         S.modal = '';
+        S.trend = [];
         loadPeriodData(false);
         return;
       }
@@ -1554,7 +1585,7 @@
       if (el.id === 'sc3Status') { S.status = el.value || ''; S.page = 1; render(); }
     };
     host.onkeydown = function (e) {
-      if (e.key === 'Escape' && S.modal) { S.modal = ''; render(); }
+      if (e.key === 'Escape' && S.modal) { stockCloseDialog(host); }
     };
   }
 
