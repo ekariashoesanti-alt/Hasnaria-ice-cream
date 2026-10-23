@@ -59,7 +59,7 @@
     showOpeningState();
     var s = document.createElement('script');
     s.id = 'hasnaria-stock-control-v3-loader';
-    s.src = '/stock-control-v3.js?v=24';
+    s.src = '/stock-control-v3.js?v=25';
     s.async = true;
     s.onload = function () {
       window.__HASNARIA_STOCK_RECONCILE_READY = true;
