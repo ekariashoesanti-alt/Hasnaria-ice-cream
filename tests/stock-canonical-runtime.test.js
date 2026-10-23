@@ -7,7 +7,7 @@ const css=fs.readFileSync('stock-readable-density.css','utf8');
 
 assert(!shim.includes('stock-recall-v4.js'),'owner shim must not load legacy Stock recall v4');
 assert(shim.includes('stock-v3-runtime-fix.js'),'owner shim must load the canonical Stock v3 bridge');
-assert(bridge.includes("/stock-control-v3.js?v=24"),'canonical bridge must load Stock Control v3');
+assert(bridge.includes("/stock-control-v3.js?v=25"),'canonical bridge must load Stock Control v3');
 assert(bridge.includes("setAttribute('data-stock-v4','1')"),'canonical shell must satisfy the existing owner guard marker');
 assert(css.includes('#stok .sc3-table{width:100%;min-width:0;table-layout:fixed;font-size:8.3px}'),'desktop Stock table must keep the readable fixed-width density override');
 assert(!css.includes('font-size:5.4px'),'readable override must not regress to the previous ultra-small status text');
@@ -20,11 +20,11 @@ assert(ui4.includes('data-sc4-modal="ledger"')&&ui4.includes('data-sc4-action="o
 assert(ui4.includes('sc6-dashboard') && ui4.includes('monthlyTrendInfographic()'),'Stock green dashboard must retain backend monthly trend');
 assert(ui4.includes('sc6-main-column')&&ui4.includes('sc6-side-column'),'Stock must use the approved two-column layout');
 assert(ui4.indexOf('sc6-trend-panel')<ui4.indexOf('sc6-category-panel'),'Value per category must sit directly below the trend');
-assert(ui4.includes('stockValueByCategory()')&&ui4.includes('lowestStockFive()')&&ui4.includes('expiryAndOpnamePanel()'),'All visible panels must use backend-driven data or explicit missing-data copy');
+assert(ui4.includes('stockValueByCategory()')&&ui4.includes('lowestStockFive()')&&ui4.includes('stockMovingPanel()'),'All visible panels must use backend-driven data or explicit missing-data copy');
 assert(!ui4.includes('sc5-grid-bottom'),'Removed obsolete lower infographic row');
 assert(ui4.includes('inventory_valuation_verified_summary')&&ui4.includes('inventory_verified_cost_current'),'Stock value must use verified unit costs only');
 assert(ui4.includes('Valuasi parsial')&&ui4.includes('Bukan total nilai seluruh persediaan'),'Incomplete value coverage must be disclosed');
-assert(ui4.includes('Data kedaluwarsa belum tersedia'),'No fictional expiry date counts');
+assert(ui4.includes('Status Pergerakan Stok')&&ui4.includes('get_stock_moving_fifo_v1'),'Moving dashboard must use real authenticated FIFO data');
 assert(ui4.includes("request('ui_stock_activity_chart_v1?' + tq)") && ui4.includes("request('inventory_stock_reconciliation?'"),'Stock must use backend data rather than dummy mockup values');
 assert(!ui4.includes("18,73 jt") && !ui4.includes("4.321"),'No invented inventory valuations or demo SKU counts');
 assert(!ui4.includes("' + renderActivity() + '</article>'"),'Stock one-view must not show the legacy panel layout');
@@ -116,7 +116,7 @@ assert(greenCss.includes('.sc12-ledger-chart')&&greenCss.includes('.sc12-ledger-
   'New SVG chart uses a single scoped green visual system');
 assert(greenCss.includes('#stok .sc12-chart-frame')&&greenCss.includes('min-height:125px'),
   'SVG chart has a definite positive visible area');
-assert(ui4.includes('/stock-control-v3.css?v=18'),'New chart stylesheet cache version must be fresh');
+assert(ui4.includes('/stock-control-v3.css?v=19'),'New chart stylesheet cache version must be fresh');
 assert(ui4.includes('sc12-status-strip')&&greenCss.includes('.sc12-status-strip'),
   'Healthy audit/upload state displays compactly to give dashboard more space');
 
@@ -172,7 +172,7 @@ assert(noBalance.includes('Belum ada nilai terverifikasi')&&noBalance.includes('
 assert(!noBalance.includes('sc13-donut-svg'),'Empty values must not display a fabricated SVG ring');
 
 const topStart=ui4.indexOf('function lowestStockFive(){');
-const topEnd=ui4.indexOf('function expiryAndOpnamePanel(){',topStart);
+const topEnd=ui4.indexOf('function stockMovingPanel(){',topStart);
 const healthEnd=ui4.indexOf('function stockKpiIcon(',topEnd);
 assert(topStart>=0&&topEnd>topStart&&healthEnd>topEnd,'Lowest-five Stock ranking and health panel exist');
 const topSource=ui4.slice(topStart,topEnd).trim();
@@ -233,20 +233,57 @@ assert(greenCss.includes('#stok .sc14-low-list{')&&greenCss.includes('justify-co
   'Stock Top 5 list starts at first SKU rather than clipping its first row');
 assert(greenCss.includes('.sc14-low-list')&&greenCss.includes('.sc14-low-quantity')&&greenCss.includes('.sc14-low-negative'),
   'Right-side low-stock ranking must have compact responsive error styling');
-const health=vm.runInNewContext(healthSource+';expiryAndOpnamePanel()',{
-  S:{baseLoaded:true,items:[
-    {last_opname_date:'2026-09-12',tracking_active:true,ui_status:'ok'},
-    {tracking_active:false,ui_status:'untracked'}
-  ]},
-  dateLabel:s=>s,fmt:n=>Number(n).toLocaleString('id-ID'),esc:v=>String(v)
+const movingSource=ui4.slice(topEnd,ui4.indexOf('async function loadMovingStatus(period){',topEnd)).trim();
+const movingRows=[
+  {moving_status:'fast',latest_sale_date:'2026-09-20'},
+  {moving_status:'fast',latest_sale_date:'2026-09-25'},
+  {moving_status:'normal',latest_sale_date:'2026-09-30'},
+  {moving_status:'slow',latest_sale_date:'2026-09-15'},
+  {moving_status:'unknown',latest_sale_date:null},
+  {moving_status:'untracked',latest_sale_date:null}
+];
+const moving=vm.runInNewContext(movingSource+';stockMovingPanel()',{
+ S:{period:'2026-10',movingLoading:false,movingLoaded:true,movingError:'',movingRows},
+ fmt:n=>Number(n).toLocaleString('id-ID'),
+ monthKey:s=>String(s||'').slice(0,7),
+ dateLabel:s=>s,esc:s=>String(s)
 });
-assert.strictEqual((health.match(/class="sc11-health-row/g)||[]).length,3,'Exactly three health rows avoid footer clipping');
-assert(health.includes('Data kedaluwarsa belum tersedia'),'Expiration must not be fabricated');
-assert(health.includes('SKU dengan checkpoint')&&health.includes('1 / 2'),'Actual checkpoint count must be retained');
-assert(health.includes('Opname terakhir')&&health.includes('2026-09-12'),'Latest valid opname date must be shown');
-assert(ui4.includes('Kondisi Data &amp; Opname'),'Short health-panel title must remain distinct from its card');
-assert(greenCss.includes('#stok .sc11-health-list')&&greenCss.includes('overflow:hidden!important'),
-  'The right panel has scroll-free constrained child layout');
+assert.strictEqual((moving.match(/class="sc15-moving-row /g)||[]).length,3,
+ 'Moving panel has exactly three named status bands');
+assert(moving.includes('Fast Moving')&&moving.includes('Normal Moving')&&moving.includes('Slow Moving'),
+ 'Expected purchase-to-consumption moving classes');
+assert(moving.includes('0–7 hari')&&moving.includes('8–30 hari')&&moving.includes('setelah 30 hari'),
+ 'Velocity thresholds must describe completed purchase-batch duration');
+assert(moving.includes('Belum dapat dihitung')&&moving.includes('2 SKU'),
+ 'Unknown and untracked stock must not be labeled slow');
+assert(moving.includes('Pemakaian ledger terbaru 2026-09-30'),
+ 'October without sales history needs explicit stale-data disclosure');
+assert(moving.includes('90 hari terakhir')&&moving.includes('FIFO estimasi'),
+ 'Panel must identify FIFO estimates and recent completed lots');
+const noMoving=vm.runInNewContext(movingSource+';stockMovingPanel()',{
+ S:{period:'2026-10',movingLoading:false,movingLoaded:true,movingError:'',movingRows:[]},
+ fmt:n=>Number(n).toLocaleString('id-ID'),
+ monthKey:s=>String(s||'').slice(0,7),dateLabel:s=>s,esc:s=>String(s)
+});
+assert(noMoving.includes('0 SKU'),'No source rows must not fabricate counts');
+const movingError=vm.runInNewContext(movingSource+';stockMovingPanel()',{
+ S:{period:'2026-10',movingLoading:false,movingLoaded:false,movingError:'Data unavailable',movingRows:[]},
+ fmt:n=>Number(n).toLocaleString('id-ID'),
+ monthKey:s=>String(s||'').slice(0,7),dateLabel:s=>s,esc:s=>String(s)
+});
+assert(movingError.includes('Data moving belum dapat dimuat'),
+ 'RPC errors must not silently display zeros as credible data');
+assert(ui4.includes('loadMovingStatus(S.period);')&&ui4.includes("p_period:period+'-01'"),
+ 'Selected month drives authenticated FIFO computation');
+assert(greenCss.includes('.sc15-moving-row')&&greenCss.includes('.sc15-moving-unclassified'),
+ 'Moving panel needs responsive status cards and unknown bucket');
+const fifoSql=fs.readFileSync('supabase/migrations/20261024_stock_moving_fifo_v1.sql','utf8');
+assert(fifoSql.includes('security invoker')&&fifoSql.includes('private.same_brand(p_brand)'),
+ 'Moving RPC must use invoker RLS and explicit same-brand guard');
+assert(fifoSql.includes('grant execute on function public.get_stock_moving_fifo_v1(uuid,date) to authenticated'),
+ 'Moving RPC can only be executed by authenticated users');
+assert(fifoSql.includes('ev.finish_date-ev.receipt_date')&&fifoSql.includes('ev.reliable'),
+ 'Calculation uses actual purchase-to-fully-consumed FIFO days with quality checks');
 assert(greenCss.includes('.sc14-low-list')&&greenCss.includes('.sc14-low-item'),
   'Lowest-five SKU ranking has its own compact layout');
 assert(!trendSource.includes('sc9-bar-shell'),'Old percentage-height bars must not be used by active chart');
