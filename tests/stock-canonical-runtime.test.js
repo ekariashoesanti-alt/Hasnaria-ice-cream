@@ -299,9 +299,8 @@ const uniqueBaseSelectors=[
  '#stok .sc12-chart-frame','#stok .sc12-ledger-chart'
 ];
 for(const sel of uniqueBaseSelectors){
- const pattern=new RegExp('^'+sel.replace(/[.*+?^${}()|[\]\\]/g,'\\const notifications = fs.readFileSync('owner-notifications-v1.js','utf8');')+'\\{','gm');
- const occurrences=[...canonical.matchAll(pattern)];
- assert.strictEqual(occurrences.length,1,'One canonical root declaration required for '+sel);
+ const occurrences=canonical.split('\n'+sel+'{').length-1;
+ assert.strictEqual(occurrences,1,'One canonical root declaration required for '+sel);
 }
 const canonicalMedia=[
  '@media(max-width:700px)', '@media(min-width:701px) and (max-width:1120px)',
