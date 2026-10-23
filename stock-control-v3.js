@@ -208,7 +208,7 @@
     var l = document.createElement('link');
     l.id = 'stock-control-v3-css';
     l.rel = 'stylesheet';
-    l.href = '/stock-control-v3.css?v=15';
+    l.href = '/stock-control-v3.css?v=16';
     document.head.appendChild(l);
   }
 
@@ -1029,60 +1029,71 @@
     if(S.valuationLoading||!S.baseLoaded)return '<div class="sc5-empty">Memuat nilai stok terverifikasi…</div>';
     if(!S.valuationLoaded||!S.valuation)return '<div class="sc5-empty">Data nilai stok belum dapat dimuat. Periksa koneksi dan lakukan Refresh.</div>';
 
-    // Every currency figure derives from positive tracked balances with verified costs.
-    // Never treat this composition as the value of all Hasnaria inventory.
-    var verified=verifiedValuationRows(),groups=Object.create(null),colors=['#176e50','#35a575','#74c79e','#a4dcbc'];
+    // A slice is ONLY a share of items with verified costs and positive stock.
+    // Never substitute sample/mockup categories or present partial valuation as all stock.
+    var verified=verifiedValuationRows(),groups=Object.create(null);
+    var colors=['#076b49','#2aa46b','#76c95b','#a8e1ba'];
     verified.forEach(function(r){
-      var k=String(r.category||'Lainnya').trim()||'Lainnya';
-      if(!groups[k])groups[k]={name:k,value:0,sku:0};
-      groups[k].value+=r.value;groups[k].sku++;
+      var key=String(r.category||'Lainnya').trim()||'Lainnya';
+      if(!groups[key])groups[key]={name:key,value:0,sku:0};
+      groups[key].value+=r.value;groups[key].sku++;
     });
-    var parts=Object.keys(groups).map(function(k){return groups[k]})
+    var parts=Object.keys(groups).map(function(key){return groups[key]})
       .sort(function(a,b){return b.value-a.value||a.name.localeCompare(b.name)});
     if(parts.length>4){
       var other=parts.slice(3).reduce(function(a,x){a.value+=x.value;a.sku+=x.sku;return a},
         {name:'Kategori lainnya',value:0,sku:0});
       parts=parts.slice(0,3).concat(other);
     }
-    var total=parts.reduce(function(a,x){return a+x.value},0);
+    var total=parts.reduce(function(sum,x){return sum+x.value},0);
     var summary=S.valuation||{},valued=num(summary.valued_items);
     var denominator=num(summary.inventory_items)||S.items.length;
     var coverage=denominator?Math.min(100,Math.max(0,100*valued/denominator)):0;
-    var coverageText=coverage.toLocaleString('id-ID',{maximumFractionDigits:1});
-    var share=function(value){return total?100*value/total:0};
-    var nfmt=function(value){return Number(value).toLocaleString('id-ID',{maximumFractionDigits:1})};
+    var fmtPercent=function(n){return Number(n).toLocaleString('id-ID',{maximumFractionDigits:1})};
+    var share=function(value){return total>0?100*value/total:0};
 
-    var hero='<div class="sc10-value-hero">'+
-      '<span class="sc10-value-eyebrow">Nilai dengan biaya terverifikasi</span>'+
-      '<strong class="sc10-value-total">'+esc(stockMoney(total,false))+'</strong>'+
-      '<span class="sc10-value-micro">'+fmt(verified.length)+' SKU bersaldo positif · '+
-        fmt(parts.length)+' kelompok kategori</span>'+
-      '<span class="sc10-value-pill">Valuasi parsial</span>'+
+    var chart='';
+    if(total>0){
+      var start=0,segments=[];
+      parts.forEach(function(p,i){
+        var end=i===parts.length-1?100:start+share(p.value);
+        // Conic segments are based on verified values, not all SKUs.
+        segments.push(colors[i]+' '+start.toFixed(3)+'% '+end.toFixed(3)+'%');
+        start=end;
+      });
+      chart='<div class="sc13-donut-figure" role="img" aria-label="'+
+        esc('Komposisi nilai terverifikasi '+parts.map(function(p){return p.name+' '+fmtPercent(share(p.value))+' persen'}).join(', '))+'">'+
+        '<div class="sc13-donut-ring" style="background:conic-gradient('+segments.join(',')+')">'+
+          '<div class="sc13-donut-hole"><strong>'+esc(stockMoney(total,true))+'</strong>'+
+            '<span>Nilai terverifikasi</span></div>'+
+        '</div>'+
+        '<small>Komposisi nilai yang sudah terverifikasi</small>'+
       '</div>';
+    }else{
+      chart='<div class="sc13-donut-empty"><strong>Belum ada nilai terverifikasi</strong>'+
+        '<small>Lengkapi biaya pokok dan saldo untuk menampilkan komposisi.</small></div>';
+    }
 
-    var bars=parts.length?parts.map(function(x,i){
-      var pct=share(x.value);
-      return '<div class="sc10-category-row" title="'+esc(x.name+' · '+stockMoney(x.value,false))+'">'+
-        '<div class="sc10-category-meta"><span><i style="background:'+colors[i%colors.length]+'"></i>'+
-          esc(x.name)+'</span><strong>'+esc(stockMoney(x.value,true))+'</strong></div>'+
-        '<div class="sc10-category-progress" role="progressbar" aria-label="'+esc(x.name)+
-          '" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+pct.toFixed(1)+'">'+
-          '<i style="width:'+pct.toFixed(2)+'%;background:'+colors[i%colors.length]+'"></i></div>'+
-        '<span class="sc10-category-subline">'+fmt(x.sku)+' SKU terverifikasi · '+nfmt(pct)+'% dari nilai terverifikasi</span></div>';
-    }).join(''):'<div class="sc10-category-none">Belum ada saldo bernilai positif dari SKU dengan biaya terverifikasi.</div>';
+    var legend=total>0?parts.map(function(p,i){
+      return '<div class="sc13-legend-row" title="'+esc(p.name+' — '+stockMoney(p.value,false))+'">'+
+        '<span class="sc13-legend-label"><i style="background:'+colors[i]+'"></i>'+
+          '<b>'+esc(p.name)+'</b></span>'+
+        '<span class="sc13-legend-percent">'+fmtPercent(share(p.value))+'%</span>'+
+        '<strong class="sc13-legend-value">'+esc(stockMoney(p.value,true))+'</strong>'+
+      '</div>';
+    }).join(''):'<p class="sc13-legend-empty">Tidak ada kategori dengan saldo dan harga pokok terverifikasi.</p>';
 
-    var coverageMarkup='<div class="sc10-coverage">'+
-      '<div class="sc10-coverage-top"><strong>Cakupan harga pokok</strong>'+
-        '<span>'+fmt(valued)+' dari '+fmt(denominator)+' SKU · '+coverageText+'%</span></div>'+
-      '<div class="sc10-coverage-track" role="progressbar" aria-label="Cakupan harga pokok terverifikasi" '+
-        'aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+coverage.toFixed(1)+'">'+
-        '<i style="width:'+coverage.toFixed(3)+'%"></i></div>'+
-      '<p class="sc10-coverage-note">Hanya nilai yang telah terverifikasi. Bukan total nilai seluruh persediaan.</p>'+
-    '</div>';
-
-    return '<div class="sc10-category-layout">'+hero+
-      '<div class="sc10-category-breakdown"><span class="sc10-breakdown-heading">Komposisi kategori</span>'+
-      bars+'</div></div>'+coverageMarkup;
+    return '<div class="sc13-category-main">'+chart+
+        '<div class="sc13-category-legend"><span class="sc13-legend-title">Nilai per kategori terverifikasi</span>'+
+          legend+'</div></div>'+
+      '<div class="sc13-category-coverage">'+
+        '<div class="sc13-coverage-text"><b>Cakupan harga pokok</b><span>'+
+          fmt(valued)+' dari '+fmt(denominator)+' SKU · '+fmtPercent(coverage)+'%</span></div>'+
+        '<div class="sc13-coverage-track" role="progressbar" aria-label="Cakupan harga pokok seluruh SKU" '+
+          'aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+coverage.toFixed(1)+'">'+
+          '<i style="width:'+coverage.toFixed(3)+'%"></i></div>'+
+        '<p class="sc13-coverage-note">Valuasi parsial. Bukan total nilai seluruh persediaan.</p>'+
+      '</div>';
   }
   function stockValueTopFive(){
     if(S.valuationLoading||!S.baseLoaded)return '<div class="sc5-empty">Memuat nilai item terverifikasi…</div>';
