@@ -208,7 +208,7 @@
     var l = document.createElement('link');
     l.id = 'stock-control-v3-css';
     l.rel = 'stylesheet';
-    l.href = '/stock-control-v3.css?v=17';
+    l.href = '/stock-control-v3.css?v=18';
     document.head.appendChild(l);
   }
 
@@ -1054,16 +1054,26 @@
 
     var chart='';
     if(total>0){
-      var start=0,segments=[];
+      // SVG circles have explicit geometry; CSS flex and aspect ratio cannot collapse
+      // the sector to an invisible conic-gradient box. pathLength normalizes to 100%.
+      var arcStart=0,arcs=[];
       parts.forEach(function(p,i){
-        var end=i===parts.length-1?100:start+share(p.value);
-        // Conic segments are based on verified values, not all SKUs.
-        segments.push(colors[i]+' '+start.toFixed(3)+'% '+end.toFixed(3)+'%');
-        start=end;
+        var pct=share(p.value),segmentStart=arcStart;
+        // No seams for the single-category (100%) case.
+        var visible=parts.length===1?100:Math.max(0,pct-.45);
+        arcs.push('<circle class="sc13-donut-sector" cx="110" cy="110" r="78" pathLength="100" '+
+          'fill="none" stroke="'+colors[i]+'" stroke-width="40" stroke-linecap="butt" '+
+          'stroke-dasharray="'+visible.toFixed(3)+' '+(100-visible).toFixed(3)+'" '+
+          'stroke-dashoffset="'+(-segmentStart).toFixed(3)+'" transform="rotate(-90 110 110)"></circle>');
+        arcStart+=pct;
       });
       chart='<div class="sc13-donut-figure" role="img" aria-label="'+
         esc('Komposisi nilai terverifikasi '+parts.map(function(p){return p.name+' '+fmtPercent(share(p.value))+' persen'}).join(', '))+'">'+
-        '<div class="sc13-donut-ring" style="background:conic-gradient('+segments.join(',')+')">'+
+        '<div class="sc13-donut-visual">'+
+          '<svg class="sc13-donut-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 220" width="220" height="220" aria-hidden="true" focusable="false">'+
+            '<circle class="sc13-donut-base" cx="110" cy="110" r="78" fill="none" stroke="#e7f3eb" stroke-width="40"></circle>'+
+            arcs.join('')+
+          '</svg>'+
           '<div class="sc13-donut-hole"><strong>'+esc(stockMoney(total,true))+'</strong>'+
             '<span>Nilai terverifikasi</span></div>'+
         '</div>'+
