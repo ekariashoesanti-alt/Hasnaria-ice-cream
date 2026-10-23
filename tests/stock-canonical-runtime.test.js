@@ -7,7 +7,7 @@ const css=fs.readFileSync('stock-readable-density.css','utf8');
 
 assert(!shim.includes('stock-recall-v4.js'),'owner shim must not load legacy Stock recall v4');
 assert(shim.includes('stock-v3-runtime-fix.js'),'owner shim must load the canonical Stock v3 bridge');
-assert(bridge.includes("/stock-control-v3.js?v=22"),'canonical bridge must load Stock Control v3');
+assert(bridge.includes("/stock-control-v3.js?v=23"),'canonical bridge must load Stock Control v3');
 assert(bridge.includes("setAttribute('data-stock-v4','1')"),'canonical shell must satisfy the existing owner guard marker');
 assert(css.includes('#stok .sc3-table{width:100%;min-width:0;table-layout:fixed;font-size:8.3px}'),'desktop Stock table must keep the readable fixed-width density override');
 assert(!css.includes('font-size:5.4px'),'readable override must not regress to the previous ultra-small status text');
@@ -20,7 +20,7 @@ assert(ui4.includes('data-sc4-modal="ledger"')&&ui4.includes('data-sc4-action="o
 assert(ui4.includes('sc6-dashboard') && ui4.includes('monthlyTrendInfographic()'),'Stock green dashboard must retain backend monthly trend');
 assert(ui4.includes('sc6-main-column')&&ui4.includes('sc6-side-column'),'Stock must use the approved two-column layout');
 assert(ui4.indexOf('sc6-trend-panel')<ui4.indexOf('sc6-category-panel'),'Value per category must sit directly below the trend');
-assert(ui4.includes('stockValueByCategory()')&&ui4.includes('stockValueTopFive()')&&ui4.includes('expiryAndOpnamePanel()'),'All visible panels must use backend-driven data or explicit missing-data copy');
+assert(ui4.includes('stockValueByCategory()')&&ui4.includes('lowestStockFive()')&&ui4.includes('expiryAndOpnamePanel()'),'All visible panels must use backend-driven data or explicit missing-data copy');
 assert(!ui4.includes('sc5-grid-bottom'),'Removed obsolete lower infographic row');
 assert(ui4.includes('inventory_valuation_verified_summary')&&ui4.includes('inventory_verified_cost_current'),'Stock value must use verified unit costs only');
 assert(ui4.includes('Valuasi parsial')&&ui4.includes('Bukan total nilai seluruh persediaan'),'Incomplete value coverage must be disclosed');
@@ -116,7 +116,7 @@ assert(greenCss.includes('.sc12-ledger-chart')&&greenCss.includes('.sc12-ledger-
   'New SVG chart uses a single scoped green visual system');
 assert(greenCss.includes('#stok .sc12-chart-frame')&&greenCss.includes('min-height:125px'),
   'SVG chart has a definite positive visible area');
-assert(ui4.includes('/stock-control-v3.css?v=16'),'New chart stylesheet cache version must be fresh');
+assert(ui4.includes('/stock-control-v3.css?v=17'),'New chart stylesheet cache version must be fresh');
 assert(ui4.includes('sc12-status-strip')&&greenCss.includes('.sc12-status-strip'),
   'Healthy audit/upload state displays compactly to give dashboard more space');
 
@@ -126,7 +126,7 @@ assert(ui4.includes('Cakupan harga pokok'),'Partial stock-cost coverage must rem
 assert(greenCss.includes('.sc13-donut-hole')&&greenCss.includes('.sc13-legend-row'),
   'New verified-value donut and legend are styled');
 const categoryStart=ui4.indexOf('function stockValueByCategory(){');
-const categoryEnd=ui4.indexOf('function stockValueTopFive(){',categoryStart);
+const categoryEnd=ui4.indexOf('function lowestStockFive(){',categoryStart);
 assert(categoryStart>=0&&categoryEnd>categoryStart,'Category function must be present');
 const categorySource=ui4.slice(categoryStart,categoryEnd).trim();
 const renderCategory=(rows,valued=1,all=198)=>vm.runInNewContext(categorySource+';stockValueByCategory()',{
@@ -165,25 +165,61 @@ assert(noBalance.includes('Belum ada nilai terverifikasi')&&noBalance.includes('
   'No real verified balance must never create fake pie segments');
 assert(!noBalance.includes('conic-gradient('),'Empty values have no fabricated chart');
 
-const topStart=ui4.indexOf('function stockValueTopFive(){');
+const topStart=ui4.indexOf('function lowestStockFive(){');
 const topEnd=ui4.indexOf('function expiryAndOpnamePanel(){',topStart);
 const healthEnd=ui4.indexOf('function stockKpiIcon(',topEnd);
-assert(topStart>=0&&topEnd>topStart&&healthEnd>topEnd,'Both Stage-5 Stock right panels are retained');
+assert(topStart>=0&&topEnd>topStart&&healthEnd>topEnd,'Lowest-five Stock ranking and health panel exist');
 const topSource=ui4.slice(topStart,topEnd).trim();
 const healthSource=ui4.slice(topEnd,healthEnd).trim();
-const renderTop=rows=>vm.runInNewContext(topSource+';stockValueTopFive()',{
-  S:{valuationLoading:false,baseLoaded:true,valuationLoaded:true,verifiedCosts:rows},
-  verifiedValuationRows:()=>rows,
-  fmt:n=>Number(n).toLocaleString('id-ID'),
-  esc:v=>String(v),
-  stockMoney:v=>'Rp '+Math.round(v).toLocaleString('id-ID')
+const trackedItem=(name,qty,unit='pcs',min=5,tracked=true)=>({
+  item_name:name,system_qty:qty,unit,min_qty:min,tracking_active:tracked,category:'MAKANAN'
 });
-const oneRow=renderTop([{name:'BUMBU ODENG',qty:19,unit:'purchase_unit',value:3163500}]);
-assert(oneRow.includes('BUMBU ODENG')&&oneRow.includes('Rp 3.163.500'),'One verified Top SKU keeps its actual value');
-assert(oneRow.includes('1 dari maks. 5'),'Single SKU is not artificially filled to five');
-assert.strictEqual((oneRow.match(/class="sc11-top-item"/g)||[]).length,1,'No phantom top-list rows');
-const fiveRows=renderTop(Array.from({length:7},(_,i)=>({name:'SKU '+i,qty:i+1,unit:'pcs',value:700-i*80})));
-assert.strictEqual((fiveRows.match(/class="sc11-top-item"/g)||[]).length,5,'Show only top five verified rows');
+const renderTop=(rows,loaded=true)=>vm.runInNewContext(topSource+';lowestStockFive()',{
+  S:{baseLoaded:loaded,items:rows},
+  num:v=>Number(v)||0,
+  fmt:n=>Number(n).toLocaleString('id-ID',{maximumFractionDigits:2}),
+  esc:v=>String(v)
+});
+const lowFixture=[
+  trackedItem('MAKANAN POSITIF',2,'pcs',7),
+  trackedItem('UNTRACKED INVENTORY',-9999,'pcs',5,false),
+  trackedItem('MATCHA',-408,'gram',16),
+  trackedItem('ODENG',-18,'porsi',20),
+  trackedItem('TOPOKKI',-65,'porsi',20),
+  trackedItem('ZENLATTE THAI TEA',-472,'gram',16),
+  trackedItem('DUMPLING CHEESE',-14,'pcs',7),
+  trackedItem('STOK NOL',0,'pcs',7),
+  trackedItem('STOK NORMAL',99,'pcs',7)
+];
+const ranked=renderTop(lowFixture);
+assert(ranked.includes('Top')===false || ranked.includes('saldo'),'Status derives from actual stock balances');
+assert(ranked.includes('ZENLATTE THAI TEA')&&ranked.includes('-472 gram'),
+  'Worst negative balance is displayed accurately, not clamped to zero');
+assert(ranked.includes('MATCHA')&&ranked.includes('-408 gram'),
+  'Second worst negative balance is displayed');
+assert(ranked.includes('TOPOKKI')&&ranked.includes('-65 porsi'),'Low stock ranking keeps original SKU units');
+assert(ranked.includes('ODENG')&&ranked.includes('-18 porsi'),'Fourth worst row appears');
+assert(ranked.includes('DUMPLING CHEESE')&&ranked.includes('-14 pcs'),'Fifth worst row appears');
+assert(!ranked.includes('UNTRACKED INVENTORY'),
+  'Untracked SKUs must never be ranked as if they had reliable balance');
+assert(!ranked.includes('MAKANAN POSITIF'),'Positive item must not push out five lower negative values');
+assert.strictEqual((ranked.match(/class="sc14-low-item sc14-low-/g)||[]).length,5,
+  'Exactly five distinct tracked SKU rows are visible');
+assert(ranked.includes('5 dari 8 SKU'),'Denominator must include only tracked SKU balances');
+assert(ranked.includes('Saldo negatif')&&ranked.includes('sc14-low-negative'),
+  'Negative ledger balances show an explicit alert');
+assert(!ranked.includes('Rp '),'Low-stock quantities must not be presented as rupiah valuation');
+const zeroCase=renderTop([trackedItem('ZERO',0,'pcs',5)]);
+assert(zeroCase.includes('Stok habis')&&zeroCase.includes('sc14-low-zero'),'Zero stock gets empty-stock warning');
+const reorderCase=renderTop([trackedItem('LOW',2,'pcs',7)]);
+assert(reorderCase.includes('Perlu beli')&&reorderCase.includes('sc14-low-reorder'),
+  'Positive stock below its own minimum is marked reorder');
+const noTracked=renderTop([trackedItem('NO OPNAME',-30,'pcs',5,false)]);
+assert(noTracked.includes('Belum ada saldo SKU yang terpantau'),'Empty state must not invent ranking');
+assert(renderTop([],false).includes('Memuat saldo SKU terpantau'),'Loading state must remain honest');
+assert(ui4.includes('Top 5 Item Stok Terendah'),'New right panel title reflects SKU balances');
+assert(greenCss.includes('.sc14-low-list')&&greenCss.includes('.sc14-low-quantity')&&greenCss.includes('.sc14-low-negative'),
+  'Right-side low-stock ranking must have compact responsive error styling');
 const health=vm.runInNewContext(healthSource+';expiryAndOpnamePanel()',{
   S:{baseLoaded:true,items:[
     {last_opname_date:'2026-09-12',tracking_active:true,ui_status:'ok'},
@@ -198,8 +234,8 @@ assert(health.includes('Opname terakhir')&&health.includes('2026-09-12'),'Latest
 assert(ui4.includes('Kondisi Data &amp; Opname'),'Short health-panel title must remain distinct from its card');
 assert(greenCss.includes('#stok .sc11-health-list')&&greenCss.includes('overflow:hidden!important'),
   'The right panel has scroll-free constrained child layout');
-assert(greenCss.includes('.sc11-top-list')&&greenCss.includes('.sc11-top-item'),
-  'Top five ranking has its own compact layout');
+assert(greenCss.includes('.sc14-low-list')&&greenCss.includes('.sc14-low-item'),
+  'Lowest-five SKU ranking has its own compact layout');
 assert(!trendSource.includes('sc9-bar-shell'),'Old percentage-height bars must not be used by active chart');
 assert(!greenCss.includes('/* Tahap 3 · monthly Stock ledger activity.'),'Old chart CSS block must be removed to avoid conflicting height rules');
 

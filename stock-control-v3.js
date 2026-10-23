@@ -208,7 +208,7 @@
     var l = document.createElement('link');
     l.id = 'stock-control-v3-css';
     l.rel = 'stylesheet';
-    l.href = '/stock-control-v3.css?v=16';
+    l.href = '/stock-control-v3.css?v=17';
     document.head.appendChild(l);
   }
 
@@ -1095,28 +1095,47 @@
         '<p class="sc13-coverage-note">Valuasi parsial. Bukan total nilai seluruh persediaan.</p>'+
       '</div>';
   }
-  function stockValueTopFive(){
-    if(S.valuationLoading||!S.baseLoaded)return '<div class="sc5-empty">Memuat nilai item terverifikasi…</div>';
-    if(!S.valuationLoaded)return '<div class="sc5-empty">Daftar nilai item belum dapat dimuat.</div>';
-    var ranks=verifiedValuationRows().sort(function(a,b){return b.value-a.value}).slice(0,5);
-    var available=(S.verifiedCosts||[]).length,visible=ranks.length;
-    if(!visible)return '<div class="sc11-top-empty"><strong>Belum ada nilai item yang dapat ditampilkan</strong>'+
-      '<span>Periksa saldo dan harga pokok yang sudah terverifikasi.</span></div>';
-    var maximum=Math.max(1,ranks[0].value);
-    return '<div class="sc11-top-wrap" aria-label="Peringkat nilai persediaan dengan biaya terverifikasi">'+
-      '<div class="sc11-top-head"><span>Nilai item terverifikasi</span><strong>'+fmt(visible)+' dari maks. 5</strong></div>'+
-      '<div class="sc11-top-list">'+ranks.map(function(x,i){
-        var width=Math.max(0,Math.min(100,100*x.value/maximum));
-        return '<div class="sc11-top-item" title="'+esc(x.name+' — '+stockMoney(x.value,false))+'">'+
-          '<div class="sc11-top-item-line"><span class="sc11-rank">'+(i+1)+'</span>'+
-            '<div class="sc11-item-desc"><strong>'+esc(x.name)+'</strong>'+
-            '<small>'+esc(x.qty.toLocaleString('id-ID',{maximumFractionDigits:3})+' '+x.unit)+'</small></div>'+
-            '<b class="sc11-item-money">'+esc(stockMoney(x.value,true))+'</b></div>'+
-          '<div class="sc11-item-bar" role="img" aria-label="'+esc(x.name+' — '+stockMoney(x.value,false))+'">'+
-            '<i style="width:'+width.toFixed(1)+'%"></i></div>'+
+  function lowestStockFive(){
+    if(!S.baseLoaded)return '<div class="sc5-empty">Memuat saldo SKU terpantau…</div>';
+    // Don't rank 157 SKUs with no opening opname: their missing balance isn't zero.
+    // Show the signed ledger balance, even if negative, rather than clamping it.
+    var monitored=(S.items||[]).filter(function(x){
+      return !!x.tracking_active && x.system_qty!==null && x.system_qty!==undefined &&
+        x.system_qty!=='' && Number.isFinite(Number(x.system_qty));
+    });
+    var lowest=monitored.slice().sort(function(a,b){
+      var difference=Number(a.system_qty)-Number(b.system_qty);
+      return difference || String(a.item_name||'').localeCompare(String(b.item_name||''),'id');
+    }).slice(0,5);
+    if(!lowest.length)return '<div class="sc14-low-empty"><strong>Belum ada saldo SKU yang terpantau</strong>'+
+      '<span>Masukkan opname awal agar item dapat diranking berdasarkan stoknya.</span></div>';
+    return '<div class="sc14-low-wrap" aria-label="Lima SKU dengan saldo terpantau paling rendah">'+
+      '<div class="sc14-low-summary"><span>Diurutkan dari saldo terkecil</span>'+
+        '<strong>'+fmt(lowest.length)+' dari '+fmt(monitored.length)+' SKU</strong></div>'+
+      '<div class="sc14-low-list">'+lowest.map(function(x,i){
+        var qty=Number(x.system_qty),minimum=Math.max(0,num(x.min_qty));
+        var negative=qty<0,zero=qty===0,low=minimum>0&&qty<minimum;
+        var state=negative?'negative':zero?'zero':low?'reorder':'normal';
+        var tag=negative?'Saldo negatif':zero?'Stok habis':low?'Perlu beli':'Terpantau';
+        // Bar represents stock status relative to the SKU's own minimum threshold,
+        // not an invalid comparison across grams / portions / pieces.
+        var width=negative||zero?100:minimum>0?Math.max(3,Math.min(100,qty/minimum*100)):100;
+        var qtyLabel=fmt(qty)+' '+String(x.unit||'unit');
+        return '<div class="sc14-low-item sc14-low-'+state+'" title="'+esc(
+          String(x.item_name||'SKU')+' · '+qtyLabel+' · '+tag
+        )+'">'+
+          '<div class="sc14-low-row">'+
+            '<span class="sc14-low-rank">'+(i+1)+'</span>'+
+            '<div class="sc14-low-title"><strong>'+esc(x.item_name||'SKU')+'</strong>'+
+              '<small>'+esc(x.category||'Tanpa kategori')+' · '+tag+'</small></div>'+
+            '<b class="sc14-low-quantity">'+esc(qtyLabel)+'</b>'+
+          '</div>'+
+          '<div class="sc14-low-track" role="img" aria-label="'+esc(
+            tag+'; saldo '+qtyLabel+(minimum>0?', minimum '+fmt(minimum):'')
+          )+'"><i style="width:'+width.toFixed(1)+'%"></i></div>'+
         '</div>';
       }).join('')+'</div>'+
-      '<p class="sc11-top-foot">Hanya item dengan saldo dan harga pokok terverifikasi; item lain tidak diisi dengan harga perkiraan.</p>'+
+      '<p class="sc14-low-note">Saldo berdasarkan ledger; satuan antar-SKU berbeda. Nilai negatif perlu direkonsiliasi.</p>'+
     '</div>';
   }
   function expiryAndOpnamePanel(){
@@ -1481,7 +1500,7 @@
             '<article class="sc5-panel sc6-category-panel"><h3>▣ Nilai Stok per Kategori</h3>'+stockValueByCategory()+'</article>'+
           '</div>'+
           '<div class="sc6-column sc6-side-column">'+
-            '<article class="sc5-panel sc6-top-panel"><h3>▤ Top 5 Item Nilai Stok</h3>'+stockValueTopFive()+'</article>'+
+            '<article class="sc5-panel sc6-top-panel"><h3>▤ Top 5 Item Stok Terendah</h3>'+lowestStockFive()+'</article>'+
             '<article class="sc5-panel sc6-expiry-panel"><h3>▦ Kondisi Data &amp; Opname</h3>'+expiryAndOpnamePanel()+'</article>'+
           '</div>'+
         '</div>'+
