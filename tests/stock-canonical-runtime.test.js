@@ -7,7 +7,7 @@ const css=fs.readFileSync('stock-readable-density.css','utf8');
 
 assert(!shim.includes('stock-recall-v4.js'),'owner shim must not load legacy Stock recall v4');
 assert(shim.includes('stock-v3-runtime-fix.js'),'owner shim must load the canonical Stock v3 bridge');
-assert(bridge.includes("/stock-control-v3.js?v=20"),'canonical bridge must load Stock Control v3');
+assert(bridge.includes("/stock-control-v3.js?v=21"),'canonical bridge must load Stock Control v3');
 assert(bridge.includes("setAttribute('data-stock-v4','1')"),'canonical shell must satisfy the existing owner guard marker');
 assert(css.includes('#stok .sc3-table{width:100%;min-width:0;table-layout:fixed;font-size:8.3px}'),'desktop Stock table must keep the readable fixed-width density override');
 assert(!css.includes('font-size:5.4px'),'readable override must not regress to the previous ultra-small status text');
@@ -116,7 +116,7 @@ assert(greenCss.includes('.sc12-ledger-chart')&&greenCss.includes('.sc12-ledger-
   'New SVG chart uses a single scoped green visual system');
 assert(greenCss.includes('#stok .sc12-chart-frame')&&greenCss.includes('min-height:125px'),
   'SVG chart has a definite positive visible area');
-assert(ui4.includes('/stock-control-v3.css?v=14'),'New chart stylesheet cache version must be fresh');
+assert(ui4.includes('/stock-control-v3.css?v=15'),'New chart stylesheet cache version must be fresh');
 assert(ui4.includes('sc12-status-strip')&&greenCss.includes('.sc12-status-strip'),
   'Healthy audit/upload state displays compactly to give dashboard more space');
 
@@ -275,10 +275,42 @@ assert(greenCss.includes('max-height:min(88dvh,calc(100dvh - 20px))'),
   'Dialog is bounded to viewport height');
 assert(greenCss.includes('#stok .sc4-modal-body')&&greenCss.includes('overflow:auto!important'),
   'Long modal content scrolls internally without clipping its header');
-assert(greenCss.includes('@media(min-width:701px) and (max-width:1120px)')&&greenCss.includes('height:100%!important;max-height:100%!important'),
+assert(greenCss.includes('@media(min-width:701px) and (max-width:1120px)')&&greenCss.includes('height:100%!important')&&greenCss.includes('max-height:100%!important'),
   'Mid-width desktop does not regress to full-page scroll mode');
 assert(greenCss.includes('sc6-grid .sc5-panel>h3')&&greenCss.includes('min-height:16px!important'),
   'Panel headings have reserved height and do not overlap panel contents');
+
+
+/* Canonical Stock dashboard style regression: no historical layout cascade. */
+const canonicalStart=greenCss.indexOf('/* HASNARIA STOCK — CANONICAL DASHBOARD');
+assert(canonicalStart>22000,'Canonical dashboard styles must follow preserved Stock table/dialog foundation');
+const canonical=greenCss.slice(canonicalStart);
+assert(greenCss.length<65000,'Stock stylesheet should be significantly smaller after consolidation');
+assert(!canonical.includes('.sc9-')&&!canonical.includes('.sc6-value-donut'),
+  'Retired DIV chart and donut rules must not return');
+assert(!canonical.includes('.sc5-grid-top')&&!canonical.includes('.sc5-footer-actions'),
+  'Retired Stock tab layout and footer cannot reintroduce overlap');
+assert(canonical.includes('#stok .sc12-ledger-chart')&&canonical.includes('#stok .sc10-category-layout'),
+  'Canonical chart and category panels must remain styled');
+const uniqueBaseSelectors=[
+ '#stok .sc6-grid', '#stok .sc6-dashboard',
+ '#stok .sc6-column','#stok .sc6-main-column','#stok .sc6-side-column',
+ '#stok .sc10-category-layout','#stok .sc11-health-list',
+ '#stok .sc12-chart-frame','#stok .sc12-ledger-chart'
+];
+for(const sel of uniqueBaseSelectors){
+ const occurrences=canonical.split('\n'+sel+'{').length-1;
+ assert.strictEqual(occurrences,1,'One canonical root declaration required for '+sel);
+}
+const canonicalMedia=[
+ '@media(max-width:700px)', '@media(min-width:701px) and (max-width:1120px)',
+ '@media(min-width:701px) and (max-height:820px)'
+];
+for(const point of canonicalMedia)assert(canonical.includes(point),'Keep required desktop/mobile breakpoint: '+point);
+assert(canonical.includes('grid-template-columns:repeat(2,minmax(0,1fr))'),
+  'Stock KPI mobile grid must retain 2 columns');
+assert(canonical.includes('max-height:min(88dvh,calc(100dvh - 20px))'),
+  'Stock modal must remain bounded by viewport');
 
 const notifications = fs.readFileSync('owner-notifications-v1.js','utf8');
 const ownerShell = fs.readFileSync('owner-shell-guard.js','utf8');
