@@ -208,7 +208,7 @@
     var l = document.createElement('link');
     l.id = 'stock-control-v3-css';
     l.rel = 'stylesheet';
-    l.href = '/stock-control-v3.css?v=13';
+    l.href = '/stock-control-v3.css?v=14';
     document.head.appendChild(l);
   }
 
@@ -1310,14 +1310,12 @@
     var year=Number(S.period.slice(0,4)),month=Number(S.period.slice(5,7))-1;
     if(!Number.isFinite(year)||!Number.isFinite(month)||month<0||month>11)
       return '<div class="sc5-empty">Periode aktivitas tidak valid.</div>';
-    // Sum source event rows per period, never add inventory quantities or prices.
-    var totals={},seen={};
+    // Source of truth is ledger event ROW COUNT, never money or mixed SKU units.
+    var totals=Object.create(null),seen=Object.create(null);
     (S.trend||[]).forEach(function(x){
-      var key=String(x.period_month||'').slice(0,10);
-      var value=Number(x.movement_rows);
+      var key=String(x.period_month||'').slice(0,10),value=Number(x.movement_rows);
       if(!/^\d{4}-\d{2}-01$/.test(key)||!Number.isFinite(value)||value<0)return;
-      totals[key]=(totals[key]||0)+value;
-      seen[key]=true;
+      totals[key]=(totals[key]||0)+value;seen[key]=true;
     });
     var labels=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
     var months=[];
@@ -1327,43 +1325,70 @@
         hasData:!!seen[key],value:totals[key]||0});
     }
     var actual=months.filter(function(x){return x.hasData});
-    if(!actual.length)return '<div class="sc9-no-data"><strong>Belum ada aktivitas ledger dalam 10 bulan ini</strong>'+
-       '<small>Grafik akan terbentuk dari transaksi stok yang benar-benar tercatat di backend.</small></div>';
+    if(!actual.length)return '<div class="sc12-no-data"><strong>Belum ada aktivitas ledger dalam 10 bulan ini</strong>'+
+       '<small>Grafik akan terbentuk dari transaksi Stok yang benar-benar tercatat di backend.</small></div>';
+
+    // All chart positions are calculated in an explicit SVG coordinate system.
+    // CSS cannot collapse the positive bar heights to 1px as in the old nested div chart.
     var peak=Math.max.apply(null,actual.map(function(x){return x.value}).concat([0]));
-    var total=actual.reduce(function(sum,x){return sum+x.value},0);
     var base=Math.pow(10,Math.floor(Math.log10(Math.max(1,peak)/4)));
     var tick=Math.max(1,Math.ceil((peak/4)/base)*base);
-    var top=Math.max(4,4*tick);
-    var steps=[4,3,2,1,0].map(function(n){
-      return '<span style="bottom:'+(n*25)+'%">'+esc(fmt(n*tick))+'</span>';
+    var ymax=Math.max(4,4*tick),total=actual.reduce(function(sum,x){return sum+x.value},0);
+    var left=72,right=868,plotTop=36,plotBottom=194,plotHeight=plotBottom-plotTop;
+    var xcoord=function(i){return left+(right-left)*i/9};
+    var ycoord=function(v){return plotBottom-Math.max(0,Math.min(1,v/ymax))*plotHeight};
+
+    var grid=[0,1,2,3,4].map(function(step){
+      var y=plotBottom-step*plotHeight/4;
+      return '<line class="sc12-grid-line" x1="'+left+'" y1="'+y.toFixed(2)+'" x2="'+right+'" y2="'+y.toFixed(2)+'"/>'+
+        '<text class="sc12-axis-tick" x="'+(left-13)+'" y="'+(y+4).toFixed(2)+'" text-anchor="end">'+
+        esc(fmt(step*tick))+'</text>';
     }).join('');
-    var bars=months.map(function(x,i){
-      var pct=x.hasData&&x.value>0?100*x.value/top:0;
-      var highlight=x.key===S.period+'-01';
-      var number=x.hasData?fmt(x.value):'—';
-      var label=x.month+(x.month==='Jan'||i===0?' '+String(x.year).slice(-2):'');
-      return '<div class="sc9-month'+(highlight?' sc9-month-current':'')+
-        (!x.hasData?' sc9-month-missing':'')+'" title="'+esc(
-          x.month+' '+x.year+': '+(x.hasData?fmt(x.value)+' aktivitas ledger':'belum ada catatan aktivitas')
-        )+'">'+
-        '<div class="sc9-bar-stage"><span class="sc9-bar-shell">'+
-          '<i class="sc9-bar" style="height:'+pct.toFixed(2)+'%">'+
-            '<b class="sc9-count">'+esc(number)+'</b></i></span></div>'+
-        '<span class="sc9-month-label">'+esc(label)+'</span></div>';
+    var bars=months.map(function(m,i){
+      var x=xcoord(i),y=ycoord(m.value),height=Math.max(0,plotBottom-y),hasValue=m.hasData&&m.value>0;
+      var active=m.key===S.period+'-01';
+      var label=m.month+(m.month==='Jan'||i===0?' '+String(m.year).slice(-2):'');
+      var bar=hasValue?'<rect class="sc12-ledger-bar'+(active?' sc12-ledger-current':'')+
+        '" x="'+(x-22).toFixed(2)+'" y="'+y.toFixed(2)+'" width="44" height="'+height.toFixed(2)+'" rx="5"'+
+        ' fill="url(#sc12StockBarGradient)"/>':'';
+      return '<g class="sc12-month'+(active?' sc12-active-month':'')+'">'+
+        '<title>'+esc(m.month+' '+m.year+': '+(m.hasData?fmt(m.value)+' aktivitas ledger':'tidak ada catatan ledger'))+'</title>'+
+        bar+
+        '<text class="sc12-number'+(m.hasData?'':' sc12-number-missing')+'" x="'+x.toFixed(2)+
+        '" y="'+(hasValue?Math.max(plotTop+7,y-9):plotBottom-12).toFixed(2)+'" text-anchor="middle">'+
+        esc(m.hasData?fmt(m.value):'—')+'</text>'+
+        '<text class="sc12-month-name'+(active?' sc12-month-selected':'')+'" x="'+x.toFixed(2)+
+        '" y="225" text-anchor="middle">'+esc(label)+'</text></g>';
     }).join('');
-    return '<div class="sc9-trend" role="group" aria-label="Grafik jumlah aktivitas ledger stok selama 10 bulan">'+
-      '<div class="sc9-trend-summary"><span>Aktivitas ledger · 10 bulan</span>'+
+
+    // Never join the line across months with missing records.
+    var strokes=[],run=[];
+    months.forEach(function(m,i){
+      if(m.hasData){run.push(xcoord(i).toFixed(2)+','+ycoord(m.value).toFixed(2));}
+      else{if(run.length>1)strokes.push(run.join(' '));run=[];}
+    });
+    if(run.length>1)strokes.push(run.join(' '));
+    var line=strokes.map(function(points){
+      return '<polyline class="sc12-ledger-line" points="'+points+'"/>';
+    }).join('');
+    var dots=months.map(function(m,i){
+      if(!m.hasData)return '';
+      return '<circle class="sc12-ledger-dot" cx="'+xcoord(i).toFixed(2)+
+        '" cy="'+ycoord(m.value).toFixed(2)+'" r="4.8"/>';
+    }).join('');
+    return '<div class="sc12-trend" role="group" aria-label="Grafik aktual jumlah event ledger Stok selama 10 bulan">'+
+      '<div class="sc12-trend-summary"><span>Aktivitas ledger · 10 bulan</span>'+
         '<strong>'+esc(fmt(total))+' <small>event tercatat</small></strong></div>'+
-      '<div class="sc9-chart">'+
-        '<div class="sc9-y-labels" aria-hidden="true">'+steps+'</div>'+
-        '<div class="sc9-plot">'+
-          '<div class="sc9-guide-lines" aria-hidden="true">'+[0,25,50,75,100].map(function(p){
-            return '<i style="bottom:'+p+'%"></i>';
-          }).join('')+'</div>'+
-          '<div class="sc9-bars">'+bars+'</div>'+
-        '</div>'+
+      '<div class="sc12-chart-frame">'+
+        '<svg class="sc12-ledger-chart" viewBox="0 0 925 239" preserveAspectRatio="xMidYMid meet" '+
+        'role="img" aria-label="Grafik batang dan garis aktivitas stok bulanan berdasarkan jumlah event ledger">'+
+        '<defs><linearGradient id="sc12StockBarGradient" x1="0" y1="0" x2="0" y2="1">'+
+          '<stop offset="0%" stop-color="#65c99d"/><stop offset="100%" stop-color="#bcebd2"/>'+
+        '</linearGradient></defs>'+
+        grid+bars+line+dots+'</svg>'+
       '</div>'+
-      '<p class="sc5-caption sc9-caption">Jumlah event pada ledger (bukan nilai stok atau total unit). Tanda — = belum ada catatan pada bulan tersebut.</p>'+
+      '<p class="sc12-trend-caption">Batang dan garis menunjukkan <b>jumlah aktivitas ledger</b>, bukan nilai rupiah. '+
+        'Tanda — berarti belum ada catatan.</p>'+
     '</div>';
   }
   function attentionSkuInfographic(){
@@ -1435,7 +1460,9 @@
     var alert = S.error ? '<div class="sc3-alert">' + esc(S.error) + '</div>' : '';
     var pAlert = S.periodError ? '<div class="sc3-alert">' + esc(S.periodError) + '</div>' : '';
     var loading = S.baseLoading && !S.baseLoaded ? '<div class="sc3-loading">Memuat posisi SKU terkini…</div>' : '';
-    shell.innerHTML = renderHeader() + renderCorrectionPanel() + renderLedgerAudit() + renderUploadStatus() + pAlert + overviewKpis() + alert + loading +
+    shell.innerHTML = renderHeader() + renderCorrectionPanel() +
+      '<div class="sc12-status-strip">'+renderLedgerAudit()+renderUploadStatus()+'</div>' +
+      pAlert + overviewKpis() + alert + loading +
       '<div class="sc5-dashboard sc6-dashboard" aria-label="Infografis Stok Hasnaria">'+
         '<div class="sc6-grid">'+
           '<div class="sc6-column sc6-main-column">'+
