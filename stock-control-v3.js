@@ -213,7 +213,7 @@
     var l = document.createElement('link');
     l.id = 'stock-control-v3-css';
     l.rel = 'stylesheet';
-    l.href = '/stock-control-v3.css?v=19';
+    l.href = '/stock-control-v3.css?v=20';
     document.head.appendChild(l);
   }
 
@@ -1070,7 +1070,7 @@
         // No seams for the single-category (100%) case.
         var visible=parts.length===1?100:Math.max(0,pct-.45);
         arcs.push('<circle class="sc13-donut-sector" cx="110" cy="110" r="78" pathLength="100" '+
-          'fill="none" stroke="'+colors[i]+'" stroke-width="40" stroke-linecap="butt" '+
+          'fill="none" stroke="'+colors[i]+'" stroke-width="30" stroke-linecap="butt" '+
           'stroke-dasharray="'+visible.toFixed(3)+' '+(100-visible).toFixed(3)+'" '+
           'stroke-dashoffset="'+(-segmentStart).toFixed(3)+'" transform="rotate(-90 110 110)"></circle>');
         arcStart+=pct;
@@ -1079,11 +1079,12 @@
         esc('Komposisi nilai terverifikasi '+parts.map(function(p){return p.name+' '+fmtPercent(share(p.value))+' persen'}).join(', '))+'">'+
         '<div class="sc13-donut-visual">'+
           '<svg class="sc13-donut-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 220" width="220" height="220" aria-hidden="true" focusable="false">'+
-            '<circle class="sc13-donut-base" cx="110" cy="110" r="78" fill="none" stroke="#e7f3eb" stroke-width="40"></circle>'+
+            '<circle class="sc13-donut-base" cx="110" cy="110" r="78" fill="none" stroke="#e7f3eb" stroke-width="30"></circle>'+
             arcs.join('')+
+            '<text class="sc13-donut-number" x="110" y="109" text-anchor="middle">'+
+              esc(stockMoney(total,true))+'</text>'+
+            '<text class="sc13-donut-label" x="110" y="127" text-anchor="middle">Nilai terverifikasi</text>'+
           '</svg>'+
-          '<div class="sc13-donut-hole"><strong>'+esc(stockMoney(total,true))+'</strong>'+
-            '<span>Nilai terverifikasi</span></div>'+
         '</div>'+
         '<small>Komposisi nilai yang sudah terverifikasi</small>'+
       '</div>';
