@@ -7,7 +7,7 @@ const css=fs.readFileSync('stock-readable-density.css','utf8');
 
 assert(!shim.includes('stock-recall-v4.js'),'owner shim must not load legacy Stock recall v4');
 assert(shim.includes('stock-v3-runtime-fix.js'),'owner shim must load the canonical Stock v3 bridge');
-assert(bridge.includes("/stock-control-v3.js?v=25"),'canonical bridge must load Stock Control v3');
+assert(bridge.includes("/stock-control-v3.js?v=26"),'canonical bridge must load Stock Control v3');
 assert(bridge.includes("setAttribute('data-stock-v4','1')"),'canonical shell must satisfy the existing owner guard marker');
 assert(css.includes('#stok .sc3-table{width:100%;min-width:0;table-layout:fixed;font-size:8.3px}'),'desktop Stock table must keep the readable fixed-width density override');
 assert(!css.includes('font-size:5.4px'),'readable override must not regress to the previous ultra-small status text');
@@ -116,15 +116,46 @@ assert(greenCss.includes('.sc12-ledger-chart')&&greenCss.includes('.sc12-ledger-
   'New SVG chart uses a single scoped green visual system');
 assert(greenCss.includes('#stok .sc12-chart-frame')&&greenCss.includes('min-height:125px'),
   'SVG chart has a definite positive visible area');
-assert(ui4.includes('/stock-control-v3.css?v=19'),'New chart stylesheet cache version must be fresh');
+assert(ui4.includes('/stock-control-v3.css?v=20'),'New chart stylesheet cache version must be fresh');
 assert(ui4.includes('sc12-status-strip')&&greenCss.includes('.sc12-status-strip'),
   'Healthy audit/upload state displays compactly to give dashboard more space');
 
-assert(ui4.includes('sc13-category-main')&&ui4.includes('sc13-donut-ring'),
+assert(ui4.includes('sc13-category-main')&&ui4.includes('sc13-donut-svg'),
   'Stock verified valuation must render responsive donut, not previous horizontal composition');
 assert(ui4.includes('Cakupan harga pokok'),'Partial stock-cost coverage must remain visible');
-assert(greenCss.includes('.sc13-donut-hole')&&greenCss.includes('.sc13-legend-row'),
+assert(greenCss.includes('.sc13-donut-number')&&greenCss.includes('.sc13-legend-row'),
   'New verified-value donut and legend are styled');
+assert(ui4.includes('ui_stock_sales_link_audit_v1')&&ui4.includes('renderSalesStockAudit()'),
+  'Dashboard must load a read-only Majoo sale_items to stock movement audit per month');
+const sourceAudit=ui4.slice(ui4.indexOf('function renderSalesStockAudit(){'),
+  ui4.indexOf('function renderLedgerAudit(){')).trim();
+const salesAudit=vm.runInNewContext(sourceAudit+';renderSalesStockAudit()',{
+ S:{period:'2026-10',salesLinkAudit:{
+   sale_item_rows:1035,linked_sale_item_rows:0,unlinked_sale_item_rows:1035,
+   eligible_verified_rows:0,no_recipe_rows:38,unverified_components_rows:0
+ }},
+ fmt:n=>Number(n).toLocaleString('id-ID'),num:n=>Number(n)||0,esc:v=>String(v)
+});
+assert(salesAudit.includes('0 / 1.035')&&salesAudit.includes('1.035 belum tertaut'),
+  'October Majoo linkage backlog must not look like reconciled stock');
+assert(salesAudit.includes('sc16-sales-pending'),'Unlinked recipes present an explicit warning');
+assert(greenCss.includes('.sc16-sales-status'),'Sales→Stock status has compact dashboard styles');
+const bridgeMigration=fs.readFileSync('supabase/migrations/20261026_stock_sales_bridge_ledger_coverage.sql','utf8');
+assert(bridgeMigration.includes('left join public.inventory_sku_registry'),
+  'Inventory ledger must keep valid master movements without registry mapping');
+assert(bridgeMigration.includes('with (security_invoker=true)'),
+  'Ledger and audit views must respect current user RLS');
+assert(bridgeMigration.includes('create or replace view public.ui_stock_sales_link_audit_v1'),
+  'Read-only sales coverage view must exist');
+const synStart=bridgeMigration.indexOf('create or replace function private.sync_sale_item_inventory_movement');
+const synEnd=bridgeMigration.indexOf('$function$;',synStart);
+const safeSync=bridgeMigration.slice(synStart,synEnd);
+assert(safeSync.indexOf("if v_approved is null then return") <
+  safeSync.indexOf('update public.inventory_movements'),
+  'Unverified recipes must never delete or update historical stock movements');
+assert(!safeSync.includes('delete from public.inventory_movements'),
+  'Do not erase historical posted sales while recipe is draft');
+
 const categoryStart=ui4.indexOf('function stockValueByCategory(){');
 const categoryEnd=ui4.indexOf('function lowestStockFive(){',categoryStart);
 assert(categoryStart>=0&&categoryEnd>categoryStart,'Category function must be present');
@@ -140,6 +171,8 @@ const renderCategory=(rows,valued=1,all=198)=>vm.runInNewContext(categorySource+
 });
 const singleCategory=renderCategory([{category:'BUMBU',value:3163500}]);
 assert(singleCategory.includes('Rp 3.163.500'),'Donut center must display real verified value');
+assert(singleCategory.includes('class="sc13-donut-number"')&&singleCategory.includes('class="sc13-donut-label"'),
+ 'Amount and caption must be inside fixed SVG coordinates without HTML overlaid on the ring');
 assert(singleCategory.includes('BUMBU'),'Current real BUMBU category is displayed');
 assert(singleCategory.includes('100%'),'A single category composes 100% of verified value only');
 assert(singleCategory.includes('1 dari 198 SKU · 0,5%'),'Coverage clarifies only one of 198 SKUs is verified');
@@ -224,7 +257,7 @@ const noTracked=renderTop([trackedItem('NO OPNAME',-30,'pcs',5,false)]);
 assert(noTracked.includes('Belum ada saldo SKU yang terpantau'),'Empty state must not invent ranking');
 assert(renderTop([],false).includes('Memuat saldo SKU terpantau'),'Loading state must remain honest');
 assert(ui4.includes('Top 5 Item Stok Terendah'),'New right panel title reflects SKU balances');
-assert(greenCss.includes('#stok .sc13-donut-visual')&&greenCss.includes('min-height:118px'),
+assert(greenCss.includes('#stok .sc13-donut-visual')&&greenCss.includes('min-height:150px'),
   'Donut ring must retain a definite rendered height independent of flexbox sizing');
 assert(greenCss.includes('#stok .sc13-donut-svg')&&greenCss.includes('visibility:visible!important'),
   'The actual SVG drawing must not be hidden by layout inherited styles');
@@ -406,7 +439,7 @@ assert(canonical.includes('grid-template-columns:repeat(2,minmax(0,1fr))'),
   'Stock KPI mobile grid must retain 2 columns');
 assert(canonical.includes('max-height:min(88dvh,calc(100dvh - 20px))'),
   'Stock modal must remain bounded by viewport');
-assert(canonical.includes('#stok .sc13-category-main')&&canonical.includes('#stok .sc13-donut-ring'),
+assert(canonical.includes('#stok .sc13-category-main')&&canonical.includes('#stok .sc13-donut-svg'),
   'Current donut style must remain scoped to Stock UI');
 assert(canonical.includes('@media(max-width:700px)'),
   'Mobile donut layout must stack into one column');
