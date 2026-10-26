@@ -123,7 +123,7 @@ begin
    if v_rec.qty_per_sale is null or v_rec.qty_per_sale<=0 then
       raise exception 'Non-positive verified ingredient quantity for product %',v_item.product_id;
    end if;
-   select count(*),min(m.id) into v_matches,v_existing
+   select count(*),(array_agg(m.id order by m.created_at))[1] into v_matches,v_existing
    from public.inventory_movements m
    where m.brand_id=v_brand and m.reference_type='sale_item'
      and m.reference_id=p_sale_item_id and m.inventory_item_id=v_rec.inventory_item_id
