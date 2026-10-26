@@ -71,7 +71,9 @@
     movingLoaded: false,
     movingRows: [],
     movingError: '',
-    movingSeq: 0
+    movingSeq: 0,
+    salesLinkAudit: null,
+    salesLinkAuditUnavailable: false
   };
 
   function esc(value) {
@@ -447,6 +449,29 @@
     }catch(_){if(seq===S.periodSeq)S.pendingUploadRuns=null}
   }
 
+  function renderSalesStockAudit(){
+    if(!S.period)return '';
+    var a=S.salesLinkAudit;
+    if(!a){
+      return S.salesLinkAuditUnavailable?
+        '<div class="sc16-sales-status sc16-sales-pending" role="status">'+
+        '<b>Penjualan → Stok</b><span>Audit belum tersedia; stok tidak diubah.</span></div>':'';
+    }
+    var total=num(a.sale_item_rows),linked=num(a.linked_sale_item_rows);
+    var missing=num(a.unlinked_sale_item_rows),ready=num(a.eligible_verified_rows);
+    var warn=total>0&&(missing>0||ready<total);
+    var label=total?fmt(linked)+' / '+fmt(total)+' detail item tertaut'+
+      (warn?' · '+fmt(missing)+' belum tertaut':''):'Belum ada detail penjualan';
+    var tip='Detail '+fmt(total)+'; tertaut '+fmt(linked)+
+      '; resep siap posting '+fmt(ready)+
+      '; tanpa resep '+fmt(a.no_recipe_rows)+
+      '; komponen belum valid '+fmt(a.unverified_components_rows)+
+      '. Satu detail penjualan bisa memakai beberapa bahan.';
+    return '<div class="sc16-sales-status'+(warn?' sc16-sales-pending':' sc16-sales-ok')+
+      '" title="'+esc(tip)+'" role="status"><b>Penjualan → Stok</b>'+
+      '<span>'+esc(label)+'</span></div>';
+  }
+
   function renderLedgerAudit() {
     var a=S.ledgerAudit || {};
     if(a.state==='loading')return '';
@@ -554,6 +579,8 @@
         S.overview = null;
         S.activity = [];
         S.trend = [];
+        S.salesLinkAudit = null;
+        S.salesLinkAuditUnavailable = false;
         S.movingRows = [];
         S.movingLoaded = false;
         return;
@@ -565,16 +592,20 @@
       var fromMonth=new Date(Date.UTC(y,m-9,1)).toISOString().slice(0,10);
       var tq=qs({brand_id:'eq.'+BRAND,period_month:'gte.'+fromMonth,
         select:'period_month,movement_rows',order:'period_month.desc',limit:'100'});
+      var salesQ=qs({brand_id:'eq.'+BRAND,period_month:'eq.'+month,select:'*',limit:'1'});
       var pair = await Promise.all([
         request('ui_stock_overview_v1?' + oq),
         request('ui_stock_activity_chart_v1?' + aq),
         loadPendingUploads(seq),
-        request('ui_stock_activity_chart_v1?' + tq).catch(function(){return []})
+        request('ui_stock_activity_chart_v1?' + tq).catch(function(){return []}),
+        request('ui_stock_sales_link_audit_v1?'+salesQ).catch(function(){return null})
       ]);
       if (seq !== S.periodSeq) return;
       S.overview = pair[0] && pair[0][0] ? pair[0][0] : null;
       S.activity = pair[1] || [];
       S.trend = (pair[3]||[]).filter(function(x){return x.period_month && x.period_month<=month});
+      S.salesLinkAudit=pair[4]&&pair[4][0]?pair[4][0]:null;
+      S.salesLinkAuditUnavailable=pair[4]===null;
       loadMovingStatus(S.period);
     } catch (e) {
       if (seq !== S.periodSeq) return;
@@ -582,6 +613,8 @@
       S.overview = null;
       S.activity = [];
       S.trend = [];
+        S.salesLinkAudit = null;
+        S.salesLinkAuditUnavailable = false;
     } finally {
       if (seq === S.periodSeq) {
         S.periodLoading = false;
@@ -1553,7 +1586,7 @@
     var pAlert = S.periodError ? '<div class="sc3-alert">' + esc(S.periodError) + '</div>' : '';
     var loading = S.baseLoading && !S.baseLoaded ? '<div class="sc3-loading">Memuat posisi SKU terkini…</div>' : '';
     shell.innerHTML = renderHeader() + renderCorrectionPanel() +
-      '<div class="sc12-status-strip">'+renderLedgerAudit()+renderUploadStatus()+'</div>' +
+      '<div class="sc12-status-strip">'+renderLedgerAudit()+renderUploadStatus()+renderSalesStockAudit()+'</div>' +
       pAlert + overviewKpis() + alert + loading +
       '<div class="sc5-dashboard sc6-dashboard" aria-label="Infografis Stok Hasnaria">'+
         '<div class="sc6-grid">'+
@@ -1697,6 +1730,8 @@
         S.ledgerPage = 1;
         S.modal = '';
         S.trend = [];
+        S.salesLinkAudit = null;
+        S.salesLinkAuditUnavailable = false;
         S.movingRows = [];
         S.movingLoaded = false;
         S.movingError = '';
