@@ -73,7 +73,12 @@
     movingError: '',
     movingSeq: 0,
     salesLinkAudit: null,
-    salesLinkAuditUnavailable: false
+    salesLinkAuditUnavailable: false,
+    recipeReviewRows: [],
+    recipeReviewLoaded: false,
+    recipeReviewLoading: false,
+    recipeReviewError: '',
+    recipeReviewSeq: 0
   };
 
   function esc(value) {
@@ -215,7 +220,7 @@
     var l = document.createElement('link');
     l.id = 'stock-control-v3-css';
     l.rel = 'stylesheet';
-    l.href = '/stock-control-v3.css?v=20';
+    l.href = '/stock-control-v3.css?v=21';
     document.head.appendChild(l);
   }
 
@@ -449,6 +454,62 @@
     }catch(_){if(seq===S.periodSeq)S.pendingUploadRuns=null}
   }
 
+  // Read-only Owner review; no recipe approval or inventory posting.
+  async function loadRecipeReview(){
+    if(!isOwner()||!S.period)return;
+    var period=S.period,seq=++S.recipeReviewSeq;
+    S.recipeReviewLoading=true;S.recipeReviewLoaded=false;
+    S.recipeReviewRows=[];S.recipeReviewError='';render();
+    try{
+      var rows=await request('ui_stock_recipe_review_v1?'+qs({
+        brand_id:'eq.'+BRAND,period_month:'eq.'+period+'-01',
+        select:'product_id,product_name,sale_item_rows,sold_units,active_components,verified_components,pending_components,recipe_status,effective_from,review_state',
+        order:'sale_item_rows.desc,product_name.asc',limit:'200'
+      }));
+      if(seq!==S.recipeReviewSeq||period!==S.period)return;
+      S.recipeReviewRows=Array.isArray(rows)?rows:[];
+      S.recipeReviewLoaded=true;
+    }catch(e){
+      if(seq!==S.recipeReviewSeq||period!==S.period)return;
+      S.recipeReviewError=e&&e.message?e.message:String(e);
+    }finally{
+      if(seq===S.recipeReviewSeq){S.recipeReviewLoading=false;render();}
+    }
+  }
+
+  function renderRecipeReview(){
+    if(!isOwner())return '<div class="sc3-alert">Review resep hanya tersedia bagi Owner.</div>';
+    if(S.recipeReviewLoading)return '<div class="sc3-loading">Memuat prioritas resep dari backend…</div>';
+    if(S.recipeReviewError)return '<div class="sc3-alert">Data review belum tersedia: '+esc(S.recipeReviewError)+'. Tidak ada perubahan stok.</div>';
+    if(!S.recipeReviewLoaded)return '<div class="sc3-loading">Pilih Review Resep untuk membaca data.</div>';
+    var rows=S.recipeReviewRows||[];
+    if(!rows.length)return '<div class="sc3-loading">Belum ada produk terjual pada periode terpilih.</div>';
+    var total=rows.reduce(function(v,x){return v+num(x.sale_item_rows)},0);
+    var eligible=rows.filter(function(x){return x.review_state==='eligible'}).length;
+    var labels={missing_bom:'Resep belum ada',component_pending:'Verifikasi komponen',
+      product_approval_pending:'Perlu persetujuan Owner',
+      effective_date_partial:'Periksa tanggal efektif',eligible:'Syarat metadata terpenuhi'};
+    var body=rows.map(function(x,i){
+      return '<tr><td class="sc3-num">'+(i+1)+'</td>'+
+        '<td><b>'+esc(x.product_name||'Produk')+'</b></td>'+
+        '<td class="sc3-num">'+fmt(x.sale_item_rows)+'</td>'+
+        '<td class="sc3-num">'+fmt(x.sold_units)+'</td>'+
+        '<td class="sc3-num">'+fmt(x.verified_components)+' / '+fmt(x.active_components)+'</td>'+
+        '<td>'+esc(x.recipe_status||'missing')+'</td>'+
+        '<td>'+esc(x.effective_from?dateLabel(x.effective_from):'Belum ada')+'</td>'+
+        '<td>'+esc(labels[x.review_state]||'Perlu pemeriksaan')+'</td></tr>';
+    }).join('');
+    var unmapped=S.salesLinkAudit?num(S.salesLinkAudit.unmapped_product_rows):null;
+    return '<div class="sc17-review-summary"><b>'+fmt(rows.length)+' produk</b><span>'+fmt(total)+
+      ' baris penjualan · '+fmt(eligible)+' produk memenuhi syarat metadata</span></div>'+
+      '<p class="sc17-review-note">Hanya menampilkan data. Persetujuan Owner memerlukan pemeriksaan bahan, takaran, satuan dan tanggal efektif. Tidak memposting stok maupun mengesahkan resep.</p>'+
+      (unmapped>0?'<p class="sc3-alert">'+fmt(unmapped)+' item penjualan tidak termapping dan tidak termasuk antrean ini.</p>':'')+
+      '<div class="sc3-table-wrap"><table class="sc3-table sc17-review-table"><thead><tr>'+
+      '<th>No</th><th>Produk</th><th>Baris jual</th><th>Qty jual</th><th>BOM valid</th>'+
+      '<th>Persetujuan</th><th>Efektif</th><th>Tindak lanjut</th></tr></thead><tbody>'+
+      body+'</tbody></table></div>';
+  }
+
   function renderSalesStockAudit(){
     if(!S.period)return '';
     var a=S.salesLinkAudit;
@@ -581,6 +642,10 @@
         S.trend = [];
         S.salesLinkAudit = null;
         S.salesLinkAuditUnavailable = false;
+        ++S.recipeReviewSeq;
+        S.recipeReviewLoaded = false;
+        S.recipeReviewRows = [];
+        S.recipeReviewError = '';
         S.movingRows = [];
         S.movingLoaded = false;
         return;
@@ -915,7 +980,8 @@
         (isOwner()?'<button type="button" class="sc5-secondary" data-sc4-action="opname">＋ Input Opname</button>':'')+
       '</div><div class="sc5-head-filters sc7-tools">'+
         '<label><span>Bulan</span><select id="sc4Period" data-month-filter="stok">'+options+'</select></label>'+
-        '<button type="button" class="sc5-text-btn" data-sc4-modal="ledger" aria-haspopup="dialog">Ledger Periode</button>'+
+        '<button type="button" class="sc5-text-btn" data-sc4-modal="ledger" aria-haspopup="dialog">Ledger Periode</button>'+ 
+        (isOwner()?'<button type="button" class="sc5-text-btn" data-sc4-modal="recipes" aria-haspopup="dialog">Review Resep</button>':'')+
         (isOwner()?'<button type="button" class="sc5-text-btn" data-sc4-action="upload-purchase">Upload Pembelian</button>':'')+
         '<button type="button" class="sc5-refresh" data-sc3-action="refresh" aria-label="Refresh data Stok">↻</button>'+
       '</div></div></header>';
@@ -1349,11 +1415,12 @@
 
   function renderModal() {
     if (!S.modal) return '';
-    var title = S.modal === 'ledger' ? 'Ledger · ' + monthLabel(S.period) : 'Posisi SKU Saat Ini';
-    var body = S.modal === 'ledger'
-      ? renderLedgerTable()
-      : renderFormula() + renderAuxState() + renderFilters() + renderTable();
-    return '<div class="sc4-modal-backdrop" data-sc4-close="1"><section class="sc4-modal" role="dialog" aria-modal="true" aria-labelledby="sc4ModalTitle" tabindex="-1"><div class="sc4-modal-head"><div><div class="sc3-eyebrow">DETAIL STOK</div><h3 id="sc4ModalTitle">' + esc(title) + '</h3><p>' + (S.modal === 'ledger' ? 'Movement periode terpilih; quantity tetap dalam satuan masing-masing SKU.' : 'Saldo terkini, opname, incoming, kebutuhan dan days cover.') + '</p></div><button type="button" data-sc4-close="1" class="sc4-close" aria-label="Tutup">×</button></div><div class="sc4-modal-body">' + body + '</div></section></div>';
+    var title = S.modal === 'ledger' ? 'Ledger · ' + monthLabel(S.period) :
+      S.modal === 'recipes' ? 'Review Resep · ' + monthLabel(S.period) : 'Posisi SKU Saat Ini';
+    var body = S.modal === 'ledger' ? renderLedgerTable() :
+      S.modal === 'recipes' ? renderRecipeReview() :
+      renderFormula() + renderAuxState() + renderFilters() + renderTable();
+    return '<div class="sc4-modal-backdrop" data-sc4-close="1"><section class="sc4-modal" role="dialog" aria-modal="true" aria-labelledby="sc4ModalTitle" tabindex="-1"><div class="sc4-modal-head"><div><div class="sc3-eyebrow">DETAIL STOK</div><h3 id="sc4ModalTitle">' + esc(title) + '</h3><p>' + (S.modal === 'ledger' ? 'Movement periode terpilih; quantity tetap dalam satuan masing-masing SKU.' : S.modal === 'recipes' ? 'Antrian verifikasi resep berdasarkan transaksi aktual; tidak ada perubahan stok.' : 'Saldo terkini, opname, incoming, kebutuhan dan days cover.') + '</p></div><button type="button" data-sc4-close="1" class="sc4-close" aria-label="Tutup">×</button></div><div class="sc4-modal-body">' + body + '</div></section></div>';
   }
 
   function openOpname() {
@@ -1649,6 +1716,7 @@
       if (modal) {
         S.modal = modal.getAttribute('data-sc4-modal') || '';
         if (S.modal === 'ledger' && !S.ledgerLoading) loadLedger();
+        else if (S.modal === 'recipes') loadRecipeReview();
         else render();
         stockDialogFocus(host);
         return;
@@ -1732,6 +1800,10 @@
         S.trend = [];
         S.salesLinkAudit = null;
         S.salesLinkAuditUnavailable = false;
+        ++S.recipeReviewSeq;
+        S.recipeReviewLoaded = false;
+        S.recipeReviewRows = [];
+        S.recipeReviewError = '';
         S.movingRows = [];
         S.movingLoaded = false;
         S.movingError = '';
