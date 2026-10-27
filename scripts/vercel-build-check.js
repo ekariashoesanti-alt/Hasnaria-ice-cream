@@ -255,6 +255,7 @@ run(process.execPath, ['--test', 'tests/purchase-upload-canonical-finance-v1.tes
 run(process.execPath, ['tests/month-filter-owner-tabs.test.js']);
 run(process.execPath, ['--test', 'tests/owner-insights-ui.test.js']);
 run(process.execPath, ['tests/data-sync-runtime.test.js']);
+run(process.execPath, ['--test', 'tests/stock-recipe-review-v1.test.js']);
 
 const dist = path.join(ROOT, 'dist');
 fs.rmSync(dist, { recursive: true, force: true });
