@@ -24,7 +24,7 @@ test('recipe review view is RLS invoker, authenticated and read-only',()=>{
 
 test('read-only Owner review is requested on demand, month scoped, versioned',()=>{
   assert.match(js,/if\(!isOwner\(\)\|\|!S\.period\)return/);
-  assert.match(js,/data-sc4-modal=\\"recipes\\"/);
+  assert.match(js,/data-sc4-modal="recipes"/);
   assert.match(js,/else if \(S\.modal === 'recipes'\) loadRecipeReview\(\)/);
   assert.match(js,/ui_stock_recipe_review_v1\?/);
   assert.match(js,/period_month:'eq\.'\+period\+'-01'/);
