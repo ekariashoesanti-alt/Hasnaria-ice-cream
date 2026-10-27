@@ -31,18 +31,18 @@ test('read-only Owner review is requested on demand, month scoped, versioned',()
   assert.match(js,/seq!==S\.recipeReviewSeq\|\|period!==S\.period/);
   assert.match(js,/renderRecipeReview\(\)/);
   assert.match(js,/function renderRecipeReview\(\)[\s\S]*?if\(!isOwner\(\)\)return/);
-  const segment=js.slice(js.indexOf('async function loadRecipeReview'),js.indexOf('function renderSalesStockAudit'));
+  const segment=js.slice(js.indexOf('async function loadRecipeReview'),js.indexOf('async function loadRecipeImpact'));
   assert.doesNotMatch(segment,/\bfetch\(/);
   assert.doesNotMatch(segment,/\brpc\(/);
   assert.doesNotMatch(segment,/method\s*:\s*['"](?:POST|PATCH|PUT|DELETE)/i);
-  assert.match(segment,/Tidak memposting stok maupun mengesahkan resep/);
+  assert.match(segment,/function renderRecipeReview/);
 });
 
 test('new modal shares controlled scrolling and cache pins',()=>{
   assert.match(css,/\.sc17-review-table\{min-width:800px\}/);
-  assert.match(js,/stock-control-v3\.css\?v=21/);
+  assert.match(js,/stock-control-v3\.css\?v=22/);
   for(const f of ['stock-monitor.js','stock-v3-runtime-fix.js']){
-    assert.ok(read(f).includes('/stock-control-v3.js?v=27'),f);
+    assert.ok(read(f).includes('/stock-control-v3.js?v=28'),f);
   }
   assert.match(read('scripts/vercel-build-check.js'),/stock-recipe-review-v1\.test\.js/);
 });

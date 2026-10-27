@@ -78,7 +78,8 @@
     recipeReviewLoaded: false,
     recipeReviewLoading: false,
     recipeReviewError: '',
-    recipeReviewSeq: 0
+    recipeReviewSeq: 0,
+    recipeDetail: null
   };
 
   function esc(value) {
@@ -220,7 +221,7 @@
     var l = document.createElement('link');
     l.id = 'stock-control-v3-css';
     l.rel = 'stylesheet';
-    l.href = '/stock-control-v3.css?v=21';
+    l.href = '/stock-control-v3.css?v=22';
     document.head.appendChild(l);
   }
 
@@ -459,7 +460,7 @@
     if(!isOwner()||!S.period)return;
     var period=S.period,seq=++S.recipeReviewSeq;
     S.recipeReviewLoading=true;S.recipeReviewLoaded=false;
-    S.recipeReviewRows=[];S.recipeReviewError='';render();
+    S.recipeReviewRows=[];S.recipeReviewError='';S.recipeDetail=null;render();
     try{
       var rows=await request('ui_stock_recipe_review_v1?'+qs({
         brand_id:'eq.'+BRAND,period_month:'eq.'+period+'-01',
@@ -497,17 +498,118 @@
         '<td class="sc3-num">'+fmt(x.verified_components)+' / '+fmt(x.active_components)+'</td>'+
         '<td>'+esc(x.recipe_status||'missing')+'</td>'+
         '<td>'+esc(x.effective_from?dateLabel(x.effective_from):'Belum ada')+'</td>'+
-        '<td>'+esc(labels[x.review_state]||'Perlu pemeriksaan')+'</td></tr>';
+        '<td>'+esc(labels[x.review_state]||'Perlu pemeriksaan')+' <button type="button" class="sc17-open" data-sc17-product="'+esc(x.product_id)+'">Periksa</button></td></tr>';
     }).join('');
     var unmapped=S.salesLinkAudit?num(S.salesLinkAudit.unmapped_product_rows):null;
     return '<div class="sc17-review-summary"><b>'+fmt(rows.length)+' produk</b><span>'+fmt(total)+
       ' baris penjualan · '+fmt(eligible)+' produk memenuhi syarat metadata</span></div>'+
-      '<p class="sc17-review-note">Hanya menampilkan data. Persetujuan Owner memerlukan pemeriksaan bahan, takaran, satuan dan tanggal efektif. Tidak memposting stok maupun mengesahkan resep.</p>'+
+      '<p class="sc17-review-note">Periksa takaran, saldo, dan bukti per produk. Catatan Owner disimpan tanpa otomatis memverifikasi resep atau mengurangi stok.</p>'+
       (unmapped>0?'<p class="sc3-alert">'+fmt(unmapped)+' item penjualan tidak termapping dan tidak termasuk antrean ini.</p>':'')+
+      renderRecipeDetail()+
       '<div class="sc3-table-wrap"><table class="sc3-table sc17-review-table"><thead><tr>'+
       '<th>No</th><th>Produk</th><th>Baris jual</th><th>Qty jual</th><th>BOM valid</th>'+
       '<th>Persetujuan</th><th>Efektif</th><th>Tindak lanjut</th></tr></thead><tbody>'+
       body+'</tbody></table></div>';
+  }
+
+
+  async function loadRecipeImpact(productId){
+    if(!isOwner()||S.modal!=='recipes'||!S.period)return;
+    var found=(S.recipeReviewRows||[]).find(function(x){return x.product_id===productId});
+    if(!found)return;
+    var detail={id:productId,period:S.period,productName:found.product_name,
+      loading:true,saving:false,error:'',notice:'',components:[],
+      decision:'HOLD_FOR_CORRECTION',effective:'',evidence:'',reason:'',attested:false};
+    S.recipeDetail=detail;render();
+    try{
+      var rows=await request('ui_stock_recipe_component_impact_v1?'+qs({
+        brand_id:'eq.'+BRAND,period_month:'eq.'+detail.period+'-01',
+        product_id:'eq.'+productId,
+        select:'component_id,inventory_item_id,sku_name,sku_unit,qty_per_sale,bom_status,evidence_note,sold_units,estimated_usage,tracking_active,current_system_qty,hypothetical_remaining_qty',
+        order:'sku_name.asc',limit:'80'
+      }));
+      if(S.recipeDetail!==detail||S.period!==detail.period)return;
+      detail.components=Array.isArray(rows)?rows:[];
+    }catch(e){
+      if(S.recipeDetail!==detail)return;
+      detail.error=e&&e.message?e.message:String(e);
+    }finally{
+      if(S.recipeDetail===detail){detail.loading=false;render();}
+    }
+  }
+
+  function renderRecipeDetail(){
+    var d=S.recipeDetail;
+    if(!d)return '';
+    var status=d.loading?'<div class="sc3-loading">Memuat bahan dari database…</div>':
+      d.error?'<div class="sc3-alert">'+esc(d.error)+'</div>':'';
+    var negative=(d.components||[]).filter(function(x){
+      return x.tracking_active&&Number(x.hypothetical_remaining_qty)<0;
+    }).length;
+    var untracked=(d.components||[]).filter(function(x){return !x.tracking_active}).length;
+    var componentBody=(d.components||[]).map(function(x){
+      var estimated=x.tracking_active?Number(x.hypothetical_remaining_qty):null;
+      var flag=estimated!==null&&estimated<0?' sc17-impact-negative':'';
+      return '<tr><td><b>'+esc(x.sku_name||'Bahan')+'</b></td>'+
+        '<td class="sc3-num">'+esc(fmt(x.qty_per_sale))+' '+esc(x.sku_unit||'')+'</td>'+
+        '<td>'+esc(x.bom_status||'belum diketahui')+'</td>'+
+        '<td class="sc3-num">'+fmt(x.estimated_usage)+' '+esc(x.sku_unit||'')+'</td>'+
+        '<td class="sc3-num">'+(x.tracking_active?fmt(x.current_system_qty):'Belum opname')+'</td>'+
+        '<td class="sc3-num'+flag+'">'+(estimated===null?'Tidak tersedia':fmt(estimated))+'</td></tr>';
+    }).join('');
+    var done=!d.loading&&!d.error;
+    return '<section class="sc17-detail">'+
+      '<div class="sc17-detail-head"><button type="button" data-sc17-back="1">‹ Kembali ke daftar</button>'+
+      '<strong>'+esc(d.productName||'Produk')+'</strong></div>'+
+      status+
+      (done?'<p class="sc17-review-note">Simulasi jika hanya produk ini diposting berdasarkan seluruh penjualan bulan terpilih. Belum memperhitungkan konsumsi produk lain, tanggal opname, dan potensi pergerakan yang sudah tercatat. Bukan saldo final.</p>'+
+        '<div class="sc3-table-wrap"><table class="sc3-table sc17-impact-table"><thead><tr>'+
+        '<th>SKU / bahan</th><th>Takaran per jual</th><th>BOM</th><th>Estimasi pemakaian</th>'+
+        '<th>Saldo ledger</th><th>Simulasi sisa</th></tr></thead><tbody>'+
+        (componentBody||'<tr><td colspan="6">Resep belum memiliki bahan terdaftar. Jangan setujui.</td></tr>')+
+        '</tbody></table></div>'+
+        (negative||untracked?'<div class="sc17-impact-warning">Perhatian: '+fmt(negative)+' bahan berpotensi saldo negatif; '+fmt(untracked)+' belum opname. Catatan review tidak akan mengubah stok.</div>':'')+
+        '<div class="sc17-evidence-form"><strong>Form bukti review Owner (tanpa posting)</strong>'+
+        '<label>Keputusan<select data-sc17-field="decision"><option value="HOLD_FOR_CORRECTION"'+(d.decision==='HOLD_FOR_CORRECTION'?' selected':'')+'>Tahan — perlu koreksi resep / stok</option>'+
+        '<option value="EVIDENCE_RECORDED"'+(d.decision==='EVIDENCE_RECORDED'?' selected':'')+'>Dokumentasikan bukti — belum disetujui</option></select></label>'+
+        '<label>Rencana tanggal efektif (tidak diterapkan)<input data-sc17-field="effective" type="date" value="'+esc(d.effective)+'"></label>'+
+        '<label>Referensi bukti fisik / catatan stok<textarea data-sc17-field="evidence" rows="2" maxlength="400" placeholder="Minimal 12 karakter, contoh nomor foto / berita acara">'+esc(d.evidence)+'</textarea></label>'+
+        '<label>Hasil pemeriksaan bahan, takaran dan alasan<textarea data-sc17-field="reason" rows="3" maxlength="1000" placeholder="Minimal 30 karakter, tuliskan apa yang sudah dan belum terbukti">'+esc(d.reason)+'</textarea></label>'+
+        '<label class="sc17-attest"><input data-sc17-field="attested" type="checkbox"'+(d.attested?' checked':'')+'><span>Saya Owner dan telah memeriksa sumber bukti asli. Saya memahami langkah ini tidak menyetujui resep atau memposting stok.</span></label>'+
+        '<button type="button" data-sc17-save="1"'+(d.saving?' disabled':'')+'>'+
+        (d.saving?'Menyimpan bukti…':'Simpan catatan review')+'</button>'+
+        (d.notice?'<p class="sc17-saved" role="status">'+esc(d.notice)+'</p>':'')+
+        '</div>':'')+'</section>';
+  }
+
+  async function saveRecipeEvidence(){
+    var d=S.recipeDetail;
+    if(!isOwner()||S.modal!=='recipes'||!d||d.loading||d.saving)return;
+    var evidence=String(d.evidence||'').trim(),reason=String(d.reason||'').trim();
+    if(evidence.length<12||reason.length<30){
+      d.notice='Referensi bukti minimal 12 karakter dan alasan minimal 30 karakter.';render();return;
+    }
+    if(d.decision==='EVIDENCE_RECORDED'&&!d.attested){
+      d.notice='Centang konfirmasi pemeriksaan bukti sebelum mendokumentasikan review.';render();return;
+    }
+    d.saving=true;d.notice='';render();
+    try{
+      var result=await rpc('owner_stock_recipe_record_review_v1',{
+        p_product_id:d.id,p_period_month:d.period+'-01',
+        p_decision:d.decision,
+        p_proposed_effective_from:d.effective||null,
+        p_evidence_reference:evidence,p_reason:reason,p_attested:!!d.attested
+      });
+      if(S.recipeDetail!==d)return;
+      if(!result||result.stock_changed!==false||result.recipe_approved!==false)
+        throw new Error('Respons server tidak sesuai kontrak review-only.');
+      d.notice='Review tersimpan ('+String(result.review_id||'').slice(0,8)+'). Tidak ada perubahan stok atau status resep.';
+    }catch(e){
+      if(S.recipeDetail!==d)return;
+      d.notice='Gagal menyimpan: '+(e&&e.message?e.message:String(e));
+    }finally{
+      if(S.recipeDetail===d){d.saving=false;render();}
+    }
   }
 
   function renderSalesStockAudit(){
@@ -646,6 +748,7 @@
         S.recipeReviewLoaded = false;
         S.recipeReviewRows = [];
         S.recipeReviewError = '';
+        S.recipeDetail = null;
         S.movingRows = [];
         S.movingLoaded = false;
         return;
@@ -1699,6 +1802,12 @@
 
   function bind(host) {
     host.onclick = function (e) {
+      var recipeOpen=e.target&&e.target.closest?e.target.closest('[data-sc17-product]'):null;
+      if(recipeOpen&&isOwner()&&S.modal==='recipes'){loadRecipeImpact(recipeOpen.getAttribute('data-sc17-product'));return;}
+      var recipeBack=e.target&&e.target.closest?e.target.closest('[data-sc17-back]'):null;
+      if(recipeBack&&S.modal==='recipes'){S.recipeDetail=null;render();return;}
+      var recipeSave=e.target&&e.target.closest?e.target.closest('[data-sc17-save]'):null;
+      if(recipeSave&&isOwner()&&S.modal==='recipes'){saveRecipeEvidence();return;}
       var auditButton = e.target && e.target.closest ? e.target.closest('[data-sc4-audit]') : null;
       if(auditButton){S.modal='position';S.status='ledger-diff';S.page=1;render();stockDialogFocus(host);return;}
       var correction = e.target && e.target.closest ? e.target.closest('[data-sc4-correction]') : null;
@@ -1770,6 +1879,13 @@
     };
     host.oninput = function (e) {
       var el = e.target;
+      if(S.recipeDetail&&el.hasAttribute&&el.hasAttribute('data-sc17-field')){
+        var field=el.getAttribute('data-sc17-field');
+        if(field==='evidence'||field==='reason'||field==='effective')S.recipeDetail[field]=el.value;
+        if(field==='decision')S.recipeDetail.decision=el.value;
+        if(field==='attested')S.recipeDetail.attested=!!el.checked;
+        return;
+      }
       if (S.correction && (el.id === 'sc4CorrectionPhysical' || el.id === 'sc4CorrectionReason')) {
         if (el.id === 'sc4CorrectionPhysical') S.correction.physical = el.value;
         else S.correction.reason = el.value;
@@ -1790,6 +1906,13 @@
     };
     host.onchange = function (e) {
       var el = e.target;
+      if(S.recipeDetail&&el.hasAttribute&&el.hasAttribute('data-sc17-field')){
+        var field=el.getAttribute('data-sc17-field');
+        if(field==='decision')S.recipeDetail.decision=el.value;
+        if(field==='attested')S.recipeDetail.attested=!!el.checked;
+        if(field==='effective')S.recipeDetail.effective=el.value;
+        return;
+      }
       if (el.id === 'sc4Period') {
         S.period = monthKey(el.value);
         S.overview = null;
@@ -1804,6 +1927,7 @@
         S.recipeReviewLoaded = false;
         S.recipeReviewRows = [];
         S.recipeReviewError = '';
+        S.recipeDetail = null;
         S.movingRows = [];
         S.movingLoaded = false;
         S.movingError = '';
