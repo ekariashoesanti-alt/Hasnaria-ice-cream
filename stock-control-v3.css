@@ -1872,3 +1872,67 @@
 #stok .sc18-summary>p{font-size:9px;line-height:1.45;color:#816848;margin:6px 0 9px}
 #stok .sc18-table{min-width:980px}
 #stok .sc18-table td{font-size:8.8px}
+
+
+/* Plain-language monthly sales / persistent recipe review, isolated from 15-column stock grid. */
+#stok .sc4-modal:has(.sc19-summary){width:min(1080px,96vw)}
+#stok .sc4-modal-body:has(.sc19-summary){overflow-y:auto;overflow-x:hidden}
+#stok .sc19-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin:0 0 12px}
+#stok .sc19-summary>div{display:flex;flex-direction:column;gap:3px;min-width:0;background:#eff8f2;border:1px solid #d4e8dc;border-radius:10px;padding:10px 13px}
+#stok .sc19-summary b{color:#125a3f;font-size:23px;font-weight:850;line-height:1}
+#stok .sc19-summary span{color:#517869;font-size:11px;line-height:1.3}
+#stok .sc19-help{background:#fffaf0;border:1px solid #efdcb4;color:#795b28;border-radius:10px;padding:11px 13px;font-size:11px;line-height:1.5;margin-bottom:13px}
+#stok .sc19-help b{color:#614921;font-weight:850}
+#stok .sc19-section-head{display:flex;align-items:center;justify-content:space-between;gap:9px;margin:4px 0 10px}
+#stok .sc19-section-head b{color:#1c513e;font-size:13px}
+#stok .sc19-section-head span{font-size:10px;color:#718779}
+#stok .sc19-toolbar{display:flex;align-items:end;gap:10px;margin-bottom:12px}
+#stok .sc19-toolbar>label{display:flex;flex-direction:column;gap:5px;min-width:0;font-size:10px;font-weight:750;color:#496e60;flex:1}
+#stok .sc19-toolbar>label:first-child{flex:1.35}
+#stok .sc19-toolbar input,#stok .sc19-toolbar select{width:100%;height:36px;border:1px solid #cbded3;border-radius:8px;padding:0 11px;background:#fff;color:#234c3c;font-size:11px;font-family:inherit;outline-offset:2px}
+#stok .sc19-toolbar input:focus-visible,#stok .sc19-toolbar select:focus-visible{outline:2px solid #2b9172}
+#stok .sc19-list-wrap{width:100%;max-width:100%;overflow-x:hidden;overflow-y:visible;border:1px solid #e0eae4;border-radius:10px}
+#stok .sc19-review-table,#stok .sc19-combined-table{table-layout:fixed;width:100%;min-width:0;border-collapse:collapse;border-spacing:0;text-align:left;font-size:11px}
+#stok .sc19-review-table th,#stok .sc19-combined-table th{position:sticky;top:0;z-index:1;background:#f2f8f4;padding:9px 10px;color:#4d7364;font-weight:800;font-size:10px;text-align:left;border-bottom:1px solid #dce8e0;white-space:normal;overflow-wrap:anywhere}
+#stok .sc19-review-table td,#stok .sc19-combined-table td{padding:9px 10px;border-bottom:1px solid #ecf0ed;vertical-align:middle;font-size:11px;color:#2e4d40;overflow-wrap:anywhere;line-height:1.35;text-align:left}
+#stok .sc19-review-table tbody tr:nth-child(even),#stok .sc19-combined-table tbody tr:nth-child(even){background:#fbfdfb}
+#stok .sc19-review-table tbody tr:last-child td,#stok .sc19-combined-table tbody tr:last-child td{border-bottom:0}
+#stok .sc19-review-table tr:hover td,#stok .sc19-combined-table tr:hover td{background:#f4faf6}
+#stok .sc19-review-table .sc19-number{color:#94a59b;font-variant-numeric:tabular-nums;text-align:center;font-size:10px}
+#stok .sc19-review-table .sc19-name b,#stok .sc19-combined-table .sc19-name b{color:#1b4d3a;font-weight:800}
+#stok .sc19-review-table .sc19-qty,#stok .sc19-combined-table .sc19-qty{font-variant-numeric:tabular-nums;text-align:center}
+#stok .sc19-review-table td small,#stok .sc19-combined-table td small{display:block;color:#84978d;font-size:9px;margin-top:3px}
+#stok .sc19-status{display:inline-flex;align-items:center;max-width:100%;padding:5px 8px;border-radius:6px;font-size:10px;font-weight:750;line-height:1.25;white-space:normal}
+#stok .sc19-ok{background:#e3f4e8;color:#176040}
+#stok .sc19-warn{background:#fff3d9;color:#98621a}
+#stok .sc19-pending{background:#eef2fa;color:#4f628b}
+#stok .sc19-missing{background:#fff0ea;color:#a64c30}
+#stok .sc19-check{display:inline-flex;align-items:center;gap:6px;border:1px solid #badbca;border-radius:8px;background:#eaf6ef;color:#126446;padding:7px 10px;font-size:10px;font-family:inherit;font-weight:800;cursor:pointer}
+#stok .sc19-check:hover{background:#d8efdf}
+#stok .sc19-empty{text-align:center!important;padding:20px!important;color:#748b7d!important}
+#stok .sc19-pagination{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:10px 1px 12px;color:#648074;font-size:10px}
+#stok .sc19-pagination>div{display:flex;align-items:center;gap:9px}
+#stok .sc19-pagination button{border:1px solid #d2e3d9;background:#fff;padding:7px 9px;border-radius:7px;font-size:10px;color:#246b4d;font-family:inherit;cursor:pointer}
+#stok .sc19-pagination button:disabled{opacity:.38;cursor:default}
+#stok .sc19-material-section{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:13px;border:1px solid #d9e7de;background:#f8fbf8;border-radius:10px;margin:12px 0 8px}
+#stok .sc19-material-section b{display:block;color:#22533f;font-size:12px}
+#stok .sc19-material-section p{margin:3px 0 0;color:#6f8979;font-size:10px;line-height:1.4}
+#stok .sc19-material-section button{flex:0 0 auto;white-space:nowrap}
+#stok .sc19-combined-table .sc19-qty{text-align:right}
+#stok .sc19-combined-table .sc19-status{font-size:9px;padding:4px 6px}
+#stok .sc4-modal-body .sc17-detail .sc3-table-wrap{max-width:100%;overflow-x:auto!important}
+#stok .sc4-modal-body .sc17-impact-table{min-width:740px}
+@media(max-width:700px){
+ #stok .sc19-summary{grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}
+ #stok .sc19-summary>div{padding:8px 6px}
+ #stok .sc19-summary b{font-size:18px}
+ #stok .sc19-summary span{font-size:9px}
+ #stok .sc19-toolbar{flex-direction:column;align-items:stretch}
+ #stok .sc19-toolbar>label{width:100%}
+ #stok .sc19-review-table th,#stok .sc19-review-table td,#stok .sc19-combined-table th,#stok .sc19-combined-table td{padding:7px 4px;font-size:9px}
+ #stok .sc19-status{padding:3px 5px;font-size:9px}
+ #stok .sc19-check{padding:6px 5px;font-size:9px}
+ #stok .sc19-pagination{flex-wrap:wrap}
+ #stok .sc19-material-section{flex-direction:column;align-items:stretch}
+ #stok .sc19-material-section button{white-space:normal}
+}
