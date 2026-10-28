@@ -79,7 +79,13 @@
     recipeReviewLoading: false,
     recipeReviewError: '',
     recipeReviewSeq: 0,
-    recipeDetail: null
+    recipeDetail: null,
+    combinedOpen: false,
+    combinedRows: [],
+    combinedLoading: false,
+    combinedLoaded: false,
+    combinedError: '',
+    combinedSeq: 0
   };
 
   function esc(value) {
@@ -221,7 +227,7 @@
     var l = document.createElement('link');
     l.id = 'stock-control-v3-css';
     l.rel = 'stylesheet';
-    l.href = '/stock-control-v3.css?v=22';
+    l.href = '/stock-control-v3.css?v=23';
     document.head.appendChild(l);
   }
 
@@ -460,7 +466,9 @@
     if(!isOwner()||!S.period)return;
     var period=S.period,seq=++S.recipeReviewSeq;
     S.recipeReviewLoading=true;S.recipeReviewLoaded=false;
-    S.recipeReviewRows=[];S.recipeReviewError='';S.recipeDetail=null;render();
+    S.recipeReviewRows=[];S.recipeReviewError='';S.recipeDetail=null;
+    S.combinedOpen=false;S.combinedRows=[];S.combinedLoaded=false;S.combinedError='';
+    ++S.combinedSeq;render();
     try{
       var rows=await request('ui_stock_recipe_review_v1?'+qs({
         brand_id:'eq.'+BRAND,period_month:'eq.'+period+'-01',
@@ -505,13 +513,70 @@
       ' baris penjualan · '+fmt(eligible)+' produk memenuhi syarat metadata</span></div>'+
       '<p class="sc17-review-note">Periksa takaran, saldo, dan bukti per produk. Catatan Owner disimpan tanpa otomatis memverifikasi resep atau mengurangi stok.</p>'+
       (unmapped>0?'<p class="sc3-alert">'+fmt(unmapped)+' item penjualan tidak termapping dan tidak termasuk antrean ini.</p>':'')+
-      renderRecipeDetail()+
+      renderCombinedRecipeImpact()+renderRecipeDetail()+
       '<div class="sc3-table-wrap"><table class="sc3-table sc17-review-table"><thead><tr>'+
       '<th>No</th><th>Produk</th><th>Baris jual</th><th>Qty jual</th><th>BOM valid</th>'+
       '<th>Persetujuan</th><th>Efektif</th><th>Tindak lanjut</th></tr></thead><tbody>'+
       body+'</tbody></table></div>';
   }
 
+
+
+  // Combined by physical SKU, on-demand; unposted quantity estimates only.
+  async function loadCombinedRecipeImpact(){
+    if(!isOwner()||S.modal!=='recipes'||!S.period)return;
+    var period=S.period,seq=++S.combinedSeq;
+    S.combinedOpen=true;S.combinedLoading=true;S.combinedLoaded=false;
+    S.combinedRows=[];S.combinedError='';render();
+    try{
+      var data=await request('ui_stock_recipe_combined_impact_v1?'+qs({
+        brand_id:'eq.'+BRAND,period_month:'eq.'+period+'-01',
+        select:'inventory_item_id,sku_name,sku_unit,contributing_products,mapped_sale_items,existing_movement_matches,lines_before_checkpoint,unverified_component_lines,unposted_after_checkpoint_lines,hypothetical_usage,approved_candidate_usage,tracking_active,baseline_date,current_system_qty,hypothetical_remaining_qty',
+        order:'hypothetical_usage.desc,sku_name.asc',
+        limit:'250'
+      }));
+      if(seq!==S.combinedSeq||period!==S.period||!S.combinedOpen)return;
+      S.combinedRows=Array.isArray(data)?data:[];S.combinedLoaded=true;
+    }catch(e){
+      if(seq!==S.combinedSeq||period!==S.period||!S.combinedOpen)return;
+      S.combinedError=e&&e.message?e.message:String(e);
+    }finally{
+      if(seq===S.combinedSeq){S.combinedLoading=false;render();}
+    }
+  }
+
+  function renderCombinedRecipeImpact(){
+    var button='<button type="button" class="sc18-toggle" data-sc18-combined="1">'+
+      (S.combinedOpen?'Tutup Simulasi Gabungan':'Simulasi Gabungan Semua Produk →')+'</button>';
+    if(!S.combinedOpen)return '<div class="sc18-controls">'+button+'</div>';
+    var box='<div class="sc18-controls">'+button+'</div>';
+    if(S.combinedLoading)return box+'<div class="sc3-loading">Menghitung pemakaian gabungan per SKU…</div>';
+    if(S.combinedError)return box+'<div class="sc3-alert">Simulasi belum dapat dibaca: '+esc(S.combinedError)+'</div>';
+    if(!S.combinedLoaded)return box;
+    var data=S.combinedRows||[],negative=data.filter(function(x){
+      return x.tracking_active&&x.hypothetical_remaining_qty!==null&&Number(x.hypothetical_remaining_qty)<0;
+    }).length,unknown=data.filter(function(x){return !x.tracking_active}).length;
+    var rows=data.map(function(x){
+      var risk=x.tracking_active&&x.hypothetical_remaining_qty!==null&&Number(x.hypothetical_remaining_qty)<0;
+      return '<tr><td><b>'+esc(x.sku_name||'SKU')+'</b></td>'+
+        '<td class="sc3-num">'+fmt(x.contributing_products)+'</td>'+
+        '<td class="sc3-num">'+fmt(x.mapped_sale_items)+'</td>'+
+        '<td class="sc3-num">'+fmt(x.unverified_component_lines)+'</td>'+
+        '<td class="sc3-num">'+fmt(x.hypothetical_usage)+' '+esc(x.sku_unit||'')+'</td>'+
+        '<td class="sc3-num">'+(x.tracking_active?fmt(x.current_system_qty):'Belum opname')+'</td>'+
+        '<td class="sc3-num'+(risk?' sc17-impact-negative':'')+'">'+
+        (x.tracking_active?fmt(x.hypothetical_remaining_qty):'Tidak tersedia')+'</td>'+
+        '<td>'+esc(x.baseline_date?dateLabel(x.baseline_date):'Belum opname')+'</td></tr>';
+    }).join('');
+    return box+'<section class="sc18-summary">'+
+      '<strong>'+fmt(data.length)+' SKU dievaluasi · '+fmt(negative)+' simulasi negatif · '+fmt(unknown)+' belum opname</strong>'+
+      '<p>Gabungan seluruh produk dengan BOM aktif. Hanya item belum terposting setelah checkpoint opname; penjualan sebelum opname dan referensi movement yang sudah tercatat tidak dikurangi ulang. Resep draft/usulan tetap perkiraan, bukan saldo final atau dasar persetujuan. Produk tanpa BOM tidak termasuk.</p>'+
+      '<div class="sc3-table-wrap"><table class="sc3-table sc18-table"><thead><tr>'+
+      '<th>SKU</th><th>Produk</th><th>Baris jual</th><th>BOM belum valid</th>'+
+      '<th>Estimasi belum posting</th><th>Saldo saat ini</th><th>Simulasi sisa</th><th>Checkpoint</th>'+
+      '</tr></thead><tbody>'+(rows||'<tr><td colspan="8">Belum ada komponen BOM yang dapat dihitung.</td></tr>')+
+      '</tbody></table></div></section>';
+  }
 
   async function loadRecipeImpact(productId){
     if(!isOwner()||S.modal!=='recipes'||!S.period)return;
@@ -749,6 +814,10 @@
         S.recipeReviewRows = [];
         S.recipeReviewError = '';
         S.recipeDetail = null;
+        ++S.combinedSeq;
+        S.combinedOpen = false;
+        S.combinedRows = [];
+        S.combinedLoaded = false;
         S.movingRows = [];
         S.movingLoaded = false;
         return;
@@ -1802,6 +1871,12 @@
 
   function bind(host) {
     host.onclick = function (e) {
+      var combine=e.target&&e.target.closest?e.target.closest('[data-sc18-combined]'):null;
+      if(combine&&isOwner()&&S.modal==='recipes'){
+        if(S.combinedOpen){S.combinedOpen=false;++S.combinedSeq;S.combinedRows=[];S.combinedLoaded=false;render();}
+        else loadCombinedRecipeImpact();
+        return;
+      }
       var recipeOpen=e.target&&e.target.closest?e.target.closest('[data-sc17-product]'):null;
       if(recipeOpen&&isOwner()&&S.modal==='recipes'){loadRecipeImpact(recipeOpen.getAttribute('data-sc17-product'));return;}
       var recipeBack=e.target&&e.target.closest?e.target.closest('[data-sc17-back]'):null;
@@ -1928,6 +2003,10 @@
         S.recipeReviewRows = [];
         S.recipeReviewError = '';
         S.recipeDetail = null;
+        ++S.combinedSeq;
+        S.combinedOpen = false;
+        S.combinedRows = [];
+        S.combinedLoaded = false;
         S.movingRows = [];
         S.movingLoaded = false;
         S.movingError = '';
