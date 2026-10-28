@@ -602,35 +602,42 @@
 
   function renderCombinedRecipeImpact(){
     var button='<button type="button" class="sc18-toggle" data-sc18-combined="1">'+
-      (S.combinedOpen?'Tutup Simulasi Gabungan':'Simulasi Gabungan Semua Produk →')+'</button>';
-    if(!S.combinedOpen)return '<div class="sc18-controls">'+button+'</div>';
-    var box='<div class="sc18-controls">'+button+'</div>';
-    if(S.combinedLoading)return box+'<div class="sc3-loading">Menghitung pemakaian gabungan per SKU…</div>';
-    if(S.combinedError)return box+'<div class="sc3-alert">Simulasi belum dapat dibaca: '+esc(S.combinedError)+'</div>';
-    if(!S.combinedLoaded)return box;
-    var data=S.combinedRows||[],negative=data.filter(function(x){
+      (S.combinedOpen?'Tutup perkiraan bahan':'Lihat perkiraan kebutuhan bahan →')+'</button>';
+    var head='<div class="sc19-material-section"><div><b>Perkiraan kebutuhan bahan baku</b>'+
+      '<p>Gabungkan kebutuhan bahan dari seluruh menu yang terjual pada bulan ini.</p></div>'+button+'</div>';
+    if(!S.combinedOpen)return head;
+    if(S.combinedLoading)return head+'<div class="sc3-loading">Menghitung kebutuhan bahan semua menu…</div>';
+    if(S.combinedError)return head+'<div class="sc3-alert">Perkiraan belum dapat ditampilkan: '+esc(S.combinedError)+'</div>';
+    if(!S.combinedLoaded)return head;
+    var data=S.combinedRows||[];
+    var negative=data.filter(function(x){
       return x.tracking_active&&x.hypothetical_remaining_qty!==null&&Number(x.hypothetical_remaining_qty)<0;
-    }).length,unknown=data.filter(function(x){return !x.tracking_active}).length;
+    }).length;
+    var unknown=data.filter(function(x){return !x.tracking_active}).length;
     var rows=data.map(function(x){
       var risk=x.tracking_active&&x.hypothetical_remaining_qty!==null&&Number(x.hypothetical_remaining_qty)<0;
-      return '<tr><td><b>'+esc(x.sku_name||'SKU')+'</b></td>'+
-        '<td class="sc3-num">'+fmt(x.contributing_products)+'</td>'+
-        '<td class="sc3-num">'+fmt(x.mapped_sale_items)+'</td>'+
-        '<td class="sc3-num">'+fmt(x.unverified_component_lines)+'</td>'+
-        '<td class="sc3-num">'+fmt(x.hypothetical_usage)+' '+esc(x.sku_unit||'')+'</td>'+
-        '<td class="sc3-num">'+(x.tracking_active?fmt(x.current_system_qty):'Belum opname')+'</td>'+
-        '<td class="sc3-num'+(risk?' sc17-impact-negative':'')+'">'+
-        (x.tracking_active?fmt(x.hypothetical_remaining_qty):'Tidak tersedia')+'</td>'+
-        '<td>'+esc(x.baseline_date?dateLabel(x.baseline_date):'Belum opname')+'</td></tr>';
+      var flag=!x.tracking_active?'Belum opname':risk?'Berpotensi minus':
+        num(x.unverified_component_lines)>0?'Perlu cek takaran':'Perkiraan';
+      var tone=!x.tracking_active||risk?'sc19-missing':'sc19-warn';
+      return '<tr><td class="sc19-name"><b>'+esc(x.sku_name||'Bahan')+'</b>'+
+        '<small>'+esc(x.sku_unit||'Satuan belum terisi')+'</small></td>'+
+        '<td class="sc19-qty">'+fmt(x.contributing_products)+'</td>'+
+        '<td class="sc19-qty">'+fmt(x.hypothetical_usage)+' '+esc(x.sku_unit||'')+'</td>'+
+        '<td class="sc19-qty">'+(x.tracking_active?fmt(x.current_system_qty):'Belum opname')+'</td>'+
+        '<td class="sc19-qty'+(risk?' sc17-impact-negative':'')+'">'+
+          (x.tracking_active?fmt(x.hypothetical_remaining_qty):'Belum dapat dihitung')+'</td>'+
+        '<td><span class="sc19-status '+tone+'">'+esc(flag)+'</span></td></tr>';
     }).join('');
-    return box+'<section class="sc18-summary">'+
-      '<strong>'+fmt(data.length)+' SKU dievaluasi · '+fmt(negative)+' simulasi negatif · '+fmt(unknown)+' belum opname</strong>'+
-      '<p>Gabungan seluruh produk dengan BOM aktif. Hanya item belum terposting setelah checkpoint opname; penjualan sebelum opname dan referensi movement yang sudah tercatat tidak dikurangi ulang. Resep draft/usulan tetap perkiraan, bukan saldo final atau dasar persetujuan. Produk tanpa BOM tidak termasuk.</p>'+
-      '<div class="sc3-table-wrap"><table class="sc3-table sc18-table"><thead><tr>'+
-      '<th>SKU</th><th>Produk</th><th>Baris jual</th><th>BOM belum valid</th>'+
-      '<th>Estimasi belum posting</th><th>Saldo saat ini</th><th>Simulasi sisa</th><th>Checkpoint</th>'+
-      '</tr></thead><tbody>'+(rows||'<tr><td colspan="8">Belum ada komponen BOM yang dapat dihitung.</td></tr>')+
-      '</tbody></table></div></section>';
+    return head+'<div class="sc18-summary"><strong>'+fmt(data.length)+' bahan dicatat · '+
+      fmt(negative)+' berpotensi minus · '+fmt(unknown)+' belum opname</strong>'+
+      '<p>Gabungan seluruh produk dengan BOM aktif. Produk tanpa BOM tidak termasuk. Ini hanya perkiraan dari penjualan setelah stok fisik terakhir, bukan saldo final. Transaksi yang sudah masuk stok tidak dikurangi ulang.</p>'+
+      '<div class="sc19-list-wrap"><table class="sc19-combined-table"><colgroup>'+
+      '<col style="width:25%"><col style="width:10%"><col style="width:20%">'+
+      '<col style="width:14%"><col style="width:16%"><col style="width:15%"></colgroup><thead><tr>'+
+      '<th>Nama bahan</th><th>Dipakai menu</th><th>Perkiraan dipakai</th>'+
+      '<th>Stok tercatat</th><th>Perkiraan sisa</th><th>Keterangan</th>'+
+      '</tr></thead><tbody>'+(rows||'<tr><td colspan="6">Belum ada bahan yang dapat dihitung.</td></tr>')+
+      '</tbody></table></div></div>';
   }
 
   async function loadRecipeImpact(productId){
