@@ -258,6 +258,7 @@ run(process.execPath, ['tests/data-sync-runtime.test.js']);
 run(process.execPath, ['--test', 'tests/stock-recipe-review-v1.test.js']);
 run(process.execPath, ['--test', 'tests/stock-recipe-owner-evidence-v1.test.js']);
 run(process.execPath, ['--test', 'tests/stock-recipe-approval-guard-v1.test.js']);
+run(process.execPath, ['--test', 'tests/stock-recipe-plain-language-v1.test.js']);
 
 const dist = path.join(ROOT, 'dist');
 fs.rmSync(dist, { recursive: true, force: true });
