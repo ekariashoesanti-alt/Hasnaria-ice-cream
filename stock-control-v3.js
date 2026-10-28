@@ -80,6 +80,9 @@
     recipeReviewError: '',
     recipeReviewSeq: 0,
     recipeDetail: null,
+    recipeSearch: '',
+    recipeFilter: 'all',
+    recipePage: 1,
     combinedOpen: false,
     combinedRows: [],
     combinedLoading: false,
@@ -227,7 +230,7 @@
     var l = document.createElement('link');
     l.id = 'stock-control-v3-css';
     l.rel = 'stylesheet';
-    l.href = '/stock-control-v3.css?v=23';
+    l.href = '/stock-control-v3.css?v=24';
     document.head.appendChild(l);
   }
 
@@ -467,6 +470,7 @@
     var period=S.period,seq=++S.recipeReviewSeq;
     S.recipeReviewLoading=true;S.recipeReviewLoaded=false;
     S.recipeReviewRows=[];S.recipeReviewError='';S.recipeDetail=null;
+    S.recipeSearch='';S.recipeFilter='all';S.recipePage=1;
     S.combinedOpen=false;S.combinedRows=[];S.combinedLoaded=false;S.combinedError='';
     ++S.combinedSeq;render();
     try{
@@ -486,40 +490,91 @@
     }
   }
 
-  function renderRecipeReview(){
-    if(!isOwner())return '<div class="sc3-alert">Review resep hanya tersedia bagi Owner.</div>';
-    if(S.recipeReviewLoading)return '<div class="sc3-loading">Memuat prioritas resep dari backend…</div>';
-    if(S.recipeReviewError)return '<div class="sc3-alert">Data review belum tersedia: '+esc(S.recipeReviewError)+'. Tidak ada perubahan stok.</div>';
-    if(!S.recipeReviewLoaded)return '<div class="sc3-loading">Pilih Review Resep untuk membaca data.</div>';
-    var rows=S.recipeReviewRows||[];
-    if(!rows.length)return '<div class="sc3-loading">Belum ada produk terjual pada periode terpilih.</div>';
-    var total=rows.reduce(function(v,x){return v+num(x.sale_item_rows)},0);
-    var eligible=rows.filter(function(x){return x.review_state==='eligible'}).length;
-    var labels={missing_bom:'Resep belum ada',component_pending:'Verifikasi komponen',
-      product_approval_pending:'Perlu persetujuan Owner',
-      effective_date_partial:'Periksa tanggal efektif',eligible:'Syarat metadata terpenuhi'};
-    var body=rows.map(function(x,i){
-      return '<tr><td class="sc3-num">'+(i+1)+'</td>'+
-        '<td><b>'+esc(x.product_name||'Produk')+'</b></td>'+
-        '<td class="sc3-num">'+fmt(x.sale_item_rows)+'</td>'+
-        '<td class="sc3-num">'+fmt(x.sold_units)+'</td>'+
-        '<td class="sc3-num">'+fmt(x.verified_components)+' / '+fmt(x.active_components)+'</td>'+
-        '<td>'+esc(x.recipe_status||'missing')+'</td>'+
-        '<td>'+esc(x.effective_from?dateLabel(x.effective_from):'Belum ada')+'</td>'+
-        '<td>'+esc(labels[x.review_state]||'Perlu pemeriksaan')+' <button type="button" class="sc17-open" data-sc17-product="'+esc(x.product_id)+'">Periksa</button></td></tr>';
-    }).join('');
-    var unmapped=S.salesLinkAudit?num(S.salesLinkAudit.unmapped_product_rows):null;
-    return '<div class="sc17-review-summary"><b>'+fmt(rows.length)+' produk</b><span>'+fmt(total)+
-      ' baris penjualan · '+fmt(eligible)+' produk memenuhi syarat metadata</span></div>'+
-      '<p class="sc17-review-note">Periksa takaran, saldo, dan bukti per produk. Catatan Owner disimpan tanpa otomatis memverifikasi resep atau mengurangi stok.</p>'+
-      (unmapped>0?'<p class="sc3-alert">'+fmt(unmapped)+' item penjualan tidak termapping dan tidak termasuk antrean ini.</p>':'')+
-      renderCombinedRecipeImpact()+renderRecipeDetail()+
-      '<div class="sc3-table-wrap"><table class="sc3-table sc17-review-table"><thead><tr>'+
-      '<th>No</th><th>Produk</th><th>Baris jual</th><th>Qty jual</th><th>BOM valid</th>'+
-      '<th>Persetujuan</th><th>Efektif</th><th>Tindak lanjut</th></tr></thead><tbody>'+
-      body+'</tbody></table></div>';
+  // Monthly sales and a persistent master recipe effective_from are separate.
+  function recipeReviewStatus(x){
+    var state=x.review_state||'component_pending';
+    if(state==='eligible')return {label:'Resep sudah disetujui',tone:'ok',detail:'Berlaku mulai '+dateLabel(x.effective_from)+', sampai resep diubah.'};
+    if(state==='effective_date_partial')return {label:'Berlaku sebagian bulan',tone:'warn',detail:'Resep berlaku sejak '+dateLabel(x.effective_from)+'; penjualan sebelumnya perlu diperiksa.'};
+    if(state==='missing_bom')return {label:'Belum ada resep',tone:'missing',detail:'Daftar bahan untuk menu ini belum tersedia.'};
+    if(state==='component_pending')return {label:'Perlu cek bahan',tone:'warn',detail:'Ada bahan atau takaran yang belum diperiksa.'};
+    return {label:'Menunggu persetujuan',tone:'pending',detail:'Bahan sudah tercatat, perlu persetujuan resep oleh Owner.'};
   }
 
+  function renderRecipeReview(){
+    if(!isOwner())return '<div class="sc3-alert">Daftar resep hanya untuk Owner.</div>';
+    if(S.recipeReviewLoading)return '<div class="sc3-loading">Mengambil data penjualan dan resep…</div>';
+    if(S.recipeReviewError)return '<div class="sc3-alert">Daftar resep belum bisa ditampilkan: '+esc(S.recipeReviewError)+'. Stok tidak berubah.</div>';
+    if(!S.recipeReviewLoaded)return '<div class="sc3-loading">Buka Cek Resep untuk memuat data.</div>';
+    var rows=S.recipeReviewRows||[];
+    if(!rows.length)return '<div class="sc3-loading">Belum ada produk terjual pada '+esc(monthLabel(S.period))+'.</div>';
+    if(S.recipeDetail)return '<div class="sc19-help"><b>Resep berlaku lintas bulan.</b> Tanggal efektif tidak perlu dibuat ulang setiap bulan, kecuali bahan atau takarannya berubah.</div>'+renderRecipeDetail();
+
+    var total=rows.reduce(function(sum,x){return sum+num(x.sale_item_rows)},0);
+    var ready=rows.filter(function(x){return x.review_state==='eligible'}).length;
+    var missing=rows.filter(function(x){return x.review_state==='missing_bom'}).length;
+    var query=String(S.recipeSearch||'').trim().toLocaleLowerCase('id-ID');
+    var filtered=rows.filter(function(x){
+      if(query&&String(x.product_name||'').toLocaleLowerCase('id-ID').indexOf(query)===-1)return false;
+      if(S.recipeFilter==='all')return true;
+      if(S.recipeFilter==='check')return x.review_state==='component_pending'||x.review_state==='missing_bom';
+      if(S.recipeFilter==='approval')return x.review_state==='product_approval_pending';
+      if(S.recipeFilter==='approved')return x.review_state==='eligible'||x.review_state==='effective_date_partial';
+      return true;
+    });
+    var pageSize=10,pages=Math.max(1,Math.ceil(filtered.length/pageSize));
+    S.recipePage=Math.min(Math.max(1,S.recipePage||1),pages);
+    var start=(S.recipePage-1)*pageSize;
+    var visible=filtered.slice(start,start+pageSize);
+    var body=visible.map(function(x,k){
+      var state=recipeReviewStatus(x);
+      var duration=x.effective_from&&x.recipe_status==='verified'
+        ?' <small>Mulai '+esc(dateLabel(x.effective_from))+'</small>':'';
+      return '<tr>'+
+        '<td class="sc19-number">'+(start+k+1)+'</td>'+
+        '<td class="sc19-name"><b>'+esc(x.product_name||'Nama menu tidak tersedia')+'</b></td>'+
+        '<td class="sc19-qty">'+fmt(x.sold_units)+'</td>'+
+        '<td><span class="sc19-status sc19-'+state.tone+'">'+esc(state.label)+'</span>'+duration+'</td>'+
+        '<td class="sc19-action"><button type="button" class="sc19-check" data-sc17-product="'+esc(x.product_id)+
+        '" title="'+esc(state.detail)+'">Periksa <span aria-hidden="true">›</span></button></td>'+
+      '</tr>';
+    }).join('');
+    var paging='<div class="sc19-pagination"><span>Menampilkan '+fmt(filtered.length?start+1:0)+'–'+
+      fmt(Math.min(start+pageSize,filtered.length))+' dari '+fmt(filtered.length)+' menu</span>'+
+      '<div><button type="button" data-sc19-page="'+(S.recipePage-1)+'"'+
+      (S.recipePage<=1?' disabled':'')+'>‹ Sebelumnya</button>'+
+      '<span>Halaman '+S.recipePage+' / '+pages+'</span>'+
+      '<button type="button" data-sc19-page="'+(S.recipePage+1)+'"'+
+      (S.recipePage>=pages?' disabled':'')+'>Berikutnya ›</button></div></div>';
+    var unmapped=S.salesLinkAudit?num(S.salesLinkAudit.unmapped_product_rows):0;
+    return '<div class="sc19-summary">'+
+      '<div><b>'+fmt(rows.length)+'</b><span>Jenis menu terjual</span></div>'+
+      '<div><b>'+fmt(total)+'</b><span>Baris detail penjualan</span></div>'+
+      '<div><b>'+fmt(ready)+'</b><span>Resep siap untuk seluruh penjualan bulan ini</span></div>'+
+      '</div>'+
+      '<div class="sc19-help"><b>Perhatikan:</b> Data penjualan mengikuti bulan '+esc(monthLabel(S.period))+
+      '. <b>Resep yang sudah disetujui berlaku terus</b> sejak tanggal efektif sampai bahan atau takaran berubah. Tidak perlu disetujui ulang tiap bulan. Halaman ini tidak mengubah stok.</div>'+
+      (unmapped>0?'<div class="sc3-alert">'+fmt(unmapped)+' baris penjualan belum memiliki nama menu yang terhubung.</div>':'')+
+      '<div class="sc19-section-head"><b>Daftar menu dan status resep</b>'+
+      '<span>'+fmt(missing)+' menu belum memiliki daftar bahan</span></div>'+
+      '<div class="sc19-toolbar">'+
+      '<label for="sc19RecipeSearch">Cari menu'+
+      '<input type="search" id="sc19RecipeSearch" placeholder="Ketik nama menu…" value="'+esc(S.recipeSearch)+'" autocomplete="off"></label>'+
+      '<label for="sc19RecipeFilter">Tampilkan'+
+      '<select id="sc19RecipeFilter">'+
+      '<option value="all"'+(S.recipeFilter==='all'?' selected':'')+'>Semua status</option>'+
+      '<option value="check"'+(S.recipeFilter==='check'?' selected':'')+'>Perlu cek bahan / belum ada resep</option>'+
+      '<option value="approval"'+(S.recipeFilter==='approval'?' selected':'')+'>Menunggu persetujuan</option>'+
+      '<option value="approved"'+(S.recipeFilter==='approved'?' selected':'')+'>Resep sudah berlaku</option>'+
+      '</select></label></div>'+
+      '<div class="sc19-list-wrap"><table class="sc19-review-table"><colgroup>'+
+      '<col style="width:6%"><col style="width:39%"><col style="width:13%">'+
+      '<col style="width:27%"><col style="width:15%"></colgroup><thead><tr>'+
+      '<th>No.</th><th>Nama menu</th><th>Terjual (item)</th><th>Status resep</th><th>Tindakan</th>'+
+      '</tr></thead><tbody>'+
+      (body||'<tr><td colspan="5" class="sc19-empty">Tidak ada menu yang cocok. Ubah pencarian atau filter.</td></tr>')+
+      '</tbody></table></div>'+paging+
+      renderCombinedRecipeImpact();
+  }
 
 
   // Combined by physical SKU, on-demand; unposted quantity estimates only.
@@ -547,35 +602,42 @@
 
   function renderCombinedRecipeImpact(){
     var button='<button type="button" class="sc18-toggle" data-sc18-combined="1">'+
-      (S.combinedOpen?'Tutup Simulasi Gabungan':'Simulasi Gabungan Semua Produk →')+'</button>';
-    if(!S.combinedOpen)return '<div class="sc18-controls">'+button+'</div>';
-    var box='<div class="sc18-controls">'+button+'</div>';
-    if(S.combinedLoading)return box+'<div class="sc3-loading">Menghitung pemakaian gabungan per SKU…</div>';
-    if(S.combinedError)return box+'<div class="sc3-alert">Simulasi belum dapat dibaca: '+esc(S.combinedError)+'</div>';
-    if(!S.combinedLoaded)return box;
-    var data=S.combinedRows||[],negative=data.filter(function(x){
+      (S.combinedOpen?'Tutup perkiraan bahan':'Lihat perkiraan kebutuhan bahan →')+'</button>';
+    var head='<div class="sc19-material-section"><div><b>Perkiraan kebutuhan bahan baku</b>'+
+      '<p>Gabungkan kebutuhan bahan dari seluruh menu yang terjual pada bulan ini.</p></div>'+button+'</div>';
+    if(!S.combinedOpen)return head;
+    if(S.combinedLoading)return head+'<div class="sc3-loading">Menghitung kebutuhan bahan semua menu…</div>';
+    if(S.combinedError)return head+'<div class="sc3-alert">Perkiraan belum dapat ditampilkan: '+esc(S.combinedError)+'</div>';
+    if(!S.combinedLoaded)return head;
+    var data=S.combinedRows||[];
+    var negative=data.filter(function(x){
       return x.tracking_active&&x.hypothetical_remaining_qty!==null&&Number(x.hypothetical_remaining_qty)<0;
-    }).length,unknown=data.filter(function(x){return !x.tracking_active}).length;
+    }).length;
+    var unknown=data.filter(function(x){return !x.tracking_active}).length;
     var rows=data.map(function(x){
       var risk=x.tracking_active&&x.hypothetical_remaining_qty!==null&&Number(x.hypothetical_remaining_qty)<0;
-      return '<tr><td><b>'+esc(x.sku_name||'SKU')+'</b></td>'+
-        '<td class="sc3-num">'+fmt(x.contributing_products)+'</td>'+
-        '<td class="sc3-num">'+fmt(x.mapped_sale_items)+'</td>'+
-        '<td class="sc3-num">'+fmt(x.unverified_component_lines)+'</td>'+
-        '<td class="sc3-num">'+fmt(x.hypothetical_usage)+' '+esc(x.sku_unit||'')+'</td>'+
-        '<td class="sc3-num">'+(x.tracking_active?fmt(x.current_system_qty):'Belum opname')+'</td>'+
-        '<td class="sc3-num'+(risk?' sc17-impact-negative':'')+'">'+
-        (x.tracking_active?fmt(x.hypothetical_remaining_qty):'Tidak tersedia')+'</td>'+
-        '<td>'+esc(x.baseline_date?dateLabel(x.baseline_date):'Belum opname')+'</td></tr>';
+      var flag=!x.tracking_active?'Belum opname':risk?'Berpotensi minus':
+        num(x.unverified_component_lines)>0?'Perlu cek takaran':'Perkiraan';
+      var tone=!x.tracking_active||risk?'sc19-missing':'sc19-warn';
+      return '<tr><td class="sc19-name"><b>'+esc(x.sku_name||'Bahan')+'</b>'+
+        '<small>'+esc(x.sku_unit||'Satuan belum terisi')+'</small></td>'+
+        '<td class="sc19-qty">'+fmt(x.contributing_products)+'</td>'+
+        '<td class="sc19-qty">'+fmt(x.hypothetical_usage)+' '+esc(x.sku_unit||'')+'</td>'+
+        '<td class="sc19-qty">'+(x.tracking_active?fmt(x.current_system_qty):'Belum opname')+'</td>'+
+        '<td class="sc19-qty'+(risk?' sc17-impact-negative':'')+'">'+
+          (x.tracking_active?fmt(x.hypothetical_remaining_qty):'Belum dapat dihitung')+'</td>'+
+        '<td><span class="sc19-status '+tone+'">'+esc(flag)+'</span></td></tr>';
     }).join('');
-    return box+'<section class="sc18-summary">'+
-      '<strong>'+fmt(data.length)+' SKU dievaluasi · '+fmt(negative)+' simulasi negatif · '+fmt(unknown)+' belum opname</strong>'+
-      '<p>Gabungan seluruh produk dengan BOM aktif. Hanya item belum terposting setelah checkpoint opname; penjualan sebelum opname dan referensi movement yang sudah tercatat tidak dikurangi ulang. Resep draft/usulan tetap perkiraan, bukan saldo final atau dasar persetujuan. Produk tanpa BOM tidak termasuk.</p>'+
-      '<div class="sc3-table-wrap"><table class="sc3-table sc18-table"><thead><tr>'+
-      '<th>SKU</th><th>Produk</th><th>Baris jual</th><th>BOM belum valid</th>'+
-      '<th>Estimasi belum posting</th><th>Saldo saat ini</th><th>Simulasi sisa</th><th>Checkpoint</th>'+
-      '</tr></thead><tbody>'+(rows||'<tr><td colspan="8">Belum ada komponen BOM yang dapat dihitung.</td></tr>')+
-      '</tbody></table></div></section>';
+    return head+'<div class="sc18-summary"><strong>'+fmt(data.length)+' bahan dicatat · '+
+      fmt(negative)+' berpotensi minus · '+fmt(unknown)+' belum opname</strong>'+
+      '<p>Gabungan seluruh produk dengan BOM aktif. Produk tanpa BOM tidak termasuk. Ini hanya perkiraan dari penjualan setelah stok fisik terakhir, bukan saldo final. Transaksi yang sudah masuk stok tidak dikurangi ulang.</p>'+
+      '<div class="sc19-list-wrap"><table class="sc19-combined-table"><colgroup>'+
+      '<col style="width:25%"><col style="width:10%"><col style="width:20%">'+
+      '<col style="width:14%"><col style="width:16%"><col style="width:15%"></colgroup><thead><tr>'+
+      '<th>Nama bahan</th><th>Dipakai menu</th><th>Perkiraan dipakai</th>'+
+      '<th>Stok tercatat</th><th>Perkiraan sisa</th><th>Keterangan</th>'+
+      '</tr></thead><tbody>'+(rows||'<tr><td colspan="6">Belum ada bahan yang dapat dihitung.</td></tr>')+
+      '</tbody></table></div></div>';
   }
 
   async function loadRecipeImpact(productId){
@@ -617,7 +679,7 @@
       var flag=estimated!==null&&estimated<0?' sc17-impact-negative':'';
       return '<tr><td><b>'+esc(x.sku_name||'Bahan')+'</b></td>'+
         '<td class="sc3-num">'+esc(fmt(x.qty_per_sale))+' '+esc(x.sku_unit||'')+'</td>'+
-        '<td>'+esc(x.bom_status||'belum diketahui')+'</td>'+
+        '<td>'+esc(x.bom_status==='verified'?'Sudah diperiksa':x.bom_status==='suggested'?'Perlu diperiksa':'Belum lengkap')+'</td>'+
         '<td class="sc3-num">'+fmt(x.estimated_usage)+' '+esc(x.sku_unit||'')+'</td>'+
         '<td class="sc3-num">'+(x.tracking_active?fmt(x.current_system_qty):'Belum opname')+'</td>'+
         '<td class="sc3-num'+flag+'">'+(estimated===null?'Tidak tersedia':fmt(estimated))+'</td></tr>';
@@ -629,17 +691,17 @@
       status+
       (done?'<p class="sc17-review-note">Simulasi jika hanya produk ini diposting berdasarkan seluruh penjualan bulan terpilih. Belum memperhitungkan konsumsi produk lain, tanggal opname, dan potensi pergerakan yang sudah tercatat. Bukan saldo final.</p>'+
         '<div class="sc3-table-wrap"><table class="sc3-table sc17-impact-table"><thead><tr>'+
-        '<th>SKU / bahan</th><th>Takaran per jual</th><th>BOM</th><th>Estimasi pemakaian</th>'+
-        '<th>Saldo ledger</th><th>Simulasi sisa</th></tr></thead><tbody>'+
+        '<th>Nama bahan</th><th>Takaran per item</th><th>Status bahan</th><th>Perkiraan dipakai</th>'+
+        '<th>Stok tercatat</th><th>Perkiraan sisa</th></tr></thead><tbody>'+
         (componentBody||'<tr><td colspan="6">Resep belum memiliki bahan terdaftar. Jangan setujui.</td></tr>')+
         '</tbody></table></div>'+
         (negative||untracked?'<div class="sc17-impact-warning">Perhatian: '+fmt(negative)+' bahan berpotensi saldo negatif; '+fmt(untracked)+' belum opname. Catatan review tidak akan mengubah stok.</div>':'')+
-        '<div class="sc17-evidence-form"><strong>Form bukti review Owner (tanpa posting)</strong>'+
+        '<div class="sc17-evidence-form"><strong>Catat hasil pemeriksaan (tidak langsung menyetujui resep)</strong>'+
         '<label>Keputusan<select data-sc17-field="decision"><option value="HOLD_FOR_CORRECTION"'+(d.decision==='HOLD_FOR_CORRECTION'?' selected':'')+'>Tahan — perlu koreksi resep / stok</option>'+
         '<option value="EVIDENCE_RECORDED"'+(d.decision==='EVIDENCE_RECORDED'?' selected':'')+'>Dokumentasikan bukti — belum disetujui</option></select></label>'+
-        '<label>Rencana tanggal efektif (tidak diterapkan)<input data-sc17-field="effective" type="date" value="'+esc(d.effective)+'"></label>'+
-        '<label>Referensi bukti fisik / catatan stok<textarea data-sc17-field="evidence" rows="2" maxlength="400" placeholder="Minimal 12 karakter, contoh nomor foto / berita acara">'+esc(d.evidence)+'</textarea></label>'+
-        '<label>Hasil pemeriksaan bahan, takaran dan alasan<textarea data-sc17-field="reason" rows="3" maxlength="1000" placeholder="Minimal 30 karakter, tuliskan apa yang sudah dan belum terbukti">'+esc(d.reason)+'</textarea></label>'+
+        '<label>Rencana tanggal mulai berlaku resep (belum diterapkan)<input data-sc17-field="effective" type="date" value="'+esc(d.effective)+'"></label>'+
+        '<label>Bukti yang diperiksa (foto, nota, atau catatan fisik)<textarea data-sc17-field="evidence" rows="2" maxlength="400" placeholder="Minimal 12 karakter, contoh nomor foto / berita acara">'+esc(d.evidence)+'</textarea></label>'+
+        '<label>Catatan hasil pemeriksaan bahan dan takaran<textarea data-sc17-field="reason" rows="3" maxlength="1000" placeholder="Minimal 30 karakter, tuliskan apa yang sudah dan belum terbukti">'+esc(d.reason)+'</textarea></label>'+
         '<label class="sc17-attest"><input data-sc17-field="attested" type="checkbox"'+(d.attested?' checked':'')+'><span>Saya Owner dan telah memeriksa sumber bukti asli. Saya memahami langkah ini tidak menyetujui resep atau memposting stok.</span></label>'+
         '<button type="button" data-sc17-save="1"'+(d.saving?' disabled':'')+'>'+
         (d.saving?'Menyimpan bukti…':'Simpan catatan review')+'</button>'+
@@ -814,6 +876,9 @@
         S.recipeReviewRows = [];
         S.recipeReviewError = '';
         S.recipeDetail = null;
+        S.recipeSearch = '';
+        S.recipeFilter = 'all';
+        S.recipePage = 1;
         ++S.combinedSeq;
         S.combinedOpen = false;
         S.combinedRows = [];
@@ -1153,7 +1218,7 @@
       '</div><div class="sc5-head-filters sc7-tools">'+
         '<label><span>Bulan</span><select id="sc4Period" data-month-filter="stok">'+options+'</select></label>'+
         '<button type="button" class="sc5-text-btn" data-sc4-modal="ledger" aria-haspopup="dialog">Ledger Periode</button>'+ 
-        (isOwner()?'<button type="button" class="sc5-text-btn" data-sc4-modal="recipes" aria-haspopup="dialog">Review Resep</button>':'')+
+        (isOwner()?'<button type="button" class="sc5-text-btn" data-sc4-modal="recipes" aria-haspopup="dialog">Cek Resep Produk</button>':'')+
         (isOwner()?'<button type="button" class="sc5-text-btn" data-sc4-action="upload-purchase">Upload Pembelian</button>':'')+
         '<button type="button" class="sc5-refresh" data-sc3-action="refresh" aria-label="Refresh data Stok">↻</button>'+
       '</div></div></header>';
@@ -1588,11 +1653,11 @@
   function renderModal() {
     if (!S.modal) return '';
     var title = S.modal === 'ledger' ? 'Ledger · ' + monthLabel(S.period) :
-      S.modal === 'recipes' ? 'Review Resep · ' + monthLabel(S.period) : 'Posisi SKU Saat Ini';
+      S.modal === 'recipes' ? 'Cek Resep Produk · ' + monthLabel(S.period) : 'Posisi SKU Saat Ini';
     var body = S.modal === 'ledger' ? renderLedgerTable() :
       S.modal === 'recipes' ? renderRecipeReview() :
       renderFormula() + renderAuxState() + renderFilters() + renderTable();
-    return '<div class="sc4-modal-backdrop" data-sc4-close="1"><section class="sc4-modal" role="dialog" aria-modal="true" aria-labelledby="sc4ModalTitle" tabindex="-1"><div class="sc4-modal-head"><div><div class="sc3-eyebrow">DETAIL STOK</div><h3 id="sc4ModalTitle">' + esc(title) + '</h3><p>' + (S.modal === 'ledger' ? 'Movement periode terpilih; quantity tetap dalam satuan masing-masing SKU.' : S.modal === 'recipes' ? 'Antrian verifikasi resep berdasarkan transaksi aktual; tidak ada perubahan stok.' : 'Saldo terkini, opname, incoming, kebutuhan dan days cover.') + '</p></div><button type="button" data-sc4-close="1" class="sc4-close" aria-label="Tutup">×</button></div><div class="sc4-modal-body">' + body + '</div></section></div>';
+    return '<div class="sc4-modal-backdrop" data-sc4-close="1"><section class="sc4-modal" role="dialog" aria-modal="true" aria-labelledby="sc4ModalTitle" tabindex="-1"><div class="sc4-modal-head"><div><div class="sc3-eyebrow">DETAIL STOK</div><h3 id="sc4ModalTitle">' + esc(title) + '</h3><p>' + (S.modal === 'ledger' ? 'Movement periode terpilih; quantity tetap dalam satuan masing-masing SKU.' : S.modal === 'recipes' ? 'Penjualan berdasarkan bulan; resep berlaku terus sejak disetujui sampai diubah.' : 'Saldo terkini, opname, incoming, kebutuhan dan days cover.') + '</p></div><button type="button" data-sc4-close="1" class="sc4-close" aria-label="Tutup">×</button></div><div class="sc4-modal-body">' + body + '</div></section></div>';
   }
 
   function openOpname() {
@@ -1877,6 +1942,14 @@
         else loadCombinedRecipeImpact();
         return;
       }
+      var recipePage=e.target&&e.target.closest?e.target.closest('[data-sc19-page]'):null;
+      if(recipePage&&isOwner()&&S.modal==='recipes'&&!recipePage.disabled){
+        S.recipePage=Number(recipePage.getAttribute('data-sc19-page'))||1;
+        render();
+        var modalBody=host.querySelector('.sc4-modal-body');
+        if(modalBody&&modalBody.scrollTo)modalBody.scrollTo({top:0,behavior:'instant'});
+        return;
+      }
       var recipeOpen=e.target&&e.target.closest?e.target.closest('[data-sc17-product]'):null;
       if(recipeOpen&&isOwner()&&S.modal==='recipes'){loadRecipeImpact(recipeOpen.getAttribute('data-sc17-product'));return;}
       var recipeBack=e.target&&e.target.closest?e.target.closest('[data-sc17-back]'):null;
@@ -1961,6 +2034,15 @@
         if(field==='attested')S.recipeDetail.attested=!!el.checked;
         return;
       }
+      if(el.id==='sc19RecipeSearch'&&isOwner()&&S.modal==='recipes'){
+        var cursor=el.selectionStart;
+        S.recipeSearch=el.value||'';
+        S.recipePage=1;
+        render();
+        var again=document.getElementById('sc19RecipeSearch');
+        if(again){again.focus({preventScroll:true});try{again.setSelectionRange(cursor,cursor)}catch(_){}}
+        return;
+      }
       if (S.correction && (el.id === 'sc4CorrectionPhysical' || el.id === 'sc4CorrectionReason')) {
         if (el.id === 'sc4CorrectionPhysical') S.correction.physical = el.value;
         else S.correction.reason = el.value;
@@ -1988,6 +2070,12 @@
         if(field==='effective')S.recipeDetail.effective=el.value;
         return;
       }
+      if(el.id==='sc19RecipeFilter'&&isOwner()&&S.modal==='recipes'){
+        S.recipeFilter=el.value||'all';
+        S.recipePage=1;
+        render();
+        return;
+      }
       if (el.id === 'sc4Period') {
         S.period = monthKey(el.value);
         S.overview = null;
@@ -2003,6 +2091,9 @@
         S.recipeReviewRows = [];
         S.recipeReviewError = '';
         S.recipeDetail = null;
+        S.recipeSearch = '';
+        S.recipeFilter = 'all';
+        S.recipePage = 1;
         ++S.combinedSeq;
         S.combinedOpen = false;
         S.combinedRows = [];
