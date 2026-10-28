@@ -143,9 +143,7 @@ create or replace function private.guard_recipe_verification_transition_v1()
 returns trigger language plpgsql security definer set search_path=''
 as $fn$
 begin
-  if new.status='verified' and
-     (tg_op='INSERT' or old.status is distinct from 'verified'
-          or old.effective_from is distinct from new.effective_from) then
+  if new.status='verified' then
     perform private.assert_product_recipe_approval_v1(
       new.product_id,new.brand_id,new.effective_from);
   end if;
