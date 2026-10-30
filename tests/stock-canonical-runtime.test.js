@@ -7,7 +7,7 @@ const css=fs.readFileSync('stock-readable-density.css','utf8');
 
 assert(!shim.includes('stock-recall-v4.js'),'owner shim must not load legacy Stock recall v4');
 assert(shim.includes('stock-v3-runtime-fix.js'),'owner shim must load the canonical Stock v3 bridge');
-assert(bridge.includes("/stock-control-v3.js?v=32"),'canonical bridge must load Stock Control v3');
+assert(bridge.includes("/stock-control-v3.js?v=33"),'canonical bridge must load Stock Control v3');
 assert(bridge.includes("setAttribute('data-stock-v4','1')"),'canonical shell must satisfy the existing owner guard marker');
 assert(css.includes('#stok .sc3-table{width:100%;min-width:0;table-layout:fixed;font-size:8.3px}'),'desktop Stock table must keep the readable fixed-width density override');
 assert(!css.includes('font-size:5.4px'),'readable override must not regress to the previous ultra-small status text');
@@ -116,7 +116,7 @@ assert(greenCss.includes('.sc12-ledger-chart')&&greenCss.includes('.sc12-ledger-
   'New SVG chart uses a single scoped green visual system');
 assert(greenCss.includes('#stok .sc12-chart-frame')&&greenCss.includes('min-height:125px'),
   'SVG chart has a definite positive visible area');
-assert(ui4.includes('/stock-control-v3.css?v=26'),'New chart stylesheet cache version must be fresh');
+assert(ui4.includes('/stock-control-v3.css?v=27'),'New chart stylesheet cache version must be fresh');
 assert(ui4.includes('sc12-status-strip')&&greenCss.includes('.sc12-status-strip'),
   'Healthy audit/upload state displays compactly to give dashboard more space');
 
