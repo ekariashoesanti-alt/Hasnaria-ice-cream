@@ -42,7 +42,7 @@ test('read-only audit is lazy-loaded on Owner request and paginated, no posting 
   assert.match(js,/pageSize=12/);
   assert.match(js,/Saldo stok belum terverifikasi penuh/);
   assert.match(js,/Selisih hitung 0 hanya berarti rumus cocok/);
-  assert.match(js,/Data penjualan Oktober yang belum diposting/);
+  assert.match(js,/Data penjualan yang belum diposting serta Pembelian yang belum terbukti diterima/);
   const section=js.slice(js.indexOf('async function loadFormulaAudit()'),js.indexOf('function renderModal()'));
   assert.ok(section.length>500);
   assert.doesNotMatch(section,/method:\s*['"](?:POST|PATCH|DELETE|PUT)/i);
