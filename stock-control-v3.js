@@ -1758,6 +1758,18 @@
       '</tbody></table></div>'+pager;
   }
 
+  function renderStockIntegrityWarning(){
+    if(!S.baseLoaded)return '';
+    var tracked=S.items.filter(function(x){return !!x.tracking_active}).length;
+    var missing=S.items.length-tracked;
+    var unlinked=S.salesLinkAudit?num(S.salesLinkAudit.unlinked_sale_item_rows):null;
+    return '<div class="sc20-integrity" role="status"><b>Saldo stok belum terverifikasi penuh</b>'+
+      '<span>'+fmt(tracked)+' SKU sudah punya opname · '+fmt(missing)+' belum punya opname'+
+      (unlinked!==null?' · '+fmt(unlinked)+' baris jual '+esc(monthLabel(S.period))+' belum tertaut ke pengurangan stok':'')+
+      '</span>'+(isOwner()?'<button type="button" data-sc4-modal="formula-audit">Lihat perhitungan</button>':'')+
+      '</div>';
+  }
+
   function renderModal() {
     if (!S.modal) return '';
     var title = S.modal === 'ledger' ? 'Ledger · ' + monthLabel(S.period) :
@@ -2003,6 +2015,7 @@
     var loading = S.baseLoading && !S.baseLoaded ? '<div class="sc3-loading">Memuat posisi SKU terkini…</div>' : '';
     shell.innerHTML = renderHeader() + renderCorrectionPanel() +
       '<div class="sc12-status-strip">'+renderLedgerAudit()+renderUploadStatus()+renderSalesStockAudit()+'</div>' +
+      renderStockIntegrityWarning() +
       pAlert + overviewKpis() + alert + loading +
       '<div class="sc5-dashboard sc6-dashboard" aria-label="Infografis Stok Hasnaria">'+
         '<div class="sc6-grid">'+
