@@ -88,7 +88,14 @@
     combinedLoading: false,
     combinedLoaded: false,
     combinedError: '',
-    combinedSeq: 0
+    combinedSeq: 0,
+    formulaRows: [],
+    formulaLoading: false,
+    formulaLoaded: false,
+    formulaError: '',
+    formulaSeq: 0,
+    formulaPage: 1,
+    formulaSearch: ''
   };
 
   function esc(value) {
@@ -230,7 +237,7 @@
     var l = document.createElement('link');
     l.id = 'stock-control-v3-css';
     l.rel = 'stylesheet';
-    l.href = '/stock-control-v3.css?v=24';
+    l.href = '/stock-control-v3.css?v=25';
     document.head.appendChild(l);
   }
 
@@ -1219,6 +1226,7 @@
         '<label><span>Bulan</span><select id="sc4Period" data-month-filter="stok">'+options+'</select></label>'+
         '<button type="button" class="sc5-text-btn" data-sc4-modal="ledger" aria-haspopup="dialog">Ledger Periode</button>'+ 
         (isOwner()?'<button type="button" class="sc5-text-btn" data-sc4-modal="recipes" aria-haspopup="dialog">Cek Resep Produk</button>':'')+
+        (isOwner()?'<button type="button" class="sc5-text-btn" data-sc4-modal="formula-audit" aria-haspopup="dialog">Periksa Hitungan</button>':'')+
         (isOwner()?'<button type="button" class="sc5-text-btn" data-sc4-action="upload-purchase">Upload Pembelian</button>':'')+
         '<button type="button" class="sc5-refresh" data-sc3-action="refresh" aria-label="Refresh data Stok">↻</button>'+
       '</div></div></header>';
@@ -1650,14 +1658,130 @@
     return '<div class="sc4-ledger-meta">' + S.ledger.length.toLocaleString('id-ID') + ' movement · ' + esc(monthLabel(S.period)) + '</div><div class="sc3-table-wrap"><table class="sc3-table sc4-ledger-table"><thead><tr><th>Tanggal</th><th>SKU</th><th>Jenis</th><th>Qty Δ</th><th>Referensi</th><th>Catatan</th></tr></thead><tbody>' + (body || '<tr><td colspan="6" class="sc3-empty">Belum ada movement.</td></tr>') + '</tbody></table></div><div class="sc3-pager"><span>Halaman ' + S.ledgerPage + ' dari ' + pages + '</span><div>' + buttons.join('') + '</div></div>';
   }
 
+
+  // Independent virtual view: every row is calculated from existing opname + ledger,
+  // not inserted as a new physical stock or movement.
+  async function loadFormulaAudit(){
+    if(!isOwner())return;
+    var seq=++S.formulaSeq;
+    S.formulaLoading=true;S.formulaLoaded=false;S.formulaError='';S.formulaRows=[];
+    S.formulaPage=1;S.formulaSearch='';render();
+    try{
+      var data=await request('ui_stock_formula_verification_v1?'+qs({
+        brand_id:'eq.'+BRAND,
+        select:'inventory_item_id,item_name,unit,opname_date,physical_qty,receipts_after_opname,usage_after_opname,other_movements_after_opname,independently_calculated_qty,existing_ledger_qty,arithmetic_difference,has_physical_baseline,same_day_ambiguous_rows,estimated_bom_usage_rows,counted_movement_rows,audit_status',
+        order:'item_name.asc',limit:'250'
+      }));
+      if(seq!==S.formulaSeq||S.modal!=='formula-audit')return;
+      S.formulaRows=Array.isArray(data)?data:[];S.formulaLoaded=true;
+    }catch(e){
+      if(seq!==S.formulaSeq||S.modal!=='formula-audit')return;
+      S.formulaError=e&&e.message?e.message:String(e);
+    }finally{
+      if(seq===S.formulaSeq){S.formulaLoading=false;render();}
+    }
+  }
+
+  function renderFormulaAudit(){
+    if(!isOwner())return '<div class="sc3-alert">Pemeriksaan rumus hanya tersedia bagi Owner.</div>';
+    if(S.formulaLoading)return '<div class="sc3-loading">Menghitung ulang seluruh SKU dari sumber transaksi…</div>';
+    if(S.formulaError)return '<div class="sc3-alert">Audit belum tersedia: '+esc(S.formulaError)+'. Stok tidak diubah.</div>';
+    if(!S.formulaLoaded)return '<div class="sc3-loading">Buka Periksa Hitungan untuk memuat data.</div>';
+    var all=S.formulaRows||[],tracked=all.filter(function(x){return x.has_physical_baseline}).length;
+    var missing=all.length-tracked;
+    var mismatched=all.filter(function(x){return x.has_physical_baseline&&Number(x.arithmetic_difference)!==0}).length;
+    var dateRisk=all.filter(function(x){return num(x.same_day_ambiguous_rows)>0}).length;
+    var estimateRisk=all.filter(function(x){return num(x.estimated_bom_usage_rows)>0}).length;
+    var minus=all.filter(function(x){return x.has_physical_baseline&&Number(x.independently_calculated_qty)<0}).length;
+    var q=String(S.formulaSearch||'').trim().toLocaleLowerCase('id-ID');
+    var priority=function(x){
+      if(!x.has_physical_baseline)return 4;
+      if(Number(x.arithmetic_difference)!==0)return 0;
+      if(num(x.same_day_ambiguous_rows)>0||num(x.estimated_bom_usage_rows)>0)return 1;
+      if(Number(x.independently_calculated_qty)<0)return 2;
+      return 3;
+    };
+    var filtered=all.filter(function(x){
+      return !q||String(x.item_name||'').toLocaleLowerCase('id-ID').indexOf(q)>=0;
+    }).slice().sort(function(a,b){return priority(a)-priority(b)||
+      String(a.item_name||'').localeCompare(String(b.item_name||''),'id')});
+    var pageSize=12,pages=Math.max(1,Math.ceil(filtered.length/pageSize));
+    S.formulaPage=Math.max(1,Math.min(S.formulaPage,pages));
+    var start=(S.formulaPage-1)*pageSize;
+    var visible=filtered.slice(start,start+pageSize);
+    var body=visible.map(function(x){
+      var flags=[];
+      if(!x.has_physical_baseline)flags.push('Belum ada stok fisik awal');
+      if(x.has_physical_baseline&&Number(x.arithmetic_difference)!==0)flags.push('HITUNGAN BERBEDA');
+      if(num(x.same_day_ambiguous_rows)>0)flags.push(fmt(x.same_day_ambiguous_rows)+' transaksi di hari opname');
+      if(num(x.estimated_bom_usage_rows)>0)flags.push(fmt(x.estimated_bom_usage_rows)+' pemakaian masih perkiraan');
+      if(x.has_physical_baseline&&Number(x.independently_calculated_qty)<0)flags.push('Saldo sistem minus');
+      if(!flags.length)flags.push('Rumus cocok; kelengkapan sumber belum final');
+      var hasBaseline=!!x.has_physical_baseline;
+      var expected=hasBaseline?fmt(x.independently_calculated_qty):'Belum bisa dihitung';
+      var existing=hasBaseline?fmt(x.existing_ledger_qty):'Belum terverifikasi';
+      var extra=hasBaseline&&num(x.other_movements_after_opname)!==0?
+        '<small>Penyesuaian lain: '+esc(signed(x.other_movements_after_opname))+'</small>':'';
+      return '<tr><td><b>'+esc(x.item_name||'Bahan')+'</b><small>'+esc(x.unit||'Satuan tidak diketahui')+'</small></td>'+
+        '<td class="sc20-num">'+(hasBaseline?fmt(x.physical_qty):'—')+
+          '<small>'+esc(x.opname_date?dateLabel(x.opname_date):'Belum opname')+'</small></td>'+
+        '<td class="sc20-num">'+(hasBaseline?fmt(x.receipts_after_opname):'—')+'</td>'+
+        '<td class="sc20-num">'+(hasBaseline?fmt(x.usage_after_opname):'—')+'</td>'+
+        '<td class="sc20-num"><b>'+esc(expected)+'</b>'+extra+'</td>'+
+        '<td class="sc20-num">'+esc(existing)+'</td>'+
+        '<td>'+flags.map(function(f){return '<span class="sc20-flag">'+esc(f)+'</span>'}).join('')+'</td></tr>';
+    }).join('');
+    var pager='<div class="sc20-pager"><span>'+fmt(filtered.length?start+1:0)+'–'+
+      fmt(Math.min(start+pageSize,filtered.length))+' dari '+fmt(filtered.length)+' bahan</span><div>'+
+      '<button type="button" data-sc20-page="'+(S.formulaPage-1)+'"'+(S.formulaPage<=1?' disabled':'')+'>‹</button>'+
+      ' '+S.formulaPage+' / '+pages+' '+
+      '<button type="button" data-sc20-page="'+(S.formulaPage+1)+'"'+(S.formulaPage>=pages?' disabled':'')+'>›</button>'+
+      '</div></div>';
+    return '<div class="sc20-cards"><div><b>'+fmt(tracked)+'</b><span>SKU dengan stok awal</span></div>'+
+      '<div><b>'+fmt(missing)+'</b><span>Belum opname</span></div>'+
+      '<div><b>'+fmt(mismatched)+'</b><span>Selisih perhitungan</span></div>'+
+      '<div><b>'+fmt(dateRisk)+'</b><span>Perlu cek tanggal opname</span></div>'+
+      '</div>'+
+      '<div class="sc20-note"><b>Rumus yang diperiksa:</b> Stok fisik terakhir + barang masuk − bahan terpakai ± penyesuaian = saldo sistem. '+
+      'Selisih hitung 0 hanya berarti rumus cocok, bukan stok fisik sudah terbukti benar. '+
+      '<b>'+fmt(minus)+' saldo minus</b> dan <b>'+fmt(estimateRisk)+' SKU dengan pemakaian resep perkiraan</b> perlu perhatian. '+
+      'Data penjualan Oktober yang belum diposting dan bukti pembelian yang belum ada tetap tidak ditambahkan secara otomatis. '+
+      'Perhitungan menggunakan transaksi <b>setelah tanggal opname</b>; transaksi di hari yang sama diberi peringatan, bukan ditebak urutannya.</div>'+
+      '<label class="sc20-search">Cari bahan <input type="search" id="sc20FormulaSearch" value="'+esc(S.formulaSearch)+
+      '" placeholder="Nama bahan…" autocomplete="off"></label>'+
+      '<div class="sc20-table-wrap"><table class="sc20-table"><colgroup>'+
+      '<col style="width:19%"><col style="width:12%"><col style="width:10%">'+
+      '<col style="width:10%"><col style="width:12%"><col style="width:11%"><col style="width:26%"></colgroup>'+
+      '<thead><tr><th>Nama bahan</th><th>Stok awal</th><th>+ Masuk</th><th>− Keluar</th>'+
+      '<th>Hitung ulang</th><th>Saldo sistem</th><th>Hasil audit</th></tr></thead><tbody>'+
+      (body||'<tr><td colspan="7">Tidak ada bahan yang cocok.</td></tr>')+
+      '</tbody></table></div>'+pager;
+  }
+
+  function renderStockIntegrityWarning(){
+    if(!S.baseLoaded)return '';
+    var tracked=S.items.filter(function(x){return !!x.tracking_active}).length;
+    var missing=S.items.length-tracked;
+    var unlinked=S.salesLinkAudit?num(S.salesLinkAudit.unlinked_sale_item_rows):null;
+    return '<div class="sc20-integrity" role="status"><b>Saldo stok belum terverifikasi penuh</b>'+
+      '<span>'+fmt(tracked)+' SKU sudah punya opname · '+fmt(missing)+' belum punya opname'+
+      (unlinked!==null?' · '+fmt(unlinked)+' baris jual '+esc(monthLabel(S.period))+' belum tertaut ke pengurangan stok':'')+
+      '</span>'+(isOwner()?'<button type="button" data-sc4-modal="formula-audit">Lihat perhitungan</button>':'')+
+      '</div>';
+  }
+
   function renderModal() {
     if (!S.modal) return '';
     var title = S.modal === 'ledger' ? 'Ledger · ' + monthLabel(S.period) :
-      S.modal === 'recipes' ? 'Cek Resep Produk · ' + monthLabel(S.period) : 'Posisi SKU Saat Ini';
+      S.modal === 'recipes' ? 'Cek Resep Produk · ' + monthLabel(S.period) :
+      S.modal === 'formula-audit' ? 'Periksa Hitungan Stok' : 'Posisi SKU Saat Ini';
     var body = S.modal === 'ledger' ? renderLedgerTable() :
       S.modal === 'recipes' ? renderRecipeReview() :
+      S.modal === 'formula-audit' ? renderFormulaAudit() :
       renderFormula() + renderAuxState() + renderFilters() + renderTable();
-    return '<div class="sc4-modal-backdrop" data-sc4-close="1"><section class="sc4-modal" role="dialog" aria-modal="true" aria-labelledby="sc4ModalTitle" tabindex="-1"><div class="sc4-modal-head"><div><div class="sc3-eyebrow">DETAIL STOK</div><h3 id="sc4ModalTitle">' + esc(title) + '</h3><p>' + (S.modal === 'ledger' ? 'Movement periode terpilih; quantity tetap dalam satuan masing-masing SKU.' : S.modal === 'recipes' ? 'Penjualan berdasarkan bulan; resep berlaku terus sejak disetujui sampai diubah.' : 'Saldo terkini, opname, incoming, kebutuhan dan days cover.') + '</p></div><button type="button" data-sc4-close="1" class="sc4-close" aria-label="Tutup">×</button></div><div class="sc4-modal-body">' + body + '</div></section></div>';
+    return '<div class="sc4-modal-backdrop" data-sc4-close="1"><section class="sc4-modal" role="dialog" aria-modal="true" aria-labelledby="sc4ModalTitle" tabindex="-1"><div class="sc4-modal-head"><div><div class="sc3-eyebrow">DETAIL STOK</div><h3 id="sc4ModalTitle">' + esc(title) + '</h3><p>' + (S.modal === 'ledger' ? 'Movement periode terpilih; quantity tetap dalam satuan masing-masing SKU.' : S.modal === 'recipes' ? 'Penjualan berdasarkan bulan; resep berlaku terus sejak disetujui sampai diubah.' :
+        S.modal === 'formula-audit' ? 'Audit hitung ulang semua SKU berdasarkan data yang sudah tercatat, bukan stok fisik baru.' :
+        'Saldo terkini, opname, incoming, kebutuhan dan days cover.') + '</p></div><button type="button" data-sc4-close="1" class="sc4-close" aria-label="Tutup">×</button></div><div class="sc4-modal-body">' + body + '</div></section></div>';
   }
 
   function openOpname() {
@@ -1891,6 +2015,7 @@
     var loading = S.baseLoading && !S.baseLoaded ? '<div class="sc3-loading">Memuat posisi SKU terkini…</div>' : '';
     shell.innerHTML = renderHeader() + renderCorrectionPanel() +
       '<div class="sc12-status-strip">'+renderLedgerAudit()+renderUploadStatus()+renderSalesStockAudit()+'</div>' +
+      renderStockIntegrityWarning() +
       pAlert + overviewKpis() + alert + loading +
       '<div class="sc5-dashboard sc6-dashboard" aria-label="Infografis Stok Hasnaria">'+
         '<div class="sc6-grid">'+
@@ -1936,6 +2061,10 @@
 
   function bind(host) {
     host.onclick = function (e) {
+      var formulaPage=e.target&&e.target.closest?e.target.closest('[data-sc20-page]'):null;
+      if(formulaPage&&S.modal==='formula-audit'&&!formulaPage.disabled){
+        S.formulaPage=Number(formulaPage.getAttribute('data-sc20-page'))||1;render();return;
+      }
       var combine=e.target&&e.target.closest?e.target.closest('[data-sc18-combined]'):null;
       if(combine&&isOwner()&&S.modal==='recipes'){
         if(S.combinedOpen){S.combinedOpen=false;++S.combinedSeq;S.combinedRows=[];S.combinedLoaded=false;render();}
@@ -1974,6 +2103,7 @@
         S.modal = modal.getAttribute('data-sc4-modal') || '';
         if (S.modal === 'ledger' && !S.ledgerLoading) loadLedger();
         else if (S.modal === 'recipes') loadRecipeReview();
+        else if (S.modal === 'formula-audit') loadFormulaAudit();
         else render();
         stockDialogFocus(host);
         return;
@@ -2027,6 +2157,13 @@
     };
     host.oninput = function (e) {
       var el = e.target;
+      if(el.id==='sc20FormulaSearch'&&S.modal==='formula-audit'){
+        var cursor=el.selectionStart;
+        S.formulaSearch=el.value||'';S.formulaPage=1;render();
+        var again=document.getElementById('sc20FormulaSearch');
+        if(again){again.focus({preventScroll:true});try{again.setSelectionRange(cursor,cursor)}catch(_){}}
+        return;
+      }
       if(S.recipeDetail&&el.hasAttribute&&el.hasAttribute('data-sc17-field')){
         var field=el.getAttribute('data-sc17-field');
         if(field==='evidence'||field==='reason'||field==='effective')S.recipeDetail[field]=el.value;
