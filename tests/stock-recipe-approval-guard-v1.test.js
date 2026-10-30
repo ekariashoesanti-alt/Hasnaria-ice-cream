@@ -52,8 +52,8 @@ test('Owner-only frontend reads combined scenario on demand and does not post',(
   assert.doesNotMatch(section,/rpc\(/);
   assert.doesNotMatch(section,/method:\s*['"](?:POST|DELETE|PATCH|PUT)/i);
   assert.match(css,/\.sc18-summary/);
-  assert.match(js,/stock-control-v3\.css\?v=26/);
+  assert.match(js,/stock-control-v3\.css\?v=27/);
   for(const p of ['stock-monitor.js','stock-v3-runtime-fix.js'])
-    assert.match(read(p),/stock-control-v3\.js\?v=32/);
+    assert.match(read(p),/stock-control-v3\.js\?v=33/);
   assert.match(read('scripts/vercel-build-check.js'),/stock-recipe-approval-guard-v1\.test\.js/);
 });
