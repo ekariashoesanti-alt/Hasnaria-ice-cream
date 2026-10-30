@@ -42,7 +42,7 @@ test('new modal shares controlled scrolling and cache pins',()=>{
   assert.match(css,/\.sc17-review-table\{min-width:800px\}/);
   assert.match(js,/stock-control-v3\.css\?v=24/);
   for(const f of ['stock-monitor.js','stock-v3-runtime-fix.js']){
-    assert.ok(read(f).includes('/stock-control-v3.js?v=30'),f);
+    assert.ok(read(f).includes('/stock-control-v3.js?v=31'),f);
   }
   assert.match(read('scripts/vercel-build-check.js'),/stock-recipe-review-v1\.test\.js/);
 });
