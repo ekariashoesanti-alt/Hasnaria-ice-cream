@@ -260,6 +260,7 @@ run(process.execPath, ['--test', 'tests/stock-recipe-owner-evidence-v1.test.js']
 run(process.execPath, ['--test', 'tests/stock-recipe-approval-guard-v1.test.js']);
 run(process.execPath, ['--test', 'tests/stock-recipe-plain-language-v1.test.js']);
 run(process.execPath, ['--test', 'tests/stock-formula-source-audit-v1.test.js']);
+run(process.execPath, ['--test', 'tests/stock-purchase-existing-gap-v1.test.js']);
 
 const dist = path.join(ROOT, 'dist');
 fs.rmSync(dist, { recursive: true, force: true });

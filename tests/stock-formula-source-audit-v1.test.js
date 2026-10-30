@@ -42,7 +42,7 @@ test('read-only audit is lazy-loaded on Owner request and paginated, no posting 
   assert.match(js,/pageSize=12/);
   assert.match(js,/Saldo stok belum terverifikasi penuh/);
   assert.match(js,/Selisih hitung 0 hanya berarti rumus cocok/);
-  assert.match(js,/Data penjualan Oktober yang belum diposting/);
+  assert.match(js,/Data penjualan yang belum diposting serta Pembelian yang belum terbukti diterima/);
   const section=js.slice(js.indexOf('async function loadFormulaAudit()'),js.indexOf('function renderModal()'));
   assert.ok(section.length>500);
   assert.doesNotMatch(section,/method:\s*['"](?:POST|PATCH|DELETE|PUT)/i);
@@ -90,9 +90,9 @@ test('mocked Owner UI shows precise formula and missing-data warnings',()=>{
 });
 
 test('new JS/CSS versions are pinned and full Stock release checks retained',()=>{
-  assert.match(js,/stock-control-v3\.css\?v=25/);
+  assert.match(js,/stock-control-v3\.css\?v=26/);
   for(const f of ['stock-monitor.js','stock-v3-runtime-fix.js']){
-    assert.match(read(f),/stock-control-v3\.js\?v=31/);
+    assert.match(read(f),/stock-control-v3\.js\?v=32/);
   }
   assert.match(read('scripts/vercel-build-check.js'),/stock-formula-source-audit-v1\.test\.js/);
 });

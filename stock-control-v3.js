@@ -74,6 +74,8 @@
     movingSeq: 0,
     salesLinkAudit: null,
     salesLinkAuditUnavailable: false,
+    purchaseImportEvidence: null,
+    purchaseImportEvidenceUnavailable: false,
     recipeReviewRows: [],
     recipeReviewLoaded: false,
     recipeReviewLoading: false,
@@ -237,7 +239,7 @@
     var l = document.createElement('link');
     l.id = 'stock-control-v3-css';
     l.rel = 'stylesheet';
-    l.href = '/stock-control-v3.css?v=25';
+    l.href = '/stock-control-v3.css?v=26';
     document.head.appendChild(l);
   }
 
@@ -878,6 +880,8 @@
         S.trend = [];
         S.salesLinkAudit = null;
         S.salesLinkAuditUnavailable = false;
+        S.purchaseImportEvidence = null;
+        S.purchaseImportEvidenceUnavailable = false;
         ++S.recipeReviewSeq;
         S.recipeReviewLoaded = false;
         S.recipeReviewRows = [];
@@ -902,12 +906,17 @@
       var tq=qs({brand_id:'eq.'+BRAND,period_month:'gte.'+fromMonth,
         select:'period_month,movement_rows',order:'period_month.desc',limit:'100'});
       var salesQ=qs({brand_id:'eq.'+BRAND,period_month:'eq.'+month,select:'*',limit:'1'});
+      var nextMonth=new Date(Date.UTC(y,m+1,1)).toISOString().slice(0,10);
+      var purchaseImportQ=qs({brand_id:'eq.'+BRAND,purchase_date:'gte.'+month,
+        select:'inventory_item_id,inventory_qty,ready_for_inventory,mapping_status',limit:'1000'})+
+        '&purchase_date=lt.'+nextMonth;
       var pair = await Promise.all([
         request('ui_stock_overview_v1?' + oq),
         request('ui_stock_activity_chart_v1?' + aq),
         loadPendingUploads(seq),
         request('ui_stock_activity_chart_v1?' + tq).catch(function(){return []}),
-        request('ui_stock_sales_link_audit_v1?'+salesQ).catch(function(){return null})
+        request('ui_stock_sales_link_audit_v1?'+salesQ).catch(function(){return null}),
+        request('purchase_inventory_bridge?'+purchaseImportQ).catch(function(){return null})
       ]);
       if (seq !== S.periodSeq) return;
       S.overview = pair[0] && pair[0][0] ? pair[0][0] : null;
@@ -915,6 +924,19 @@
       S.trend = (pair[3]||[]).filter(function(x){return x.period_month && x.period_month<=month});
       S.salesLinkAudit=pair[4]&&pair[4][0]?pair[4][0]:null;
       S.salesLinkAuditUnavailable=pair[4]===null;
+      S.purchaseImportEvidenceUnavailable=pair[5]===null;
+      if(pair[5]!==null){
+        var imported=Array.isArray(pair[5])?pair[5]:[];
+        S.purchaseImportEvidence={
+          total:imported.length,
+          quantityMapped:imported.filter(function(x){
+            return !!x.ready_for_inventory&&!!x.inventory_item_id&&Number(x.inventory_qty)>0;
+          }).length,
+          needsReview:imported.filter(function(x){
+            return !x.ready_for_inventory||!x.inventory_item_id||!(Number(x.inventory_qty)>0);
+          }).length
+        };
+      }else S.purchaseImportEvidence=null;
       loadMovingStatus(S.period);
     } catch (e) {
       if (seq !== S.periodSeq) return;
@@ -924,6 +946,8 @@
       S.trend = [];
         S.salesLinkAudit = null;
         S.salesLinkAuditUnavailable = false;
+        S.purchaseImportEvidence = null;
+        S.purchaseImportEvidenceUnavailable = false;
     } finally {
       if (seq === S.periodSeq) {
         S.periodLoading = false;
@@ -1745,7 +1769,7 @@
       '<div class="sc20-note"><b>Rumus yang diperiksa:</b> Stok fisik terakhir + barang masuk − bahan terpakai ± penyesuaian = saldo sistem. '+
       'Selisih hitung 0 hanya berarti rumus cocok, bukan stok fisik sudah terbukti benar. '+
       '<b>'+fmt(minus)+' saldo minus</b> dan <b>'+fmt(estimateRisk)+' SKU dengan pemakaian resep perkiraan</b> perlu perhatian. '+
-      'Data penjualan Oktober yang belum diposting dan bukti pembelian yang belum ada tetap tidak ditambahkan secara otomatis. '+
+      'Data penjualan yang belum diposting serta Pembelian yang belum terbukti diterima tidak otomatis ditambahkan ke stok. '+
       'Perhitungan menggunakan transaksi <b>setelah tanggal opname</b>; transaksi di hari yang sama diberi peringatan, bukan ditebak urutannya.</div>'+
       '<label class="sc20-search">Cari bahan <input type="search" id="sc20FormulaSearch" value="'+esc(S.formulaSearch)+
       '" placeholder="Nama bahan…" autocomplete="off"></label>'+
@@ -1763,9 +1787,11 @@
     var tracked=S.items.filter(function(x){return !!x.tracking_active}).length;
     var missing=S.items.length-tracked;
     var unlinked=S.salesLinkAudit?num(S.salesLinkAudit.unlinked_sale_item_rows):null;
+    var purchase=S.purchaseImportEvidence;
     return '<div class="sc20-integrity" role="status"><b>Saldo stok belum terverifikasi penuh</b>'+
       '<span>'+fmt(tracked)+' SKU sudah punya opname · '+fmt(missing)+' belum punya opname'+
       (unlinked!==null?' · '+fmt(unlinked)+' baris jual '+esc(monthLabel(S.period))+' belum tertaut ke pengurangan stok':'')+
+      (purchase&&purchase.total?' · '+fmt(purchase.total)+' data Pembelian impor ('+fmt(purchase.quantityMapped)+' jumlah+SKU terpetakan, '+fmt(purchase.needsReview)+' perlu verifikasi)':'')+
       '</span>'+(isOwner()?'<button type="button" data-sc4-modal="formula-audit">Lihat perhitungan</button>':'')+
       '</div>';
   }
@@ -2223,6 +2249,8 @@
         S.trend = [];
         S.salesLinkAudit = null;
         S.salesLinkAuditUnavailable = false;
+        S.purchaseImportEvidence = null;
+        S.purchaseImportEvidenceUnavailable = false;
         ++S.recipeReviewSeq;
         S.recipeReviewLoaded = false;
         S.recipeReviewRows = [];

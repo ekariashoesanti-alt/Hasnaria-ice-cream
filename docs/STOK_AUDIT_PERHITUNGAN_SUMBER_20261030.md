@@ -68,3 +68,30 @@ Jenis `BASELINE` dan `OPNAME_CORRECTION` tidak dijumlahkan lagi setelah baseline
 4. Audit tren dan stock moving agar metrik yang tidak didukung sumber tidak disajikan sebagai angka pasti.
 
 **Status pekerjaan ini: pemeriksaan dan kejelasan angka, bukan pemulihan stok Oktober secara otomatis.**
+
+
+## Koreksi temuan sumber Pembelian Oktober (audit lanjutan 30 Oktober)
+
+Pernyataan “tidak ada pembelian Oktober” **tidak tepat**. Yang benar: **tidak ada `inventory_purchase_log` / `PURCHASE_RECEIPT` Oktober yang sudah masuk ledger**. Terdapat data pembelian yang sudah tersimpan pada sistem lain:
+
+| Sumber | Jumlah baris Oktober |
+| --- | ---: |
+| `offline_purchase_canonical` | 57 |
+| `purchase_inventory_bridge` | 57 (view dari sumber yang sama; **jangan ditambahkan** menjadi 114) |
+| `inventory_purchase_log` | **0** |
+| `goods_receipts` | **0** |
+
+Sumber file impor: `HASNARIA_PURCHASE_UNIFIED_2026-10.xlsx`; baris sampai 6 Oktober.
+
+Dari 57 baris `purchase_inventory_bridge`:
+- **22** `exact_name` dengan SKU dan kuantitas berstatus teknis `ready_for_inventory`.
+- **5** `inventory_alias` telah memiliki SKU dan `inventory_qty` siap dipetakan.
+- **12** alias masih membutuhkan konversi/pemeriksaan satuan.
+- **14** belum dapat dipetakan ke SKU.
+- **4** berstatus `expense_candidate`, bukan otomatis persediaan.
+
+Dengan demikian, **27 baris layak ditelusuri untuk penerimaan**, tetapi belum cukup membuktikan barang diterima atau boleh langsung dibukukan. Contoh MIE KUNING 48 porsi dibeli menurut impor 2 Oktober, tetapi masih 0 di ledger Oktober. Menambahkan 48 otomatis tanpa bukti penerimaan berpotensi menyebabkan stok salah.
+
+Implementasi UI: status sumber impor bulanan ditampilkan dari `purchase_inventory_bridge` secara READ-ONLY pada dashboard, dengan catatan bahwa barang yang **dibeli** belum tentu **diterima**. Tidak ada posting/pengubahan saldo pada tahap ini.
+
+Aturan untuk rekonsiliasi lanjutan: data impor adalah kandidat barang masuk; transaksi boleh memengaruhi stok hanya setelah bukti penerimaan, SKU, dan konversi satuan tervalidasi. Jika tidak tersedia dalam data existing, tandai **belum terverifikasi**, bukan memperkirakan.
