@@ -54,8 +54,8 @@ test('Owner can inspect per-product BOM and record evidence without approving re
 test('new layout is compact and both bridge loads are cache-busted',()=>{
   assert.match(css,/\.sc17-evidence-form\{/);
   assert.match(css,/\.sc17-impact-negative\{/);
-  assert.match(js,/stock-control-v3\.css\?v=24/);
+  assert.match(js,/stock-control-v3\.css\?v=25/);
   for(const p of ['stock-monitor.js','stock-v3-runtime-fix.js'])
-    assert.match(read(p),/stock-control-v3\.js\?v=30/,p);
+    assert.match(read(p),/stock-control-v3\.js\?v=31/,p);
   assert.match(read('scripts/vercel-build-check.js'),/stock-recipe-owner-evidence-v1\.test\.js/);
 });
