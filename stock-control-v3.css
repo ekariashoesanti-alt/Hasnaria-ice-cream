@@ -1962,3 +1962,10 @@
 #stok .sc20-pager button{border:1px solid #cfe3d5;background:#fff;color:#1b694b;border-radius:7px;padding:6px 10px;font-size:11px;cursor:pointer}
 #stok .sc20-pager button:disabled{opacity:.4;cursor:default}
 @media(max-width:700px){#stok .sc20-cards{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+
+#stok .sc20-integrity{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;border:1px solid #e8d0a7;background:#fff8eb;color:#845921;padding:7px 10px;border-radius:8px;margin:5px 0;font-size:10px;line-height:1.35}
+#stok .sc20-integrity>b{font-weight:850}
+#stok .sc20-integrity>span{flex:1;min-width:240px}
+#stok .sc20-integrity button{border:1px solid #ddb778;border-radius:7px;background:#fffefb;color:#855925;font-size:10px;font-weight:800;padding:5px 9px;cursor:pointer}
+@media(max-width:700px){#stok .sc20-integrity>span{min-width:0;flex-basis:100%}}
