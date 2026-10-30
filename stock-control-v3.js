@@ -114,7 +114,7 @@
   function fmt(value) {
     var n = Number(value);
     if (!Number.isFinite(n)) return '-';
-    return n.toLocaleString('id-ID', { maximumFractionDigits: 2 });
+    return n.toLocaleString('id-ID', { maximumFractionDigits: 6 });
   }
 
   function signed(value) {
@@ -239,7 +239,7 @@
     var l = document.createElement('link');
     l.id = 'stock-control-v3-css';
     l.rel = 'stylesheet';
-    l.href = '/stock-control-v3.css?v=26';
+    l.href = '/stock-control-v3.css?v=27';
     document.head.appendChild(l);
   }
 
@@ -1471,15 +1471,15 @@
     }).join(''):'<p class="sc13-legend-empty">Tidak ada kategori dengan saldo dan harga pokok terverifikasi.</p>';
 
     return '<div class="sc13-category-main">'+chart+
-        '<div class="sc13-category-legend"><span class="sc13-legend-title">Nilai per kategori terverifikasi</span>'+
+        '<div class="sc13-category-legend"><span class="sc13-legend-title">Nilai kategori dari '+fmt(valued)+' SKU dengan harga pokok</span>'+
           legend+'</div></div>'+
       '<div class="sc13-category-coverage">'+
-        '<div class="sc13-coverage-text"><b>Cakupan harga pokok</b><span>'+
+        '<div class="sc13-coverage-text"><b>Cakupan harga pokok, bukan validasi fisik</b><span>'+
           fmt(valued)+' dari '+fmt(denominator)+' SKU · '+fmtPercent(coverage)+'%</span></div>'+
         '<div class="sc13-coverage-track" role="progressbar" aria-label="Cakupan harga pokok seluruh SKU" '+
           'aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+coverage.toFixed(1)+'">'+
           '<i style="width:'+coverage.toFixed(3)+'%"></i></div>'+
-        '<p class="sc13-coverage-note">Valuasi parsial. Bukan total nilai seluruh persediaan.</p>'+
+        '<p class="sc13-coverage-note">Valuasi parsial dari saldo ledger dan harga pokok yang tersedia; bukan total seluruh persediaan atau bukti stok fisik.</p>'+
       '</div>';
   }
   function lowestStockFive(){
@@ -1490,14 +1490,25 @@
       return !!x.tracking_active && x.system_qty!==null && x.system_qty!==undefined &&
         x.system_qty!=='' && Number.isFinite(Number(x.system_qty));
     });
+    // Mixed units (gram/pcs/porsi) cannot be ranked by raw numeric quantity.
+    // Select by risk status first; use numeric ordering ONLY within the same unit.
+    function rank(x){
+      var q=Number(x.system_qty),min=Math.max(0,num(x.min_qty));
+      return q<0?0:q===0?1:min>0&&q<min?2:3;
+    }
     var lowest=monitored.slice().sort(function(a,b){
-      var difference=Number(a.system_qty)-Number(b.system_qty);
-      return difference || String(a.item_name||'').localeCompare(String(b.item_name||''),'id');
+      var ra=rank(a),rb=rank(b);
+      if(ra!==rb)return ra-rb;
+      if(String(a.unit||'')===String(b.unit||'')){
+        var diff=Number(a.system_qty)-Number(b.system_qty);
+        if(diff)return diff;
+      }
+      return String(a.item_name||'').localeCompare(String(b.item_name||''),'id');
     }).slice(0,5);
     if(!lowest.length)return '<div class="sc14-low-empty"><strong>Belum ada saldo SKU yang terpantau</strong>'+
       '<span>Masukkan opname awal agar item dapat diranking berdasarkan stoknya.</span></div>';
     return '<div class="sc14-low-wrap" aria-label="Lima SKU dengan saldo terpantau paling rendah">'+
-      '<div class="sc14-low-summary"><span>Diurutkan dari saldo terkecil</span>'+
+      '<div class="sc14-low-summary"><span>Prioritas risiko; satuan berbeda tidak dibandingkan</span>'+
         '<strong>'+fmt(lowest.length)+' dari '+fmt(monitored.length)+' SKU</strong></div>'+
       '<div class="sc14-low-list">'+lowest.map(function(x,i){
         var qty=Number(x.system_qty),minimum=Math.max(0,num(x.min_qty));
@@ -1532,6 +1543,14 @@
       '<small>'+esc(S.movingError)+'</small></div>';
     if(!S.movingLoaded)return '<div class="sc15-moving-empty">Memuat perputaran stok terverifikasi…</div>';
 
+    // When a month has sales but zero linked sale-item inventory movements,
+    // historical FIFO estimates cannot be presented as its current moving data.
+    var saleAudit=S.salesLinkAudit;
+    if(saleAudit&&num(saleAudit.sale_item_rows)>0&&num(saleAudit.linked_sale_item_rows)===0){
+      return '<div class="sc15-moving-empty"><strong>Belum dapat dihitung untuk '+esc(monthLabel(S.period))+'</strong>'+
+        '<small>'+fmt(saleAudit.unlinked_sale_item_rows)+' baris penjualan belum terhubung ke pemakaian stok. '+
+        'Angka perputaran periode sebelumnya tidak dipakai sebagai angka bulan ini.</small></div>';
+    }
     var rows=S.movingRows||[],groups={fast:0,normal:0,slow:0,unknown:0,untracked:0};
     var latest='';
     rows.forEach(function(r){
@@ -1602,14 +1621,15 @@
     var need=items.filter(function(x){return x.ui_status==='critical'||x.ui_status==='order'}).length;
     var untracked=items.filter(function(x){return x.ui_status==='untracked'}).length;
     var v=S.valuation,valuationReady=!!(S.valuationLoaded&&v);
-    var coverage=valuationReady&&items.length?num(v.valued_items)/items.length*100:0;
+    var valuationSkuCount=valuationReady?num(v.inventory_items):0;
+    var coverage=valuationSkuCount>0?num(v.valued_items)/valuationSkuCount*100:0;
     function quantity(n){return loading?'…':fmt(n)}
     var cards=[
       {kind:'package',label:'Total Item (SKU)',value:quantity(items.length),
        note:loading?'Memuat master stok…':'Item terdaftar di backend'},
-      {kind:'value',label:'Nilai Stok Terverifikasi',
+      {kind:'value',label:'Nilai Stok (Parsial)',
        value:S.valuationLoading?'…':!valuationReady?'—':stockMoney(v.inventory_value,true),
-       note:valuationReady?('Parsial · '+fmt(v.valued_items)+' dari '+fmt(v.inventory_items)+' SKU ('+
+       note:valuationReady?('Biaya terverifikasi: '+fmt(v.valued_items)+' dari '+fmt(v.inventory_items)+' SKU ('+
          coverage.toLocaleString('id-ID',{maximumFractionDigits:1})+'%)'):
          (S.valuationError?'Data valuasi belum tersedia':'Menunggu biaya terverifikasi'),
        partial:valuationReady&&num(v.valued_items)<num(v.inventory_items)},
@@ -1621,9 +1641,9 @@
     return '<div class="sc5-kpis sc6-kpis sc8-kpis" aria-label="Ringkasan empat KPI stok">'+cards.map(function(c){
       return '<article class="sc5-kpi sc8-kpi sc8-kpi-'+c.kind+'">'+
         '<span class="sc5-kpi-icon sc8-kpi-icon">'+stockKpiIcon(c.kind)+'</span>'+
-        '<div class="sc8-kpi-copy"><span class="sc8-kpi-label">'+esc(c.label)+'</span>'+
-        '<strong class="sc8-kpi-value">'+esc(c.value)+'</strong>'+
-        '<small class="sc8-kpi-note">'+esc(c.note)+'</small></div></article>';
+        '<div class="sc8-kpi-copy"><span class="sc8-kpi-label" title="'+esc(c.label)+'">'+esc(c.label)+'</span>'+
+        '<strong class="sc8-kpi-value" title="'+esc(c.value)+'">'+esc(c.value)+'</strong>'+
+        '<small class="sc8-kpi-note" title="'+esc(c.note)+'">'+esc(c.note)+'</small></div></article>';
     }).join('')+'</div>';
   }
 
