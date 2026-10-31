@@ -80,7 +80,7 @@
     if(!visible(h))return;
     claim();
     loadCanonical();
-    // Stock upload controls are loaded when their action is requested.
+    loadStockUpload(); // Keep upload handlers ready without altering their interaction.
   }
 
   window.__HASNARIA_STOCK_WAKE=wake;
