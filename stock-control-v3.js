@@ -31,6 +31,7 @@
     page: 1,
     baseLoading: false,
     baseLoaded: false,
+    firstPeriodLoaded: false,
     auxLoading: false,
     auxLoaded: false,
     error: '',
@@ -243,7 +244,7 @@
     var l = document.createElement('link');
     l.id = 'stock-control-v3-css';
     l.rel = 'stylesheet';
-    l.href = '/stock-control-v3.css?v=31';
+    l.href = '/stock-control-v3.css?v=32';
     document.head.appendChild(l);
   }
 
@@ -818,8 +819,7 @@
     S.baseLoading = true;
     S.error = '';
     S.auxError = '';
-    S.auxLoaded = false;
-    S.auxLoading = false;
+    if(!S.baseLoaded){S.auxLoaded = false;S.auxLoading = false;}
     render();
 
     try {
@@ -829,10 +829,20 @@
         order: 'category.asc,item_name.asc'
       });
       var rows = await request('inventory_stock_reconciliation?' + baseQuery);
-      var audit = await loadVerifiedAudit(rows);
       if (seq !== S.loadSeq) return;
       S.raw = rows || [];
-      S.ledgerAudit = audit;
+      // The independent ledger audit is not part of the first dashboard paint.
+      // Do not delay the real stock balances on a second database query.
+      var auditSeq=seq;
+      var auditRun=function(){
+        if(auditSeq!==S.loadSeq)return;
+        loadVerifiedAudit(rows).then(function(audit){
+          if(auditSeq!==S.loadSeq)return;
+          S.ledgerAudit=audit;
+        });
+      };
+      if(window.requestIdleCallback)window.requestIdleCallback(auditRun,{timeout:1800});
+      else setTimeout(auditRun,200);
       S.lastVerifiedAt = new Date().toLocaleString('id-ID');
       S.items = S.raw.map(baseItem);
       S.baseLoaded = true;
@@ -843,7 +853,11 @@
       if (seq === S.loadSeq) {
         S.baseLoading = false;
         render();
-        if (S.baseLoaded) {scheduleAux(seq);loadVerifiedValuation();}
+        if (S.baseLoaded) {
+          // Defer rarely used PO/BOM detail; the main two charts do not need it.
+          if(!S.auxLoaded&&!S.auxLoading&&S.modal==='position')scheduleAux(seq);
+          if(!S.valuationLoaded&&!S.valuationLoading)loadVerifiedValuation();
+        }
         schedulePendingCommittedRefresh();
       }
     }
@@ -867,7 +881,7 @@
     var seq = ++S.periodSeq;
     S.periodLoading = true;
     S.periodError = '';
-    render();
+    if(!S.firstPeriodLoaded)render();
     try {
       if (!S.periods.length || force) {
         var ps = await rpc('get_ui_period_catalog_fast_v1', { p_brand: BRAND, p_module: 'stok' });
@@ -917,36 +931,20 @@
       var purchaseImportQ=qs({brand_id:'eq.'+BRAND,purchase_date:'gte.'+month,
         select:'inventory_item_id,inventory_qty,ready_for_inventory,mapping_status',limit:'1000'})+
         '&purchase_date=lt.'+nextMonth;
-      var pair = await Promise.all([
-        request('ui_stock_overview_v1?' + oq),
-        request('ui_stock_activity_chart_v1?' + aq),
-        loadPendingUploads(seq),
-        request('ui_stock_month_end_trend_v1?' + tq).catch(function(){return null}),
-        request('ui_stock_sales_link_audit_v1?'+salesQ).catch(function(){return null}),
-        request('purchase_inventory_bridge?'+purchaseImportQ).catch(function(){return null})
-      ]);
-      if (seq !== S.periodSeq) return;
-      S.overview = pair[0] && pair[0][0] ? pair[0][0] : null;
-      S.activity = pair[1] || [];
-      S.monthEndRows=Array.isArray(pair[3])?pair[3]:[];
-      S.monthEndUnavailable=pair[3]===null;
+      // First paint only waits for the actual monthly stock-end series.
+      // Previously six unrelated requests (status/upload/activities/import)
+      // blocked this chart even though their cards were removed from the UI.
+      var trendRows=await request('ui_stock_month_end_trend_v1?' + tq);
+      if(seq!==S.periodSeq)return;
+      S.monthEndRows=Array.isArray(trendRows)?trendRows:[];
+      S.monthEndUnavailable=false;
       S.trend=[];
-      S.salesLinkAudit=pair[4]&&pair[4][0]?pair[4][0]:null;
-      S.salesLinkAuditUnavailable=pair[4]===null;
-      S.purchaseImportEvidenceUnavailable=pair[5]===null;
-      if(pair[5]!==null){
-        var imported=Array.isArray(pair[5])?pair[5]:[];
-        S.purchaseImportEvidence={
-          total:imported.length,
-          quantityMapped:imported.filter(function(x){
-            return !!x.ready_for_inventory&&!!x.inventory_item_id&&Number(x.inventory_qty)>0;
-          }).length,
-          needsReview:imported.filter(function(x){
-            return !x.ready_for_inventory||!x.inventory_item_id||!(Number(x.inventory_qty)>0);
-          }).length
-        };
-      }else S.purchaseImportEvidence=null;
-      loadMovingStatus(S.period);
+      S.firstPeriodLoaded=true;
+      // These operational sources belong to detail/actions, not dashboard
+      // first paint. Retain lazy, read-only access when those panels are used.
+      S.salesLinkAuditUnavailable=false;
+      S.purchaseImportEvidenceUnavailable=false;
+      // Moving FIFO is not visible on the current two-panel dashboard.
     } catch (e) {
       if (seq !== S.periodSeq) return;
       S.periodError = e && e.message ? e.message : String(e);
@@ -962,6 +960,7 @@
     } finally {
       if (seq === S.periodSeq) {
         S.periodLoading = false;
+        S.firstPeriodLoaded=true;
         render();
         schedulePendingCommittedRefresh();
       }
@@ -2154,7 +2153,7 @@
     var loading = S.baseLoading && !S.baseLoaded ? '<div class="sc3-loading">Memuat posisi SKU terkini…</div>' : '';
     // Resolve shared chart unit before rendering the left series.
     var stockComparison=stockSafetyInfographic();
-    shell.innerHTML = renderHeader() + renderCorrectionPanel() +
+    var html = renderHeader() + renderCorrectionPanel() +
       pAlert + overviewKpis() + alert + loading +
       '<div class="sc5-dashboard sc6-dashboard sc22-dashboard" aria-label="Dashboard Stok Hasnaria">'+
         '<div class="sc22-dual">'+
@@ -2162,7 +2161,13 @@
           '<article class="sc5-panel sc22-compare-panel"><h3>▥ Stok Saat Ini vs Batas Aman</h3>'+stockComparison+'</article>'+
         '</div>'+
       '</div>'+renderModal();
-    bind(host);
+    // Skip DOM teardown if a background status update changes no visible UI.
+    // This preserves chart nodes, scroll position, focused controls and avoids flicker.
+    if(shell.__sc3LastHtml!==html){
+      shell.innerHTML=html;
+      shell.__sc3LastHtml=html;
+      bind(host);
+    }
     // Data refresh may rebuild the dialog; keep keyboard focus within the dialog.
     if(preserveDialogFocus)stockDialogFocus(host);
     host.__sc3Rendering = false;
@@ -2457,7 +2462,7 @@
     var id = tab.getAttribute('data-tab');
     if (id && id !== 'stok') return;
     if (id === 'stok' || String(tab.textContent || '').trim().toLowerCase() === 'stok') {
-      setTimeout(function () { watch(); mount(true); }, 0);
+      setTimeout(function () { watch(); mount(false); }, 0);
     }
   }, true);
 
@@ -2469,7 +2474,12 @@
   },true);
   document.addEventListener('hasnaria:purchase-imported',function(){refreshCommittedData()},true);
   document.addEventListener('hasnaria:owner-shell-navigate',function(e){
-    if(e.detail&&e.detail.tab==='stok')refreshCommittedData();
+    if(e.detail&&e.detail.tab==='stok'){
+      // Navigation is not a stock write. The initial cache remains usable;
+      // real write events and the explicit Refresh button still reload.
+      if(S.pendingStockRefresh)refreshCommittedData();
+      else mount(false);
+    }
   },true);
   ensureCss();
   registerSync();
