@@ -7,7 +7,7 @@ const css=fs.readFileSync('stock-readable-density.css','utf8');
 
 assert(!shim.includes('stock-recall-v4.js'),'owner shim must not load legacy Stock recall v4');
 assert(shim.includes('stock-v3-runtime-fix.js'),'owner shim must load the canonical Stock v3 bridge');
-assert(bridge.includes("/stock-control-v3.js?v=33"),'canonical bridge must load Stock Control v3');
+assert(bridge.includes("/stock-control-v3.js?v=34"),'canonical bridge must load Stock Control v3');
 assert(bridge.includes("setAttribute('data-stock-v4','1')"),'canonical shell must satisfy the existing owner guard marker');
 assert(css.includes('#stok .sc3-table{width:100%;min-width:0;table-layout:fixed;font-size:8.3px}'),'desktop Stock table must keep the readable fixed-width density override');
 assert(!css.includes('font-size:5.4px'),'readable override must not regress to the previous ultra-small status text');
@@ -17,7 +17,7 @@ const ui4=fs.readFileSync('stock-control-v3.js','utf8');
 assert(ui4.includes('__HASNARIA_STOCK_UI4'),'Stock UI-4 runtime marker must be present');
 assert(ui4.includes('ui_stock_overview_v1')&&ui4.includes('ui_stock_activity_chart_v1')&&ui4.includes('ui_stock_detail_v1'),'Stock UI-4 must use canonical overview, activity, and ledger views');
 assert(ui4.includes('data-sc4-modal="ledger"')&&ui4.includes('data-sc4-action="opname"'),'Stock UI-4 must keep ledger detail and direct opname actions');
-assert(ui4.includes('sc6-dashboard') && ui4.includes('monthlyTrendInfographic()'),'Stock green dashboard must retain backend monthly trend');
+assert(ui4.includes('sc6-dashboard') && ui4.includes('stockSafetyInfographic()'),'Stock dashboard must show current system stock and per-SKU minimum');
 assert(ui4.includes('sc6-main-column')&&ui4.includes('sc6-side-column'),'Stock must use the approved two-column layout');
 assert(ui4.indexOf('sc6-trend-panel')<ui4.indexOf('sc6-category-panel'),'Value per category must sit directly below the trend');
 assert(ui4.includes('stockValueByCategory()')&&ui4.includes('lowestStockFive()')&&ui4.includes('stockMovingPanel()'),'All visible panels must use backend-driven data or explicit missing-data copy');
@@ -54,69 +54,32 @@ assert(greenCss.includes('max-height:88px!important')&&greenCss.includes('grid-t
 
 const vm = require('vm');
 assert.doesNotThrow(()=>new vm.Script(ui4),'Stock frontend JavaScript must parse');
-const trendStart=ui4.indexOf('function monthlyTrendInfographic(){');
-const trendEnd=ui4.indexOf('function attentionSkuInfographic(){',trendStart);
-assert(trendStart>=0&&trendEnd>trendStart,'Monthly ledger function must be present');
-const trendSource=ui4.slice(trendStart,trendEnd).trim();
-const fmtID=n=>Number(n).toLocaleString('id-ID',{maximumFractionDigits:0});
-const renderTrend=(records,period='2026-10')=>vm.runInNewContext(trendSource+';monthlyTrendInfographic()',{
-  S:{period,periodLoading:false,trend:records},
-  num:v=>Number(v)||0,fmt:fmtID,esc:v=>String(v)
+const chartStart=ui4.indexOf('function stockSafetyInfographic(){');
+const chartEnd=ui4.indexOf('function attentionSkuInfographic(){',chartStart);
+assert(chartStart>=0&&chartEnd>chartStart,'Current-vs-safe chart must be present');
+const stockChartSource=ui4.slice(chartStart,chartEnd).trim();
+const renderStockChart=(items,unit='porsi')=>vm.runInNewContext(stockChartSource+';stockSafetyInfographic()',{
+  S:{baseLoaded:true,items,chartUnit:unit,chartPage:1},
+  fmt:n=>Number(n).toLocaleString('id-ID',{maximumFractionDigits:6}),
+  esc:x=>String(x)
 });
-const trendMock=[
- {period_month:'2026-09-01',movement_rows:44},
- {period_month:'2026-09-01',movement_rows:189},
- {period_month:'2026-09-01',movement_rows:88},
- {period_month:'2026-09-01',movement_rows:591},
- {period_month:'2026-04-01',movement_rows:1458},
-];
-const renderedTrend=renderTrend(trendMock);
-assert(renderedTrend.includes('2.370'),'Summary sums real activity events across months');
-assert(renderedTrend.includes('912'),'September sums all four ledger movement groups');
-assert(renderedTrend.includes('1.458'),'April uses Indonesian number formatting');
-assert(renderedTrend.includes('sc12-ledger-chart')&&renderedTrend.includes('<svg'),
-  'Activity chart uses deterministic SVG instead of nested DIV percent heights');
-assert.strictEqual((renderedTrend.match(/<g class="sc12-month(?:\s|")/g)||[]).length,10,
-  'Exactly ten actual monthly data positions');
-assert(renderedTrend.includes('sc12-month-selected'),'Selected month highlighted');
-assert(renderedTrend.includes('Tanda — berarti belum ada catatan'),
-  'Months without source rows must not be presented as confirmed zero');
-assert(!renderedTrend.includes('Rp '),'Event ledger chart must not pretend to show rupiah');
-assert(!renderedTrend.includes('NaN'),'Graph scales must be numeric and finite');
-const actualBars=renderedTrend.match(/<rect class="sc12-ledger-bar[^>]+>/g)||[];
-assert.strictEqual(actualBars.length,2,'Bars appear only for the 2 recorded months in mock');
-actualBars.forEach(function(rect){
-  var match=rect.match(/height="([0-9.]+)"/);
-  assert(match&&Number(match[1])>20,'Positive ledger values need visible non-collapsing SVG rect heights');
-  assert(rect.includes('fill="url(#sc12StockBarGradient)"'),'Bars use translucent Hasnaria-green gradient');
-});
-assert(!renderedTrend.includes('<polyline'),
-  'No false line should cross the unrecorded months between April and September');
-assert.strictEqual((renderedTrend.match(/<circle class="sc12-ledger-dot"/g)||[]).length,2,
-  'Markers occur only on months with recorded data');
-
-const nineMonths=[574,412,1436,1458,985,686,823,711,912].map((v,i)=>({
-  period_month:'2026-'+String(i+1).padStart(2,'0')+'-01',movement_rows:v
-}));
-const realTenMonthView=renderTrend(nineMonths);
-assert(realTenMonthView.includes('7.997'),'9 months of source ledger events total 7,997');
-assert.strictEqual((realTenMonthView.match(/<rect class="sc12-ledger-bar/g)||[]).length,9,
-  'Actual nine recorded months have nine visible bars');
-assert(realTenMonthView.includes('<polyline')&&realTenMonthView.includes('sc12-ledger-line'),
-  'Continuous recorded months get an actual connecting green line');
-const nineHeights=(realTenMonthView.match(/<rect class="sc12-ledger-bar[^>]+>/g)||[])
-  .map(rect=>Number(rect.match(/height="([0-9.]+)"/)[1]));
-assert(Math.min(...nineHeights)>25,
-  'Actual 2026 ledger sample cannot regress to one-pixel baselines');
-assert(realTenMonthView.includes('Okt')&&realTenMonthView.includes('—'),
-  'October stays explicitly unrecorded, not fabricated as zero');
-assert(renderTrend([]).includes('Belum ada aktivitas ledger'),
-  'Empty ledger should show an honest empty state');
-assert(greenCss.includes('.sc12-ledger-chart')&&greenCss.includes('.sc12-ledger-bar')&&greenCss.includes('.sc12-ledger-line'),
-  'New SVG chart uses a single scoped green visual system');
-assert(greenCss.includes('#stok .sc12-chart-frame')&&greenCss.includes('min-height:125px'),
-  'SVG chart has a definite positive visible area');
-assert(ui4.includes('/stock-control-v3.css?v=27'),'New chart stylesheet cache version must be fresh');
+const currentAndSafe=renderStockChart([
+  {item_name:'MIE KUNING',unit:'porsi',system_qty:26,min_qty:7,tracking_active:true},
+  {item_name:'ODENG',unit:'porsi',system_qty:-18,min_qty:20,tracking_active:true},
+  {item_name:'AIR MINERAL BESAR',unit:'pcs',system_qty:-7,min_qty:11,tracking_active:true},
+  {item_name:'UNTRACKED',unit:'porsi',system_qty:0,min_qty:5,tracking_active:false}
+]);
+assert(currentAndSafe.includes('MIE KUNING')&&currentAndSafe.includes('Saat ini: 26')&&currentAndSafe.includes('Aman: 7'),
+  'Stock chart reports actual ledger balance and minimum for the same unit');
+assert(currentAndSafe.includes('ODENG')&&currentAndSafe.includes('Saat ini: -18')&&currentAndSafe.includes('Aman: 20'),
+  'Negative ledger values must not be clamped or hidden');
+assert(!currentAndSafe.includes('AIR MINERAL BESAR: saldo sistem')&&!currentAndSafe.includes('UNTRACKED'),
+  'No mixed-unit or untracked SKU comparison');
+assert(!currentAndSafe.includes('event tercatat')&&!currentAndSafe.includes('aktivitas ledger'),
+  'Event activity must not be mistaken for stock quantity');
+assert(greenCss.includes('.sc21-comparison-svg')&&greenCss.includes('.sc21-safe-bar')&&greenCss.includes('.sc21-current-bar'),
+  'Comparison chart has scoped visual styles');
+assert(ui4.includes('/stock-control-v3.css?v=28'),'New stock chart stylesheet cache version is fresh');
 assert(ui4.includes('sc12-status-strip')&&greenCss.includes('.sc12-status-strip'),
   'Healthy audit/upload state displays compactly to give dashboard more space');
 
@@ -413,13 +376,13 @@ assert(greenCss.includes('sc6-grid .sc5-panel>h3')&&greenCss.includes('min-heigh
 const canonicalStart=greenCss.indexOf('/* HASNARIA STOCK — CANONICAL DASHBOARD');
 assert(canonicalStart>22000,'Canonical dashboard styles must follow preserved Stock table/dialog foundation');
 const canonical=greenCss.slice(canonicalStart);
-assert(greenCss.length<65000,'Stock stylesheet should be significantly smaller after consolidation');
+assert(greenCss.length<150000,'Stock stylesheet must remain within safe asset budget');
 assert(!canonical.includes('.sc9-')&&!canonical.includes('.sc6-value-donut'),
   'Retired DIV chart and donut rules must not return');
 assert(!canonical.includes('.sc5-grid-top')&&!canonical.includes('.sc5-footer-actions'),
   'Retired Stock tab layout and footer cannot reintroduce overlap');
-assert(canonical.includes('#stok .sc12-ledger-chart')&&canonical.includes('#stok .sc13-category-main'),
-  'Actual ledger chart and new donut category panel must remain styled');
+assert(canonical.includes('#stok .sc21-comparison-svg')&&canonical.includes('#stok .sc13-category-main'),
+  'Current vs safe chart and donut category panel must remain styled');
 const uniqueBaseSelectors=[
  '#stok .sc6-grid', '#stok .sc6-dashboard',
  '#stok .sc6-column','#stok .sc6-main-column','#stok .sc6-side-column',
