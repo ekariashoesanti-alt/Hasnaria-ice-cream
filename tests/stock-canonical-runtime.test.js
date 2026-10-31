@@ -7,7 +7,7 @@ const css=fs.readFileSync('stock-readable-density.css','utf8');
 
 assert(!shim.includes('stock-recall-v4.js'),'owner shim must not load legacy Stock recall v4');
 assert(shim.includes('stock-v3-runtime-fix.js'),'owner shim must load the canonical Stock v3 bridge');
-assert(bridge.includes("/stock-control-v3.js?v=37"),'canonical bridge must load Stock Control v3');
+assert(bridge.includes("/stock-control-v3.js?v=38"),'canonical bridge must load Stock Control v3');
 assert(bridge.includes("setAttribute('data-stock-v4','1')"),'canonical shell must satisfy the existing owner guard marker');
 assert(css.includes('#stok .sc3-table{width:100%;min-width:0;table-layout:fixed;font-size:8.3px}'),'desktop Stock table must keep the readable fixed-width density override');
 assert(!css.includes('font-size:5.4px'),'readable override must not regress to the previous ultra-small status text');
@@ -15,7 +15,7 @@ console.log('stock canonical runtime checks passed');
 
 const ui4=fs.readFileSync('stock-control-v3.js','utf8');
 assert(ui4.includes('__HASNARIA_STOCK_UI4'),'Stock UI-4 runtime marker must be present');
-assert(ui4.includes('ui_stock_overview_v1')&&ui4.includes('ui_stock_activity_chart_v1')&&ui4.includes('ui_stock_detail_v1'),'Stock UI-4 must use canonical overview, activity, and ledger views');
+assert(ui4.includes('ui_stock_month_end_trend_v1')&&ui4.includes('inventory_stock_reconciliation')&&ui4.includes('ui_stock_detail_v1'),'Stock uses the needed month-end series, reconciliation, and ledger details');
 assert(ui4.includes('data-sc4-modal="ledger"')&&ui4.includes('data-sc4-action="opname"'),'Stock UI-4 must keep ledger detail and direct opname actions');
 assert(ui4.includes('sc6-dashboard') && ui4.includes('stockSafetyInfographic()'),'Stock dashboard must show current system stock and per-SKU minimum');
 assert(ui4.includes('sc22-dual')&&ui4.includes('sc22-trend-panel')&&ui4.includes('sc22-compare-panel'),'Stock uses only two requested panels');
@@ -25,7 +25,7 @@ assert(!ui4.includes('sc5-grid-bottom'),'Removed obsolete lower infographic row'
 assert(ui4.includes('inventory_valuation_verified_summary')&&ui4.includes('inventory_verified_cost_current'),'Stock value must use verified unit costs only');
 assert(ui4.includes('Valuasi parsial')&&ui4.includes('Bukan total nilai seluruh persediaan'),'Incomplete value coverage must be disclosed');
 assert(ui4.includes('Status Pergerakan Stok')&&ui4.includes('get_stock_moving_fifo_v1'),'Moving dashboard must use real authenticated FIFO data');
-assert(ui4.includes("request('ui_stock_activity_chart_v1?' + tq)") && ui4.includes("request('inventory_stock_reconciliation?'"),'Stock must use backend data rather than dummy mockup values');
+assert(ui4.includes("request('ui_stock_month_end_trend_v1?' + tq)") && ui4.includes("request('inventory_stock_reconciliation?'"),'Stock must use current ledger and month-end backend data rather than mockups');
 assert(!ui4.includes("18,73 jt") && !ui4.includes("4.321"),'No invented inventory valuations or demo SKU counts');
 assert(!ui4.includes("' + renderActivity() + '</article>'"),'Stock one-view must not show the legacy panel layout');
 const greenCss=fs.readFileSync('stock-control-v3.css','utf8');
@@ -79,7 +79,7 @@ assert(!currentAndSafe.includes('event tercatat')&&!currentAndSafe.includes('akt
   'Event activity must not be mistaken for stock quantity');
 assert(greenCss.includes('.sc21-comparison-svg')&&greenCss.includes('.sc21-safe-bar')&&greenCss.includes('.sc21-current-bar'),
   'Comparison chart has scoped visual styles');
-assert(ui4.includes('/stock-control-v3.css?v=31'),'New stock chart stylesheet cache version is fresh');
+assert(ui4.includes('/stock-control-v3.css?v=32'),'New stock chart stylesheet cache version is fresh');
 assert(!ui4.includes('<div class="sc12-status-strip">')&&greenCss.includes('.sc12-status-strip'),
   'Crossed operational warning cards are not rendered on dashboard');
 

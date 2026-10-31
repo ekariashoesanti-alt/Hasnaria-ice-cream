@@ -376,8 +376,9 @@
   }
 
   function active() { var host = document.getElementById('stok'); return !!(host && !host.classList.contains('hidden')); }
-  async function mount(force) { var host = document.getElementById('stok'); if (!host || !active()) return; ensureCss(); if (host.querySelector('.sr-shell') && !force) return; render(); if (!S.loaded && !S.loading) await loadAll(); }
-  function watch() { var host = document.getElementById('stok'); if (!host || host.__srObserver) return; host.__srObserver = new MutationObserver(function () { if (host.__srRendering || !active()) return; if (!host.querySelector('.sr-shell')) setTimeout(function () { mount(true); }, 0); }); host.__srObserver.observe(host, { childList: true }); }
+  function canonicalOwnsStock(){var host=document.getElementById('stok');return !!(window.__HASNARIA_STOCK_CONTROL_V3||window.__HASNARIA_STOCK_V3_RUNTIME_FIX||(host&&host.querySelector('.sc3-shell,[data-stock-v3-boot]')))}
+  async function mount(force) { if(canonicalOwnsStock())return; var host = document.getElementById('stok'); if (!host || !active()) return; ensureCss(); if (host.querySelector('.sr-shell') && !force) return; render(); if (!S.loaded && !S.loading) await loadAll(); }
+  function watch() { if(canonicalOwnsStock())return; var host = document.getElementById('stok'); if (!host || host.__srObserver) return; host.__srObserver = new MutationObserver(function () { if (host.__srRendering || !active() || canonicalOwnsStock()) return; if (!host.querySelector('.sr-shell')) setTimeout(function () { mount(true); }, 0); }); host.__srObserver.observe(host, { childList: true }); }
 
   document.addEventListener('click', function (e) { var tab = e.target && e.target.closest ? e.target.closest('[data-tab="stok"],.tab') : null; if (!tab) return; var id = tab.getAttribute('data-tab'); if (id && id !== 'stok') return; if (id === 'stok' || String(tab.textContent || '').toLowerCase().indexOf('stok') >= 0) setTimeout(function () { watch(); mount(true); }, 70); }, true);
 

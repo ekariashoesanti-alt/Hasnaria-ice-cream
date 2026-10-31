@@ -52,7 +52,7 @@ test('empty or unavailable history shows explanation instead of numeric zero',()
 test('only 4 KPI and 2 charts render; selected unit shared across left/right',()=>{
  const body=js.slice(js.indexOf('function render() {'),js.indexOf('function stockDialogFocus(',js.indexOf('function render() {')));
  assert.match(body,/overviewKpis\(\)/);
- assert.match(body,/var stockComparison=stockSafetyInfographic\(\)/);
+ assert.match(body,/stockComparison=stockSafetyInfographic\(\)/);
  assert.match(body,/monthlyStockEndInfographic\(\)/);
  assert.ok(body.indexOf('monthlyStockEndInfographic()')<body.indexOf("sc22-compare-panel"));
  assert.doesNotMatch(body,/renderSalesStockAudit|renderLedgerAudit|renderUploadStatus|renderStockIntegrityWarning/);
@@ -60,8 +60,8 @@ test('only 4 KPI and 2 charts render; selected unit shared across left/right',()
  assert.match(css,/#stok \.sc22-dual/);
  assert.match(css,/#stok \.sc22-plot-svg/);
  assert.match(css, /@media\(max-width:700px\)/);
- assert.match(js,/stock-control-v3\.css\?v=31/);
- for(const f of ['stock-monitor.js','stock-v3-runtime-fix.js'])assert.match(fs.readFileSync(f,'utf8'),/stock-control-v3\.js\?v=37/);
+ assert.match(js,/stock-control-v3\.css\?v=32/);
+ for(const f of ['stock-monitor.js','stock-v3-runtime-fix.js'])assert.match(fs.readFileSync(f,'utf8'),/stock-control-v3\.js\?v=38/);
 });
 test('historical view uses physical checkpoint, cutoff and account RLS; no writes',()=>{
  assert.match(sql,/with \(security_invoker = true\)/);
