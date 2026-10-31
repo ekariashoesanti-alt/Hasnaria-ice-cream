@@ -267,6 +267,7 @@ run(process.execPath, ['--test', 'tests/stock-month-end-dual-chart-v1.test.js'])
 run(process.execPath, ['--test', 'tests/stock-sales-layout-parity-v1.test.js']);
 run(process.execPath, ['--test', 'tests/stock-bottom-viewport-recovery-v1.test.js']);
 run(process.execPath, ['--test', 'tests/stock-first-paint-no-flicker-v1.test.js']);
+run(process.execPath, ['--test', 'tests/stock-legacy-first-frame-guard-v1.test.js']);
 
 const dist = path.join(ROOT, 'dist');
 fs.rmSync(dist, { recursive: true, force: true });
