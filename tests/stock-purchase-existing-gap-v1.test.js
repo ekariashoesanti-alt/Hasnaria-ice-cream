@@ -22,7 +22,7 @@ test('new existing-data source label is disclosed but not equated to received st
   assert.match(js,/jumlah\+SKU terpetakan/);
   assert.match(js,/perlu verifikasi/);
   assert.match(js,/purchaseImportEvidence = null/);
-  assert.match(js,/stock-control-v3\.css\?v=31/);
-  for(const f of ['stock-monitor.js','stock-v3-runtime-fix.js'])assert.match(read(f),/stock-control-v3\.js\?v=37/);
+  assert.match(js,/stock-control-v3\.css\?v=32/);
+  for(const f of ['stock-monitor.js','stock-v3-runtime-fix.js'])assert.match(read(f),/stock-control-v3\.js\?v=38/);
   assert.match(read('scripts/vercel-build-check.js'),/stock-purchase-existing-gap-v1\.test\.js/);
 });
