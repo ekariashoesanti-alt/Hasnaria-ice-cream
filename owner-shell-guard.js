@@ -13,7 +13,7 @@
   var DASH_SRC='/owner-dashboard-one-view.js?v=8';
   var OWNER_TABS=['dashboard','sales','pembelian','stok','operasional','administrasi','ops','notifikasi'];
   var SECTION_IDS=['dashboard','sales','pembelian','operasional','administrasi','ops','stok','notifikasi','shift','social','approval','team','sistem','karyawan'];
-  var state={active:'dashboard',initialized:false,scheduled:false,salesRetries:0,finStockLoad:null,operationalLoad:null,adminLoad:null,dashboardLoad:null,notificationsLoad:null};
+  var state={active:'dashboard',initialized:false,scheduled:false,salesRetries:0,finStockLoad:null,operationalLoad:null,adminLoad:null,dashboardLoad:null,notificationsLoad:null,navEpoch:0};
   var tries=0;
 
   function context(){return window.__HASNARIA_CONTEXT||null}
@@ -243,7 +243,9 @@
 
   function safeNavigate(id){
     if(!isOwner()||OWNER_TABS.indexOf(id)<0)return false;
+    var epoch=++state.navEpoch;
     state.active=id;state.initialized=true;state.salesRetries=0;setExecutiveFlag(id==='dashboard');setVisibility(id);if(id==='stok')claimStockHost();patchContext();
+    try{document.dispatchEvent(new CustomEvent('hasnaria:owner-tab-change',{detail:{tab:id,epoch:epoch}}))}catch(_){}
     if(id==='dashboard')ensureDashboard();
     if(id==='sales')ensureSales();
     if(id==='pembelian')ensurePurchase();
@@ -290,6 +292,6 @@
   }
 
   function boot(){if(isOwner()){start();return}if(++tries<80)setTimeout(boot,100)}
-  window.__HASNARIA_OWNER_SHELL={navigate:safeNavigate,isOwner:isOwner,getActive:function(){return state.active},reconcile:reconcile};
+  window.__HASNARIA_OWNER_SHELL={navigate:safeNavigate,isOwner:isOwner,getActive:function(){return state.active},getEpoch:function(){return state.navEpoch},isCurrent:function(tab,epoch){return isOwner()&&state.active===tab&&(epoch==null||state.navEpoch===epoch)},reconcile:reconcile};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
