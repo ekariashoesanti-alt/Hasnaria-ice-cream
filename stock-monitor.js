@@ -54,12 +54,17 @@
 
   function loadControl() {
     if (!stockActive()) return;
-    if (window.__HASNARIA_STOCK_CONTROL_V3 || document.getElementById('hasnaria-stock-control-v3-loader')) return;
+    // Canonical Owner bridge owns first paint and script loading; never compete.
+    if(window.__HASNARIA_STOCK_V3_RUNTIME_FIX){
+      if(window.__HASNARIA_STOCK_WAKE)window.__HASNARIA_STOCK_WAKE();
+      return;
+    }
+    if (window.__HASNARIA_STOCK_CONTROL_V3 || document.getElementById('hasnaria-stock-control-v3-loader') || document.getElementById('hasnaria-stock-control-v3-canonical-js')) return;
 
     showOpeningState();
     var s = document.createElement('script');
     s.id = 'hasnaria-stock-control-v3-loader';
-    s.src = '/stock-control-v3.js?v=37';
+    s.src = '/stock-control-v3.js?v=38';
     s.async = true;
     s.onload = function () {
       window.__HASNARIA_STOCK_RECONCILE_READY = true;
