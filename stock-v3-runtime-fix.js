@@ -44,7 +44,7 @@
 
   function claim(){
     var h=host();
-    if(!visible(h)||h.querySelector('.sc3-shell'))return;
+    if(!visible(h)||h.querySelector('.sc3-shell,[data-stock-v3-boot]'))return;
     h.innerHTML='<div data-stock-v4="1" data-stock-v3-boot="1" class="sc3-boot"><strong>Stok &amp; Kebutuhan Material</strong><span>Memuat posisi persediaan terkini…</span></div>';
   }
 
@@ -54,10 +54,10 @@
       setTimeout(markCanonical,0);
       return;
     }
-    if(document.getElementById('hasnaria-stock-control-v3-canonical-js'))return;
+    if(document.getElementById('hasnaria-stock-control-v3-canonical-js')||document.getElementById('hasnaria-stock-control-v3-loader'))return;
     var s=document.createElement('script');
     s.id='hasnaria-stock-control-v3-canonical-js';
-    s.src='/stock-control-v3.js?v=37';
+    s.src='/stock-control-v3.js?v=38';
     s.async=false;
     s.onload=function(){
       setTimeout(markCanonical,0);
@@ -81,6 +81,7 @@
     loadStockUpload();
   }
 
+  window.__HASNARIA_STOCK_WAKE=wake;
   document.addEventListener('hasnaria:owner-shell-navigate',function(e){
     if(e&&e.detail&&e.detail.tab==='stok')wake();
   });
