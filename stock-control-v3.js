@@ -45,6 +45,8 @@
     overview: null,
     activity: [],
     trend: [],
+    monthEndRows: [],
+    monthEndUnavailable: false,
     periodLoading: false,
     periodError: '',
     modal: '',
@@ -241,7 +243,7 @@
     var l = document.createElement('link');
     l.id = 'stock-control-v3-css';
     l.rel = 'stylesheet';
-    l.href = '/stock-control-v3.css?v=28';
+    l.href = '/stock-control-v3.css?v=29';
     document.head.appendChild(l);
   }
 
@@ -880,6 +882,8 @@
         S.overview = null;
         S.activity = [];
         S.trend = [];
+        S.monthEndRows = [];
+        S.monthEndUnavailable = false;
         S.salesLinkAudit = null;
         S.salesLinkAuditUnavailable = false;
         S.purchaseImportEvidence = null;
@@ -906,7 +910,8 @@
       var y=Number(S.period.slice(0,4)),m=Number(S.period.slice(5,7))-1;
       var fromMonth=new Date(Date.UTC(y,m-9,1)).toISOString().slice(0,10);
       var tq=qs({brand_id:'eq.'+BRAND,period_month:'gte.'+fromMonth,
-        select:'period_month,movement_rows',order:'period_month.desc',limit:'100'});
+        select:'period_month,unit,total_unit_skus,checkpoint_skus,recorded_end_qty,period_movement_rows,unlinked_sale_rows,data_status',order:'period_month.asc',limit:'200'})+
+        '&period_month=lte.'+month;
       var salesQ=qs({brand_id:'eq.'+BRAND,period_month:'eq.'+month,select:'*',limit:'1'});
       var nextMonth=new Date(Date.UTC(y,m+1,1)).toISOString().slice(0,10);
       var purchaseImportQ=qs({brand_id:'eq.'+BRAND,purchase_date:'gte.'+month,
@@ -916,14 +921,16 @@
         request('ui_stock_overview_v1?' + oq),
         request('ui_stock_activity_chart_v1?' + aq),
         loadPendingUploads(seq),
-        request('ui_stock_activity_chart_v1?' + tq).catch(function(){return []}),
+        request('ui_stock_month_end_trend_v1?' + tq).catch(function(){return null}),
         request('ui_stock_sales_link_audit_v1?'+salesQ).catch(function(){return null}),
         request('purchase_inventory_bridge?'+purchaseImportQ).catch(function(){return null})
       ]);
       if (seq !== S.periodSeq) return;
       S.overview = pair[0] && pair[0][0] ? pair[0][0] : null;
       S.activity = pair[1] || [];
-      S.trend = (pair[3]||[]).filter(function(x){return x.period_month && x.period_month<=month});
+      S.monthEndRows=Array.isArray(pair[3])?pair[3]:[];
+      S.monthEndUnavailable=pair[3]===null;
+      S.trend=[];
       S.salesLinkAudit=pair[4]&&pair[4][0]?pair[4][0]:null;
       S.salesLinkAuditUnavailable=pair[4]===null;
       S.purchaseImportEvidenceUnavailable=pair[5]===null;
@@ -946,6 +953,8 @@
       S.overview = null;
       S.activity = [];
       S.trend = [];
+        S.monthEndRows = [];
+        S.monthEndUnavailable = false;
         S.salesLinkAudit = null;
         S.salesLinkAuditUnavailable = false;
         S.purchaseImportEvidence = null;
@@ -2001,6 +2010,79 @@
       'Hanya barang yang sudah opname dan memiliki batas minimum ditampilkan; angka ini bukan tren bulanan.</p>'+
     '</div>';
   }
+  function monthlyStockEndInfographic(){
+    if(!S.period)return '<div class="sc5-empty">Pilih periode stok.</div>';
+    if(S.periodLoading&&!S.monthEndRows.length)return '<div class="sc5-empty">Menghitung stok akhir bulan…</div>';
+    if(S.monthEndUnavailable)return '<div class="sc5-empty">Data stok akhir bulanan belum dapat dimuat; saldo tidak diubah.</div>';
+    var unit=S.chartUnit||'';
+    if(!unit)return '<div class="sc5-empty">Pilih satuan pada grafik kanan.</div>';
+    var lookup=Object.create(null);
+    (S.monthEndRows||[]).forEach(function(x){if(x.unit===unit)lookup[String(x.period_month).slice(0,10)]=x;});
+    var year=Number(S.period.slice(0,4)),month=Number(S.period.slice(5,7))-1;
+    var names=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+    var months=[];
+    for(var k=9;k>=0;k--){
+      var d=new Date(Date.UTC(year,month-k,1)),key=d.toISOString().slice(0,10),row=lookup[key]||null;
+      var n=row&&row.recorded_end_qty!==null?Number(row.recorded_end_qty):null;
+      var noSync=!!(row&&row.data_status==='NO_POSTED_SALES');
+      months.push({key:key,label:names[d.getUTCMonth()],year:d.getUTCFullYear(),
+        n:row&&Number(row.checkpoint_skus)>0&&!noSync&&Number.isFinite(n)?n:null,
+        row:row,noSync:noSync});
+    }
+    var existing=months.filter(function(x){return x.n!==null;});
+    if(!existing.length)return '<div class="sc22-empty"><b>Belum tersedia saldo akhir bulanan yang dapat digrafikkan</b>'+
+      '<small>Data opname baru tersedia mulai September 2026; Oktober belum tersinkronisasi. Bulan tanpa dasar hitung tidak dibuat nol.</small></div>';
+    var values=existing.map(function(x){return x.n;}).concat([0]);
+    var min=Math.min.apply(null,values),max=Math.max.apply(null,values);
+    var pad=Math.max(1,(max-min)*.15);min-=pad;max+=pad;
+    var left=65,right=682,top=40,bottom=223;
+    var xc=function(i){return left+(right-left)*i/9;};
+    var yc=function(v){return bottom-(v-min)/(max-min)*(bottom-top);};
+    var ticks=[0,1,2,3,4].map(function(k){
+      var yy=bottom-k*(bottom-top)/4;
+      return '<line class="sc22-gridline" x1="'+left+'" y1="'+yy+'" x2="'+right+'" y2="'+yy+'"/>'+
+        '<text class="sc22-axis-label" x="'+(left-8)+'" y="'+(yy+4)+'" text-anchor="end">'+
+        esc(fmt(min+(max-min)*k/4))+'</text>';
+    }).join('');
+    var paths=[],run=[];
+    months.forEach(function(x,i){
+      if(x.n===null){if(run.length>1)paths.push(run.join(' '));run=[];}
+      else run.push(xc(i).toFixed(1)+','+yc(x.n).toFixed(1));
+    });
+    if(run.length>1)paths.push(run.join(' '));
+    var lines=paths.map(function(x){return '<polyline class="sc22-trend-line" points="'+x+'"/>';}).join('');
+    var points=months.map(function(x,i){
+      var xx=xc(i),axis='<text class="sc22-month-label" x="'+xx.toFixed(1)+
+        '" y="251" text-anchor="middle">'+esc(x.label+(i===0||x.label==='Jan'?' '+String(x.year).slice(-2):''))+'</text>';
+      if(x.n===null)return '<g><title>'+esc(x.label+' '+x.year+': '+
+        (x.noSync?'penjualan belum disinkronkan':'belum ada data opname'))+
+        '</title><text class="sc22-missing-point" x="'+xx.toFixed(1)+'" y="'+(bottom-10)+
+        '" text-anchor="middle">—</text>'+axis+'</g>';
+      var yy=yc(x.n),partial=x.row.data_status!=='LEDGER_RECORDED';
+      var title=x.label+' '+x.year+': '+fmt(x.n)+' '+unit+
+        '; '+x.row.checkpoint_skus+'/'+x.row.total_unit_skus+' SKU ber-opname'+
+        (partial?'; belum lengkap':'');
+      return '<g><title>'+esc(title)+'</title><circle class="sc22-trend-dot'+
+        (partial?' sc22-partial':'')+'" cx="'+xx.toFixed(1)+'" cy="'+yy.toFixed(1)+
+        '" r="5.7"/><text class="sc22-point-value" x="'+xx.toFixed(1)+
+        '" y="'+Math.max(26,yy-12).toFixed(1)+'" text-anchor="middle">'+esc(fmt(x.n))+
+        '</text>'+axis+'</g>';
+    }).join('');
+    var last=existing[existing.length-1],d=last.row;
+    return '<div class="sc22-month-end">'+
+      '<div class="sc22-summary"><span>Saldo akhir terhitung · '+esc(unit)+'</span>'+
+      '<strong>'+esc(fmt(last.n))+' <small>'+esc(unit)+'</small></strong></div>'+
+      '<div class="sc22-summary-note">'+esc(last.label+' '+last.year)+' · '+fmt(d.checkpoint_skus)+' dari '+
+        fmt(d.total_unit_skus)+' SKU · <b>data parsial, bukan stok fisik final</b></div>'+
+      '<div class="sc22-plot"><svg class="sc22-plot-svg" viewBox="0 0 740 269" role="img" aria-label="Tren saldo akhir bulanan agregat dalam satuan '+esc(unit)+'">'+
+        ticks+lines+points+'</svg></div>'+
+      '<p class="sc22-chart-note">Total per bulan = jumlah saldo akhir SKU <b>'+esc(unit)+
+      '</b> yang punya opname, setelah pergerakan tercatat. '+
+      (existing.length<2?'Titik historis belum cukup untuk membentuk garis tren. ':'')+
+      'Tanda — berarti belum dapat dihitung. Angka parsial tidak berarti seluruh transaksi sudah masuk.</p>'+
+    '</div>';
+  }
+
   function attentionSkuInfographic(){
     if(!S.baseLoaded)return '<div class="sc5-empty">Memuat prioritas item…</div>';
     var rank={critical:0,order:1};
@@ -2070,22 +2152,16 @@
     var alert = S.error ? '<div class="sc3-alert">' + esc(S.error) + '</div>' : '';
     var pAlert = S.periodError ? '<div class="sc3-alert">' + esc(S.periodError) + '</div>' : '';
     var loading = S.baseLoading && !S.baseLoaded ? '<div class="sc3-loading">Memuat posisi SKU terkini…</div>' : '';
+    // Resolve shared chart unit before rendering the left series.
+    var stockComparison=stockSafetyInfographic();
     shell.innerHTML = renderHeader() + renderCorrectionPanel() +
-      '<div class="sc12-status-strip">'+renderLedgerAudit()+renderUploadStatus()+renderSalesStockAudit()+'</div>' +
       pAlert + overviewKpis() + alert + loading +
-      '<div class="sc5-dashboard sc6-dashboard" aria-label="Infografis Stok Hasnaria">'+
-        '<div class="sc6-grid">'+
-          '<div class="sc6-column sc6-main-column">'+
-            '<article class="sc5-panel sc6-trend-panel"><h3>▥ Stok Saat Ini vs Batas Aman</h3>'+stockSafetyInfographic()+'</article>'+
-            '<article class="sc5-panel sc6-category-panel"><h3>▣ Nilai Stok per Kategori</h3>'+stockValueByCategory()+'</article>'+
-          '</div>'+
-          '<div class="sc6-column sc6-side-column">'+
-            '<article class="sc5-panel sc6-top-panel"><h3>▤ Top 5 Item Stok Terendah</h3>'+lowestStockFive()+'</article>'+
-            '<article class="sc5-panel sc6-expiry-panel sc15-moving-panel"><h3>↗ Status Pergerakan Stok</h3>'+stockMovingPanel()+'</article>'+
-          '</div>'+
+      '<div class="sc5-dashboard sc6-dashboard sc22-dashboard" aria-label="Dashboard Stok Hasnaria">'+
+        '<div class="sc22-dual">'+
+          '<article class="sc5-panel sc22-trend-panel"><h3>↗ Tren Stok Akhir Bulanan</h3>'+monthlyStockEndInfographic()+'</article>'+
+          '<article class="sc5-panel sc22-compare-panel"><h3>▥ Stok Saat Ini vs Batas Aman</h3>'+stockComparison+'</article>'+
         '</div>'+
-      '</div>'+
-      renderModal();
+      '</div>'+renderModal();
     bind(host);
     // Data refresh may rebuild the dialog; keep keyboard focus within the dialog.
     if(preserveDialogFocus)stockDialogFocus(host);
@@ -2288,6 +2364,8 @@
         S.ledgerPage = 1;
         S.modal = '';
         S.trend = [];
+        S.monthEndRows = [];
+        S.monthEndUnavailable = false;
         S.salesLinkAudit = null;
         S.salesLinkAuditUnavailable = false;
         S.purchaseImportEvidence = null;

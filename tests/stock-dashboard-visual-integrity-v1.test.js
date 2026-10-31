@@ -9,15 +9,15 @@ const css=read('stock-control-v3.css');
 const overrides=css.slice(css.indexOf('/* Stock visual integrity 2026-10-30.'));
 const stockSnippet=(start,end)=>{const a=js.indexOf(start),b=js.indexOf(end,a+1);assert.ok(a>=0&&b>a,start+' / '+end);return js.slice(a,b)};
 
-test('keeps original 4 KPI, 2-column dashboard and 4 panels intact',()=>{
+test('keeps 4 KPIs and precisely two requested responsive panels',()=>{
   assert.match(js,/Ringkasan empat KPI stok/);
-  assert.match(js,/sc6-grid/);
-  assert.match(js,/sc6-main-column/);
-  assert.match(js,/sc6-side-column/);
-  for(const label of ['Stok Saat Ini vs Batas Aman','Nilai Stok per Kategori','Top 5 Item Stok Terendah','Status Pergerakan Stok'])assert.ok(js.includes(label),label);
-  assert.match(overrides,/grid-template-columns:minmax\(0,1\.67fr\) minmax\(0,1fr\)!important/);
-  assert.match(overrides,/\.sc6-column\.sc6-main-column/);
-  assert.match(overrides,/\.sc6-column\.sc6-side-column/);
+  const render=js.slice(js.indexOf('function render() {'),js.indexOf('function stockDialogFocus(',js.indexOf('function render() {')));
+  assert.match(render,/sc22-dual/);
+  assert.match(render,/sc22-trend-panel/);
+  assert.match(render,/sc22-compare-panel/);
+  assert.doesNotMatch(render,/sc12-status-strip|sc6-top-panel|sc15-moving-panel|sc6-category-panel/);
+  assert.match(css,/#stok \.sc22-dual/);
+  assert.match(css, /grid-template-columns:minmax\(0,1fr\) minmax\(0,1fr\)/);
 });
 
 test('prevents fixed-height clipping and keeps SVG labels/legend/rows visible',()=>{
@@ -34,8 +34,8 @@ test('prevents fixed-height clipping and keeps SVG labels/legend/rows visible',(
   assert.match(overrides,/\.sc15-moving-panel\{[\s\S]*?overflow:visible!important/);
   assert.match(overrides,/@media\(max-width:700px\)/);
   assert.match(overrides,/@media\(max-width:440px\)/);
-  assert.match(js,/stock-control-v3\.css\?v=28/);
-  for(const p of ['stock-monitor.js','stock-v3-runtime-fix.js'])assert.match(read(p),/stock-control-v3\.js\?v=34/);
+  assert.match(js,/stock-control-v3\.css\?v=29/);
+  for(const p of ['stock-monitor.js','stock-v3-runtime-fix.js'])assert.match(read(p),/stock-control-v3\.js\?v=35/);
 });
 
 test('verified valuation never falsely claims total stock; denominator consistent with backend',()=>{
