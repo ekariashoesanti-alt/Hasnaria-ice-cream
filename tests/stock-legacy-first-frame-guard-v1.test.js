@@ -47,7 +47,7 @@ test('boot placeholder text is identical, stylesheet is not relinked on every St
  assert.doesNotMatch(bridge,/setTimeout\(markCanonical,500\)/);
 });
 test('versioned runtime prevents browser from using outdated Owner navigation and Stock bridge code',()=>{
- assert.match(indexBuild,/owner-shell-guard\.js\?v=13/);
+ assert.match(indexBuild,/owner-shell-guard\.js\?v=14/);
  assert.match(nav,/owner-finance-stock-v3'\+'\.js\?v=15/);
  assert.match(shim,/stock-v3-runtime-fix\.js\?v=5/);
  assert.match(bridge,/stock-control-v3\.js\?v=38/);
