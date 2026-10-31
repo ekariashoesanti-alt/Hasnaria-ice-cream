@@ -2151,23 +2151,33 @@
     var alert = S.error ? '<div class="sc3-alert">' + esc(S.error) + '</div>' : '';
     var pAlert = S.periodError ? '<div class="sc3-alert">' + esc(S.periodError) + '</div>' : '';
     var loading = S.baseLoading && !S.baseLoaded ? '<div class="sc3-loading">Memuat posisi SKU terkini…</div>' : '';
-    // Resolve shared chart unit before rendering the left series.
-    var stockComparison=stockSafetyInfographic();
-    var html = renderHeader() + renderCorrectionPanel() +
-      pAlert + overviewKpis() + alert + loading +
-      '<div class="sc5-dashboard sc6-dashboard sc22-dashboard" aria-label="Dashboard Stok Hasnaria">'+
-        '<div class="sc22-dual">'+
-          '<article class="sc5-panel sc22-trend-panel"><h3>↗ Tren Stok Akhir Bulanan</h3>'+monthlyStockEndInfographic()+'</article>'+
-          '<article class="sc5-panel sc22-compare-panel"><h3>▥ Stok Saat Ini vs Batas Aman</h3>'+stockComparison+'</article>'+
-        '</div>'+
-      '</div>'+renderModal();
-    // Skip DOM teardown if a background status update changes no visible UI.
-    // This preserves chart nodes, scroll position, focused controls and avoids flicker.
-    if(shell.__sc3LastHtml!==html){
-      shell.innerHTML=html;
-      shell.__sc3LastHtml=html;
-      bind(host);
+    // Preserve mounted chart DOM. Only update the fragment whose data changed.
+    var headerHtml=renderHeader(),correctionHtml=renderCorrectionPanel();
+    var kpiHtml=overviewKpis(),stockComparison=stockSafetyInfographic();
+    var trendHtml='<article class="sc5-panel sc22-trend-panel"><h3>↗ Tren Stok Akhir Bulanan</h3>'+monthlyStockEndInfographic()+'</article>';
+    var comparisonHtml='<article class="sc5-panel sc22-compare-panel"><h3>▥ Stok Saat Ini vs Batas Aman</h3>'+stockComparison+'</article>';
+    var currentParts={header:headerHtml,kpis:kpiHtml,left:trendHtml,right:comparisonHtml};
+    var previous=shell.__sc3Parts;
+    var stable=previous&&previous.header===headerHtml&&!S.modal&&!S.correction&&
+      !pAlert&&!alert&&!loading&&
+      shell.querySelector('.sc8-kpis')&&shell.querySelector('.sc22-trend-panel')&&
+      shell.querySelector('.sc22-compare-panel');
+    if(stable){
+      if(previous.kpis!==kpiHtml)shell.querySelector('.sc8-kpis').outerHTML=kpiHtml;
+      if(previous.left!==trendHtml)shell.querySelector('.sc22-trend-panel').outerHTML=trendHtml;
+      if(previous.right!==comparisonHtml)shell.querySelector('.sc22-compare-panel').outerHTML=comparisonHtml;
+    }else{
+      var html=headerHtml+correctionHtml+pAlert+kpiHtml+alert+loading+
+        '<div class="sc5-dashboard sc6-dashboard sc22-dashboard" aria-label="Dashboard Stok Hasnaria">'+
+          '<div class="sc22-dual">'+trendHtml+comparisonHtml+'</div>'+
+        '</div>'+renderModal();
+      if(shell.__sc3LastHtml!==html){
+        shell.innerHTML=html;
+        shell.__sc3LastHtml=html;
+      }
     }
+    shell.__sc3Parts=currentParts;
+    bind(host);
     // Data refresh may rebuild the dialog; keep keyboard focus within the dialog.
     if(preserveDialogFocus)stockDialogFocus(host);
     host.__sc3Rendering = false;
