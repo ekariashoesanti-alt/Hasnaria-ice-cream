@@ -63,14 +63,17 @@ patch('finance-accuracy-v6.js',s=>{
  return s;
 });
 
-patch('stock-v3-runtime-fix.js',s=>one(s,
+patch('stock-v3-runtime-fix.js',s=>{
+ if(s.includes('h.replaceChildren(boot);'))return s;
+ return one(s,
 "    if(!visible(h)||h.querySelector('.sc3-shell'))return;\n    h.innerHTML='<div data-stock-v4=\"1\" data-stock-v3-boot=\"1\" class=\"sc3-boot\"><strong>Stok &amp; Kebutuhan Material</strong><span>Memuat posisi persediaan terkini…</span></div>';",
 "    if(!visible(h)||h.querySelector('.sc3-shell,[data-stock-v3-boot=\"1\"]'))return;\n    var boot=document.createElement('div');boot.setAttribute('data-stock-v4','1');boot.setAttribute('data-stock-v3-boot','1');boot.className='sc3-boot';boot.innerHTML='<strong>Stok &amp; Kebutuhan Material</strong><span>Memuat posisi persediaan terkini…</span>';h.replaceChildren(boot);",
-'stock stable boot'));
+'stock stable boot');
+});
 
 patch('stock-control-v3.js',s=>{
  if(s.includes('__HASNARIA_STOCK_UI4')){
-  for(const marker of ['get_ui_period_catalog_fast_v1','ui_stock_overview_v1','ui_stock_activity_chart_v1','ui_stock_detail_v1','data-sc4-modal="ledger"','data-sc4-action="opname"','shell.setAttribute(\'data-stock-v4\',\'1\')'])if(!s.includes(marker))throw new Error('Stock UI-4 stability marker missing: '+marker);
+  for(const marker of ['get_ui_period_catalog_fast_v1','ui_stock_month_end_trend_v1','inventory_stock_reconciliation','ui_stock_detail_v1','data-sc4-modal="ledger"','data-sc4-action="opname"','shell.setAttribute(\'data-stock-v4\',\'1\')'])if(!s.includes(marker))throw new Error('Stock UI-4 stability marker missing: '+marker);
   return s;
  }
  const a=`    host.__sc3Rendering = true;\n    var alert = S.error ? '<div class="sc3-alert">' + esc(S.error) + '</div>' : '';\n    var loading = S.baseLoading && !S.baseLoaded ? '<div class="sc3-loading">Memuat data utama persediaan…</div>' : '';\n    var refresh = S.baseLoading && S.baseLoaded ? '<div class="sc3-auxbar"><span class="sc3-pulse"></span>Memperbarui data utama tanpa mengosongkan tabel…</div>' : '';\n    host.innerHTML = '<div class="sc3-shell">' + renderHeader() + alert + loading + (S.baseLoaded ? refresh + renderFormula() + renderAuxState() + renderFilters() + renderTable() + renderNotes() : '') + '</div>';\n    bind(host);\n    host.__sc3Rendering = false;`;
