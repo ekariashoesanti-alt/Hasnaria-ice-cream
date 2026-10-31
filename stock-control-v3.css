@@ -2202,3 +2202,49 @@
  #stok .sc21-comparison-svg{min-width:600px}
  #stok .sc21-foot{font-size:10px}
 }
+
+
+/* Stock dashboard 2026-10-31: only two panels, same unit on both charts.
+   Unverified months are explicitly missing, never drawn at zero. */
+#stok .sc22-dashboard{height:auto!important;min-height:0!important;overflow:visible!important}
+#stok .sc22-dual{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:start;gap:12px;width:100%;height:auto;min-height:0}
+#stok .sc22-dual>.sc5-panel{display:flex;flex-direction:column;min-width:0;width:100%;height:auto!important;min-height:390px!important;max-height:none!important;overflow:visible!important;padding:13px!important;gap:9px!important}
+#stok .sc22-dual>.sc5-panel>h3{margin:0!important;padding:0 0 6px!important;min-height:20px!important;line-height:1.3!important;font-size:13px!important;white-space:normal!important;overflow:visible!important}
+#stok .sc22-month-end{display:flex;flex-direction:column;gap:9px;flex:1 1 auto;min-width:0;overflow:visible}
+#stok .sc22-summary{display:flex;align-items:center;justify-content:space-between;gap:9px;flex-wrap:wrap;color:#50775f;font-size:11px}
+#stok .sc22-summary>strong{font-size:19px;font-variant-numeric:tabular-nums;font-weight:850;color:#15583d}
+#stok .sc22-summary>strong>small{font-size:10px;font-weight:700;color:#5b7966}
+#stok .sc22-summary-note{font-size:10px;line-height:1.35;color:#68816e}
+#stok .sc22-summary-note b{color:#986524}
+#stok .sc22-plot{width:100%;min-width:0;height:auto;min-height:200px;overflow:visible;flex:1 1 auto;display:flex;align-items:center}
+#stok .sc22-plot-svg{width:100%;height:auto;display:block;overflow:visible;max-height:none}
+#stok .sc22-gridline{stroke:#e3ebe5;stroke-width:1}
+#stok .sc22-axis-label{fill:#78907d;font:600 10px system-ui,-apple-system,'Segoe UI',sans-serif}
+#stok .sc22-month-label{fill:#476f58;font:700 11px system-ui,-apple-system,'Segoe UI',sans-serif}
+#stok .sc22-trend-line{fill:none;stroke:#15835a;stroke-width:3;stroke-linejoin:round;stroke-linecap:round}
+#stok .sc22-trend-dot{stroke:#fff;stroke-width:2;fill:#117d52}
+#stok .sc22-trend-dot.sc22-partial{fill:#e8a64a;stroke:#fff}
+#stok .sc22-point-value{fill:#236c48;font:800 11px system-ui,-apple-system,'Segoe UI',sans-serif}
+#stok .sc22-missing-point{fill:#aab8ae;font:700 11px system-ui,-apple-system,'Segoe UI',sans-serif}
+#stok .sc22-chart-note{font-size:10px;line-height:1.5;color:#6f8877;margin:0!important;white-space:normal!important;overflow:visible!important}
+#stok .sc22-chart-note b{color:#376e52}
+#stok .sc22-empty{border:1px dashed #d5e4d8;background:#f9fcfa;border-radius:10px;min-height:240px;padding:22px 17px;display:flex;align-items:center;justify-content:center;flex-direction:column;text-align:center;gap:10px;color:#385f49}
+#stok .sc22-empty small{color:#698672;font-size:11px;line-height:1.5}
+#stok .sc22-compare-panel .sc21-comparison{gap:8px!important}
+#stok .sc22-compare-panel .sc21-chart-frame{height:auto!important;min-height:185px!important;overflow-x:auto!important;overflow-y:visible!important}
+#stok .sc22-compare-panel .sc21-comparison-svg{width:100%!important;min-width:540px!important;height:auto!important}
+#stok .sc22-compare-panel .sc21-stat{flex-wrap:wrap!important;align-items:center!important}
+#stok .sc22-compare-panel .sc21-controls{flex-wrap:wrap!important}
+#stok .sc22-compare-panel .sc21-foot{font-size:9px!important;line-height:1.45!important}
+@media(min-width:701px) and (max-width:1150px){
+  #stok .sc22-dual{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:9px}
+  #stok .sc22-dual>.sc5-panel{padding:10px!important}
+  #stok .sc22-compare-panel .sc21-comparison-svg{min-width:580px!important}
+}
+@media(max-width:700px){
+  #stok .sc22-dual{grid-template-columns:minmax(0,1fr)!important}
+  #stok .sc22-dual>.sc5-panel{height:auto!important;min-height:0!important;gap:10px!important}
+  #stok .sc22-compare-panel .sc21-chart-frame{overflow-x:auto!important}
+  #stok .sc22-compare-panel .sc21-comparison-svg{min-width:600px!important}
+  #stok .sc22-plot-svg{min-width:0!important}
+}
