@@ -14,7 +14,7 @@ test('keeps original 4 KPI, 2-column dashboard and 4 panels intact',()=>{
   assert.match(js,/sc6-grid/);
   assert.match(js,/sc6-main-column/);
   assert.match(js,/sc6-side-column/);
-  for(const label of ['Tren Aktivitas Stok Bulanan','Nilai Stok per Kategori','Top 5 Item Stok Terendah','Status Pergerakan Stok'])assert.ok(js.includes(label),label);
+  for(const label of ['Stok Saat Ini vs Batas Aman','Nilai Stok per Kategori','Top 5 Item Stok Terendah','Status Pergerakan Stok'])assert.ok(js.includes(label),label);
   assert.match(overrides,/grid-template-columns:minmax\(0,1\.67fr\) minmax\(0,1fr\)!important/);
   assert.match(overrides,/\.sc6-column\.sc6-main-column/);
   assert.match(overrides,/\.sc6-column\.sc6-side-column/);
@@ -27,15 +27,15 @@ test('prevents fixed-height clipping and keeps SVG labels/legend/rows visible',(
   assert.match(overrides,/\.sc6-grid \.sc5-panel\{/);
   assert.match(overrides,/\.sc8-kpi\{[\s\S]*?max-height:none!important/);
   assert.match(overrides,/\.sc8-kpi \.sc8-kpi-value\{[\s\S]*?text-overflow:clip!important/);
-  assert.match(overrides,/\.sc12-ledger-chart\{[\s\S]*?aspect-ratio:925\/239/);
+  assert.match(css,/#stok \.sc21-comparison-svg/);
   assert.match(overrides,/\.sc13-donut-visual\{/);
   assert.match(overrides,/\.sc13-category-legend\{[\s\S]*?overflow:visible!important/);
   assert.match(overrides,/\.sc14-low-list\{[\s\S]*?overflow:visible!important/);
   assert.match(overrides,/\.sc15-moving-panel\{[\s\S]*?overflow:visible!important/);
   assert.match(overrides,/@media\(max-width:700px\)/);
   assert.match(overrides,/@media\(max-width:440px\)/);
-  assert.match(js,/stock-control-v3\.css\?v=27/);
-  for(const p of ['stock-monitor.js','stock-v3-runtime-fix.js'])assert.match(read(p),/stock-control-v3\.js\?v=33/);
+  assert.match(js,/stock-control-v3\.css\?v=28/);
+  for(const p of ['stock-monitor.js','stock-v3-runtime-fix.js'])assert.match(read(p),/stock-control-v3\.js\?v=34/);
 });
 
 test('verified valuation never falsely claims total stock; denominator consistent with backend',()=>{

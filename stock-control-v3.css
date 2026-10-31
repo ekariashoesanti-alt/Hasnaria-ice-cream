@@ -2149,3 +2149,56 @@
   #stok .sc8-kpi-icon svg{width:17px!important;height:17px!important}
   #stok .sc8-kpi .sc8-kpi-value{font-size:clamp(15px,4vw,19px)!important}
 }
+
+
+/* Stock now vs minimum -- existing dashboard/chart slot; per-unit quantities only. */
+#stok .sc21-comparison{
+  display:flex;flex:1 1 auto;flex-direction:column;gap:9px;min-width:0;min-height:0;
+  width:100%;overflow:visible
+}
+#stok .sc21-controls{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;min-width:0}
+#stok .sc21-controls label{display:flex;align-items:center;gap:7px;min-width:0;color:#42725c;font-size:10px;font-weight:800}
+#stok .sc21-controls select{
+  min-width:125px;max-width:205px;height:30px;border:1px solid #cae3d4;border-radius:8px;
+  padding:3px 9px;background:#fff;color:#19513a;font:inherit;font-size:10px
+}
+#stok .sc21-legend{display:flex;gap:17px;align-items:center;flex-wrap:wrap;color:#507662;font-size:10px;font-weight:750}
+#stok .sc21-legend>span{display:inline-flex;align-items:center;gap:6px}
+#stok .sc21-legend i{width:17px;height:7px;border-radius:3px;display:inline-block}
+#stok .sc21-legend-current{background:#168159}
+#stok .sc21-legend-safe{background:#e9b85d}
+#stok .sc21-stat{display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap;color:#557965;font-size:10px}
+#stok .sc21-stat>span{display:flex;align-items:center;gap:8px;min-width:0}
+#stok .sc21-page{display:inline-flex;align-items:center;gap:5px;flex:0 0 auto;color:#547462;font-size:10px}
+#stok .sc21-page button{
+  border:1px solid #d2e7da;border-radius:7px;background:#f6fbf8;color:#176b49;
+  padding:3px 9px;font-size:13px;font-weight:850;cursor:pointer;line-height:1.2
+}
+#stok .sc21-page button:disabled{opacity:.33;cursor:default}
+#stok .sc21-chart-frame{flex:1 1 auto;width:100%;min-width:0;min-height:170px;overflow:visible}
+#stok .sc21-comparison-svg{display:block;width:100%;height:auto;overflow:visible}
+#stok .sc21-axis{stroke:#e1ebe4;stroke-width:1}
+#stok .sc21-axis-label{fill:#708e7a;font:650 11px system-ui,-apple-system,'Segoe UI',sans-serif}
+#stok .sc21-stock-label{fill:#285340;font:760 12.5px system-ui,-apple-system,'Segoe UI',sans-serif}
+#stok .sc21-zero{stroke:#b8cfc0;stroke-width:1;stroke-dasharray:3 3}
+#stok .sc21-safe-bar{fill:#e9b85d}
+#stok .sc21-current-bar{fill:#168159}
+#stok .sc21-negative .sc21-current-bar,#stok .sc21-low .sc21-current-bar{fill:#cf665a}
+#stok .sc21-stock-value{fill:#1a6c49;font:800 12px system-ui,-apple-system,'Segoe UI',sans-serif;font-variant-numeric:tabular-nums}
+#stok .sc21-stock-value.sc21-value-alert{fill:#b44539}
+#stok .sc21-safe-value{fill:#8b6b31;font:700 11px system-ui,-apple-system,'Segoe UI',sans-serif;font-variant-numeric:tabular-nums}
+#stok .sc21-foot{margin:0!important;max-width:100%;color:#688472;font-size:9px;line-height:1.45;white-space:normal}
+#stok .sc21-foot b{color:#3d7059}
+@media(max-width:900px){
+ #stok .sc21-comparison{gap:7px}
+ #stok .sc21-chart-frame{min-height:130px}
+ #stok .sc21-controls select{min-width:105px}
+}
+@media(max-width:700px){
+ #stok .sc21-controls{align-items:flex-start}
+ #stok .sc21-legend{gap:10px}
+ #stok .sc21-stat>span{flex-wrap:wrap}
+ #stok .sc21-chart-frame{overflow-x:auto}
+ #stok .sc21-comparison-svg{min-width:600px}
+ #stok .sc21-foot{font-size:10px}
+}

@@ -97,7 +97,9 @@
     formulaError: '',
     formulaSeq: 0,
     formulaPage: 1,
-    formulaSearch: ''
+    formulaSearch: '',
+    chartUnit: '',
+    chartPage: 1
   };
 
   function esc(value) {
@@ -239,7 +241,7 @@
     var l = document.createElement('link');
     l.id = 'stock-control-v3-css';
     l.rel = 'stylesheet';
-    l.href = '/stock-control-v3.css?v=27';
+    l.href = '/stock-control-v3.css?v=28';
     document.head.appendChild(l);
   }
 
@@ -1903,91 +1905,100 @@
     return sc5Donut(parts,S.items.length,'SKU master')+
       '<p class="sc5-caption">Komposisi jumlah SKU, bukan nilai rupiah atau total unit berbeda satuan.</p>';
   }
-  function monthlyTrendInfographic(){
-    if(S.periodLoading&&!S.trend.length)return '<div class="sc5-empty">Memuat aktivitas ledger stok…</div>';
-    if(!S.period)return '<div class="sc5-empty">Pilih periode untuk melihat tren aktivitas.</div>';
-    var year=Number(S.period.slice(0,4)),month=Number(S.period.slice(5,7))-1;
-    if(!Number.isFinite(year)||!Number.isFinite(month)||month<0||month>11)
-      return '<div class="sc5-empty">Periode aktivitas tidak valid.</div>';
-    // Source of truth is ledger event ROW COUNT, never money or mixed SKU units.
-    var totals=Object.create(null),seen=Object.create(null);
-    (S.trend||[]).forEach(function(x){
-      var key=String(x.period_month||'').slice(0,10),value=Number(x.movement_rows);
-      if(!/^\d{4}-\d{2}-01$/.test(key)||!Number.isFinite(value)||value<0)return;
-      totals[key]=(totals[key]||0)+value;seen[key]=true;
+  // Current stock balance vs per-SKU minimum. One unit per chart:
+  // never aggregate or compare quantities across grams, pieces and portions.
+  function stockSafetyInfographic(){
+    if(!S.baseLoaded)return '<div class="sc5-empty">Memuat saldo dan batas aman setiap barang…</div>';
+    var candidates=(S.items||[]).filter(function(x){
+      return x.tracking_active&&x.system_qty!==null&&x.system_qty!==undefined&&
+        x.system_qty!==''&&Number.isFinite(Number(x.system_qty))&&
+        x.min_qty!==null&&x.min_qty!==undefined&&x.min_qty!==''&&
+        Number.isFinite(Number(x.min_qty))&&Number(x.min_qty)>0&&
+        String(x.unit||'').trim()&&x.unit!=='purchase_unit';
     });
-    var labels=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
-    var months=[];
-    for(var i=9;i>=0;i--){
-      var d=new Date(Date.UTC(year,month-i,1)),key=d.toISOString().slice(0,10);
-      months.push({key:key,month:labels[d.getUTCMonth()],year:d.getUTCFullYear(),
-        hasData:!!seen[key],value:totals[key]||0});
-    }
-    var actual=months.filter(function(x){return x.hasData});
-    if(!actual.length)return '<div class="sc12-no-data"><strong>Belum ada aktivitas ledger dalam 10 bulan ini</strong>'+
-       '<small>Grafik akan terbentuk dari transaksi Stok yang benar-benar tercatat di backend.</small></div>';
+    if(!candidates.length)return '<div class="sc12-no-data">'+
+      '<strong>Belum ada barang dengan saldo dan batas aman yang dapat dibandingkan</strong>'+
+      '<small>Grafik membutuhkan opname awal dan batas minimum barang yang sudah ditetapkan. '+
+      'Barang tanpa data tersebut tidak dianggap stok nol.</small></div>';
 
-    // All chart positions are calculated in an explicit SVG coordinate system.
-    // CSS cannot collapse the positive bar heights to 1px as in the old nested div chart.
-    var peak=Math.max.apply(null,actual.map(function(x){return x.value}).concat([0]));
-    var base=Math.pow(10,Math.floor(Math.log10(Math.max(1,peak)/4)));
-    var tick=Math.max(1,Math.ceil((peak/4)/base)*base);
-    var ymax=Math.max(4,4*tick),total=actual.reduce(function(sum,x){return sum+x.value},0);
-    var left=72,right=868,plotTop=36,plotBottom=194,plotHeight=plotBottom-plotTop;
-    var xcoord=function(i){return left+(right-left)*i/9};
-    var ycoord=function(v){return plotBottom-Math.max(0,Math.min(1,v/ymax))*plotHeight};
-
-    var grid=[0,1,2,3,4].map(function(step){
-      var y=plotBottom-step*plotHeight/4;
-      return '<line class="sc12-grid-line" x1="'+left+'" y1="'+y.toFixed(2)+'" x2="'+right+'" y2="'+y.toFixed(2)+'"/>'+
-        '<text class="sc12-axis-tick" x="'+(left-13)+'" y="'+(y+4).toFixed(2)+'" text-anchor="end">'+
-        esc(fmt(step*tick))+'</text>';
-    }).join('');
-    var bars=months.map(function(m,i){
-      var x=xcoord(i),y=ycoord(m.value),height=Math.max(0,plotBottom-y),hasValue=m.hasData&&m.value>0;
-      var active=m.key===S.period+'-01';
-      var label=m.month+(m.month==='Jan'||i===0?' '+String(m.year).slice(-2):'');
-      var bar=hasValue?'<rect class="sc12-ledger-bar'+(active?' sc12-ledger-current':'')+
-        '" x="'+(x-22).toFixed(2)+'" y="'+y.toFixed(2)+'" width="44" height="'+height.toFixed(2)+'" rx="5"'+
-        ' fill="url(#sc12StockBarGradient)"/>':'';
-      return '<g class="sc12-month'+(active?' sc12-active-month':'')+'">'+
-        '<title>'+esc(m.month+' '+m.year+': '+(m.hasData?fmt(m.value)+' aktivitas ledger':'tidak ada catatan ledger'))+'</title>'+
-        bar+
-        '<text class="sc12-number'+(m.hasData?'':' sc12-number-missing')+'" x="'+x.toFixed(2)+
-        '" y="'+(hasValue?Math.max(plotTop+7,y-9):plotBottom-12).toFixed(2)+'" text-anchor="middle">'+
-        esc(m.hasData?fmt(m.value):'—')+'</text>'+
-        '<text class="sc12-month-name'+(active?' sc12-month-selected':'')+'" x="'+x.toFixed(2)+
-        '" y="225" text-anchor="middle">'+esc(label)+'</text></g>';
-    }).join('');
-
-    // Never join the line across months with missing records.
-    var strokes=[],run=[];
-    months.forEach(function(m,i){
-      if(m.hasData){run.push(xcoord(i).toFixed(2)+','+ycoord(m.value).toFixed(2));}
-      else{if(run.length>1)strokes.push(run.join(' '));run=[];}
+    var groups=Object.create(null);
+    candidates.forEach(function(x){
+      var unit=String(x.unit).trim();
+      (groups[unit]||(groups[unit]=[])).push(x);
     });
-    if(run.length>1)strokes.push(run.join(' '));
-    var line=strokes.map(function(points){
-      return '<polyline class="sc12-ledger-line" points="'+points+'"/>';
+    var units=Object.keys(groups).sort(function(a,b){
+      return groups[b].length-groups[a].length||a.localeCompare(b,'id');
+    });
+    if(!S.chartUnit||!groups[S.chartUnit])S.chartUnit=units[0];
+    var unit=S.chartUnit;
+    var priority=function(x){
+      var stock=Number(x.system_qty),minimum=Number(x.min_qty);
+      return stock<=0?0:stock<minimum?1:2;
+    };
+    var list=groups[unit].slice().sort(function(a,b){
+      return priority(a)-priority(b)||
+        (Number(a.system_qty)-Number(a.min_qty))-(Number(b.system_qty)-Number(b.min_qty))||
+        String(a.item_name||'').localeCompare(String(b.item_name||''),'id');
+    });
+    var size=6,pages=Math.max(1,Math.ceil(list.length/size));
+    S.chartPage=Math.max(1,Math.min(S.chartPage||1,pages));
+    var start=(S.chartPage-1)*size,shown=list.slice(start,start+size);
+    var neg=Math.min.apply(null,shown.map(function(x){return Number(x.system_qty)}).concat([0]));
+    var positive=Math.max.apply(null,shown.map(function(x){
+      return Math.max(Number(x.system_qty),Number(x.min_qty));
+    }).concat([1]));
+    var span=positive-neg;
+    var left=247,right=682,plotW=right-left;
+    var xcoord=function(v){return left+((v-neg)/span)*plotW};
+    var zeroX=xcoord(0);
+    var chartHeight=52+shown.length*35;
+    var lines=shown.map(function(item,i){
+      var stock=Number(item.system_qty),minimum=Number(item.min_qty);
+      var y=51+i*35,barcode=stock<0?'negative':stock<minimum?'low':'normal';
+      var label=String(item.item_name||'Barang');
+      var short=label.length>27?label.slice(0,26)+'…':label;
+      var stockX=xcoord(stock),safeX=xcoord(minimum);
+      var startStock=Math.min(stockX,zeroX),widthStock=Math.max(1,Math.abs(stockX-zeroX));
+      var safeWidth=Math.max(1,safeX-zeroX);
+      return '<g class="sc21-stock-row sc21-'+barcode+'">'+
+        '<title>'+esc(label+': saldo sistem '+fmt(stock)+' '+unit+
+        ', batas aman '+fmt(minimum)+' '+unit)+'</title>'+
+        '<text class="sc21-stock-label" x="18" y="'+(y+10)+'">'+esc(short)+'</text>'+
+        '<line class="sc21-zero" x1="'+zeroX.toFixed(2)+'" y1="'+(y-6)+
+        '" x2="'+zeroX.toFixed(2)+'" y2="'+(y+22)+'"/>'+
+        '<rect class="sc21-safe-bar" x="'+zeroX.toFixed(2)+'" y="'+(y-3)+
+        '" width="'+safeWidth.toFixed(2)+'" height="7" rx="3"/>'+
+        '<rect class="sc21-current-bar" x="'+startStock.toFixed(2)+'" y="'+(y+8)+
+        '" width="'+widthStock.toFixed(2)+'" height="7" rx="3"/>'+
+        '<text class="sc21-stock-value'+(stock<minimum?' sc21-value-alert':'')+
+        '" x="702" y="'+(y+7)+'">Saat ini: '+esc(fmt(stock))+'</text>'+
+        '<text class="sc21-safe-value" x="702" y="'+(y+21)+'">Aman: '+esc(fmt(minimum))+'</text>'+
+      '</g>';
     }).join('');
-    var dots=months.map(function(m,i){
-      if(!m.hasData)return '';
-      return '<circle class="sc12-ledger-dot" cx="'+xcoord(i).toFixed(2)+
-        '" cy="'+ycoord(m.value).toFixed(2)+'" r="4.8"/>';
-    }).join('');
-    return '<div class="sc12-trend" role="group" aria-label="Grafik aktual jumlah event ledger Stok selama 10 bulan">'+
-      '<div class="sc12-trend-summary"><span>Aktivitas ledger · 10 bulan</span>'+
-        '<strong>'+esc(fmt(total))+' <small>event tercatat</small></strong></div>'+
-      '<div class="sc12-chart-frame">'+
-        '<svg class="sc12-ledger-chart" viewBox="0 0 925 239" preserveAspectRatio="xMidYMid meet" '+
-        'role="img" aria-label="Grafik batang dan garis aktivitas stok bulanan berdasarkan jumlah event ledger">'+
-        '<defs><linearGradient id="sc12StockBarGradient" x1="0" y1="0" x2="0" y2="1">'+
-          '<stop offset="0%" stop-color="#65c99d"/><stop offset="100%" stop-color="#bcebd2"/>'+
-        '</linearGradient></defs>'+
-        grid+bars+line+dots+'</svg>'+
-      '</div>'+
-      '<p class="sc12-trend-caption">Batang dan garis menunjukkan <b>jumlah aktivitas ledger</b>, bukan nilai rupiah. '+
-        'Tanda — berarti belum ada catatan.</p>'+
+    var buttons='<div class="sc21-page"><button type="button" data-sc21-page="'+(S.chartPage-1)+'"'+
+      (S.chartPage===1?' disabled':'')+' aria-label="Halaman sebelumnya">‹</button>'+
+      '<span>'+S.chartPage+' / '+pages+'</span>'+
+      '<button type="button" data-sc21-page="'+(S.chartPage+1)+'"'+
+      (S.chartPage>=pages?' disabled':'')+' aria-label="Halaman berikutnya">›</button></div>';
+    return '<div class="sc21-comparison">'+
+      '<div class="sc21-controls"><div class="sc21-legend">'+
+        '<span><i class="sc21-legend-current"></i>Saldo saat ini</span>'+
+        '<span><i class="sc21-legend-safe"></i>Batas aman</span></div>'+
+        '<label>Satuan <select id="sc21StockUnit" aria-label="Pilih satuan grafik stok">'+
+        units.map(function(u){return '<option value="'+esc(u)+'"'+(u===unit?' selected':'')+'>'+
+          esc(u)+' ('+fmt(groups[u].length)+' SKU)</option>'}).join('')+
+        '</select></label></div>'+
+      '<div class="sc21-stat"><span>'+fmt(list.length)+' SKU dengan batas aman · '+esc(unit)+
+      '</span><span>Menampilkan '+(start+1)+'–'+Math.min(start+size,list.length)+' SKU '+buttons+'</span></div>'+
+      '<div class="sc21-chart-frame"><svg class="sc21-comparison-svg" viewBox="0 0 925 '+chartHeight+
+        '" role="img" aria-label="Perbandingan saldo sistem stok saat ini dan batas aman per barang dalam satuan '+esc(unit)+'">'+
+        '<line class="sc21-axis" x1="'+left+'" y1="32" x2="'+right+'" y2="32"/>'+
+        '<text class="sc21-axis-label" x="'+left+'" y="23">Minus</text>'+
+        '<text class="sc21-axis-label" x="'+right+'" y="23" text-anchor="end">Jumlah ('+esc(unit)+')</text>'+
+        lines+'</svg></div>'+
+      '<p class="sc21-foot">Stok saat ini = <b>saldo sistem dari transaksi yang telah tercatat</b>, bukan hasil hitung fisik terbaru. '+
+      'Batas aman = <b>minimum per SKU</b> yang tersimpan. Saldo negatif ditampilkan apa adanya. '+
+      'Hanya barang yang sudah opname dan memiliki batas minimum ditampilkan; angka ini bukan tren bulanan.</p>'+
     '</div>';
   }
   function attentionSkuInfographic(){
@@ -2061,12 +2072,11 @@
     var loading = S.baseLoading && !S.baseLoaded ? '<div class="sc3-loading">Memuat posisi SKU terkini…</div>' : '';
     shell.innerHTML = renderHeader() + renderCorrectionPanel() +
       '<div class="sc12-status-strip">'+renderLedgerAudit()+renderUploadStatus()+renderSalesStockAudit()+'</div>' +
-      renderStockIntegrityWarning() +
       pAlert + overviewKpis() + alert + loading +
       '<div class="sc5-dashboard sc6-dashboard" aria-label="Infografis Stok Hasnaria">'+
         '<div class="sc6-grid">'+
           '<div class="sc6-column sc6-main-column">'+
-            '<article class="sc5-panel sc6-trend-panel"><h3>↗ Tren Aktivitas Stok Bulanan</h3>'+monthlyTrendInfographic()+'</article>'+
+            '<article class="sc5-panel sc6-trend-panel"><h3>▥ Stok Saat Ini vs Batas Aman</h3>'+stockSafetyInfographic()+'</article>'+
             '<article class="sc5-panel sc6-category-panel"><h3>▣ Nilai Stok per Kategori</h3>'+stockValueByCategory()+'</article>'+
           '</div>'+
           '<div class="sc6-column sc6-side-column">'+
@@ -2107,6 +2117,11 @@
 
   function bind(host) {
     host.onclick = function (e) {
+      var stockChartPage=e.target&&e.target.closest?e.target.closest('[data-sc21-page]'):null;
+      if(stockChartPage&&!stockChartPage.disabled){
+        S.chartPage=Number(stockChartPage.getAttribute('data-sc21-page'))||1;
+        render();return;
+      }
       var formulaPage=e.target&&e.target.closest?e.target.closest('[data-sc20-page]'):null;
       if(formulaPage&&S.modal==='formula-audit'&&!formulaPage.disabled){
         S.formulaPage=Number(formulaPage.getAttribute('data-sc20-page'))||1;render();return;
@@ -2246,6 +2261,12 @@
     };
     host.onchange = function (e) {
       var el = e.target;
+      if(el.id==='sc21StockUnit'){
+        S.chartUnit=el.value||'';
+        S.chartPage=1;
+        render();
+        return;
+      }
       if(S.recipeDetail&&el.hasAttribute&&el.hasAttribute('data-sc17-field')){
         var field=el.getAttribute('data-sc17-field');
         if(field==='decision')S.recipeDetail.decision=el.value;
