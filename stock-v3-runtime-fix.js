@@ -19,7 +19,7 @@
       link.rel='stylesheet';
       link.href='/stock-readable-density.css?v=2';
     }
-    document.head.appendChild(link);
+    if(!link.isConnected)document.head.appendChild(link);
 
     var trimId='stock-column-trim-css';
     var trim=document.getElementById(trimId);
@@ -29,7 +29,7 @@
       trim.rel='stylesheet';
       trim.href='/stock-column-trim.css?v=2';
     }
-    document.head.appendChild(trim);
+    if(!trim.isConnected)document.head.appendChild(trim);
   }
 
   function markCanonical(){
@@ -48,7 +48,7 @@
     var boot=document.createElement('div');
     boot.setAttribute('data-stock-v4','1');boot.setAttribute('data-stock-v3-boot','1');
     boot.className='sc3-boot';
-    boot.innerHTML='<strong>Stok &amp; Kebutuhan Material</strong><span>Memuat posisi persediaan terkini…</span>';
+    boot.innerHTML='<strong>Dashboard Stok</strong><span>Memuat saldo dan grafik stok…</span>';
     h.replaceChildren(boot);
   }
 
@@ -64,9 +64,7 @@
     s.src='/stock-control-v3.js?v=38';
     s.async=false;
     s.onload=function(){
-      setTimeout(markCanonical,0);
-      setTimeout(markCanonical,120);
-      setTimeout(markCanonical,500);
+      markCanonical();
     };
     document.head.appendChild(s);
   }
@@ -82,7 +80,7 @@
     if(!visible(h))return;
     claim();
     loadCanonical();
-    loadStockUpload();
+    loadStockUpload(); // Keep upload handlers ready without altering their interaction.
   }
 
   window.__HASNARIA_STOCK_WAKE=wake;

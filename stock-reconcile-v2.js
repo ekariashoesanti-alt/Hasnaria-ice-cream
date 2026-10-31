@@ -301,6 +301,7 @@
   function renderContent() { if (S.tab === 'purchase') return renderPurchase(); if (S.tab === 'opname') return renderOpname(); if (S.tab === 'history') return renderHistory(); return renderStock(); }
 
   function render() {
+    if(canonicalOwnsStock())return;
     var host = document.getElementById('stok');
     if (!host) return;
     ensureCss();
@@ -376,7 +377,15 @@
   }
 
   function active() { var host = document.getElementById('stok'); return !!(host && !host.classList.contains('hidden')); }
-  function canonicalOwnsStock(){var host=document.getElementById('stok');return !!(window.__HASNARIA_STOCK_CONTROL_V3||window.__HASNARIA_STOCK_V3_RUNTIME_FIX||(host&&host.querySelector('.sc3-shell,[data-stock-v3-boot]')))}
+  function canonicalOwnsStock(){
+    var host=document.getElementById('stok'),ctx=window.__HASNARIA_CONTEXT;
+    return !!(window.__HASNARIA_STOCK_OWNER_CLAIMED||
+      (ctx&&ctx.role==='owner')||
+      (document.body&&document.body.classList.contains('hasnaria-owner-erp'))||
+      window.__HASNARIA_STOCK_CONTROL_V3||
+      window.__HASNARIA_STOCK_V3_RUNTIME_FIX||
+      (host&&host.querySelector('.sc3-shell,[data-stock-v3-boot]')));
+  }
   async function mount(force) { if(canonicalOwnsStock())return; var host = document.getElementById('stok'); if (!host || !active()) return; ensureCss(); if (host.querySelector('.sr-shell') && !force) return; render(); if (!S.loaded && !S.loading) await loadAll(); }
   function watch() { if(canonicalOwnsStock())return; var host = document.getElementById('stok'); if (!host || host.__srObserver) return; host.__srObserver = new MutationObserver(function () { if (host.__srRendering || !active() || canonicalOwnsStock()) return; if (!host.querySelector('.sr-shell')) setTimeout(function () { mount(true); }, 0); }); host.__srObserver.observe(host, { childList: true }); }
 

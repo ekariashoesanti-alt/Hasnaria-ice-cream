@@ -1,9 +1,9 @@
 (function () {
   'use strict';
   var CORE = '/core-app.js?v=9';
-  var OWNER_SHELL = '/owner-shell-guard.js?v=12';
+  var OWNER_SHELL = '/owner-shell-guard.js?v=13';
   var AUTH_ONBOARDING = '/auth-onboarding-v1.js?v=1';
-  var STOCK = '/stock-monitor.js?v=30';
+  var STOCK = '/stock-monitor.js?v=31';
   var PURCHASE = '/xlsx-preload.js?v=28';
   var SALES = '/sales-board.js?v=49';
   var SALES_HOURLY = '/sales-hourly-chart.js?v=6';

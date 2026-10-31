@@ -33,9 +33,9 @@ ownerRender(host);
 assert.equal(replaced, 0, 'Repeated Owner render should leave canonical summary and upload controls mounted');
 
 assert.match(app, /core-app\.js\?v=9/);
-assert.match(app, /owner-shell-guard\.js\?v=12/);
+assert.match(app, /owner-shell-guard\.js\?v=13/);
 assert.match(index, /app\.js\?v=p074/);
-assert.match(build, /owner-shell-guard\.js\?v=12/);
+assert.match(build, /owner-shell-guard\.js\?v=13/);
 assert.match(build, /purchase-lazy-loader\.js\?v=3/);
 assert.match(lazy, /purchase-analytics\.js\?v=7/);
 console.log('Purchase Owner flicker regression: PASS');
