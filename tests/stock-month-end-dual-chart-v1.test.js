@@ -52,7 +52,7 @@ test('empty or unavailable history shows explanation instead of numeric zero',()
 test('only 4 KPI and 2 charts render; selected unit shared across left/right',()=>{
  const body=js.slice(js.indexOf('function render() {'),js.indexOf('function stockDialogFocus(',js.indexOf('function render() {')));
  assert.match(body,/overviewKpis\(\)/);
- assert.match(body,/var stockComparison=stockSafetyInfographic\(\)/);
+ assert.match(body,/stockComparison=stockSafetyInfographic\(\)/);
  assert.match(body,/monthlyStockEndInfographic\(\)/);
  assert.ok(body.indexOf('monthlyStockEndInfographic()')<body.indexOf("sc22-compare-panel"));
  assert.doesNotMatch(body,/renderSalesStockAudit|renderLedgerAudit|renderUploadStatus|renderStockIntegrityWarning/);
