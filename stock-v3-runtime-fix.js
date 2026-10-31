@@ -44,8 +44,12 @@
 
   function claim(){
     var h=host();
-    if(!visible(h)||h.querySelector('.sc3-shell,[data-stock-v3-boot]'))return;
-    h.innerHTML='<div data-stock-v4="1" data-stock-v3-boot="1" class="sc3-boot"><strong>Stok &amp; Kebutuhan Material</strong><span>Memuat posisi persediaan terkini…</span></div>';
+    if(!visible(h)||h.querySelector('.sc3-shell,[data-stock-v3-boot="1"]'))return;
+    var boot=document.createElement('div');
+    boot.setAttribute('data-stock-v4','1');boot.setAttribute('data-stock-v3-boot','1');
+    boot.className='sc3-boot';
+    boot.innerHTML='<strong>Stok &amp; Kebutuhan Material</strong><span>Memuat posisi persediaan terkini…</span>';
+    h.replaceChildren(boot);
   }
 
   function loadCanonical(){
