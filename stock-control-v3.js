@@ -919,18 +919,11 @@
         return;
       }
       var month = S.period + '-01';
-      var oq = qs({ brand_id: 'eq.' + BRAND, period_month: 'eq.' + month, select: '*', limit: '1' });
-      var aq = qs({ brand_id: 'eq.' + BRAND, period_month: 'eq.' + month, select: 'movement_type,movement_rows,sku_count', order: 'movement_rows.desc' });
       var y=Number(S.period.slice(0,4)),m=Number(S.period.slice(5,7))-1;
       var fromMonth=new Date(Date.UTC(y,m-9,1)).toISOString().slice(0,10);
       var tq=qs({brand_id:'eq.'+BRAND,period_month:'gte.'+fromMonth,
         select:'period_month,unit,total_unit_skus,checkpoint_skus,recorded_end_qty,period_movement_rows,unlinked_sale_rows,data_status',order:'period_month.asc',limit:'200'})+
         '&period_month=lte.'+month;
-      var salesQ=qs({brand_id:'eq.'+BRAND,period_month:'eq.'+month,select:'*',limit:'1'});
-      var nextMonth=new Date(Date.UTC(y,m+1,1)).toISOString().slice(0,10);
-      var purchaseImportQ=qs({brand_id:'eq.'+BRAND,purchase_date:'gte.'+month,
-        select:'inventory_item_id,inventory_qty,ready_for_inventory,mapping_status',limit:'1000'})+
-        '&purchase_date=lt.'+nextMonth;
       // First paint only waits for the actual monthly stock-end series.
       // Previously six unrelated requests (status/upload/activities/import)
       // blocked this chart even though their cards were removed from the UI.
