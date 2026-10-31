@@ -237,6 +237,7 @@ run(process.execPath, ['tests/erp-ui.test.js']);
 run(process.execPath, ['tests/p2-owner-performance.test.js']);
 run(process.execPath, ['tests/purchase-fast-load.test.js']);
 run(process.execPath, ['tests/purchase-owner-no-flicker.test.js']);
+run(process.execPath, ['--test', 'tests/sales-purchase-revisit-performance-v1.test.js']);
 run(process.execPath, ['tests/purchase-one-view-viewport.test.js']);
 run(process.execPath, ['tests/purchase-unified-card.test.js']);
 run(process.execPath, ['tests/purchase-ytd-category-pie.test.js']);
