@@ -255,7 +255,6 @@ EESE=2|ODENG TIPIS=2|Topokki=5|BAKSO UDANG=1|CHIKUWA=1|KUAH ODENG=2|SCALLOP=1|IC
   window.addEventListener('hasnaria:data-sync-ready', registerSalesSync);
   registerSalesSync();
 
-  window.__HASNARIA_SALES_MOUNT=mount;
   window.__hasnariaReloadSales = function () {
     salesSyncGeneration++;
     STATE.fetched = false;
@@ -271,7 +270,7 @@ EESE=2|ODENG TIPIS=2|Topokki=5|BAKSO UDANG=1|CHIKUWA=1|KUAH ODENG=2|SCALLOP=1|IC
     if (id === 'sales' || (t.textContent || '').toLowerCase().indexOf('penjualan') !== -1) {
       setTimeout(mount, 40);
       setTimeout(function () {
-        if (!STATE.fetched || STATE.error) loadMetrics();
+        if (!STATE.fetched || STATE.error || !STATE.rows.length) loadMetrics();
       }, 150);
     }
   }, true);
@@ -279,7 +278,7 @@ EESE=2|ODENG TIPIS=2|Topokki=5|BAKSO UDANG=1|CHIKUWA=1|KUAH ODENG=2|SCALLOP=1|IC
   if (window.__HASNARIA_AUTH_READY && typeof window.__HASNARIA_AUTH_READY.then === 'function') {
     window.__HASNARIA_AUTH_READY.then(function () {
       setTimeout(function () {
-        if (!STATE.fetched || STATE.error) loadMetrics();
+        if (!STATE.fetched || STATE.error || !STATE.rows.length) loadMetrics();
       }, 200);
     });
   }
@@ -287,10 +286,10 @@ EESE=2|ODENG TIPIS=2|Topokki=5|BAKSO UDANG=1|CHIKUWA=1|KUAH ODENG=2|SCALLOP=1|IC
   var tries = 0;
   (function wait() {
     mount();
-    if (document.getElementById('sales') && !STATE.fetched && !STATE.loading && pickTokenFromStorage()) {
+    if (document.getElementById('sales') && (!STATE.fetched || !STATE.rows.length) && pickTokenFromStorage()) {
       loadMetrics();
     }
-    if (!STATE.fetched && tries++ < 80) {
+    if ((!STATE.fetched || !STATE.rows.length) && tries++ < 80) {
       setTimeout(wait, 400);
     }
   })();
