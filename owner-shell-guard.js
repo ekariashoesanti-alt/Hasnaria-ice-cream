@@ -127,26 +127,15 @@
   function ensureSales(){
     var h=section('sales');if(!h||h.classList.contains('hidden'))return;
     if(h.querySelector('.sale-board')){state.salesRetries=0;return}
-    // Returning to Sales is not a data mutation. Mount the existing board
-    // instead of calling __hasnariaReloadSales, which forces two new GETs.
-    if(typeof window.__HASNARIA_SALES_MOUNT==='function'){
-      state.salesRetries=0;window.__HASNARIA_SALES_MOUNT();return;
-    }
+    if(typeof window.__hasnariaReloadSales==='function'){state.salesRetries=0;window.__hasnariaReloadSales();return}
     if(typeof window.__HASNARIA_LOAD_SALES==='function'){
-      window.__HASNARIA_LOAD_SALES().then(function(){
-        if(isOwner()&&state.active==='sales'&&!h.querySelector('.sale-board')&&state.salesRetries++<40)
-          setTimeout(ensureSales,100);
-      });return;
+      window.__HASNARIA_LOAD_SALES().then(function(){if(isOwner()&&state.active==='sales'){state.salesRetries=0;setTimeout(ensureSales,30)}});return;
     }
-    if(state.salesRetries>=40)return;
-    state.salesRetries++;setTimeout(function(){if(isOwner()&&state.active==='sales')ensureSales()},100)
+    if(state.salesRetries>=40)return;state.salesRetries++;setTimeout(function(){if(isOwner()&&state.active==='sales')ensureSales()},100)
   }
 
   function ensurePurchase(){
     var h=section('pembelian');if(!h||h.classList.contains('hidden'))return;
-    // The canonical Purchase dashboard is persistent across tab visits.
-    // Avoid repeated initialization of Excel/import/report modules on revisit.
-    if(h.querySelector('#paRoot.pa-owner-single-render')&&h.querySelector('#purchaseFinanceAlignment'))return;
     // Install a stable first-paint skeleton before loading either Purchase runtime.
     // Never reveal the core-app legacy Pembelian cards while scripts are in flight.
     if(!h.querySelector('#paRoot')&&!h.querySelector('[data-purchase-pending="1"]')){
