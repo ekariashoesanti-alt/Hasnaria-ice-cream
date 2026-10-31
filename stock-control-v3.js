@@ -243,7 +243,7 @@
     var l = document.createElement('link');
     l.id = 'stock-control-v3-css';
     l.rel = 'stylesheet';
-    l.href = '/stock-control-v3.css?v=29';
+    l.href = '/stock-control-v3.css?v=30';
     document.head.appendChild(l);
   }
 
@@ -1257,14 +1257,14 @@
         (isOwner()?'<button type="button" class="sc5-primary" data-sc4-action="upload-opname">⇧ Upload Excel Stok</button>':'')+
         '<button type="button" class="sc5-secondary" data-sc4-modal="position" aria-haspopup="dialog">▣ Detail Stok</button>'+
         (isOwner()?'<button type="button" class="sc5-secondary" data-sc4-action="opname">＋ Input Opname</button>':'')+
-      '</div><div class="sc5-head-filters sc7-tools">'+
+      '</div></div></header><div class="sc5-head-filters sc7-tools sc23-period-row">'+
         '<label><span>Bulan</span><select id="sc4Period" data-month-filter="stok">'+options+'</select></label>'+
         '<button type="button" class="sc5-text-btn" data-sc4-modal="ledger" aria-haspopup="dialog">Ledger Periode</button>'+ 
         (isOwner()?'<button type="button" class="sc5-text-btn" data-sc4-modal="recipes" aria-haspopup="dialog">Cek Resep Produk</button>':'')+
         (isOwner()?'<button type="button" class="sc5-text-btn" data-sc4-modal="formula-audit" aria-haspopup="dialog">Periksa Hitungan</button>':'')+
         (isOwner()?'<button type="button" class="sc5-text-btn" data-sc4-action="upload-purchase">Upload Pembelian</button>':'')+
         '<button type="button" class="sc5-refresh" data-sc3-action="refresh" aria-label="Refresh data Stok">↻</button>'+
-      '</div></div></header>';
+      '</div>';
   }
 
   function renderFormula() {
