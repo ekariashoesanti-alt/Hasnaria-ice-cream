@@ -484,7 +484,13 @@ function purchasePack(period){return db.rpc('get_purchase_control_period_v1',{p_
 async function load(force){
   var p=periodValue();if(!p)return;
   if(loading){if(force)requestSeq++;return}
-  if(!force&&rows.length&&loadedPeriod===p&&Date.now()-loadedAt<60000){render();return}
+  if(!force&&loadedPeriod===p&&loadedAt){
+    // Stale-while-revalidate: keep populated Purchase visible on tab revisit.
+    // Data-sync refreshes it only when the backend actually changes.
+    if(Date.now()-loadedAt>60000&&!syncing&&canSyncReport())
+      syncReport().catch(function(){});
+    return;
+  }
   var seq=++requestSeq;db=db||window.__HASNARIA_DB;if(!db)return;loading=true;error='';render();
   try{
     var q=await purchasePack(p);
