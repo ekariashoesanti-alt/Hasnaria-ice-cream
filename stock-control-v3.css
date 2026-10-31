@@ -2425,3 +2425,39 @@
  #stok .sc3-shell:has(.sc22-dashboard) .sc8-kpi{padding:10px 11px!important}
  #stok .sc3-shell:has(.sc22-dashboard) .sc22-dual>.sc5-panel{padding:12px!important}
 }
+
+
+/* 2026-10-31 / Owner Stok bottom-edge recovery (100% browser zoom).
+   Owner one-view sets every desktop section to overflow:hidden !important;
+   the taller Sales-parity Stock shell therefore had its last caption clipped.
+   Keep the viewport boundary, but allow Stock alone to scroll its true content.
+   Do not remove the existing scroll lock from other ERP tabs. */
+@media (min-width:901px){
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard){
+    box-sizing:border-box!important;
+    height:100%!important;max-height:100%!important;min-height:0!important;
+    overflow-x:hidden!important;overflow-y:auto!important;
+    padding-bottom:clamp(24px,3.5vh,44px)!important;
+    scroll-padding-bottom:24px;
+    overscroll-behavior-y:contain;
+    scrollbar-gutter:stable;
+    scrollbar-width:thin;
+  }
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell{
+    height:auto!important;max-height:none!important;min-height:0!important;
+    overflow:visible!important;
+    margin-bottom:0!important;
+  }
+}
+/* Compact only unused spacing on short laptops. Do not cap chart heights. */
+@media (min-width:901px) and (max-height:850px){
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard) .sc22-dual>.sc5-panel{
+    gap:6px!important;
+    padding:11px 13px!important;
+    min-height:0!important;
+  }
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard) .sc8-kpi{
+    min-height:72px!important;
+    padding:9px 12px!important;
+  }
+}
