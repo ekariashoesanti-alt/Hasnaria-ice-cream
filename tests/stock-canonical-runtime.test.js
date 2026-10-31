@@ -18,9 +18,9 @@ assert(ui4.includes('__HASNARIA_STOCK_UI4'),'Stock UI-4 runtime marker must be p
 assert(ui4.includes('ui_stock_overview_v1')&&ui4.includes('ui_stock_activity_chart_v1')&&ui4.includes('ui_stock_detail_v1'),'Stock UI-4 must use canonical overview, activity, and ledger views');
 assert(ui4.includes('data-sc4-modal="ledger"')&&ui4.includes('data-sc4-action="opname"'),'Stock UI-4 must keep ledger detail and direct opname actions');
 assert(ui4.includes('sc6-dashboard') && ui4.includes('stockSafetyInfographic()'),'Stock dashboard must show current system stock and per-SKU minimum');
-assert(ui4.includes('sc6-main-column')&&ui4.includes('sc6-side-column'),'Stock must use the approved two-column layout');
-assert(ui4.indexOf('sc6-trend-panel')<ui4.indexOf('sc6-category-panel'),'Value per category must sit directly below the trend');
-assert(ui4.includes('stockValueByCategory()')&&ui4.includes('lowestStockFive()')&&ui4.includes('stockMovingPanel()'),'All visible panels must use backend-driven data or explicit missing-data copy');
+assert(ui4.includes('sc22-dual')&&ui4.includes('sc22-trend-panel')&&ui4.includes('sc22-compare-panel'),'Stock uses only two requested panels');
+assert(ui4.indexOf('sc22-trend-panel')<ui4.indexOf('sc22-compare-panel'),'Monthly end balance on left, current vs safe on right');
+assert(ui4.includes('monthlyStockEndInfographic()')&&ui4.includes('stockSafetyInfographic()'),'Visible charts must use monthly computed data and current ledger');
 assert(!ui4.includes('sc5-grid-bottom'),'Removed obsolete lower infographic row');
 assert(ui4.includes('inventory_valuation_verified_summary')&&ui4.includes('inventory_verified_cost_current'),'Stock value must use verified unit costs only');
 assert(ui4.includes('Valuasi parsial')&&ui4.includes('Bukan total nilai seluruh persediaan'),'Incomplete value coverage must be disclosed');
@@ -38,7 +38,7 @@ assert(ui4.includes('data-sc4-action="upload-opname"')&&ui4.includes('data-sc4-a
 assert(ui4.includes('data-sc4-modal="position"')&&ui4.includes('data-sc4-modal="ledger"'),'Stock detail and ledger must remain accessible');
 assert(ui4.includes('data-sc4-action="upload-purchase"'),'Existing purchase upload route must remain');
 assert(!ui4.includes('sc5-footer-actions'),'Floating footer button bar should be absent');
-assert(ui4.indexOf('sc6-trend-panel')<ui4.indexOf('sc6-category-panel'),'Trend must remain immediately above category');
+assert(ui4.includes('sc22-dashboard')&&!ui4.includes('<article class="sc5-panel sc6-top-panel"'),'Removed panels must stay hidden');
 
 assert(greenCss.includes('.sc7-head') && greenCss.includes('min-height:64px!important'),'Stock header spacing is compact');
 assert(greenCss.includes('background:#fff!important') && greenCss.includes('sc6-grid'),'White toolbar must be isolated from green sidebar');
@@ -80,8 +80,8 @@ assert(!currentAndSafe.includes('event tercatat')&&!currentAndSafe.includes('akt
 assert(greenCss.includes('.sc21-comparison-svg')&&greenCss.includes('.sc21-safe-bar')&&greenCss.includes('.sc21-current-bar'),
   'Comparison chart has scoped visual styles');
 assert(ui4.includes('/stock-control-v3.css?v=29'),'New stock chart stylesheet cache version is fresh');
-assert(ui4.includes('sc12-status-strip')&&greenCss.includes('.sc12-status-strip'),
-  'Healthy audit/upload state displays compactly to give dashboard more space');
+assert(!ui4.includes('<div class="sc12-status-strip">')&&greenCss.includes('.sc12-status-strip'),
+  'Crossed operational warning cards are not rendered on dashboard');
 
 assert(ui4.includes('sc13-category-main')&&ui4.includes('sc13-donut-svg'),
   'Stock verified valuation must render responsive donut, not previous horizontal composition');
