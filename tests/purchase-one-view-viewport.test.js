@@ -56,7 +56,7 @@ assert.match(app,/data-pfa-unit-open/);
 for(const path of ['purchase-analytics.css?v=1','purchase-finance-alignment-v1.css?v=5','purchase-dual-source.css?v=1','owner-insight-v1.css?v=1','owner-one-view.css?v=12']){
  assert.ok(palette.includes(path),'first-paint Owner CSS preloads '+path);
 }
-assert.match(preload,/purchase-finance-alignment-v1\.js\?v=29/);
+assert.match(preload,/purchase-finance-alignment-v1\.js\?v=30/);
 assert.match(shell,/data-purchase-pending/);
 console.log('Owner Purchase one-view and anti-flicker contract: PASS');
 
