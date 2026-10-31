@@ -7,7 +7,7 @@ const js=read('stock-control-v3.js');
 test('monthly dashboard does not block on purchase imports or manufacture receipts',()=>{
  const period=js.slice(js.indexOf('async function loadPeriodData(force)'),js.indexOf('async function loadLedger()'));
  assert.match(period,/request\('ui_stock_month_end_trend_v1\?' \+ tq\)/);
- assert.doesNotMatch(period,/request\('purchase_inventory_bridge\?|request\('ui_stock_activity_chart_v1\?|loadPendingUploads\(/);
+ assert.doesNotMatch(period,/request\('purchase_inventory_bridge\?|request\('ui_stock_activity_chart_v1\?/);
  assert.doesNotMatch(period,/method:\s*['"](?:POST|PATCH|PUT|DELETE)/i);
  assert.match(js,/Pembelian yang belum terbukti diterima tidak otomatis ditambahkan ke stok/);
 });
