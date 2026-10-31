@@ -7,7 +7,7 @@ const css=fs.readFileSync('stock-readable-density.css','utf8');
 
 assert(!shim.includes('stock-recall-v4.js'),'owner shim must not load legacy Stock recall v4');
 assert(shim.includes('stock-v3-runtime-fix.js'),'owner shim must load the canonical Stock v3 bridge');
-assert(bridge.includes("/stock-control-v3.js?v=34"),'canonical bridge must load Stock Control v3');
+assert(bridge.includes("/stock-control-v3.js?v=35"),'canonical bridge must load Stock Control v3');
 assert(bridge.includes("setAttribute('data-stock-v4','1')"),'canonical shell must satisfy the existing owner guard marker');
 assert(css.includes('#stok .sc3-table{width:100%;min-width:0;table-layout:fixed;font-size:8.3px}'),'desktop Stock table must keep the readable fixed-width density override');
 assert(!css.includes('font-size:5.4px'),'readable override must not regress to the previous ultra-small status text');
@@ -79,7 +79,7 @@ assert(!currentAndSafe.includes('event tercatat')&&!currentAndSafe.includes('akt
   'Event activity must not be mistaken for stock quantity');
 assert(greenCss.includes('.sc21-comparison-svg')&&greenCss.includes('.sc21-safe-bar')&&greenCss.includes('.sc21-current-bar'),
   'Comparison chart has scoped visual styles');
-assert(ui4.includes('/stock-control-v3.css?v=28'),'New stock chart stylesheet cache version is fresh');
+assert(ui4.includes('/stock-control-v3.css?v=29'),'New stock chart stylesheet cache version is fresh');
 assert(ui4.includes('sc12-status-strip')&&greenCss.includes('.sc12-status-strip'),
   'Healthy audit/upload state displays compactly to give dashboard more space');
 
