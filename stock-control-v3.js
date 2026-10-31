@@ -1638,7 +1638,7 @@
       {kind:'package',label:'Total Item (SKU)',value:quantity(items.length),
        note:loading?'Memuat master stok…':'Item terdaftar di backend'},
       {kind:'value',label:'Nilai Stok (Parsial)',
-       value:S.valuationLoading?'…':!valuationReady?'—':stockMoney(v.inventory_value,true),
+       value:valuationReady?stockMoney(v.inventory_value,true):S.valuationError?'—':'…',
        note:valuationReady?('Biaya terverifikasi: '+fmt(v.valued_items)+' dari '+fmt(v.inventory_items)+' SKU ('+
          coverage.toLocaleString('id-ID',{maximumFractionDigits:1})+'%)'):
          (S.valuationError?'Data valuasi belum tersedia':'Menunggu biaya terverifikasi'),
