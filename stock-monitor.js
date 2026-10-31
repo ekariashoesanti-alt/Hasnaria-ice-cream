@@ -48,12 +48,15 @@
 
   function showOpeningState() {
     var host = stockHost();
-    if (!host || host.querySelector('.sc3-shell') || host.querySelector('[data-stock-opening]')) return;
+    if (!host || host.querySelector('.sc3-shell,[data-stock-v3-boot],[data-stock-opening]')) return;
     host.innerHTML = '<div class="card" data-stock-opening="1"><h2>Stok &amp; Kebutuhan Material</h2><p class="small">Menyiapkan data persediaan…</p></div>';
   }
 
   function loadControl() {
     if (!stockActive()) return;
+    // Never replace the Owner's canonical loading surface while bridge loads.
+    var owner=window.__HASNARIA_CONTEXT&&window.__HASNARIA_CONTEXT.role==='owner';
+    if(owner||window.__HASNARIA_STOCK_OWNER_CLAIMED)return;
     // Canonical Owner bridge owns first paint and script loading; never compete.
     if(window.__HASNARIA_STOCK_V3_RUNTIME_FIX){
       if(window.__HASNARIA_STOCK_WAKE)window.__HASNARIA_STOCK_WAKE();
