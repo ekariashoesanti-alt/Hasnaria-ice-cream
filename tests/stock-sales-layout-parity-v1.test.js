@@ -60,8 +60,8 @@ test('responsive panels keep charts and data visible at narrower widths',()=>{
  assert.match(stockStyle,/@media\(max-width:640px\)/);
  assert.match(stockStyle,/\.sc21-chart-frame\{[\s\S]*?overflow-x:auto!important/);
  assert.match(stockStyle,/\.sc22-dual>.sc5-panel\{[\s\S]*?max-height:none!important/);
- assert.match(stockJS,/stock-control-v3\.css\?v=32/);
+ assert.match(stockJS,/stock-control-v3\.css\?v=33/);
  for(const f of ['stock-monitor.js','stock-v3-runtime-fix.js']){
-  assert.match(read(f),/stock-control-v3\.js\?v=38/);
+  assert.match(read(f),/stock-control-v3\.js\?v=39/);
  }
 });
