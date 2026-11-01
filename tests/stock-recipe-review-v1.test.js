@@ -40,9 +40,9 @@ test('read-only Owner review is requested on demand, month scoped, versioned',()
 
 test('new modal shares controlled scrolling and cache pins',()=>{
   assert.match(css,/\.sc17-review-table\{min-width:800px\}/);
-  assert.match(js,/stock-control-v3\.css\?v=32/);
+  assert.match(js,/stock-control-v3\.css\?v=33/);
   for(const f of ['stock-monitor.js','stock-v3-runtime-fix.js']){
-    assert.ok(read(f).includes('/stock-control-v3.js?v=38'),f);
+    assert.ok(read(f).includes('/stock-control-v3.js?v=39'),f);
   }
   assert.match(read('scripts/vercel-build-check.js'),/stock-recipe-review-v1\.test\.js/);
 });
