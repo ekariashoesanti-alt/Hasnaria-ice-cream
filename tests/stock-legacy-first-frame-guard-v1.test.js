@@ -50,7 +50,7 @@ test('versioned runtime prevents browser from using outdated Owner navigation an
  assert.match(indexBuild,/owner-shell-guard\.js\?v=13/);
  assert.match(nav,/owner-finance-stock-v3'\+'\.js\?v=15/);
  assert.match(shim,/stock-v3-runtime-fix\.js\?v=5/);
- assert.match(bridge,/stock-control-v3\.js\?v=38/);
+ assert.match(bridge,/stock-control-v3\.js\?v=39/);
  assert.match(source('scripts/vercel-build-check.js'),/stock-legacy-first-frame-guard-v1\.test\.js/);
 });
 test('old renderer block is presentation-only; stock calculation paths remain untouched',()=>{
@@ -58,5 +58,5 @@ test('old renderer block is presentation-only; stock calculation paths remain un
  for(const s of ['inventory_stock_reconciliation','ui_stock_month_end_trend_v1','Stok Saat Ini vs Batas Aman','Tren Stok Akhir Bulanan']){
   assert.ok(main.includes(s),s);
  }
- assert.match(main,/stock-control-v3\.css\?v=32/);
+ assert.match(main,/stock-control-v3\.css\?v=33/);
 });

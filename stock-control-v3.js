@@ -101,6 +101,11 @@
     formulaSeq: 0,
     formulaPage: 1,
     formulaSearch: '',
+    integrationAudit: null,
+    integrationLoading: false,
+    integrationError: '',
+    integrationSeq: 0,
+    integrationPeriod: '',
     chartUnit: '',
     chartPage: 1
   };
@@ -244,7 +249,7 @@
     var l = document.createElement('link');
     l.id = 'stock-control-v3-css';
     l.rel = 'stylesheet';
-    l.href = '/stock-control-v3.css?v=32';
+    l.href = '/stock-control-v3.css?v=33';
     document.head.appendChild(l);
   }
 
@@ -902,6 +907,7 @@
         S.salesLinkAuditUnavailable = false;
         S.purchaseImportEvidence = null;
         S.purchaseImportEvidenceUnavailable = false;
+        ++S.integrationSeq;S.integrationAudit=null;S.integrationPeriod='';S.integrationError='';S.integrationLoading=false;
         ++S.recipeReviewSeq;
         S.recipeReviewLoaded = false;
         S.recipeReviewRows = [];
@@ -1706,6 +1712,67 @@
   }
 
 
+
+  // Read-only; no inventory movement or opening stock is ever created here.
+  async function loadIntegrationAudit(){
+    if(!isOwner()||S.modal!=='formula-audit')return;
+    var period=monthKey(S.period),seq=++S.integrationSeq;
+    S.integrationPeriod=period;S.integrationAudit=null;S.integrationError='';S.integrationLoading=true;
+    if(!period){S.integrationError='Pilih periode terlebih dahulu.';S.integrationLoading=false;return;}
+    var year=Number(period.slice(0,4)),month=Number(period.slice(5,7));
+    var next=new Date(Date.UTC(year,month,1)).toISOString().slice(0,10),from=period+'-01';
+    var results=await Promise.allSettled([
+      request('ui_stock_sales_link_audit_v1?'+qs({brand_id:'eq.'+BRAND,period_month:'eq.'+from,
+        select:'period_month,sale_item_rows,linked_sale_item_rows,unlinked_sale_item_rows,no_recipe_rows,unverified_components_rows,eligible_verified_rows,awaiting_recipe_approval_rows,sale_consumption_movements',limit:'1'})),
+      request('purchase_inventory_bridge?'+qs({brand_id:'eq.'+BRAND,purchase_date:'gte.'+from,
+        select:'ready_for_inventory,inventory_item_id',limit:'2000'})+'&purchase_date=lt.'+next)
+    ]);
+    if(seq!==S.integrationSeq||S.modal!=='formula-audit'||monthKey(S.period)!==period)return;
+    var salesOk=results[0].status==='fulfilled',purchaseOk=results[1].status==='fulfilled';
+    var sales=salesOk&&Array.isArray(results[0].value)?results[0].value[0]||null:null;
+    var rows=purchaseOk&&Array.isArray(results[1].value)?results[1].value:null;
+    S.integrationAudit={
+      sales:s,salesOk:salesOk,purchaseOk:purchaseOk,
+      purchaseTotal:rows?rows.length:null,
+      purchaseMapped:rows?rows.filter(function(x){return !!x.inventory_item_id}).length:null,
+      purchaseReady:rows?rows.filter(function(x){return x.ready_for_inventory===true}).length:null,
+      purchaseReview:rows?rows.filter(function(x){return x.ready_for_inventory!==true}).length:null
+    };
+    if(!salesOk||!purchaseOk)S.integrationError='Sebagian sumber gagal dibaca; data lain tetap ditampilkan.';
+    S.integrationLoading=false;render();
+  }
+
+  function renderIntegrationAudit(){
+    if(!isOwner())return '';
+    var a=S.integrationAudit||{},sale=a.sales||{};
+    var out='<div class="sc24-integration" aria-label="Audit integrasi Penjualan Pembelian Stok">'+
+      '<div class="sc24-title"><b>Audit Integrasi · '+esc(monthLabel(S.period))+'</b>'+
+      '<span>READ ONLY · tanpa posting transaksi</span></div>';
+    if(S.integrationLoading||S.integrationPeriod!==monthKey(S.period))return out+
+      '<p class="sc20-note">Memeriksa kaitan penjualan, resep dan pembelian periode terpilih…</p></div>';
+    if(S.integrationError)out+='<div class="sc20-note">'+esc(S.integrationError)+'</div>';
+    if(!a.salesOk&&!a.purchaseOk)return out+
+      '<div class="sc20-note">Belum dapat memverifikasi integrasi; saldo tidak diubah.</div></div>';
+    var cell=function(v,name,note){return '<div><b>'+esc(v)+'</b><span>'+esc(name)+
+      '</span><small>'+esc(note)+'</small></div>'};
+    out+='<div class="sc20-cards sc24-metrics">'+
+      cell(a.salesOk?fmt(sale.unlinked_sale_item_rows||0):'—','Baris jual belum tertaut','Belum mengurangi saldo stok')+
+      cell(a.salesOk?fmt(sale.awaiting_recipe_approval_rows||0):'—','Menunggu persetujuan resep','Jangan posting otomatis')+
+      cell(a.purchaseOk?fmt(a.purchaseReview):'—','Pembelian perlu review','Mapping/satuan/penerimaan belum lengkap')+
+      cell(a.purchaseOk?fmt(a.purchaseReady):'—','Data pembelian terpetakan','Belum berarti barang diterima')+
+      '</div><div class="sc20-note">'+
+      (a.salesOk?'<b>Penjualan:</b> '+fmt(sale.sale_item_rows||0)+' baris; '+
+        fmt(sale.linked_sale_item_rows||0)+' tertaut; '+fmt(sale.sale_consumption_movements||0)+
+        ' event pemakaian; '+fmt(sale.no_recipe_rows||0)+' tanpa resep; '+
+        fmt(sale.unverified_components_rows||0)+' komponen belum terverifikasi. ':'')+
+      (a.purchaseOk?'<b>Pembelian:</b> '+fmt(a.purchaseTotal)+' baris; '+fmt(a.purchaseMapped)+
+        ' punya referensi SKU. ':'')+
+      'Kategori penyebab bisa tumpang-tindih. Tidak ada transaksi yang otomatis dibukukan.</div>'+
+      '<div class="sc24-actions"><button type="button" data-sc24-review="recipes">Periksa Resep</button>'+
+      '<button type="button" data-sc24-review="pembelian">Review Pembelian</button></div></div>';
+    return out;
+  }
+
   // Independent virtual view: every row is calculated from existing opname + ledger,
   // not inserted as a new physical stock or movement.
   async function loadFormulaAudit(){
@@ -1713,6 +1780,7 @@
     var seq=++S.formulaSeq;
     S.formulaLoading=true;S.formulaLoaded=false;S.formulaError='';S.formulaRows=[];
     S.formulaPage=1;S.formulaSearch='';render();
+    loadIntegrationAudit();
     try{
       var data=await request('ui_stock_formula_verification_v1?'+qs({
         brand_id:'eq.'+BRAND,
@@ -1784,7 +1852,7 @@
       ' '+S.formulaPage+' / '+pages+' '+
       '<button type="button" data-sc20-page="'+(S.formulaPage+1)+'"'+(S.formulaPage>=pages?' disabled':'')+'>›</button>'+
       '</div></div>';
-    return '<div class="sc20-cards"><div><b>'+fmt(tracked)+'</b><span>SKU dengan stok awal</span></div>'+
+    return renderIntegrationAudit()+'<div class="sc20-cards"><div><b>'+fmt(tracked)+'</b><span>SKU dengan stok awal</span></div>'+
       '<div><b>'+fmt(missing)+'</b><span>Belum opname</span></div>'+
       '<div><b>'+fmt(mismatched)+'</b><span>Selisih perhitungan</span></div>'+
       '<div><b>'+fmt(dateRisk)+'</b><span>Perlu cek tanggal opname</span></div>'+
@@ -2230,6 +2298,13 @@
       if(recipeBack&&S.modal==='recipes'){S.recipeDetail=null;render();return;}
       var recipeSave=e.target&&e.target.closest?e.target.closest('[data-sc17-save]'):null;
       if(recipeSave&&isOwner()&&S.modal==='recipes'){saveRecipeEvidence();return;}
+      var integrationReview=e.target&&e.target.closest?e.target.closest('[data-sc24-review]'):null;
+      if(integrationReview&&isOwner()&&S.modal==='formula-audit'){
+        var dest=integrationReview.getAttribute('data-sc24-review');
+        if(dest==='recipes'){S.modal='recipes';loadRecipeReview();}
+        else if(dest==='pembelian'){S.modal='';render();stockNavigate('pembelian');}
+        return;
+      }
       var auditButton = e.target && e.target.closest ? e.target.closest('[data-sc4-audit]') : null;
       if(auditButton){S.modal='position';S.status='ledger-diff';S.page=1;render();stockDialogFocus(host);return;}
       var correction = e.target && e.target.closest ? e.target.closest('[data-sc4-correction]') : null;
@@ -2378,6 +2453,7 @@
         S.salesLinkAuditUnavailable = false;
         S.purchaseImportEvidence = null;
         S.purchaseImportEvidenceUnavailable = false;
+        ++S.integrationSeq;S.integrationAudit=null;S.integrationPeriod='';S.integrationError='';S.integrationLoading=false;
         ++S.recipeReviewSeq;
         S.recipeReviewLoaded = false;
         S.recipeReviewRows = [];

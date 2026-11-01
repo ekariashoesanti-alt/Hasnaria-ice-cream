@@ -2461,3 +2461,20 @@
     padding:9px 12px!important;
   }
 }
+
+
+/* Period-scoped read-only audit inside Owner Formula modal only.
+   Does not change dashboard dimensions, scroll rules or first paint. */
+#stok .sc24-integration{
+  border:1px solid #c5ded1;background:#f7fbf8;border-radius:12px;
+  padding:12px;margin:0 0 14px;min-width:0;
+}
+#stok .sc24-title{display:flex;align-items:center;justify-content:space-between;
+  flex-wrap:wrap;gap:7px;margin-bottom:10px;color:#185b43;font-size:12px}
+#stok .sc24-title span{font-size:10px;color:#658577;font-weight:700}
+#stok .sc24-metrics>div{background:#fff}
+#stok .sc24-metrics>div small{font-size:10px;line-height:1.3;color:#718377}
+#stok .sc24-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:9px}
+#stok .sc24-actions button{font:inherit;font-size:11px;font-weight:800;border:1px solid #c5dbc9;
+  background:#fff;color:#186346;border-radius:8px;min-height:34px;padding:7px 11px;cursor:pointer}
+#stok .sc24-actions button:hover{background:#eaf6ee}
