@@ -55,7 +55,7 @@ test('Audit stays inside existing scrollable Formula modal and Stock dashboard k
  assert.match(js,/stock-control-v3\.css\?v=33/);
  assert.match(b,/stock-control-v3\.js\?v=39/);
  const dashboard=section('function render() {','function stockDialogFocus(');
- assert.match(dashboard,/<div class=\\"sc22-dual\\"/);
+ assert.ok(dashboard.includes('<div class="sc22-dual"'),'main dashboard still has two-column stock charts');
  assert.match(dashboard,/monthlyStockEndInfographic\(\)/);
  assert.match(dashboard,/stockSafetyInfographic\(\)/);
  assert.doesNotMatch(dashboard,/loadIntegrationAudit\(/);
