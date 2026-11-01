@@ -61,7 +61,7 @@
     if(document.getElementById('hasnaria-stock-control-v3-canonical-js')||document.getElementById('hasnaria-stock-control-v3-loader'))return;
     var s=document.createElement('script');
     s.id='hasnaria-stock-control-v3-canonical-js';
-    s.src='/stock-control-v3.js?v=38';
+    s.src='/stock-control-v3.js?v=39';
     s.async=false;
     s.onload=function(){
       markCanonical();
