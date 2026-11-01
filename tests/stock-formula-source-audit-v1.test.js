@@ -90,9 +90,9 @@ test('mocked Owner UI shows precise formula and missing-data warnings',()=>{
 });
 
 test('new JS/CSS versions are pinned and full Stock release checks retained',()=>{
-  assert.match(js,/stock-control-v3\.css\?v=32/);
+  assert.match(js,/stock-control-v3\.css\?v=33/);
   for(const f of ['stock-monitor.js','stock-v3-runtime-fix.js']){
-    assert.match(read(f),/stock-control-v3\.js\?v=38/);
+    assert.match(read(f),/stock-control-v3\.js\?v=39/);
   }
   assert.match(read('scripts/vercel-build-check.js'),/stock-formula-source-audit-v1\.test\.js/);
 });
