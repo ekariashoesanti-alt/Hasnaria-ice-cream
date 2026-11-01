@@ -2302,7 +2302,7 @@
       if(integrationReview&&isOwner()&&S.modal==='formula-audit'){
         var dest=integrationReview.getAttribute('data-sc24-review');
         if(dest==='recipes'){S.modal='recipes';loadRecipeReview();}
-        else if(dest==='pembelian')stockNavigate('pembelian');
+        else if(dest==='pembelian'){S.modal='';render();stockNavigate('pembelian');}
         return;
       }
       var auditButton = e.target && e.target.closest ? e.target.closest('[data-sc4-audit]') : null;
