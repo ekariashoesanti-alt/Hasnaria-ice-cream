@@ -75,6 +75,7 @@ test('mocked Owner UI shows precise formula and missing-data warnings',()=>{
     fmt:v=>Number(v).toLocaleString('id-ID'),num:v=>Number(v)||0,
     esc:v=>String(v),dateLabel:v=>v?String(v):'-',
     signed:v=>(Number(v)>0?'+':'')+Number(v),
+    renderIntegrationAudit:()=>'', // Audit integra­si is tested separately; isolate formula unit view.
     isOwner:()=>true
   };
   const html=vm.runInNewContext(js.slice(start,end)+';renderFormulaAudit()',mocked);
