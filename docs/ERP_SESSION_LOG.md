@@ -292,3 +292,9 @@ Validasi:30 kasus GPS (9 tambahan),25 berkas tes/full build, review independen d
 - Production verified recipe status: **54 draft / 0 verified**. October has **484 sales and 1,035 sale items**, but canonical inventory movement last date was 30 Sep. `private.sync_sale_item_inventory_movement` requires verified recipe effective date; do NOT automatically authorize all recipes or post retrospective consumption.
 - Added direct audit marker and SKU drilldown to Stock to avoid hiding gaps behind green KPI, pending upload counter, exact month alignment for Purchase-cycle stock cards.
 - Validation: GitHub Audit Gate passed including test `tests/stock-opname-upload-v1.test.js` (strict parsing, duplicate prevention, no posting, owner-only, saved draft) and existing Stock/Operations sync tests. Database/Owner authenticated browser E2E and Vercel preview still outstanding. Release remains **REVIEW**; do not merge solely based on CI.
+
+## 2026-11-02 — HSN-005 Owner Sales navigation idempotency
+
+- `sales-board.js`: avoid rewriting the Penjualan label when already correct, reducing unnecessary DOM churn. Existing routes, styling, data and role guards stay unchanged.
+- Added targeted regression and build gate. Local headless/browser validation required before production release. No Supabase changes.
+- Tracker remains IN_PROGRESS pending CI and real-browser acceptance.
