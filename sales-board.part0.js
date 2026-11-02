@@ -352,11 +352,14 @@
   }
 
   async function loadMetrics() {
+    // Lock before awaiting auth: initial mount, Owner navigation and auth-ready
+    // callbacks may all request the first snapshot in the same microtask.
     if (STATE.loading) return;
-    var t = await getTok();
-    if (!t) return;
-    STATE.loading = true; STATE.error = ''; draw();
+    STATE.loading = true;
     try {
+      var t = await getTok();
+      if (!t) { STATE.loading = false; return; }
+      STATE.error = ''; draw();
       var rows = await api('daily_metrics?brand_id=eq.' + encodeURIComponent(BRAND) + '&limit=5000&select=metric_date,cash_revenue,transactions,notes,brand_id&order=metric_date.asc');
       STATE.rows = (rows || []).map(function (r) {
         return Object.assign({}, r, {
@@ -364,9 +367,9 @@
           transactions: Number(r.transactions || 0)
         });
       });
-      var minDate = STATE.rows.length ? STATE.rows[0].metric_date : '';
-      var maxDate = STATE.rows.length ? STATE.rows[STATE.rows.length - 1].metric_date : '';
-      STATE.hourlySales = minDate && maxDate ? (await api('sales?brand_id=eq.' + encodeURIComponent(BRAND) + '&sold_at=gte.' + encodeURIComponent(minDate) + '&sold_at=lte.' + encodeURIComponent(maxDate) + '&select=sold_at,sold_hour,transaction_count&limit=50000&order=sold_at.asc') || []) : [];
+      // The visible hourly chart has its own month-scoped
+      // get_sales_hourly_month_v1 RPC (sales-hourly-chart.js). Fetching up to
+      // 50k sales rows here delayed first KPI paint without feeding that chart.
       STATE.loading = false; STATE.fetched = true; STATE.error = '';
       if (!STATE.viewFrom) ensureView();
       draw();

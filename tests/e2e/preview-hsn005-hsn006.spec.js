@@ -6,8 +6,8 @@ const EXACT = 'http://127.0.0.1:4173';
 test('HSN compiled preview: canonical bundle and retry markers are served', async ({ request }) => {
   expect(BASE, 'Read-only browser test must use local compiled artifact').toBe(EXACT);
   const checks = [
-    ['/', ['/app.js?v=p076', '/owner-shell-guard.js?v=14']],
-    ['/app.js?v=p076', ['/sales-board.js?v=50', 'pendingScriptLoads=Object.create(null)']],
+    ['/', ['/app.js?v=p077', '/owner-shell-guard.js?v=14']],
+    ['/app.js?v=p076', ['/sales-board.js?v=51', 'pendingScriptLoads=Object.create(null)']],
     ['/owner-shell-guard.js?v=14', ['data-sales-bootstrap-error', 'if(ok===false)']],
     ['/sales-board.js?v=50', ['!STATE.fetched && !STATE.loading && !STATE.error && pickTokenFromStorage()', '!STATE.fetched && !STATE.error && tries++ < 80']]
   ];

@@ -236,6 +236,7 @@ run(process.execPath, ['tests/erp-tracker.test.js']);
 run(process.execPath, ['tests/erp-ui.test.js']);
 run(process.execPath, ['tests/p2-owner-performance.test.js']);
 run(process.execPath, ['--test', 'tests/sales-nav-idempotent.test.js']);
+run(process.execPath, ['--test', 'tests/sales-cold-load-fastpath.test.js']);
 run(process.execPath, ['tests/purchase-fast-load.test.js']);
 run(process.execPath, ['tests/purchase-owner-no-flicker.test.js']);
 run(process.execPath, ['--test', 'tests/module-loader-retry.test.js']);

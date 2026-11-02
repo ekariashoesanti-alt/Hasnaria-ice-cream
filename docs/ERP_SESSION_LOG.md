@@ -2,6 +2,13 @@
 
 Append-only working journal. Newest session goes at the top.
 
+## 2026-11-02 — Sales first-load fast path
+
+- Guard Sales initial fetch before awaiting auth to prevent duplicate calls on initial mount/navigation/auth-ready.
+- Use one `daily_metrics` read for initial KPI paint. Removed unused 50,000-row historical `sales` fetch from foreground loader. The visible hourly chart still uses independent month-scoped RPC `get_sales_hourly_month_v1`.
+- No changes to Supabase data, historical daily_metrics selection, import, or layout. Added simulated cold-fetch regression and cache version bump. CI and authenticated Owner acceptance pending.
+
+
 ## 2026-11-02 — HSN-005 canonical runtime follow-up
 
 - Detected that the production `sales-board.js` is compiled from `sales-board.part0–4.js` and the earlier loader-only label patch was not present in that asset.

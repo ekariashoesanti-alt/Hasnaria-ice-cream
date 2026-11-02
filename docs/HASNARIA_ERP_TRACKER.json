@@ -227,7 +227,7 @@
       "acceptance": "Loading terlihat saat bootstrap/data load dan tidak memblokir tanpa batas.",
       "owner": "Codex/ChatGPT",
       "updated_at": "2026-11-02",
-      "notes": "Module script errors now recoverable across Sales/Purchase/Stock; dedicated simulated DOM tests. Full CI/preview and authenticated browser acceptance are required before DONE."
+      "notes": "Module script errors now recoverable across Sales/Purchase/Stock; dedicated simulated DOM tests. Full CI/preview and authenticated browser acceptance are required before DONE. Cold first-paint fast path: Sales canonical loader now single-flight before auth and removes unused all-history 50k-row Sales read; hourly chart still fetches month-specific RPC. Stage in PR #184; UI acceptance pending."
     },
     {
       "id": "HSN-007",

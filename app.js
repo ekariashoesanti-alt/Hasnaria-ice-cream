@@ -5,7 +5,7 @@
   var AUTH_ONBOARDING = '/auth-onboarding-v1.js?v=1';
   var STOCK = '/stock-monitor.js?v=31';
   var PURCHASE = '/xlsx-preload.js?v=28';
-  var SALES = '/sales-board.js?v=50';
+  var SALES = '/sales-board.js?v=51';
   var SALES_HOURLY = '/sales-hourly-chart.js?v=6';
   var SALES_FALLBACK = false;
   var SALES_UI = '/sales-ui-patch.js?v=13';
