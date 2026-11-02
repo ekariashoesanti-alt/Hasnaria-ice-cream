@@ -163,7 +163,7 @@ function setup(lateCoordinator = false) {
   foreground.window.__hasnariaReloadSales(); await tick();
   assert.equal(foreground.requests.length, 3, 'the existing public hook still starts the foreground reload');
   foreground.respond(foreground.requests[2], metric(175)); await tick();
-  foreground.respond(foreground.requests[3], hourly(3)); await tick();
+  assert.equal(foreground.requests.length, 3, 'foreground fast path skips the unused historical hourly GET');
   assert.equal(foreground.state.loading, false);
   const foregroundHtml = foreground.html, foregroundRenders = foreground.renders;
   foreground.respond(foreground.requests[1], hourly(40)); await oldBackground;

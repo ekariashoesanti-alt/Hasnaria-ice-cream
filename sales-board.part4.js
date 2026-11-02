@@ -286,10 +286,12 @@ EESE=2|ODENG TIPIS=2|Topokki=5|BAKSO UDANG=1|CHIKUWA=1|KUAH ODENG=2|SCALLOP=1|IC
   var tries = 0;
   (function wait() {
     mount();
-    if (document.getElementById('sales') && (!STATE.fetched || !STATE.rows.length) && pickTokenFromStorage()) {
+    // Empty-but-fetched Sales results are valid; do not re-fetch indefinitely.
+    if (document.getElementById('sales') && !STATE.fetched && !STATE.loading && !STATE.error && pickTokenFromStorage()) {
       loadMetrics();
     }
-    if ((!STATE.fetched || !STATE.rows.length) && tries++ < 80) {
+    // On genuine failure, wait for an explicit tab revisit or manual refresh.
+    if (!STATE.fetched && !STATE.error && tries++ < 80) {
       setTimeout(wait, 400);
     }
   })();

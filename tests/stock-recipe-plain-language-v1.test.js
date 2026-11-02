@@ -59,7 +59,7 @@ test('ingredient scenario remains separate and cannot auto-post inventory',()=>{
   const section=js.slice(a,b);
   assert.doesNotMatch(section,/resolve_product_recipe_verification_v2\s*\(/);
   assert.doesNotMatch(section,/method:\s*['"](?:PATCH|POST|DELETE|PUT)/i);
-  assert.match(js,/stock-control-v3\.css\?v=33/);
+  assert.match(js,/stock-control-v3\.css\?v=34/);
   for(const file of ['stock-monitor.js','stock-v3-runtime-fix.js']){
     assert.match(read(file),/stock-control-v3\.js\?v=39/);
   }

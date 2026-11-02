@@ -40,7 +40,7 @@ test('read-only Owner review is requested on demand, month scoped, versioned',()
 
 test('new modal shares controlled scrolling and cache pins',()=>{
   assert.match(css,/\.sc17-review-table\{min-width:800px\}/);
-  assert.match(js,/stock-control-v3\.css\?v=33/);
+  assert.match(js,/stock-control-v3\.css\?v=34/);
   for(const f of ['stock-monitor.js','stock-v3-runtime-fix.js']){
     assert.ok(read(f).includes('/stock-control-v3.js?v=39'),f);
   }

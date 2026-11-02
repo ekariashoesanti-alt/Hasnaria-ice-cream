@@ -20,7 +20,7 @@
     var tabs=document.getElementById('tabs');if(!tabs)return false;
     var btn=tabs.querySelector('[data-tab="sales"]');
     if(!btn){btn=document.createElement('button');btn.type='button';btn.className='tab';btn.setAttribute('data-tab','sales');btn.setAttribute('aria-label','Penjualan');btn.textContent='Penjualan';tabs.insertBefore(btn,tabs.firstChild?tabs.children[1]||null:null);}
-    btn.style.display='';btn.textContent='Penjualan';
+    btn.style.display='';if(btn.textContent!=='Penjualan')btn.textContent='Penjualan';
     btn.onclick=function(){
       ['dashboard','sales','ops','stok','shift','social','approval','team','sistem'].forEach(function(id){var el=document.getElementById(id);if(el)el.classList.toggle('hidden',id!=='sales');});
       tabs.querySelectorAll('.tab').forEach(function(b){b.classList.toggle('on',b===btn);});

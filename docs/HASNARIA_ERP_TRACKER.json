@@ -205,27 +205,29 @@
       "id": "HSN-005",
       "milestone": "M0",
       "priority": "P0",
-      "status": "TODO",
+      "status": "IN_PROGRESS",
       "title": "Hilangkan flicker top navigation",
       "dependencies": [
         "HSN-003"
       ],
       "acceptance": "Tab tidak berkedip/berubah label saat rerender.",
       "owner": "Codex/ChatGPT",
-      "updated_at": "2026-09-18"
+      "updated_at": "2026-11-02",
+      "notes": "Integrated preview now also fixes compiled Sales bootstrap retries for empty/failing reads; original source loader fix alone did not reach Vercel dist. CI and authenticated 100% visual acceptance pending."
     },
     {
       "id": "HSN-006",
       "milestone": "M0",
       "priority": "P0",
-      "status": "TODO",
+      "status": "IN_PROGRESS",
       "title": "Global loading state",
       "dependencies": [
         "HSN-003"
       ],
       "acceptance": "Loading terlihat saat bootstrap/data load dan tidak memblokir tanpa batas.",
       "owner": "Codex/ChatGPT",
-      "updated_at": "2026-09-18"
+      "updated_at": "2026-11-02",
+      "notes": "Module script errors now recoverable across Sales/Purchase/Stock; dedicated simulated DOM tests. Full CI/preview and authenticated browser acceptance are required before DONE. Cold first-paint fast path: Sales canonical loader now single-flight before auth and removes unused all-history 50k-row Sales read; hourly chart still fetches month-specific RPC. Stage in PR #184; UI acceptance pending."
     },
     {
       "id": "HSN-007",
@@ -244,14 +246,15 @@
       "id": "HSN-008",
       "milestone": "M0",
       "priority": "P1",
-      "status": "TODO",
+      "status": "IN_PROGRESS",
       "title": "Responsive baseline desktop/tablet/mobile",
       "dependencies": [
         "HSN-003"
       ],
       "acceptance": "Semua core screen usable di 360px, 768px, dan desktop.",
       "owner": "Codex/ChatGPT",
-      "updated_at": "2026-09-18"
+      "updated_at": "2026-11-02",
+      "notes": "Stock-only Owner one-view compact layout at desktop >=1101x720, safe scroll for short screens, no data or math changes; Chromium geometry and authenticated visual acceptance pending."
     },
     {
       "id": "HSN-009",

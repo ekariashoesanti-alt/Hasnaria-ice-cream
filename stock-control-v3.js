@@ -249,7 +249,7 @@
     var l = document.createElement('link');
     l.id = 'stock-control-v3-css';
     l.rel = 'stylesheet';
-    l.href = '/stock-control-v3.css?v=33';
+    l.href = '/stock-control-v3.css?v=34';
     document.head.appendChild(l);
   }
 
