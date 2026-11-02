@@ -126,10 +126,18 @@
 
   function ensureSales(){
     var h=section('sales');if(!h||h.classList.contains('hidden'))return;
+    var failed=h.querySelector('[data-sales-bootstrap-error="1"]');if(failed)failed.remove();
     if(h.querySelector('.sale-board')){state.salesRetries=0;return}
     if(typeof window.__hasnariaReloadSales==='function'){state.salesRetries=0;window.__hasnariaReloadSales();return}
     if(typeof window.__HASNARIA_LOAD_SALES==='function'){
-      window.__HASNARIA_LOAD_SALES().then(function(){if(isOwner()&&state.active==='sales'){state.salesRetries=0;setTimeout(ensureSales,30)}});return;
+      window.__HASNARIA_LOAD_SALES().then(function(ok){
+        if(!isOwner()||state.active!=='sales')return;
+        if(ok===false){
+          if(!h.querySelector('.sale-board'))h.innerHTML='<div class="sale-board" data-sales-bootstrap-error="1" role="alert">Dashboard Penjualan gagal dimuat. Buka tab lain lalu kembali ke Penjualan untuk mencoba lagi.</div>';
+          return;
+        }
+        state.salesRetries=0;setTimeout(ensureSales,30);
+      });return;
     }
     if(state.salesRetries>=40)return;state.salesRetries++;setTimeout(function(){if(isOwner()&&state.active==='sales')ensureSales()},100)
   }

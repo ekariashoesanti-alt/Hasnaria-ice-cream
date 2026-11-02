@@ -2,6 +2,14 @@
 
 Append-only working journal. Newest session goes at the top.
 
+## 2026-11-02 — HSN-006 Script loader recovery (preview review)
+
+- Replaced false-success `loadOnce` behavior with shared in-flight load, true/false result, failed-tag cleanup, and retryable cache across Sales, Purchase, Stock.
+- Owner Sales shows a recoverable error rather than auto-looping when the script fails.
+- Bumped runtime cache versions, added eight headless regression scenarios, and registered them in the Vercel build gate.
+- No Supabase writes, changes to business logic, or CSS. Keep IN_PROGRESS until GitHub CI, preview, and authenticated browser visual acceptance.
+
+
 ## 2026-09-25 — HSN-300 Purchase canonical render cleanup
 
 **Scope**

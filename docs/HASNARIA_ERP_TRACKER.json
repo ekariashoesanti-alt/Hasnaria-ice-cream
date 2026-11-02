@@ -218,14 +218,15 @@
       "id": "HSN-006",
       "milestone": "M0",
       "priority": "P0",
-      "status": "TODO",
+      "status": "IN_PROGRESS",
       "title": "Global loading state",
       "dependencies": [
         "HSN-003"
       ],
       "acceptance": "Loading terlihat saat bootstrap/data load dan tidak memblokir tanpa batas.",
       "owner": "Codex/ChatGPT",
-      "updated_at": "2026-09-18"
+      "updated_at": "2026-11-02",
+      "notes": "Module script errors now recoverable across Sales/Purchase/Stock; dedicated simulated DOM tests. Full CI/preview and authenticated browser acceptance are required before DONE."
     },
     {
       "id": "HSN-007",
