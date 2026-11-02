@@ -246,14 +246,15 @@
       "id": "HSN-008",
       "milestone": "M0",
       "priority": "P1",
-      "status": "TODO",
+      "status": "IN_PROGRESS",
       "title": "Responsive baseline desktop/tablet/mobile",
       "dependencies": [
         "HSN-003"
       ],
       "acceptance": "Semua core screen usable di 360px, 768px, dan desktop.",
       "owner": "Codex/ChatGPT",
-      "updated_at": "2026-09-18"
+      "updated_at": "2026-11-02",
+      "notes": "Stock-only Owner one-view compact layout at desktop >=1101x720, safe scroll for short screens, no data or math changes; Chromium geometry and authenticated visual acceptance pending."
     },
     {
       "id": "HSN-009",

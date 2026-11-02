@@ -2,6 +2,13 @@
 
 Append-only working journal. Newest session goes at the top.
 
+## 2026-11-02 — HSN-008 compact Stock one-view desktop
+
+- CSS-only Owner Stock override scales head, toolbar, four KPI tiles and dual-chart panels to desktop viewport >=1101x720; preserves fallback scroll on smaller displays and stock modals.
+- Removes comparison SVG min-width overflow; does not hide chart data, captions or any existing buttons.
+- Stock stylesheet version v34; added static contract and Playwright geometry checks. No stock math or Supabase changes. User acceptance pending.
+
+
 ## 2026-11-02 — Sales first-load fast path
 
 - Guard Sales initial fetch before awaiting auth to prevent duplicate calls on initial mount/navigation/auth-ready.
