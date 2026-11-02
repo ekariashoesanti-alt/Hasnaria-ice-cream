@@ -1,7 +1,7 @@
 (function () {
   'use strict';
   var CORE = '/core-app.js?v=9';
-  var OWNER_SHELL = '/owner-shell-guard.js?v=13';
+  var OWNER_SHELL = '/owner-shell-guard.js?v=14';
   var AUTH_ONBOARDING = '/auth-onboarding-v1.js?v=1';
   var STOCK = '/stock-monitor.js?v=31';
   var PURCHASE = '/xlsx-preload.js?v=28';
@@ -38,15 +38,49 @@
     }catch(e){console.error('Hasnaria Auth client init gagal:',e);}
   }
   function load(src,done){var s=document.createElement('script');s.src=src;s.async=false;s.onload=function(){if(done)done();};s.onerror=function(){console.error('Hasnaria module gagal dimuat:',src);if(done)done();};document.head.appendChild(s);}
-  function loadOnce(id,src){return new Promise(function(resolve){var old=document.getElementById(id);if(old){if(old.getAttribute('data-loaded')==='1')return resolve();old.addEventListener('load',resolve,{once:true});old.addEventListener('error',resolve,{once:true});return;}var s=document.createElement('script');s.id=id;s.src=src;s.async=true;s.onload=function(){s.setAttribute('data-loaded','1');resolve();};s.onerror=function(){console.error('Hasnaria module gagal dimuat:',src);resolve();};document.head.appendChild(s);});}
+  // Failed script URLs remain retryable; only successful loads are cached.
+  var pendingScriptLoads=Object.create(null);
+  function loadOnce(id,src){
+    var old=document.getElementById(id);
+    if(old&&old.getAttribute('data-loaded')==='1')return Promise.resolve(true);
+    if(pendingScriptLoads[id])return pendingScriptLoads[id];
+    // A stale script node cannot be relied on to fire another load event.
+    if(old&&old.parentNode)old.parentNode.removeChild(old);
+    var task=new Promise(function(resolve){
+      var s=document.createElement('script');s.id=id;s.src=src;s.async=true;
+      s.onload=function(){s.setAttribute('data-loaded','1');resolve(true);};
+      s.onerror=function(){console.error('Hasnaria module gagal dimuat:',src);if(s.parentNode)s.parentNode.removeChild(s);resolve(false);};
+      document.head.appendChild(s);
+    });
+    pendingScriptLoads[id]=task.then(function(ok){delete pendingScriptLoads[id];return ok;});
+    return pendingScriptLoads[id];
+  }
   var salesRuntimePromise=null;
-  function ensureSalesRuntime(){if(salesRuntimePromise)return salesRuntimePromise;salesRuntimePromise=loadOnce('hasnaria-sales-board-runtime',SALES).then(function(){return Promise.all([loadOnce('hasnaria-sales-ui-runtime',SALES_UI),loadOnce('hasnaria-sales-hourly-runtime',SALES_HOURLY)]);});return salesRuntimePromise;}
+  function ensureSalesRuntime(){
+    if(salesRuntimePromise)return salesRuntimePromise;
+    salesRuntimePromise=loadOnce('hasnaria-sales-board-runtime',SALES).then(function(ok){
+      if(!ok)return false;
+      return Promise.all([loadOnce('hasnaria-sales-ui-runtime',SALES_UI),loadOnce('hasnaria-sales-hourly-runtime',SALES_HOURLY)]).then(function(parts){return parts.every(Boolean);});
+    }).then(function(ok){if(!ok)salesRuntimePromise=null;return ok;});
+    return salesRuntimePromise;
+  }
   window.__HASNARIA_LOAD_SALES=ensureSalesRuntime;
   var purchaseRuntimePromise=null;
-  function ensurePurchaseRuntime(){if(purchaseRuntimePromise)return purchaseRuntimePromise;purchaseRuntimePromise=loadOnce('hasnaria-purchase-runtime',PURCHASE);return purchaseRuntimePromise;}
+  function ensurePurchaseRuntime(){
+    if(purchaseRuntimePromise)return purchaseRuntimePromise;
+    purchaseRuntimePromise=loadOnce('hasnaria-purchase-runtime',PURCHASE).then(function(ok){if(!ok)purchaseRuntimePromise=null;return ok;});
+    return purchaseRuntimePromise;
+  }
   window.__HASNARIA_LOAD_PURCHASE=ensurePurchaseRuntime;
   var stockRuntimePromise=null;
-  function ensureStockRuntime(){if(stockRuntimePromise)return stockRuntimePromise;stockRuntimePromise=loadOnce('hasnaria-stock-runtime',STOCK).then(function(){fixStockLayout();setTimeout(fixStockLayout,150);setTimeout(fixStockLayout,500);});return stockRuntimePromise;}
+  function ensureStockRuntime(){
+    if(stockRuntimePromise)return stockRuntimePromise;
+    stockRuntimePromise=loadOnce('hasnaria-stock-runtime',STOCK).then(function(ok){
+      if(!ok){stockRuntimePromise=null;return false;}
+      fixStockLayout();setTimeout(fixStockLayout,150);setTimeout(fixStockLayout,500);return true;
+    });
+    return stockRuntimePromise;
+  }
   window.__HASNARIA_LOAD_STOCK=ensureStockRuntime;
   function fixStockLayout(){var host=document.getElementById('stok');if(!host)return;var form=host.querySelector('.stk-form');if(form){form.style.minWidth='0';form.style.maxWidth='100%';}var price=host.querySelector('#stkBuyPrice'),priceBox=price&&price.parentElement;if(priceBox){var units=priceBox.querySelectorAll('.unit');if(units.length)units[units.length-1].textContent='/ pcs';}}
   function afterCore(){
