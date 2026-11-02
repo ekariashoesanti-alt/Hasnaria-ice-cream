@@ -1,0 +1,40 @@
+name: Hasnaria Preview Browser Smoke HSN-005-006
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/hsn-preview-browser-smoke.yml'
+      - 'tests/e2e/preview-hsn005-hsn006.spec.js'
+permissions:
+  contents: read
+jobs:
+  preview-browser-smoke:
+    if: ${{ github.event.pull_request.head.ref == 'test/hsn005-hsn006-integrated-20261102' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      # Pinned READY Vercel preview, built from 379e22d. No production credentials or writes.
+      HASNARIA_BASE_URL: https://hasnaria-business-analyzer-f5mptx9lp.vercel.app
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Validate target is the exact reviewed preview
+        run: |
+          test "$HASNARIA_BASE_URL" = "https://hasnaria-business-analyzer-f5mptx9lp.vercel.app"
+          test "${{ github.event.pull_request.base.ref }}" = "main"
+      - name: Install isolated browser dependencies
+        run: |
+          npm init -y >/dev/null 2>&1
+          npm install --no-save @playwright/test@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Browser smoke of approved preview (no credentials)
+        run: npx playwright test tests/e2e/public-smoke.spec.js tests/e2e/preview-hsn005-hsn006.spec.js --reporter=line --workers=1
+      - name: Upload failure diagnostics (no authenticated state)
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: hsn-preview-browser-smoke-failure
+          path: test-results/
+          if-no-files-found: ignore
+          retention-days: 2
