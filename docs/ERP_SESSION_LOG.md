@@ -2,6 +2,12 @@
 
 Append-only working journal. Newest session goes at the top.
 
+## 2026-11-02 — HSN-005 canonical runtime follow-up
+
+- Detected that the production `sales-board.js` is compiled from `sales-board.part0–4.js` and the earlier loader-only label patch was not present in that asset.
+- Added idempotent bootstrap to `sales-board.part4.js`: no repeated fetch for valid empty Sales data or automatic retry loop on errors.
+- Added a test against generated canonical runtime and updated Sales/app cache versions and their contract checks. No data, auth, or stylesheet mutation. CI and authenticated browser verification remain release gates.
+
 ## 2026-11-02 — HSN-005 + HSN-006 integrated preview
 
 - Consolidate label-write idempotency with retryable module scripts in a separate test branch, leaving draft PRs #182 and #183 unchanged.

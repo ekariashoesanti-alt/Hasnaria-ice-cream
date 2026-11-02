@@ -88,7 +88,7 @@ assert(staffV5Source.includes("if(!resumed&&state.view==='login')await loadDirec
 assert(staffV5Source.includes("staff_pin_login") && staffV5Source.includes("staff_owner_save"), 'UI-7 Staff portal must preserve PIN login and owner save flows');
 assert(staffOwnerStableSource.includes('hso-ui7-summary') && staffOwnerStableSource.includes("data-hso-action=\"staff-detail\""), 'UI-7 Owner Mobile must use employee snapshot and isolated detail overlay');
 assert(!appSource.includes("load('/finance-purchase-basis-v1.js"), 'Finance management runtime must be lazy-owned by the Owner Finance shell');
-assert(appSource.includes("var SALES = '/sales-board.js?v=49';"), 'Sales lazy runtime cache version is current');
+assert(appSource.includes("var SALES = '/sales-board.js?v=50';"), 'Sales lazy runtime cache version is current');
 assert(appSource.includes('window.__HASNARIA_LOAD_SALES=ensureSalesRuntime'), 'Sales runtime must be exposed as a lazy loader');
 assert(!appSource.includes('purchase-inventory-status.js'), 'startup must not load the legacy 10k-row Purchase inventory helper');
 assert(!/function afterCore\(\)[\s\S]*?load\(SALES[,)]/.test(appSource), 'Sales must not be fetched unconditionally during application startup');

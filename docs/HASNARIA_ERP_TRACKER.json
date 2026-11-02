@@ -213,7 +213,7 @@
       "acceptance": "Tab tidak berkedip/berubah label saat rerender.",
       "owner": "Codex/ChatGPT",
       "updated_at": "2026-11-02",
-      "notes": "Combined preview with HSN-006 validates idempotent Penjualan tab text; production authenticated visual acceptance outstanding."
+      "notes": "Integrated preview now also fixes compiled Sales bootstrap retries for empty/failing reads; original source loader fix alone did not reach Vercel dist. CI and authenticated 100% visual acceptance pending."
     },
     {
       "id": "HSN-006",
