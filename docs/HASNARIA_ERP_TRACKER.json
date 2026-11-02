@@ -205,14 +205,15 @@
       "id": "HSN-005",
       "milestone": "M0",
       "priority": "P0",
-      "status": "TODO",
+      "status": "IN_PROGRESS",
       "title": "Hilangkan flicker top navigation",
       "dependencies": [
         "HSN-003"
       ],
       "acceptance": "Tab tidak berkedip/berubah label saat rerender.",
       "owner": "Codex/ChatGPT",
-      "updated_at": "2026-09-18"
+      "updated_at": "2026-11-02",
+      "notes": "Combined preview with HSN-006 validates idempotent Penjualan tab text; production authenticated visual acceptance outstanding."
     },
     {
       "id": "HSN-006",

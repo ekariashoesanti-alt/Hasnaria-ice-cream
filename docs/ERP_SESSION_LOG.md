@@ -2,6 +2,12 @@
 
 Append-only working journal. Newest session goes at the top.
 
+## 2026-11-02 — HSN-005 + HSN-006 integrated preview
+
+- Consolidate label-write idempotency with retryable module scripts in a separate test branch, leaving draft PRs #182 and #183 unchanged.
+- New navigation regression added to existing build gate. No production database or CSS changes.
+- Keep both tracker tasks IN_PROGRESS until CI, staging preview and authenticated visual checks pass.
+
 ## 2026-11-02 — HSN-006 Script loader recovery (preview review)
 
 - Replaced false-success `loadOnce` behavior with shared in-flight load, true/false result, failed-tag cleanup, and retryable cache across Sales, Purchase, Stock.
