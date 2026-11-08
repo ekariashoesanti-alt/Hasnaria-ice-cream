@@ -166,3 +166,20 @@ This phase inspected the uploaded XLSX workbook directly rather than relying on 
 - Confirmed Github Audit Gate PASS. Real authenticated Owner browser/UAT with the original XLSX and CSV remains necessary before merging or production activation.
 
 All writes remain limited to the Singapore synthetic UAT brand; October operational sales/stock remain read-only and unchanged.
+
+## Singapore staging ACL security hardening (2026-11-08)
+
+A read-only permission audit found that the Supabase staging report tables inherited authenticated table grants including INSERT, DELETE and TRUNCATE. PostgreSQL RLS does not constrain TRUNCATE. This is a staging schema issue; the corresponding report tables do not exist in Tokyo production.
+
+Remediation implemented as a **separate additive migration** `supabase/migrations/20261108133000_secure_sales_product_report_acl_v2.sql`:
+- Explicitly REVOKE all default grants from PUBLIC, anon and authenticated.
+- Regrant only SELECT+UPDATE (review state transition) on report batches and SELECT on sealed report lines to authenticated; Owner remains gated by existing RLS.
+- Convert the single `stage_sales_product_report_v1` RPC to SECURITY DEFINER with empty search_path and its existing explicit JWT Owner, brand and outlet checks. Authentication and branch segregation remain mandatory.
+- Regrant RPC execution to authenticated only; anonymous cannot execute it.
+- Add migration-time SQL permission assertions to fail if TRUNCATE, direct INSERT, line modification or anonymous access reappears.
+
+Applied and tested in Singapore **only**. Verified: Owner direct INSERT and authenticated TRUNCATE blocked; Owner can create complete 2-line synthetic report atomically via RPC; staff cannot call RPC or read an Owner batch; existing 54-row October replay is still idempotent; reconciliation view is readable to Owner and hidden from staff. Both new-batch and replay UAT scripts used BEGIN/ROLLBACK, leaving 1 real October batch, 54 lines and 0 operational ledger writes.
+
+Replayable security UAT: `supabase/uat/singapore/assert_owner_atomic_import_acl_v2.sql`. CI now requires both the ACL migration and its UAT evidence file.
+
+**Production release rule:** never apply only the initial table migration; the ACL hardening migration must be applied and validated before exposing the new report endpoint. There is no approved merge or stock-posting activation.
