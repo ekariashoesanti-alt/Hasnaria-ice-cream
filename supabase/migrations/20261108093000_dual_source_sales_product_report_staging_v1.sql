@@ -50,8 +50,8 @@ alter table public.sales_product_report_batches enable row level security;
 alter table public.sales_product_report_lines enable row level security;
 revoke all on public.sales_product_report_batches from public, anon;
 revoke all on public.sales_product_report_lines from public, anon;
-grant select, insert, update, delete on public.sales_product_report_batches to authenticated;
-grant select, insert, update, delete on public.sales_product_report_lines to authenticated;
+grant select, insert, update on public.sales_product_report_batches to authenticated;
+grant select, insert on public.sales_product_report_lines to authenticated;
 
 create policy sales_product_report_batch_owner_select_v1
   on public.sales_product_report_batches for select to authenticated
@@ -81,10 +81,6 @@ create policy sales_product_report_batch_owner_update_v1
       where o.id = outlet_id and o.brand_id = brand_id
     )
   );
-create policy sales_product_report_batch_owner_delete_v1
-  on public.sales_product_report_batches for delete to authenticated
-  using ((select private.is_owner()) and (select private.same_brand(brand_id)));
-
 create policy sales_product_report_line_owner_select_v1
   on public.sales_product_report_lines for select to authenticated
   using (
@@ -101,28 +97,33 @@ create policy sales_product_report_line_owner_insert_v1
       where b.id = batch_id and (select private.same_brand(b.brand_id))
     )
   );
-create policy sales_product_report_line_owner_update_v1
-  on public.sales_product_report_lines for update to authenticated
-  using (
-    (select private.is_owner()) and exists (
-      select 1 from public.sales_product_report_batches b
-      where b.id = batch_id and (select private.same_brand(b.brand_id))
-    )
-  )
-  with check (
-    (select private.is_owner()) and exists (
-      select 1 from public.sales_product_report_batches b
-      where b.id = batch_id and (select private.same_brand(b.brand_id))
-    )
-  );
-create policy sales_product_report_line_owner_delete_v1
-  on public.sales_product_report_lines for delete to authenticated
-  using (
-    (select private.is_owner()) and exists (
-      select 1 from public.sales_product_report_batches b
-      where b.id = batch_id and (select private.same_brand(b.brand_id))
-    )
-  );
+-- Batch identity and source totals are immutable after creation.
+-- The RPC may transition DRAFT -> UNDER_REVIEW; a reviewer may reject but
+-- cannot re-open a batch and rewrite source rows. Revisions get a new SHA256.
+create or replace function private.guard_sales_product_report_batch_update_v1()
+returns trigger language plpgsql security invoker set search_path = '' as $
+begin
+  if row(new.brand_id,new.outlet_id,new.period_month,new.filename,new.file_sha256,
+         new.payload_fingerprint,new.source_format,new.source_row_count,
+         new.created_by,new.created_at)
+     is distinct from
+     row(old.brand_id,old.outlet_id,old.period_month,old.filename,old.file_sha256,
+         old.payload_fingerprint,old.source_format,old.source_row_count,
+         old.created_by,old.created_at) then
+    raise exception 'Sales product report source fields are immutable';
+  end if;
+  if (old.status='draft' and new.status not in ('draft','under_review'))
+     or (old.status='under_review' and new.status not in ('under_review','rejected'))
+     or (old.status='rejected' and new.status <> 'rejected') then
+    raise exception 'Invalid report review status transition';
+  end if;
+  return new;
+end;
+$;
+revoke all on function private.guard_sales_product_report_batch_update_v1() from public, anon, authenticated;
+create trigger trg_guard_sales_product_report_batch_update_v1
+  before update on public.sales_product_report_batches
+  for each row execute function private.guard_sales_product_report_batch_update_v1();
 
 -- Do not mutate line snapshots after the Owner sends a batch for review.
 create or replace function private.guard_sales_product_report_lines_v1()
@@ -225,8 +226,16 @@ begin
   if v_count is distinct from jsonb_array_length(p_rows) then
     raise exception 'Import count mismatch; transaction rolled back';
   end if;
+  -- Seal the snapshot before commit; future direct line writes are blocked.
+  update public.sales_product_report_batches
+  set status='under_review',reviewed_at=now(),
+      review_note='Awaiting Owner reconciliation; never canonical or stock-postable'
+  where id=v_batch and status='draft';
+  if not found then
+    raise exception 'Unable to seal report snapshot; transaction rolled back';
+  end if;
   return jsonb_build_object('batch_id',v_batch,'reused',false,
-     'status','draft','line_count',v_count,'quantity',v_units,'sales',v_sales);
+     'status','under_review','line_count',v_count,'quantity',v_units,'sales',v_sales);
 end;
 $$;
 revoke all on function public.stage_sales_product_report_v1(uuid,uuid,date,text,text,jsonb) from public, anon;
