@@ -107,7 +107,11 @@
     integrationSeq: 0,
     integrationPeriod: '',
     chartUnit: '',
-    chartPage: 1
+    chartPage: 1,
+    skuSim: null,
+    skuSimLoading: false,
+    skuSimError: '',
+    skuSimSeq: 0
   };
 
   function esc(value) {
@@ -1259,6 +1263,7 @@
         '<label><span>Bulan</span><select id="sc4Period" data-month-filter="stok">'+options+'</select></label>'+
         '<button type="button" class="sc5-text-btn" data-sc4-modal="ledger" aria-haspopup="dialog">Ledger Periode</button>'+ 
         (isOwner()?'<button type="button" class="sc5-text-btn" data-sc4-modal="recipes" aria-haspopup="dialog">Cek Resep Produk</button>':'')+
+        (isOwner()?'<button type="button" class="sc5-text-btn" data-sc4-modal="sku-sim" aria-haspopup="dialog">Simulasi Qty × BOM</button>':'')+
         (isOwner()?'<button type="button" class="sc5-text-btn" data-sc4-modal="formula-audit" aria-haspopup="dialog">Periksa Hitungan</button>':'')+
         (isOwner()?'<button type="button" class="sc5-text-btn" data-sc4-action="upload-purchase">Upload Pembelian</button>':'')+
         '<button type="button" class="sc5-refresh" data-sc3-action="refresh" aria-label="Refresh data Stok">↻</button>'+
@@ -1891,12 +1896,14 @@
     if (!S.modal) return '';
     var title = S.modal === 'ledger' ? 'Ledger · ' + monthLabel(S.period) :
       S.modal === 'recipes' ? 'Cek Resep Produk · ' + monthLabel(S.period) :
+      S.modal === 'sku-sim' ? 'Simulasi Penjualan Produk → BOM' :
       S.modal === 'formula-audit' ? 'Periksa Hitungan Stok' : 'Posisi SKU Saat Ini';
     var body = S.modal === 'ledger' ? renderLedgerTable() :
       S.modal === 'recipes' ? renderRecipeReview() :
+      S.modal === 'sku-sim' ? renderSkuSimulation() :
       S.modal === 'formula-audit' ? renderFormulaAudit() :
       renderFormula() + renderAuxState() + renderFilters() + renderTable();
-    return '<div class="sc4-modal-backdrop" data-sc4-close="1"><section class="sc4-modal" role="dialog" aria-modal="true" aria-labelledby="sc4ModalTitle" tabindex="-1"><div class="sc4-modal-head"><div><div class="sc3-eyebrow">DETAIL STOK</div><h3 id="sc4ModalTitle">' + esc(title) + '</h3><p>' + (S.modal === 'ledger' ? 'Movement periode terpilih; quantity tetap dalam satuan masing-masing SKU.' : S.modal === 'recipes' ? 'Penjualan berdasarkan bulan; resep berlaku terus sejak disetujui sampai diubah.' :
+    return '<div class="sc4-modal-backdrop" data-sc4-close="1"><section class="sc4-modal" role="dialog" aria-modal="true" aria-labelledby="sc4ModalTitle" tabindex="-1"><div class="sc4-modal-head"><div><div class="sc3-eyebrow">DETAIL STOK</div><h3 id="sc4ModalTitle">' + esc(title) + '</h3><p>' + (S.modal === 'sku-sim' ? 'Simulasi teoretis dari rekap Majoo, tidak mengurangi saldo atau menyetujui BOM.' : S.modal === 'ledger' ? 'Movement periode terpilih; quantity tetap dalam satuan masing-masing SKU.' : S.modal === 'recipes' ? 'Penjualan berdasarkan bulan; resep berlaku terus sejak disetujui sampai diubah.' :
         S.modal === 'formula-audit' ? 'Audit hitung ulang semua SKU berdasarkan data yang sudah tercatat, bukan stok fisik baru.' :
         'Saldo terkini, opname, incoming, kebutuhan dan days cover.') + '</p></div><button type="button" data-sc4-close="1" class="sc4-close" aria-label="Tutup">×</button></div><div class="sc4-modal-body">' + body + '</div></section></div>';
   }
@@ -2269,6 +2276,8 @@
 
   function bind(host) {
     host.onclick = function (e) {
+      var skuSimRefresh=e.target&&e.target.closest?e.target.closest('[data-sc25-refresh]'):null;
+      if(skuSimRefresh&&isOwner()&&S.modal==='sku-sim'){loadSkuSimulation();return;}
       var stockChartPage=e.target&&e.target.closest?e.target.closest('[data-sc21-page]'):null;
       if(stockChartPage&&!stockChartPage.disabled){
         S.chartPage=Number(stockChartPage.getAttribute('data-sc21-page'))||1;
@@ -2323,6 +2332,7 @@
         S.modal = modal.getAttribute('data-sc4-modal') || '';
         if (S.modal === 'ledger' && !S.ledgerLoading) loadLedger();
         else if (S.modal === 'recipes') loadRecipeReview();
+        else if (S.modal === 'sku-sim') loadSkuSimulation();
         else if (S.modal === 'formula-audit') loadFormulaAudit();
         else render();
         stockDialogFocus(host);
