@@ -2253,7 +2253,7 @@
       "acceptance": "Compact 100% zoom infographic layout with monthly trend from current snapshots, repeat purchase segmentation, contribution share, Top 3 most loyal by cumulative visits; customer table secondary; missing months visually differentiated; owner-only read API, staging tests and deploy gates.",
       "owner": "ChatGPT",
       "updated_at": "2026-11-09",
-      "notes": "Read-only infographic RPC staged and rollback-tested. Awaiting PR CI and deployment verification."
+      "notes": "PR #199 infographic-first Loyalty UI + owner-only production read API. GitHub Audit Gate #3043 PASS after test updates. Staging DB fixture Jan/Feb + gap Mar + leaderboard + rollback PASS. Tokyo production RPC live verified: Oct visits=210, Nov visits=86, Jan-Sep missing, leaderboard visit counts=10/3/3, full phone withheld, canonical sales still 7,612. Frontend production not live: Vercel build-rate-limit denies automatic new deploys; PR draft awaiting READY preview to avoid production untested UI. Do not declare live."
     }
   ]
 }
