@@ -10,7 +10,8 @@
   /* Compatibility marker kept for release tests; this full executive runtime is
      deliberately NOT loaded because it used to take ownership of every tab. */
   var EXEC_SRC='/owner-executive-v1.js?v=1';
-  var DASH_SRC='/owner-dashboard-one-view.js?v=8';
+  var DASH_SRC='/owner-dashboard-one-view.js?v=9';
+  var KPI_SRC='/owner-ceo-kpi-v1.js?v=1';
   var OWNER_TABS=['dashboard','sales','pembelian','stok','operasional','administrasi','ops','notifikasi'];
   var SECTION_IDS=['dashboard','sales','pembelian','operasional','administrasi','ops','stok','notifikasi','shift','social','approval','team','sistem','karyawan'];
   var state={active:'dashboard',initialized:false,scheduled:false,salesRetries:0,finStockLoad:null,operationalLoad:null,adminLoad:null,dashboardLoad:null,notificationsLoad:null,navEpoch:0};
@@ -108,9 +109,19 @@
     Array.prototype.forEach.call(document.querySelectorAll('#tabs .tab[data-tab]'),function(b){b.classList.toggle('on',b.getAttribute('data-tab')===id)});
   }
 
+  function ensureCeoKpis(){
+    if(window.__HASNARIA_CEO_KPI_V1)return;
+    if(document.getElementById('hasnaria-owner-ceo-kpi-js'))return;
+    var s=document.createElement('script');s.id='hasnaria-owner-ceo-kpi-js';s.src=KPI_SRC;s.async=true;
+    s.onload=function(){var p=document.getElementById('hx6Period');if(p&&window.__HASNARIA_CEO_KPI_V1)window.__HASNARIA_CEO_KPI_V1.mount(p.value)};
+    s.onerror=function(){s.remove();var root=document.getElementById('hx7Cards');if(root)root.textContent='KPI eksekutif gagal dimuat. Pilih tab lain lalu buka Ringkasan CEO untuk mencoba lagi.'};
+    document.head.appendChild(s);
+  }
+
   function ensureDashboard(){
     var h=section('dashboard');if(!h||h.classList.contains('hidden'))return;
     setExecutiveFlag(true);
+    ensureCeoKpis();
     if(window.__HASNARIA_DASHBOARD_ONE_VIEW&&typeof window.__HASNARIA_DASHBOARD_ONE_VIEW.mount==='function'){
       window.__HASNARIA_DASHBOARD_ONE_VIEW.mount();return;
     }
