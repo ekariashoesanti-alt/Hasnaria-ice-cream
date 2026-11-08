@@ -307,7 +307,7 @@ ice && STATE.slice.type === 'day' && STATE.slice.id === x.key;
     // Do not briefly show the empty-data screen before the initial GET resolves.
     // Keep the same canonical board skeleton until data (or an error) is known.
     if (STATE.loading || (!STATE.fetched && !STATE.error)) {
-      board.innerHTML = html + '<div class="sb-loading">Memuat data penjualan…</div></div>' + renderFormatHelpModal();
+      board.innerHTML = html + '<div class="sb-loading">Memuat data penjualan…</div></div>' + renderFormatHelpModal() + renderReportSourceChoiceModal() + renderReportPreviewModal();
       STATE.draw = false; bind(); return;
     }
 
@@ -320,7 +320,7 @@ ice && STATE.slice.type === 'day' && STATE.slice.id === x.key;
         '<button type="button" class="sb-btn-upload" id="sbBtnChooseEmpty"><span>📁</span> Pilih File Majoo Sekarang</button>' +
         '<button type="button" class="sb-help" id="sbBtnSeedDemo" style="background:#eef7f3;border-color:#176b55;color:#176b55;font-weight:700">⚡ Muat Data Majoo Jan 2026 (337 Transaksi)</button>' +
         '</div>' +
-        '</div></div>' + renderFormatHelpModal();
+        '</div></div>' + renderFormatHelpModal() + renderReportSourceChoiceModal() + renderReportPreviewModal();
       board.innerHTML = html; STATE.draw = false; bind(); return;
     }
 
