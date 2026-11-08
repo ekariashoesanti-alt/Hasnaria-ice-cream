@@ -272,10 +272,19 @@ v class="sb-period">' +
                 : 'Rekap SKU bulanan — staging UAT';
               STATE.stagedFileRows=STATE.reportPreview.source_row_count;
               STATE.reportChoiceOpen=false;
+              // XLSX reading left a progress modal at 15%; show the parsed
+              // SKU summary immediately rather than leaving the upload blocked.
+              STATE.showReportPreview=true;
             }catch(e){
               STATE.error='Rekap Produk ditolak: '+(e&&e.message?e.message:e);
               STATE.reportPreview=null;STATE.stagedFiles=[];STATE.stagedFileType='';
+              STATE.showReportPreview=false;
               STATE.reportChoiceOpen=false;
+            }finally{
+              // Read/parse is done (success OR failure). No DB write has begun.
+              // Never keep the blocking import-status overlay on top of the UI.
+              STATE.importStatus=null;
+              STATE.importProgress='';
             }
             draw();return;
           }
@@ -291,6 +300,12 @@ v class="sb-period">' +
           } else {
             STATE.stagedFileType = flist.length + ' File Majoo';
             STATE.stagedFileRows = 0;
+          }
+          // Legacy Excel preview also passes through readFileMatrix() and may
+          // leave the same 15% modal visible after the file type is detected.
+          if(!STATE.importing && STATE.importStatus && STATE.importStatus.type==='progress'){
+            STATE.importStatus=null;
+            STATE.importProgress='';
           }
           draw();
         }
