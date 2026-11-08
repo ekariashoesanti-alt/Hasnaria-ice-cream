@@ -1,0 +1,27 @@
+.hsri-backdrop{position:fixed;inset:0;z-index:100030;background:rgba(10,22,38,.66);display:flex;align-items:center;justify-content:center;padding:16px;font-family:inherit}
+.hsri-panel{background:#fff;color:#15243a;border-radius:14px;box-shadow:0 22px 70px rgba(0,0,0,.28);width:min(1080px,96vw);max-height:92vh;overflow-y:auto;padding:20px}
+.hsri-panel header{display:flex;justify-content:space-between;gap:16px;border-bottom:1px solid #dce5ec;padding-bottom:12px}
+.hsri-panel header h3{font-size:19px;margin:4px 0}
+.hsri-panel header p{font-size:12px;color:#516476;margin:4px 0;max-width:760px}
+.hsri-panel header small{font-size:10px;font-weight:700;color:#007e87;letter-spacing:.08em}
+.hsri-panel button{background:#0b6173;color:#fff;border:0;border-radius:7px;padding:9px 12px;cursor:pointer;font-size:12px;font-weight:600}
+.hsri-panel button:disabled{background:#99aab8;cursor:not-allowed}
+.hsri-panel [data-hsri-close]{background:#eff3f7;color:#15243a;height:35px}
+.hsri-controls{display:flex;gap:12px;align-items:end;justify-content:space-between;margin:13px 0;flex-wrap:wrap;font-size:12px}
+.hsri-controls label{font-weight:600}
+.hsri-controls input{display:block;margin-top:7px;font-size:11px;max-width:100%}
+.hsri-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:12px 0}
+.hsri-kpis>div{background:#eef7f9;border-radius:9px;padding:10px;display:grid;gap:4px}
+.hsri-kpis b{font-size:19px}
+.hsri-kpis span,.hsri-caption{font-size:11px;color:#506574}
+.hsri-panel h4{font-size:13px;margin:14px 0 6px}
+.hsri-table-wrap{max-height:205px;overflow:auto;border:1px solid #dce5ec;border-radius:8px}
+.hsri-table-wrap table{border-collapse:collapse;width:100%;font-size:11px}
+.hsri-table-wrap th{position:sticky;top:0;background:#eaf2f6;text-align:left;font-weight:700}
+.hsri-table-wrap td,.hsri-table-wrap th{padding:7px 9px;border-bottom:1px solid #ebeff4;vertical-align:top}
+.hsri-panel footer{display:flex;align-items:center;justify-content:space-between;gap:10px;border-top:1px solid #e1e8ef;margin-top:14px;padding-top:12px;font-size:11px}
+.hsri-panel footer span{max-width:530px}
+.hsri-error,.hsri-warning{padding:10px;border-radius:7px;background:#fff2e6;color:#873e10;font-size:12px;margin-top:10px}
+.hsri-notice{padding:10px;border-radius:7px;background:#e6f4f0;color:#126148;font-size:12px;margin-top:10px}
+.hsri-loading{font-size:12px;padding:12px}
+@media(max-width:650px){.hsri-panel{padding:13px}.hsri-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.hsri-panel footer{flex-wrap:wrap}.hsri-backdrop{padding:6px}}

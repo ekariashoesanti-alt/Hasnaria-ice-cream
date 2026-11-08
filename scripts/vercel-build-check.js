@@ -293,6 +293,9 @@ hardenRuntimeStyleAttachment(dist);
 run(process.execPath, ['--check', path.join(dist, 'sales-ui-patch.js')]);
 run(process.execPath, ['--check', path.join(dist, 'stock-monitor.js')]);
 
+for (const asset of ['stock-recipe-import-v1.js', 'stock-recipe-import-model-v1.js', 'stock-recipe-import-v1.css']) {
+  if (!fs.existsSync(path.join(dist, asset))) fail('Owner Majoo recipe import asset missing: '+asset);
+}
 if (!fs.existsSync(path.join(dist, 'stock-sku-simulation-v1.js'))) fail('Owner stock SKU BOM read-only model not deployed');
 run(process.execPath, ['--check', path.join(dist, 'stock-sku-simulation-v1.js')]);
 if (!fs.existsSync(path.join(dist, 'index.html'))) fail('dist/index.html was not produced');
