@@ -14,6 +14,8 @@ test('Loyalty loaded only on Owner Operational tab',()=>{
  assert.match(op,/sc\.src='\/loyalty-v1\.js\?v=1'/);
  assert.match(js,/if\(!owner\(\)\)/);
  assert.match(js,/function previewUnsafe\(\)/);
+ assert.match(js,/h!=='hasnaria-business-analyzer\.vercel\.app'/);
+ assert.doesNotMatch(js,/h!=='hasnaria-business-analyzer-ekariashoesanti-9951s-projects\.vercel\.app'/);
  assert.match(css,/\.lo1-kpis\{display:grid/);
 });
 test('Majoo parser is explicit, guarded, duplicate-aware',()=>{
