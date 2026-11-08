@@ -106,3 +106,35 @@ test('do not silently accept ambiguous normalized names in SKU report',()=>{
   const p=product();p.rows.push({name:' odeng ',sku:'FO99',quantity:1,sales_amount:5000});
   assert.throws(()=>reconcile(d,p),/Nama produk ambigu/);
 });
+
+
+test('source category and payment controls are aggregated without treating them as SKU revenue',()=>{
+  const a=row('CS/101','01-10-2026','Topokki',10000,'Cash');a[5]='Bungkus';
+  const b=row('CS/102','01-10-2026','ODENG',15000,'Bank Transfer - GOJEK');b[5]='Ojek Online - Go-Jek';
+  const c=row('CS/103','02-10-2026','ODENG',5000,'Cash');c[5]='Free Table';
+  const det=detail([a,b,c],30000,30000);
+  const src=parseDetailMatrix(det);
+  assert.deepEqual(src.per_order_type['Bungkus'],{receipts:1,gross:10000});
+  assert.deepEqual(src.per_order_type['Ojek Online - Go-Jek'],{receipts:1,gross:15000});
+  assert.deepEqual(src.per_order_type['Free Table'],{receipts:1,gross:5000});
+  assert.deepEqual(src.per_payment['Cash'],{receipts:2,gross:15000});
+  assert.deepEqual(src.per_payment['Bank Transfer - GOJEK'],{receipts:1,gross:15000});
+  const result=reconcile(det,product());
+  assert.equal(result.gross_gap,5000);
+  assert.equal(result.by_order_type['Ojek Online - Go-Jek'].gross,15000);
+  assert.equal(result.by_payment_method['Cash'].receipts,2);
+  assert.equal(result.allowed_to_add_data_sources,false);
+  assert.equal(result.stock_posting_allowed,false);
+});
+test('incomplete order types are rejected instead of silently dropping source revenue category',()=>{
+  const x=row('CS/104','01-10-2026','ODENG',5000);
+  x[5]='';
+  assert.throws(()=>parseDetailMatrix(detail([x],5000,5000)),/Jenis order kosong/);
+});
+test('special order category keys cannot corrupt the category summary prototype',()=>{
+  const x=row('CS/105','01-10-2026','ODENG',5000);
+  x[5]='__proto__';
+  const result=parseDetailMatrix(detail([x],5000,5000));
+  assert.equal(result.per_order_type['__proto__'].gross,5000);
+  assert.equal(Object.getPrototypeOf(result.per_order_type),null);
+});
