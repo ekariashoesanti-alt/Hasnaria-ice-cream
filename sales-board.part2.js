@@ -388,7 +388,7 @@ v class="sb-period">' +
     return lines.map(split);
   }
 
-  async function readFileMatrix(file) {
+  async function readFileMatrix(file, preciseNumbers) {
     var ext = file.name.toLowerCase().split('.').pop();
     if (ext === 'xlsx' || ext === 'xls') {
       await ensureXLSX();
@@ -399,9 +399,13 @@ v class="sb-period">' +
       STATE.importStatus = {type:'progress',message:'Memproses file Excel',detail:file.name,percent:15};
       STATE.importProgress = 'Memproses sheet…';
       draw();
-      var wb = XLSX.read(buf, { type: 'array', cellDates: true, raw: true, dense: true, cellStyles: false, cellHTML: false, cellFormula: false });
+      // Monthly SKU reports carry sub-rupiah HPP precision. Using formatted
+      // display text can round the real cell value and cause false mismatch
+      // against immutable Supabase source lines. Keep the legacy Detail path
+      // byte-for-byte equivalent to its previous raw:false behavior.
+      var wb = XLSX.read(buf, { type: 'array', cellDates: !preciseNumbers, raw: true, dense: true, cellStyles: false, cellHTML: false, cellFormula: false });
       var sh = wb.Sheets[wb.SheetNames[0]];
-      return XLSX.utils.sheet_to_json(sh, { header: 1, defval: '', raw: false });
+      return XLSX.utils.sheet_to_json(sh, { header: 1, defval: '', raw: !!preciseNumbers });
     }
     return parseTextLines(await file.text());
   }
@@ -425,14 +429,23 @@ v class="sb-period">' +
     return { type: 'generic', headerRow: 0, label: 'File Majoo Standard' };
   }
 
-  // Cache parsed matrices by File object so preview and submit do not parse the
-  // same Excel workbook twice.
+  // Cache separately by File object and precision mode: legacy Detail imports
+  // must never reuse the SKU report raw-number matrix (or vice versa).
   var fileMatrixCache = typeof WeakMap !== 'undefined' ? new WeakMap() : null;
 
   async function getFileMatrix(file) {
-    if (fileMatrixCache && fileMatrixCache.has(file)) return fileMatrixCache.get(file);
-    var matrix = await readFileMatrix(file);
-    if (fileMatrixCache) fileMatrixCache.set(file, matrix);
+    var ext = String(file && file.name || '').toLowerCase().split('.').pop();
+    var preciseNumbers = window.__HASNARIA_ENABLE_PRODUCT_REPORT_V1 === true &&
+      STATE.selectedUploadType === 'product' && (ext === 'xlsx' || ext === 'xls');
+    var mode = preciseNumbers ? 'sku_precision' : 'legacy_display';
+    var cached = fileMatrixCache && fileMatrixCache.get(file);
+    if (cached && cached[mode]) return cached[mode];
+    var matrix = await readFileMatrix(file, preciseNumbers);
+    if (fileMatrixCache) {
+      if (!cached) cached = {};
+      cached[mode] = matrix;
+      fileMatrixCache.set(file, cached);
+    }
     return matrix;
   }
 
