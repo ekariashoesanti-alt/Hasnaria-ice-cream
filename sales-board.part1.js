@@ -194,7 +194,7 @@ ice && STATE.slice.type === 'day' && STATE.slice.id === x.key;
       '</button>' +
       pillHtml +
       '<button type="button" class="sb-btn-submit ' + (hasFiles && !STATE.importing ? 'ready' : '') + '" id="sbBtnSubmit" ' + (!hasFiles || STATE.importing ? 'disabled' : '') + '>' +
-      (STATE.importing ? '<span class="sb-spin">⏳</span> ' + esc(STATE.importProgress || 'Memproses…') : '<span>⬆</span> Submit Data') +
+      (STATE.importing ? '<span class="sb-spin">⏳</span> ' + esc(STATE.importProgress || 'Memproses…') : (window.__HASNARIA_ENABLE_PRODUCT_REPORT_V1 && STATE.selectedUploadType==='product' ? '<span>🔎</span> Preview Rekap' : '<span>⬆</span> Submit Data')) +
       '</button>' +
       '<button type="button" class="sb-btn-format" id="sbBtnFormat" title="Panduan multi-periode & 3 format file Majoo">' +
       'Format & Multi-Periode' +
