@@ -10,7 +10,7 @@ const { inventoryStyleAttributes } = require('./style-attr-csp-inventory');
 
 const ROOT = process.cwd();
 const PARTS = [0, 1, 2, 3, 4].map((n) => `sales-board.part${n}.js`);
-const SOURCE_ONLY_FILES = new Set([...PARTS, 'sales-import-v2.js']);
+const SOURCE_ONLY_FILES = new Set([...PARTS, 'sales-import-v2.js', 'sales-product-report-v1.js']);
 const SKIP_DIRS = new Set(['.git', '.github', 'node_modules', 'dist']);
 const DEV_ONLY_DIRS = new Set(['.git', '.github', 'docs', 'supabase', 'tests', 'scripts', 'dist', 'node_modules']);
 const DEV_ONLY_FILES = new Set(['README.md', 'vercel.json', 'AGENTS.md', 'HASNARIA_ERP_MASTERPLAN.md']);
@@ -158,6 +158,7 @@ function assertCanonicalSalesRuntime(dist) {
     if (sales.includes(marker)) fail(`legacy Sales runtime marker leaked into production: ${marker}`);
   }
   if (!sales.includes('window.__HASNARIA_IMPORT_V2')) fail('canonical Sales runtime is missing Majoo importer v2');
+  if (!sales.includes('window.__HASNARIA_PRODUCT_REPORT_V1')) fail('canonical Sales runtime is missing monthly SKU parser');
   if (!sales.includes('return window.__HASNARIA_IMPORT_V2(fileOrFiles')) fail('canonical Sales runtime is not delegating to importer v2');
   if (!sales.includes('.sb-w-100{width:100%}')) fail('canonical Sales runtime is missing width utility classes');
   console.log('Canonical Sales production artifact: PASS');
