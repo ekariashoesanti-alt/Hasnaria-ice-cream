@@ -64,6 +64,7 @@ jobs:
           test -s supabase/uat/singapore/assert_four_source_integrity_v1.sql
           test -s supabase/uat/singapore/assert_original_report_idempotency_v1.sql
           test -s supabase/uat/singapore/assert_owner_atomic_import_acl_v2.sql
+          test -s supabase/uat/singapore/20261108141000_order_type_reconciliation_uat_v1.sql
           test -s supabase/migrations/20261108133000_secure_sales_product_report_acl_v2.sql
           grep -q 'REVOKE ALL PRIVILEGES ON TABLE public.sales_product_report_batches' supabase/migrations/20261108133000_secure_sales_product_report_acl_v2.sql
           grep -q 'REVOKE ALL PRIVILEGES ON TABLE public.sales_product_report_lines' supabase/migrations/20261108133000_secure_sales_product_report_acl_v2.sql
