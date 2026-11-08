@@ -152,6 +152,19 @@ ice && STATE.slice.type === 'day' && STATE.slice.id === x.key;
           return '<p>'+esc(c.transaction_id)+' · '+esc(c.pos_timestamp)+
             ' · '+money(c.receipt_total)+' · '+esc(c.review_status)+'</p>';
         }).join('')+'</details>';
+      var pricingCandidates=(r.price_arithmetic_exceptions||[]).slice();
+      pricingCandidates.sort(function(a,b){return Number(b.receipt_total)-Number(a.receipt_total);});
+      var priceAudit='<details class="sb-fmt-box"><summary>💰 Periksa harga es krim &amp; penyesuaian: '+
+        pricingCandidates.length+' struk ('+(r.price_arithmetic_icecream_bowl_count||0)+
+        ' menyebut ICE CREAM BOWL)</summary>'+
+        '<p>Uji harga rata-rata per SKU dari rekap bulanan. Nilai struk ini tidak bisa dihasilkan hanya dengan tambahan unit utuh dari nama produk yang tercantum. Ini bukan bukti biaya tambahan, diskon atau stok hilang.</p>'+
+        pricingCandidates.slice(0,20).map(function(x){
+          return '<p>'+esc(x.transaction_id)+' · '+esc(x.order_time)+' · '+money(x.receipt_total)+
+            ' (minimal 1 per nama: '+money(x.reference_one_each)+') · '+
+            esc(x.product_names.join(', '))+'</p>';
+        }).join('')+
+        (pricingCandidates.length>20?'<p>Dan '+(pricingCandidates.length-20)+
+          ' struk lainnya — memerlukan rincian item POS untuk kepastian.</p>':'')+'</details>';
       var exceptions=r.receipt_exceptions.slice(0,3).map(function(x){
         return '<p>'+esc(x.transaction_id)+' · '+esc(x.issue)+' · '+money(x.receipt_total)+'</p>';
       }).join('');
@@ -161,7 +174,7 @@ ice && STATE.slice.type === 'day' && STATE.slice.id === x.key;
         '<p>Selisih bruto: '+money(r.gross_gap)+' · Selisih bersih: '+money(r.net_gap)+'</p>' +
         '<p>Selisih refund: '+money(r.refund_gap)+' · Pengecualian struk: '+r.receipt_exceptions.length+'</p>' +
         '<p><b>Bukan dasar posting stok:</b> Qty SKU per struk belum tersedia.</p>'+exceptions+'</div>'+
-        sourceBreakdown+cfdAudit;
+        sourceBreakdown+priceAudit+cfdAudit;
     }
     var auditError=STATE.reportReconcileError?'<div class="sb-fmt-box"><b>Rekonsiliasi gagal</b><p>'+esc(STATE.reportReconcileError)+'</p></div>':'';
     var saveResult=STATE.reportSaveResult?'<div class="sb-fmt-box"><b>✅ Tersimpan untuk review Singapore</b>'+
