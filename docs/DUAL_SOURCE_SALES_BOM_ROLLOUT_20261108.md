@@ -62,3 +62,35 @@ Status: **Phase 1 proposed in draft PR; NOT LIVE**. Branch `feature/dual-source-
 The existing frontend `sales-board.js` loads `sales-import-v2.js`, a **Detail Transactions-only importer**. The multipart legacy parser advertises a product report format but is overridden by the normalized importer. It must **not** be revived; old parsing would spread monthly SKU totals evenly across dates and create fictitious daily sales. A future explicit product-report upload route should invoke the staging RPC; its user-visible label must say **Draft / Pending Review** until signed off.
 
 When building a real parser, accept only stable SKU identities. Store the raw report numbers; never derive per-product revenue from static `PRICE_MAP`.
+
+
+## Singapore actual-source UAT — 2026-11-08 (not production)
+
+Validated against all four uploaded Majoo source exports.
+
+| Input | SHA256 | Audited data |
+|---|---|---|
+| Product Master | 694f457a0bfc503ccf046867646234509d6eaa6761efa763c3954f31d944532a | 72 SKU |
+| Recipe Master | 02b5e9ca8ff47a7eb83c876c17fe651a8eeaa08f321831ecfa305cfc8e2715d8 | 61 ingredients, 153 BOM rows |
+| Detail Transactions CSV | 21277146db1163fb14b30d75aafdaf0686ed79e32ba15861c5624ca60ba494a9 | 824 unique receipts, 31 days, Rp21,614,500 gross, 1,823 product-name occurrences |
+| Monthly Product Sales | ea801b3a0d2eb33ea135aba187daf04371acb3a49990eccb104b2ea46947f648 | 54 sold SKU, 2,604 gross units, Rp20,992,500 product sales |
+
+Singapore staging project rynnpndtzjwpekbiwiif; isolated synthetic test brand. Production proposal migration 20261108093000_dual_source_sales_product_report_staging_v1.sql was applied to Singapore only. The 54 real monthly report rows are saved under synthetic test Owner as UNDER_REVIEW, cannot post stock. The two master exports are copied into private hasnaria_uat source snapshots without reusing production product or inventory UUID mappings. The Detail CSV is represented in Singapore by its source SHA256, actual daily totals and payment aggregates, not invented per-SKU transactions.
+
+### Reconciliation UAT
+
+- 54/54 sold SKUs exist in the 72-SKU product master.
+- 47 sold SKUs have exported BOM, covering 2,300 / 2,604 units. Seven SKU without exported BOM account for 304 units: FO92, FO51, DD91, DR56, DD95, FO91, FO41.
+- All 153 BOM components have a valid product and ingredient SKU.
+- Private read-only hasnaria_uat.raw_bom_demand_preview_v1 contains 55 ingredient/source-unit groups, all with stock_posting_allowed=false and conversion_verified=false.
+- Monthly Majoo HPP rounded per line = Rp10,345,955.24; sum of displayed item gross profits = Rp10,626,232.08 vs Majoo footer Rp10,626,232.07 (Rp0.01 rounding).
+- Gross transactions Rp21,614,500 vs monthly product report Rp20,992,500 = Rp622,000 unexplained.
+- Product-name occurrences in CSV = 1,823, which is not per-SKU quantity; 2,604 monthly SKU units cannot be allocated to days.
+- Staging canonical sales rows, sale items and inventory ledger movements remain 0. Tests of Owner and non-Owner RLS, checksum deduplication, immutable snapshots, and malformed-file rollback all passed in transactions that were rolled back.
+
+### Release protection
+
+- Main production remains unchanged; PR #185 stays draft.
+- Singapore-only schema scripts live under supabase/uat/singapore/, not supabase/migrations/. CI blocks accidental release of private UAT schema.
+- Before go-live, reconcile Rp622,000 and seven BOM-less SKUs; validate physical units, effective recipe dates and stock baseline with Owner approval.
+- New monthly report is NOT an automatic source of daily financial metrics, per-SKU item transactions or inventory postings.
