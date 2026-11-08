@@ -45,6 +45,16 @@ begin
      raise exception '4-source UAT: transaction and payment source controls differ';
   end if;
 
+  if (select count(*) from hasnaria_uat.transaction_order_type_reference where batch_key=k) <> 5
+     or (select sum(receipt_count) from hasnaria_uat.transaction_order_type_reference where batch_key=k) <> 824
+     or (select sum(gross_sales) from hasnaria_uat.transaction_order_type_reference where batch_key=k) <> 21614500
+     or (select receipt_count from hasnaria_uat.transaction_order_type_reference
+         where batch_key=k and order_type='Ojek Online - Go-Jek') <> 60
+     or (select gross_sales from hasnaria_uat.transaction_order_type_reference
+         where batch_key=k and order_type='Ojek Online - Go-Jek') <> 1456000 then
+     raise exception '4-source UAT: original transaction order types inconsistent';
+  end if;
+
   if (select sum(source_sales_amount) from public.sales_product_report_lines l
       join public.sales_product_report_batches b on b.id=l.batch_id
       where b.file_sha256=h) <> 20992500 then
