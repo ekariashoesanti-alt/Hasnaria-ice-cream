@@ -112,6 +112,42 @@ ice && STATE.slice.type === 'day' && STATE.slice.id === x.key;
     }).join('') + '</div>';
   }
 
+  // Preview-only two-source chooser. No write path exists in this UI stage.
+  // Enable on PR preview with ?sales_product_preview=1; production defaults OFF.
+  function renderReportSourceChoiceModal() {
+    if (!window.__HASNARIA_ENABLE_PRODUCT_REPORT_V1 || !STATE.reportChoiceOpen) return '';
+    return '<div class="sb-modal-overlay" id="sbReportChoiceOverlay">' +
+      '<div class="sb-modal-card" style="max-width:480px">' +
+      '<div class="sb-modal-head"><h3>Upload Penjualan Majoo</h3>' +
+      '<button type="button" id="sbReportChoiceClose" class="sb-modal-close" aria-label="Tutup">✕</button></div>' +
+      '<div class="sb-modal-body" style="display:grid;gap:10px">' +
+      '<button type="button" data-hsn-report-type="detail" class="sb-fmt-box" style="text-align:left;cursor:pointer">' +
+      '<b>📋 Detail Transaksi</b><p>Nomor transaksi, tanggal/jam, pembayaran dan nama produk. Importer eksisting.</p></button>' +
+      '<button type="button" data-hsn-report-type="product" class="sb-fmt-box" style="text-align:left;cursor:pointer">' +
+      '<b>📦 Rekap Penjualan Produk</b><p>SKU, jumlah terjual, omzet, HPP, dan refund bulanan. Tahap ini: preview read-only.</p></button>' +
+      '</div></div></div>';
+  }
+
+  function renderReportPreviewModal() {
+    if (!window.__HASNARIA_ENABLE_PRODUCT_REPORT_V1 || !STATE.showReportPreview || !STATE.reportPreview) return '';
+    var p=STATE.reportPreview,t=p.totals;
+    return '<div class="sb-modal-overlay" id="sbReportPreviewOverlay">' +
+      '<div class="sb-modal-card" style="max-width:480px">' +
+      '<div class="sb-modal-head"><h3>Preview Rekap Produk</h3>' +
+      '<button type="button" id="sbReportPreviewClose" class="sb-modal-close" aria-label="Tutup">✕</button></div>' +
+      '<div class="sb-modal-body">' +
+      '<div class="sb-fmt-box"><b>Periode: '+esc(p.period_month)+'</b>' +
+      '<p>Outlet: '+esc(p.outlet_name)+'</p>' +
+      '<p>'+p.source_row_count+' SKU · '+Number(t.quantity).toLocaleString('id-ID')+' unit · '+money(t.sales)+'</p>' +
+      '<p>HPP Majoo: '+money(t.hpp)+' · Refund: '+money(t.refund_amount)+'</p></div>' +
+      '<div class="sb-fmt-box" style="background:#fff7ed;border-color:#fed7aa">' +
+      '<b>🔒 Preview saja — tidak tersimpan ke Supabase</b>' +
+      '<p>Tidak mengubah transaksi, KPI, resep, HPP resmi atau saldo stok. Tombol simpan akan dibuka setelah migrasi staging dan verifikasi Owner lulus.</p></div>' +
+      '</div><div class="sb-modal-foot">' +
+      '<button type="button" class="sb-btn-modal-ok" id="sbReportPreviewOkay">Tutup Preview</button>' +
+      '</div></div></div>';
+  }
+
   function renderUploadSection() {
     var hasFiles = STATE.stagedFiles && STATE.stagedFiles.length > 0;
     var pillHtml = '';
@@ -137,7 +173,7 @@ ice && STATE.slice.type === 'day' && STATE.slice.id === x.key;
     return '<div class="sb-upload-wrap">' +
       '<input id="sbFileInput" type="file" accept=".csv,.xlsx,.xls,.txt" multiple style="display:none">' +
       '<button type="button" class="sb-btn-upload" id="sbBtnChoose">' +
-      '<span>📁</span> Upload dari Majoo' +
+      '<span>📁</span> ' + (window.__HASNARIA_ENABLE_PRODUCT_REPORT_V1 ? 'Upload Penjualan' : 'Upload dari Majoo') +
       '</button>' +
       pillHtml +
       '<button type="button" class="sb-btn-submit ' + (hasFiles && !STATE.importing ? 'ready' : '') + '" id="sbBtnSubmit" ' + (!hasFiles || STATE.importing ? 'disabled' : '') + '>' +
