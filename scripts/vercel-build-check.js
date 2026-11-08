@@ -10,7 +10,7 @@ const { inventoryStyleAttributes } = require('./style-attr-csp-inventory');
 
 const ROOT = process.cwd();
 const PARTS = [0, 1, 2, 3, 4].map((n) => `sales-board.part${n}.js`);
-const SOURCE_ONLY_FILES = new Set([...PARTS, 'sales-import-v2.js', 'sales-product-report-v1.js', 'sales-reconciliation-v1.js']);
+const SOURCE_ONLY_FILES = new Set([...PARTS, 'sales-import-v2.js', 'sales-product-report-v1.js', 'sales-reconciliation-v1.js', 'sales-scope-bridge-v1.js']);
 const SKIP_DIRS = new Set(['.git', '.github', 'node_modules', 'dist']);
 const DEV_ONLY_DIRS = new Set(['.git', '.github', 'docs', 'supabase', 'tests', 'scripts', 'dist', 'node_modules']);
 const DEV_ONLY_FILES = new Set(['README.md', 'vercel.json', 'AGENTS.md', 'HASNARIA_ERP_MASTERPLAN.md']);
