@@ -8,7 +8,7 @@
 
   var PAGE_SIZE=25;
   var state={
-    runs:[],periods:[],period:'',loading:false,error:'',loaded:false,subtab:'work',loyaltyLoad:null,
+    runs:[],periods:[],period:'',loading:false,error:'',loaded:false,subtab:'attendance',loyaltyLoad:null,attendanceLoad:null,
     activeRun:null,items:[],itemPage:1,itemTotal:0,itemLoading:false,itemError:'',
     createOpen:false,members:[],membersLoading:false,membersLoaded:false,membersError:'',
     busy:false,notice:'',actionError:'',itemSaves:0,loadSeq:0,itemSeq:0,viewSeq:0,syncSeq:0,syncing:false
@@ -37,7 +37,7 @@
   function typeLabel(t){return{stock_opname:'Stock Opname',opening:'Opening',closing:'Closing',hygiene:'Hygiene',equipment:'Peralatan',custom:'Operasional'}[t]||t||'Operasional'}
   function editable(r){return!!(r&&['draft','in_progress','rejected'].indexOf(r.status)>=0)}
   function reviewable(r){return!!(r&&r.status==='submitted'&&isOwner())}
-  function css(){if(document.getElementById('operational-v1-css'))return;var l=document.createElement('link');l.id='operational-v1-css';l.rel='stylesheet';l.href='/operational-v1.css?v=2';document.head.appendChild(l)}
+  function css(){if(document.getElementById('operational-v1-css'))return;var l=document.createElement('link');l.id='operational-v1-css';l.rel='stylesheet';l.href='/operational-v1.css?v=3';document.head.appendChild(l)}
   function memberName(m){return m.full_name||m.display_name||m.email||m.id}
   function clearAction(){state.notice='';state.actionError=''}
   function notifyChange(){if(window.__HASNARIA_DATA_SYNC)window.__HASNARIA_DATA_SYNC.notify()}
@@ -99,15 +99,27 @@
     state.loyaltyLoad=new Promise(function(resolve){var sc=document.createElement('script');sc.id='hasnaria-loyalty-v1-js';sc.src='/loyalty-v1.js?v=1';sc.async=true;sc.onload=resolve;sc.onerror=function(){state.loyaltyLoad=null;resolve()};document.head.appendChild(sc)});
     state.loyaltyLoad.then(function(){if(active()&&state.subtab==='loyalty'&&typeof window.__HASNARIA_LOYALTY_MOUNT==='function')window.__HASNARIA_LOYALTY_MOUNT()});
   }
+  function ensureAttendance(){
+    if(!isOwner()||!active()||state.subtab!=='attendance')return;
+    if(window.__HASNARIA_ATTENDANCE_MOUNT){window.__HASNARIA_ATTENDANCE_MOUNT();return}
+    if(state.attendanceLoad)return;
+    state.attendanceLoad=new Promise(function(resolve){var sc=document.createElement('script');sc.src='/attendance-v1.js?v=1';sc.async=true;sc.onload=resolve;sc.onerror=function(){state.attendanceLoad=null;resolve()};document.head.appendChild(sc)});
+    state.attendanceLoad.then(function(){if(active()&&state.subtab==='attendance'&&window.__HASNARIA_ATTENDANCE_MOUNT)window.__HASNARIA_ATTENDANCE_MOUNT()});
+  }
+  function subnav(tab){return '<nav class="op1-loyalty-nav" aria-label="Submenu Operasional"><button type="button" data-op-action="show-attendance"'+(tab==='attendance'?' class="on"':'')+'>Attendance</button><button type="button" data-op-action="show-loyalty"'+(tab==='loyalty'?' class="on"':'')+'>Loyalty</button><button type="button" data-op-action="show-work"'+(tab==='work'?' class="on"':'')+'>Stock Opname</button></nav>'}
   function render(){
     var h=host();if(!h)return;css();var c=counts();
+    if(isOwner()&&state.subtab==='attendance'){
+      h.innerHTML='<div class="op1-shell">'+subnav('attendance')+'<div id="opAttendanceHost"></div></div>';
+      bind(h);ensureAttendance();return;
+    }
     if(isOwner()&&state.subtab==='loyalty'){
-      h.innerHTML='<div class="op1-shell"><nav class="op1-loyalty-nav" aria-label="Submenu Operasional"><button type="button" data-op-action="show-work">Pekerjaan</button><button type="button" data-op-action="show-loyalty" class="on">Loyalty</button></nav><div id="opLoyaltyHost"></div></div>';
+      h.innerHTML='<div class="op1-shell">'+subnav('loyalty')+'<div id="opLoyaltyHost"></div></div>';
       bind(h);ensureLoyalty();return;
     }
     state.viewSeq++;
     var shell=h.querySelector('[data-operational-v1="1"]');if(!shell){shell=document.createElement('div');shell.className='op1-shell';shell.setAttribute('data-operational-v1','1');h.replaceChildren(shell)}
-    shell.innerHTML=(isOwner()?'<nav class="op1-loyalty-nav" aria-label="Submenu Operasional"><button type="button" data-op-action="show-work" class="on">Pekerjaan</button><button type="button" data-op-action="show-loyalty">Loyalty</button></nav>':'')+'<div class="op1-head"><div><div class="op1-eyebrow">OPERASIONAL · '+esc(monthLabel(state.period))+'</div><h2>Pelaksanaan & Kontrol Harian</h2><p>Daftar pekerjaan ringan; anggota tim dan detail opname hanya dimuat saat dibutuhkan.</p></div><div class="op1-head-actions"><label class="op1-month"><span>Bulan</span><select id="op1Month" data-month-filter="operasional">'+periodOptions()+'</select></label>'+(isOwner()?'<button type="button" class="op1-new" data-op-action="new-opname">+ Stock Opname</button>':'')+'<button type="button" class="op1-refresh" data-op-action="refresh">↻ Refresh</button></div></div>'+
+    shell.innerHTML=(isOwner()?subnav('work'):'')+'<div class="op1-head"><div><div class="op1-eyebrow">OPERASIONAL · '+esc(monthLabel(state.period))+'</div><h2>Pelaksanaan & Kontrol Harian</h2><p>Daftar pekerjaan ringan; anggota tim dan detail opname hanya dimuat saat dibutuhkan.</p></div><div class="op1-head-actions"><label class="op1-month"><span>Bulan</span><select id="op1Month" data-month-filter="operasional">'+periodOptions()+'</select></label>'+(isOwner()?'<button type="button" class="op1-new" data-op-action="new-opname">+ Stock Opname</button>':'')+'<button type="button" class="op1-refresh" data-op-action="refresh">↻ Refresh</button></div></div>'+
       '<div class="op1-kpis"><div><span>Aktif</span><strong>'+c.open+'</strong></div><div><span>Menunggu Review</span><strong>'+c.review+'</strong></div><div><span>Selesai</span><strong>'+c.done+'</strong></div></div>'+
       (state.notice?'<div class="op1-notice">'+esc(state.notice)+'</div>':'')+(state.actionError?'<div class="op1-alert">'+esc(state.actionError)+'</div>':'')+(state.error?'<div class="op1-alert">'+esc(state.error)+'</div>':'')+(state.loading&&!state.loaded?'<div class="op1-loading">Memuat daftar pekerjaan…</div>':'')+
       renderCreate()+'<div class="op1-grid"><section><div class="op1-section-title"><strong>Pekerjaan terbaru</strong><span>Maks. 30 run</span></div>'+renderRunList()+'</section>'+renderDetails()+'</div>'+
@@ -261,6 +273,7 @@
   function bind(h){
     h.onchange=function(e){if(e.target&&e.target.id==='op1Month'){state.period=String(e.target.value||'').slice(0,7);state.loadSeq++;state.itemSeq++;state.syncSeq++;state.loading=false;state.itemLoading=false;state.activeRun=null;state.items=[];state.itemTotal=0;state.itemPage=1;clearAction();loadRuns();}};
     h.onclick=function(e){var b=e.target&&e.target.closest?e.target.closest('button'):null;if(!b)return;var action=b.getAttribute('data-op-action');
+      if(action==='show-attendance'){if(isOwner()){state.subtab='attendance';render()}return}
       if(action==='show-loyalty'){if(isOwner()){state.subtab='loyalty';render()}return}
       if(action==='show-work'){state.subtab='work';render();if(!state.loaded&&!state.loading)loadRuns();return}
       if(action==='refresh'){clearAction();loadRuns(null,true);return}
@@ -276,7 +289,7 @@
     };
   }
 
-  function mount(opts){if(!active())return;css();render();if(state.subtab==='loyalty')return;if(!state.loaded&&!state.loading)loadRuns();else if(opts&&opts.force&&!state.loading)loadRuns(state.activeRun&&state.activeRun.id)}
+  function mount(opts){if(!active())return;css();render();if(isOwner()&&(state.subtab==='loyalty'||state.subtab==='attendance'))return;if(!state.loaded&&!state.loading)loadRuns();else if(opts&&opts.force&&!state.loading)loadRuns(state.activeRun&&state.activeRun.id)}
   window.__HASNARIA_OPERATIONS_V1_MOUNT=mount;
   registerSync();
   document.addEventListener('hasnaria:data-sync-ready',registerSync);
