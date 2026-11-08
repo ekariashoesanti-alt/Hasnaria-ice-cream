@@ -167,6 +167,7 @@ v class="sb-period">' +
         if(kind!=='detail'&&kind!=='product')return;
         STATE.selectedUploadType=kind;STATE.reportPreview=null;STATE.stagedFiles=[];
         STATE.showReportPreview=false;STATE.reportReconciliation=null;STATE.reportReconcileError='';
+        STATE.reportSaveResult=null;STATE.reportSaveError='';STATE.reportSaving=false;
         fileInput.value='';
         fileInput.accept=kind==='product'?'.xlsx,.xls':'.csv,.xlsx,.xls,.txt';
         fileInput.multiple=(kind==='detail');
@@ -182,6 +183,49 @@ v class="sb-period">' +
     if(reportPreviewOverlay)reportPreviewOverlay.onclick=function(e){
       if(e.target===reportPreviewOverlay){STATE.showReportPreview=false;draw();}
     };
+    var reportStageButton=host.querySelector('#sbReportStageConfirm');
+    if(reportStageButton){
+      reportStageButton.onclick=async function(){
+        if(!reportFlag || STATE.reportSaving || STATE.reportSaveResult)return;
+        if(!STATE.reportPreview || !STATE.stagedFiles || STATE.stagedFiles.length!==1)
+          { STATE.reportSaveError='Preview satu file Excel harus valid sebelum menyimpan.';draw();return; }
+        if(!window.__HASNARIA_PRODUCT_REPORT_V1 ||
+          !window.__HASNARIA_PRODUCT_REPORT_V1.isSingaporeUat(SB))
+          { STATE.reportSaveError='Konfigurasi Singapore UAT tidak valid.';draw();return; }
+        if(!window.confirm('Simpan Rekap Produk '+STATE.reportPreview.period_month+
+           ' ke Supabase Singapore TEST sebagai UNDER_REVIEW? Tidak akan memengaruhi production, KPI, BOM aktif, atau stok.'))
+          return;
+        STATE.reportSaving=true;STATE.reportSaveError='';
+        draw();
+        try {
+          var service=window.__HASNARIA_PRODUCT_REPORT_V1;
+          var token=await getTok();
+          if(!token)throw new Error('Sesi Owner tidak tersedia. Silakan login ulang.');
+          var outlet=await service.resolveSingaporeOutlet(BRAND,token,KEY);
+          var result=await service.stagePreview(
+            STATE.stagedFiles[0],await getFileMatrix(STATE.stagedFiles[0]),{
+              singaporeUatApproved:true,enableWrite:true,confirmed:true,
+              brandId:BRAND,outletId:outlet.id,supabaseUrl:SB,publishableKey:KEY,
+              getAccessToken:async function(){return token;}
+            });
+          if(!result || !result.receipt || !result.receipt.batch_id)
+            throw new Error('Tanda terima database tidak lengkap');
+          STATE.reportSaveResult={
+            status:result.receipt.status || result.status,
+            batch_id:result.receipt.batch_id
+          };
+          STATE.msg=result.status==='existing'
+            ? 'Rekap SKU sudah tersimpan di Singapore. Tidak dibuat duplikat.'
+            : 'Rekap SKU disimpan untuk review di Singapore; belum memengaruhi stok.';
+        } catch(err){
+          STATE.reportSaveError=err&&err.message?err.message:String(err);
+        } finally {
+          STATE.reportSaving=false;
+          STATE.showReportPreview=true;draw();
+        }
+      };
+    }
+
     var reconcileChooser=host.querySelector('#sbReportReconcileChoose');
     var reconcileInput=host.querySelector('#sbReportReconcileInput');
     if(reconcileChooser && reconcileInput){
@@ -215,7 +259,8 @@ v class="sb-period">' +
               if(!window.__HASNARIA_PRODUCT_REPORT_V1)throw new Error('Pembaca rekap belum siap. Refresh halaman.');
               STATE.reportPreview=window.__HASNARIA_PRODUCT_REPORT_V1.parseMatrix(await getFileMatrix(flist[0]));
               STATE.reportReconciliation=null;STATE.reportReconcileError='';
-              STATE.stagedFileType='Rekap SKU bulanan — preview saja';
+              STATE.reportSaveResult=null;STATE.reportSaveError='';
+              STATE.stagedFileType='Rekap SKU bulanan — staging UAT';
               STATE.stagedFileRows=STATE.reportPreview.source_row_count;
               STATE.reportChoiceOpen=false;
             }catch(e){
@@ -251,6 +296,9 @@ v class="sb-period">' +
         STATE.reportPreview = null;
         STATE.reportReconciliation = null;
         STATE.reportReconcileError = '';
+        STATE.reportSaveResult = null;
+        STATE.reportSaveError = '';
+        STATE.reportSaving = false;
         STATE.selectedUploadType = null;
         if (fileInput) fileInput.value = '';
         draw();
