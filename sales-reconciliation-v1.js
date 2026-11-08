@@ -9,6 +9,7 @@
   function str(v){return v==null?'':String(v).trim();}
   function key(v){return str(v).toLocaleLowerCase('id-ID').replace(/\s+/g,' ');}
   function head(v){return key(v).replace(/[\u00a0_\-\/\\()[\]{}:;,.%]+/g,' ').replace(/\s+/g,' ').trim();}
+  function isIceCreamName(v){return /\b(?:ice\s*cream|es\s*krim)\b/i.test(str(v));}
   function money(v,field){
     if(typeof v==='number'){if(!Number.isFinite(v))err('Angka tidak valid: '+field);return v;}
     var s=str(v).replace(/rp\.?/ig,'').replace(/[\s\u00a0]/g,'');
@@ -60,18 +61,19 @@
       if(row.length>=2)meta.set(head(row[0]),row[1]);
     }
     var period=parsePeriod(meta.get('periode'));
-    var rows=[],ids=new Set(),outlets=new Set(),nameOccurrences=0,perMethod=Object.create(null),perOrderType=Object.create(null),perDay=Object.create(null),total=0;
+    var rows=[],ids=new Set(),outlets=new Set(),cfdCandidates=[],nameOccurrences=0,perMethod=Object.create(null),perOrderType=Object.create(null),perDay=Object.create(null),total=0;
     for(var j=headerRow+1;j<matrix.length;j++){
       var rec=matrix[j]||[];
       if(!rec.some(function(x){return str(x)!=='';}))continue;
       var id=str(rec[cols.id]),dt=str(rec[cols.order]);
       if(!id)err('Nomor transaksi kosong pada baris '+(j+1));
       if(ids.has(id))err('Nomor transaksi duplikat: '+id);
-      var tm=dt.match(/^(\d{2})-(\d{2})-(\d{4})(?:\s|$)/);
+      var tm=dt.match(/^(\d{2})-(\d{2})-(\d{4})\s+(\d{2}):(\d{2}):(\d{2})$/);
       if(!tm)err('Waktu order tidak terbaca: '+id);
       var numericDay=Number(tm[1]),numericMonth=Number(tm[2]),year=Number(tm[3]);
       var stamp=new Date(Date.UTC(year,numericMonth,0)).getUTCDate();
-      if(year<2020||year>2100||numericMonth<1||numericMonth>12||numericDay<1||numericDay>stamp)
+      var hour=Number(tm[4]),minute=Number(tm[5]),second=Number(tm[6]);
+      if(year<2020||year>2100||numericMonth<1||numericMonth>12||numericDay<1||numericDay>stamp||hour>23||minute>59||second>59)
         err('Tanggal transaksi tidak valid: '+id);
       var day=tm[3]+'-'+tm[2]+'-'+tm[1];
       if(day<period.range_from||day>period.range_to)err('Tanggal di luar periode file: '+id);
@@ -94,7 +96,19 @@
       channel.receipts++;channel.gross+=price;
       var dayItem=perDay[day]||(perDay[day]={receipts:0,gross:0,appearances:0});
       dayItem.receipts++;dayItem.gross+=price;dayItem.appearances+=names.length;
-      rows.push({transaction_id:id,order_date:day,total_sales:price,payment_method:pay,order_type:orderType,outlet:outlet,names:names});
+      // Evidence-based CFD *candidate* only. A receipt is NOT confirmed as an
+      // event sale until Owner verifies the point-of-sale context. Event date
+      // is the original timestamp; never re-date a Monday POS receipt to Sunday.
+      var sunday=new Date(Date.UTC(year,numericMonth-1,numericDay)).getUTCDay()===0;
+      var cfdCandidate=sunday && hour<12 && names.every(isIceCreamName);
+      if(cfdCandidate)cfdCandidates.push({
+        transaction_id:id,pos_timestamp:dt,order_date:day,receipt_total:price,
+        product_name_occurrences:names.length,review_status:'needs_owner_confirmation',
+        evidence:'Sunday before 12:00 WIB; all listed product names are ice cream'
+      });
+      rows.push({transaction_id:id,order_date:day,order_time:dt,total_sales:price,
+        payment_method:pay,order_type:orderType,outlet:outlet,names:names,
+        cfd_candidate:cfdCandidate});
     }
     if(!rows.length)err('Tidak ditemukan transaksi untuk direkonsiliasi');
     var expectedCount=money(meta.get('total transaksi'),'Total Transaksi');
@@ -111,6 +125,7 @@
       receipts:rows.length,product_name_appearances:nameOccurrences,
       gross:round2(total),net:round2(expectedNet),reported_refund:round2(total-expectedNet),
       per_payment:perMethod,per_order_type:perOrderType,per_day:perDay,rows:rows,
+      cfd_candidates:cfdCandidates,cfd_candidate_gross:round2(cfdCandidates.reduce(function(t,c){return t+c.receipt_total;},0)),
       sku_quantity_known:false,stock_posting_allowed:false};
   }
   function reconcile(detailMatrix,productReport){
@@ -160,6 +175,8 @@
       product_gross:grossReport,product_net:netReport,
       detail_refund:det.reported_refund,product_refund:refunds,
       by_order_type:det.per_order_type,by_payment_method:det.per_payment,
+      cfd_candidates:det.cfd_candidates,cfd_candidate_gross:det.cfd_candidate_gross,
+      cfd_candidate_status:'needs_owner_confirmation',
       gross_gap:round2(det.gross-grossReport),
       net_gap:round2(det.net-netReport),
       refund_gap:round2(det.reported_refund-refunds),
