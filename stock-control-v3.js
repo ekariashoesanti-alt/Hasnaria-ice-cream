@@ -1892,6 +1892,73 @@
       '</div>';
   }
 
+  // Owner-only, on-demand simulation against the immutable monthly Majoo
+  // product-report source. Never write or run a stock-posting RPC here.
+  var skuSimEnginePromise=null;
+  function ensureSkuSimEngine(){
+    if(window.__HASNARIA_STOCK_SKU_SIM_V1)return Promise.resolve(window.__HASNARIA_STOCK_SKU_SIM_V1);
+    if(skuSimEnginePromise)return skuSimEnginePromise;
+    skuSimEnginePromise=new Promise(function(resolve,reject){
+      var el=document.createElement('script');
+      el.src='/stock-sku-simulation-v1.js?v=1';
+      el.async=true;
+      el.onload=function(){
+        if(window.__HASNARIA_STOCK_SKU_SIM_V1)resolve(window.__HASNARIA_STOCK_SKU_SIM_V1);
+        else reject(new Error('Modul simulasi belum termuat'));
+      };
+      el.onerror=function(){reject(new Error('Gagal memuat modul simulasi SKU'));};
+      document.head.appendChild(el);
+    }).catch(function(err){skuSimEnginePromise=null;throw err;});
+    return skuSimEnginePromise;
+  }
+  async function loadSkuSimulation(){
+    if(!isOwner()||S.skuSimLoading)return;
+    var seq=++S.skuSimSeq;
+    S.skuSimLoading=true;S.skuSimError='';S.skuSim=null;render();
+    try{
+      var api=await ensureSkuSimEngine();
+      var batches=await request('sales_product_report_batches?'+qs({
+        brand_id:'eq.'+BRAND,
+        select:'id,brand_id,outlet_id,period_month,status,source_row_count,file_sha256,created_at',
+        order:'created_at.desc',limit:'30'
+      }));
+      if(seq!==S.skuSimSeq)return;
+      var valid=(batches||[]).filter(function(x){
+        return x.brand_id===BRAND&&(x.status==='under_review'||x.status==='approved');
+      });
+      // Match Stock's selected month first; otherwise show the most recently
+      // uploaded month, clearly labeling it as such in the modal.
+      var chosen=valid.find(function(x){return monthKey(x.period_month)===S.period;})||valid[0];
+      if(!chosen)throw new Error('Belum ada Rekap Penjualan Produk untuk disimulasikan. Unggah Excel dari tab Penjualan dahulu.');
+      if(valid.filter(function(x){return x.period_month===chosen.period_month;}).length>1)
+        throw new Error('Lebih dari satu batch SKU pada bulan sama. Periksa sumber agar tidak menggandakan Qty.');
+      var lineQuery=qs({batch_id:'eq.'+chosen.id,
+        select:'line_no,source_sku,source_product_name,quantity,refund_quantity,source_sales_amount',
+        order:'line_no.asc',limit:'500'});
+      var all=await Promise.all([
+        request('sales_product_report_lines?'+lineQuery),
+        request('products?'+qs({brand_id:'eq.'+BRAND,select:'id,name,sku,active',limit:'500'})),
+        request('inventory_recipe_components?'+qs({brand_id:'eq.'+BRAND,
+          select:'product_id,inventory_item_id,qty_per_sale,bom_status,active',active:'eq.true',limit:'1000'})),
+        request('inventory_items?'+qs({brand_id:'eq.'+BRAND,select:'id,item_name,unit',limit:'1000'})),
+        request('product_recipe_verifications?'+qs({brand_id:'eq.'+BRAND,
+          select:'product_id,status,effective_from',limit:'500'})),
+        request('inventory_unit_conversions?'+qs({brand_id:'eq.'+BRAND,
+          select:'product_id,inventory_item_id,status,units_per_purchase_unit,purchase_unit,sale_unit',limit:'1000'}))
+      ]);
+      if(seq!==S.skuSimSeq)return;
+      S.skuSim=api.calculate({batch:chosen,lines:all[0],products:all[1],
+        components:all[2],items:all[3],approvals:all[4],conversions:all[5]});
+    }catch(err){
+      if(seq===S.skuSimSeq)S.skuSimError=err&&err.message?err.message:String(err);
+    }finally{
+      if(seq===S.skuSimSeq){
+        S.skuSimLoading=false;
+        if(S.modal==='sku-sim')render();
+      }
+    }
+  }
+
   function renderModal() {
     if (!S.modal) return '';
     var title = S.modal === 'ledger' ? 'Ledger · ' + monthLabel(S.period) :
