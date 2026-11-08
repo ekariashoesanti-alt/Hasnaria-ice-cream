@@ -144,7 +144,7 @@ v class="sb-period">' +
       };
     }
 
-    // Two-source selection is preview-only behind explicit feature flag.
+    // Two-source selection is evaluated from live authenticated Owner context.
     var fileInput = host.querySelector('#sbFileInput');
     var btnChoose = host.querySelector('#sbBtnChoose') || host.querySelector('#sbBtnChooseEmpty');
     var reportFlag = window.__HASNARIA_ENABLE_PRODUCT_REPORT_V1 === true;
@@ -267,7 +267,9 @@ v class="sb-period">' +
               STATE.reportPreview=window.__HASNARIA_PRODUCT_REPORT_V1.parseMatrix(await getFileMatrix(flist[0]));
               STATE.reportReconciliation=null;STATE.reportReconcileError='';
               STATE.reportSaveResult=null;STATE.reportSaveError='';
-              STATE.stagedFileType='Rekap SKU bulanan — staging UAT';
+              STATE.stagedFileType=window.__HASNARIA_PRODUCT_REPORT_V1.isTokyoProduction(SB)
+                ? 'Rekap SKU bulanan — review Owner'
+                : 'Rekap SKU bulanan — staging UAT';
               STATE.stagedFileRows=STATE.reportPreview.source_row_count;
               STATE.reportChoiceOpen=false;
             }catch(e){
