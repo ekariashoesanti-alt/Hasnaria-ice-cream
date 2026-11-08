@@ -28,7 +28,7 @@ async function dashboardPack(){
 }
 function css(){if($('hx-exec-css')){var x=$('hx-exec-css');if(x.getAttribute('href')!=='/owner-executive-v1.css?v=5')x.href='/owner-executive-v1.css?v=5';return}var l=document.createElement('link');l.id='hx-exec-css';l.rel='stylesheet';l.href='/owner-executive-v1.css?v=5';document.head.appendChild(l)}
 function current(){return S.rows.find(function(x){return key(x.period_month)===S.period})||null}
-function periodOptions(){return S.periods.map(function(x){var k=key(x.period_start||x.period_key);return'<option value="'+esc(k)+'"'+(k===S.period?' selected':'')+'>'+esc(monthLabel(k))+'</option>'}).join('')}
+function periodOptions(){var periods=S.periods.map(function(x){return key(x.period_start||x.period_key)}).filter(Boolean),today=new Date(Date.now()+7*3600000).toISOString().slice(0,7);if(periods.indexOf(today)<0)periods.unshift(today);return periods.map(function(k){return'<option value="'+esc(k)+'"'+(k===S.period?' selected':'')+'>'+esc(monthLabel(k))+'</option>'}).join('')}
 function syncText(v){return v===true?'MATCH':v===false?'MISMATCH':'N/A'}
 function syncClass(v){return v===true?'ok':v===false?'bad':'na'}
 function purchaseText(v){return v&&v.purchase_sync_state==='POSTED_CANONICAL'?'POSTED':syncText(v&&v.purchase_sync_ok)}
@@ -120,7 +120,7 @@ async function load(force){
     var pack=r.data||{};
     S.periods=Array.isArray(pack.periods)?pack.periods:[];
     S.rows=Array.isArray(pack.rows)?pack.rows:[];
-    if(!S.period||!S.periods.some(function(x){return key(x.period_start||x.period_key)===S.period}))S.period=S.periods.length?key(S.periods[0].period_start||S.periods[0].period_key):'';
+    if(!S.period){var today=new Date(Date.now()+7*3600000).toISOString().slice(0,7);S.period=today|| (S.periods.length?key(S.periods[0].period_start||S.periods[0].period_key):'')}
     S.loaded=true;S.stale=false;
   }catch(e){if(seq!==S.seq||!sameView(ctx,h))return;S.error='Gagal memuat Ringkasan CEO: '+(e&&e.message?e.message:String(e))}
   finally{if(seq===S.seq){S.loading=false;if(sameView(ctx,h)){render();if(S.loaded&&S.hpp==null)loadHpp(seq)}}}
