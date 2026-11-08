@@ -1,27 +1,35 @@
-.hsri-backdrop{position:fixed;inset:0;z-index:100030;background:rgba(10,22,38,.66);display:flex;align-items:center;justify-content:center;padding:16px;font-family:inherit}
-.hsri-panel{background:#fff;color:#15243a;border-radius:14px;box-shadow:0 22px 70px rgba(0,0,0,.28);width:min(1080px,96vw);max-height:92vh;overflow-y:auto;padding:20px}
-.hsri-panel header{display:flex;justify-content:space-between;gap:16px;border-bottom:1px solid #dce5ec;padding-bottom:12px}
-.hsri-panel header h3{font-size:19px;margin:4px 0}
-.hsri-panel header p{font-size:12px;color:#516476;margin:4px 0;max-width:760px}
-.hsri-panel header small{font-size:10px;font-weight:700;color:#007e87;letter-spacing:.08em}
-.hsri-panel button{background:#0b6173;color:#fff;border:0;border-radius:7px;padding:9px 12px;cursor:pointer;font-size:12px;font-weight:600}
-.hsri-panel button:disabled{background:#99aab8;cursor:not-allowed}
-.hsri-panel [data-hsri-close]{background:#eff3f7;color:#15243a;height:35px}
-.hsri-controls{display:flex;gap:12px;align-items:end;justify-content:space-between;margin:13px 0;flex-wrap:wrap;font-size:12px}
-.hsri-controls label{font-weight:600}
-.hsri-controls input{display:block;margin-top:7px;font-size:11px;max-width:100%}
-.hsri-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:12px 0}
-.hsri-kpis>div{background:#eef7f9;border-radius:9px;padding:10px;display:grid;gap:4px}
-.hsri-kpis b{font-size:19px}
-.hsri-kpis span,.hsri-caption{font-size:11px;color:#506574}
-.hsri-panel h4{font-size:13px;margin:14px 0 6px}
-.hsri-table-wrap{max-height:205px;overflow:auto;border:1px solid #dce5ec;border-radius:8px}
-.hsri-table-wrap table{border-collapse:collapse;width:100%;font-size:11px}
-.hsri-table-wrap th{position:sticky;top:0;background:#eaf2f6;text-align:left;font-weight:700}
-.hsri-table-wrap td,.hsri-table-wrap th{padding:7px 9px;border-bottom:1px solid #ebeff4;vertical-align:top}
-.hsri-panel footer{display:flex;align-items:center;justify-content:space-between;gap:10px;border-top:1px solid #e1e8ef;margin-top:14px;padding-top:12px;font-size:11px}
-.hsri-panel footer span{max-width:530px}
-.hsri-error,.hsri-warning{padding:10px;border-radius:7px;background:#fff2e6;color:#873e10;font-size:12px;margin-top:10px}
-.hsri-notice{padding:10px;border-radius:7px;background:#e6f4f0;color:#126148;font-size:12px;margin-top:10px}
-.hsri-loading{font-size:12px;padding:12px}
-@media(max-width:650px){.hsri-panel{padding:13px}.hsri-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.hsri-panel footer{flex-wrap:wrap}.hsri-backdrop{padding:6px}}
+/* HASNARIA Owner · Recipe import modal, intentionally scoped against global header/input rules. */
+#hsri-root .hsri-backdrop{position:fixed!important;inset:0!important;z-index:100030!important;background:rgba(12,28,27,.56)!important;display:flex!important;align-items:center!important;justify-content:center!important;padding:16px!important;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important}
+#hsri-root .hsri-panel{box-sizing:border-box!important;display:flex!important;flex-direction:column!important;width:min(920px,calc(100vw - 32px))!important;max-width:920px!important;max-height:min(89vh,820px)!important;min-height:240px!important;overflow:auto!important;background:#fff!important;color:#162c28!important;border:1px solid #dbe7e0!important;border-radius:16px!important;box-shadow:0 24px 80px rgba(0,22,18,.32)!important;padding:0!important;line-height:1.4!important}
+#hsri-root .hsri-header{box-sizing:border-box!important;display:flex!important;justify-content:space-between!important;align-items:flex-start!important;gap:18px!important;background:#fff!important;color:#142c29!important;border:0!important;border-bottom:1px solid #e5ece7!important;padding:20px 22px 17px!important;min-height:0!important}
+#hsri-root .hsri-header .hsri-heading{flex:1;min-width:0}
+#hsri-root .hsri-header small{display:block;font-size:10px!important;font-weight:800!important;color:#16816d!important;letter-spacing:.11em!important;margin-bottom:4px!important}
+#hsri-root .hsri-header h3{font-size:21px!important;line-height:1.25!important;letter-spacing:-.025em!important;margin:0 0 6px!important;color:#142c29!important;font-weight:750!important}
+#hsri-root .hsri-header p{font-size:12px!important;line-height:1.5!important;margin:0!important;max-width:740px!important;color:#62736c!important}
+#hsri-root button{box-sizing:border-box!important;min-height:36px!important;font-size:12px!important;font-weight:700!important;line-height:1.2!important;border-radius:9px!important;padding:9px 13px!important;cursor:pointer!important;background:#176b55!important;color:#fff!important;border:1px solid #176b55!important}
+#hsri-root button:disabled{cursor:not-allowed!important;background:#c6d3ce!important;color:#eff5f1!important;border-color:#c6d3ce!important}
+#hsri-root .hsri-close{flex:none!important;width:32px!important;height:32px!important;min-height:32px!important;display:grid!important;place-items:center!important;padding:0!important;font-size:23px!important;font-weight:500!important;background:#eff4f1!important;color:#3d5950!important;border-color:#e0eae4!important}
+#hsri-root .hsri-upload{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:16px!important;flex-wrap:wrap!important;margin:18px 22px 9px!important;border:1px dashed #a7c6b6!important;border-radius:12px!important;padding:15px 17px!important;background:#f4faf7!important}
+#hsri-root .hsri-upload-copy{min-width:0;flex:1;display:grid;gap:5px}
+#hsri-root .hsri-upload-copy strong{font-size:13px!important;color:#193b30!important}
+#hsri-root .hsri-upload-copy small{font-size:11px!important;line-height:1.45!important;color:#61756c!important}
+#hsri-root .hsri-file-name{font-size:12px!important;color:#176b55!important;font-weight:650!important;overflow-wrap:anywhere}
+#hsri-root .hsri-file-input{position:absolute!important;width:1px!important;height:1px!important;min-height:1px!important;opacity:0!important;overflow:hidden!important;clip-path:inset(100%)!important;pointer-events:none!important}
+#hsri-root .hsri-choose{flex-shrink:0!important;white-space:nowrap!important;align-self:center!important;background:#176b55!important;color:white!important}
+#hsri-root .hsri-error,#hsri-root .hsri-warning{padding:10px 14px!important;border-radius:8px!important;background:#fff3e8!important;color:#8b441f!important;font-size:12px!important;margin:12px 22px!important;border:1px solid #ffdfc0!important}
+#hsri-root .hsri-notice{padding:10px 14px!important;border-radius:8px!important;background:#eaf6f0!important;color:#176b55!important;font-size:12px!important;margin:12px 22px!important;border:1px solid #d0e7d8!important}
+#hsri-root .hsri-loader,#hsri-root .hsri-loading{font-size:12px!important;color:#576b62!important;padding:10px 22px!important}
+#hsri-root .hsri-kpis{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:9px!important;margin:10px 22px!important}
+#hsri-root .hsri-kpis>div{display:grid!important;gap:4px!important;background:#f2f7f4!important;border:1px solid #e1eae5!important;border-radius:10px!important;padding:11px!important}
+#hsri-root .hsri-kpis b{font-size:20px!important;line-height:1.15!important;color:#193e32!important}
+#hsri-root .hsri-kpis span,#hsri-root .hsri-caption{font-size:11px!important;color:#5b7168!important}
+#hsri-root .hsri-caption{padding:0 22px!important;margin:7px 0!important}
+#hsri-root .hsri-panel h4{font-size:13px!important;color:#24473b!important;font-weight:750!important;margin:15px 22px 7px!important}
+#hsri-root .hsri-table-wrap{max-height:192px!important;overflow:auto!important;border:1px solid #e0e9e3!important;border-radius:9px!important;margin:0 22px!important;min-height:0!important}
+#hsri-root .hsri-table-wrap table{width:100%!important;border-collapse:collapse!important;font-size:11px!important;table-layout:auto!important}
+#hsri-root .hsri-table-wrap th{position:sticky!important;top:0!important;background:#eaf3ed!important;z-index:1!important;color:#24483a!important;text-align:left!important;font-weight:750!important}
+#hsri-root .hsri-table-wrap td,#hsri-root .hsri-table-wrap th{padding:8px 9px!important;border-bottom:1px solid #e8efe9!important;vertical-align:top!important}
+#hsri-root .hsri-panel footer{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:14px!important;background:#fff!important;border-top:1px solid #e0e9e3!important;margin-top:16px!important;padding:14px 22px!important;font-size:11px!important;color:#61746b!important;flex-wrap:wrap!important}
+#hsri-root .hsri-panel footer span{max-width:540px!important}
+#hsri-root .hsri-panel footer button{margin-left:auto!important}
+@media(max-width:680px){#hsri-root .hsri-backdrop{padding:6px!important}#hsri-root .hsri-panel{width:calc(100vw - 12px)!important;max-height:94vh!important;border-radius:11px!important}#hsri-root .hsri-header{padding:14px!important}#hsri-root .hsri-header h3{font-size:18px!important}#hsri-root .hsri-upload{margin:12px!important;padding:12px!important}#hsri-root .hsri-choose{width:100%!important}#hsri-root .hsri-kpis{grid-template-columns:repeat(2,minmax(0,1fr))!important;margin:10px 12px!important}#hsri-root .hsri-table-wrap{margin:0 12px!important}#hsri-root .hsri-panel h4{margin:13px 12px 6px!important}#hsri-root .hsri-caption{padding:0 12px!important}#hsri-root .hsri-panel footer{padding:12px!important}#hsri-root .hsri-panel footer button{width:100%!important}#hsri-root .hsri-error,#hsri-root .hsri-notice,#hsri-root .hsri-warning{margin:10px 12px!important}}
