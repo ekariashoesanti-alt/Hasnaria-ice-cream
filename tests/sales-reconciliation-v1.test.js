@@ -20,7 +20,7 @@ function detail(rows,total,net){
   ];
 }
 function product(){
-  return {period_month:'2026-10-01',totals:{sales:25000,refund_amount:1000,quantity:4},
+  return {period_month:'2026-10-01',outlet_name:'Hasnaria Ice Cream',totals:{sales:25000,refund_amount:1000,quantity:4},
     rows:[
       {name:'Topokki',sku:'F053',quantity:1,sales_amount:10000},
       {name:'ODENG',sku:'FO1',quantity:3,sales_amount:15000}
@@ -137,4 +137,58 @@ test('special order category keys cannot corrupt the category summary prototype'
   const result=parseDetailMatrix(detail([x],5000,5000));
   assert.equal(result.per_order_type['__proto__'].gross,5000);
   assert.equal(Object.getPrototypeOf(result.per_order_type),null);
+});
+
+
+test('cross-source audit rejects mixed outlets and mismatched report outlet',()=>{
+  const r1=row('CS/OUT1','04-10-2026','ODENG',5000);
+  const r2=row('CS/OUT2','04-10-2026','ODENG',5000);r2[3]='Other Shop';
+  assert.throws(()=>parseDetailMatrix(detail([r1,r2],10000,10000)),/mencampur beberapa outlet/);
+  const p=product();p.outlet_name='Other Shop';
+  assert.throws(()=>reconcile(detail([r1],5000,5000),p),/Outlet Detail Transaksi tidak sama/);
+});
+
+test('Sunday morning ice cream POS is an UNCONFIRMED event candidate, not a rewritten transaction',()=>{
+  const a=row('CS/01/261025/0001','25-10-2026','ICE CREAM BOWL,Es krim Turkiy,ICE CREAM BOWL',281000);
+  a[1]='25-10-2026 10:52:42';
+  const b=row('CS/01/261011/0003','11-10-2026','CFD Ice Cream Turki',6000);
+  b[1]='11-10-2026 07:05:52';
+  const d=detail([a,b],287000,287000);
+  const raw=parseDetailMatrix(d);
+  assert.equal(raw.cfd_candidates.length,2);
+  assert.equal(raw.cfd_candidate_gross,287000);
+  assert.deepEqual(raw.cfd_candidates.map(x=>x.order_date),['2026-10-25','2026-10-11']);
+  assert.ok(raw.cfd_candidates.every(x=>x.review_status==='needs_owner_confirmation'));
+  assert.equal(raw.rows[0].order_time,'25-10-2026 10:52:42');
+  const reconciled=reconcile(d,product());
+  assert.equal(reconciled.cfd_candidate_gross,287000);
+  assert.equal(reconciled.cfd_candidate_status,'needs_owner_confirmation');
+  assert.equal(reconciled.stock_posting_allowed,false);
+});
+
+test('Monday evening Rp1.512m mixed-food transaction must NOT be relabeled as Sunday CFD',()=>{
+  const a=row('CS/01/261005/0024','05-10-2026','SOSIS AYAM,ODENG,Topokki Odeng,THAI TEA,French fries,KUAH ODENG',1512000);
+  a[1]='05-10-2026 20:38:33';a[5]='Lainnya';
+  const raw=parseDetailMatrix(detail([a],1512000,1512000));
+  assert.equal(raw.cfd_candidates.length,0);
+  assert.equal(raw.rows[0].cfd_candidate,false);
+  assert.equal(raw.rows[0].order_date,'2026-10-05');
+  assert.equal(raw.rows[0].order_time,'05-10-2026 20:38:33');
+});
+
+test('Sunday mixed food or afternoon ice cream is NOT a CFD candidate',()=>{
+  const a=row('CS/01/261004/0001','04-10-2026','Topokki Odeng,Topokki',22000);
+  a[1]='04-10-2026 10:11:26';
+  const b=row('CS/01/261025/0005','25-10-2026','ICE CREAM BOWL',11000);
+  b[1]='25-10-2026 13:00:00';
+  assert.equal(parseDetailMatrix(detail([a,b],33000,33000)).cfd_candidates.length,0);
+});
+
+test('CSV export includes non-CS prefixes and still counts those tickets',()=>{
+  const a=row('CO/01/261004/0001','04-10-2026','Paket ODENG Kenyang,ODENG,RABOKKI',35000,'Bank Transfer - GOJEK');
+  a[1]='04-10-2026 11:29:45';
+  const raw=parseDetailMatrix(detail([a],35000,35000));
+  assert.equal(raw.receipts,1);
+  assert.equal(raw.gross,35000);
+  assert.equal(raw.rows[0].transaction_id,'CO/01/261004/0001');
 });
