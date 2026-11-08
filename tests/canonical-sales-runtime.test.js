@@ -13,6 +13,8 @@ try {
 
   if (!runtime.includes('window.__HASNARIA_IMPORT_V2')) throw new Error('Majoo importer v2 is missing');
   if (!runtime.includes('window.__HASNARIA_PRODUCT_REPORT_V1')) throw new Error('Monthly SKU parser is missing from canonical runtime');
+  if (!runtime.includes('window.__HASNARIA_SALES_RECONCILE_V1')) throw new Error('Read-only reconciler missing from canonical runtime');
+  if (!runtime.includes('sbReportReconcileChoose')) throw new Error('Read-only reconciliation UI missing');
   if (!runtime.includes('renderReportSourceChoiceModal')) throw new Error('Flagged two-source modal missing');
   if (!runtime.includes('renderReportPreviewModal')) throw new Error('Read-only product preview missing');
   if (!runtime.includes('return n==null ? null : n;')) throw new Error('revenue normalization patch missing');
