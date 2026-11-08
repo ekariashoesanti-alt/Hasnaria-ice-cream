@@ -33,7 +33,7 @@ test('idempotency, no stock or finance mutations, scoped access',()=>{
  assert.match(sql,/unique \(brand_id, period_month, source_sha256\)/);
  assert.match(sql,/loyalty_one_current_period_uidx/);
  assert.match(sql,/pg_advisory_xact_lock/);
- assert.match(sql,/source_generated_at<=v_previous/);
+ assert.match(sql,/p_generated_at<=v_previous/);
  assert.match(sql,/status','duplicate'/);
  assert.match(sql,/get_loyalty_dashboard_v1/);
  assert.match(sql,/import_loyalty_majoo_v1/);
