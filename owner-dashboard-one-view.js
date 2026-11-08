@@ -85,6 +85,7 @@ function render(){
   '<div class="hx6-toolbar"><div><div class="hx6-eyebrow">RINGKASAN CEO · '+esc(cutLabel())+'</div><h1>Ringkasan CEO</h1><p>Visual singkat lintas Penjualan, Pembelian, Administrasi, Keuangan, dan Stok.</p></div><div class="hx6-tools"><label><span>Bulan</span><select id="hx6Period" data-month-filter="dashboard">'+periodOptions()+'</select></label><button type="button" data-hx6-detail="1">Lihat Detail</button></div></div>'+
   (S.error?'<div class="hx-error">'+esc(S.error)+'</div>':'')+
   '<div id="hx7Cards" class="hx7-grid" aria-label="Empat kondisi utama bisnis"></div>'+
+  '<div id="hx7Insights" class="hx7-insights-host" aria-live="polite"></div>'+
   '<div class="hx7-collapsible"><button type="button" data-hx7-expand="1">Tampilkan tren & status transaksi</button></div>'+
   '<div id="hx7Secondary" class="hx7-secondary"><div class="hx6-kpis">'+
    kpi('Penjualan',S.loading&&!S.loaded?'…':money(v.sales_revenue),n(v.sales_rows).toLocaleString('id-ID')+' transaksi','sales')+
