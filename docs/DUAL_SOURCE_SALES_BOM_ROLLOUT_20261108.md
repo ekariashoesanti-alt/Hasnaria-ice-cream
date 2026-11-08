@@ -219,3 +219,22 @@ Replayable security UAT: `supabase/uat/singapore/assert_owner_atomic_import_acl_
 - Full corrected evidence and limits: `docs/CFD_OCTOBER_2026_SOURCE_CORRECTION.md`. Source comparison workbook available in conversation: `HASNARIA_Audit_Koreksi_CFD_Oktober_2026.xlsx`.
 
 **Owner confirmation and source itemization still required** before changing any event tag, transaction date, official revenue, BOM, or stock. Never merge PR #185 while Rp622,000 discrepancy and inventory conversion gates remain unresolved.
+
+## Stage 5: POS item-price arithmetic screening (2026-11-08)
+
+**New evidence from 824 real October Majoo receipts, all 54 monthly SKU prices, and independently matched master SKUs:**
+
+- Exactly **54/54 distinct sold product names and SKUs** map to the Majoo master. Missing product-name/SKU mapping does **not** explain the Rp622,000 gap.
+- Monthly per-SKU unit reference price is derived from reported `source_sales_amount / quantity`, not copied from an unapproved price list. All 54 observed October reference prices are whole rupiah.
+- CSV provides **1,823 product-name mentions** versus **2,604 sold units** in both XLSX reports. A mention is a name appearing on a ticket, **not a trustworthy receipt-level SKU quantity**.
+- Independent read-only arithmetical test: assume at least one unit for each name occurrence on a receipt, then ask whether the receipt gross can be formed by adding any whole-number extra units at the **monthly reference price for only those same names**. 490 tickets exactly equal their minimum one-each reference total, another 333 are above, one is below. Of all 824, **51 cannot be represented** as a sum of those reference unit prices; **50 mention an ice-cream product, 44 mention `ICE CREAM BOWL`**.
+- Example: `IC60 / ICE CREAM BOWL` October SKU reference Rp5,000 per unit, but Majoo has tickets listing only that product at Rp11,000 / Rp13,000 / Rp22,000. Since these are not multiples of Rp5,000, investigate **POS actual price, modifier, topping, pricing variant, promo, rounding or fee**. This is not proof of an unregistered SKU or a specific adjustment.
+- `CS/01/261025/0001` (Sunday 25 Oct 10:52 WIB) contains four `ICE CREAM BOWL` mentions plus one `Es krim Turkiy`; all have Rp5,000 monthly reference prices. Receipt gross Rp281,000 is not divisible by Rp5,000, so it is a **priority itemization check**, while its event attribution remains unconfirmed.
+- `CS/01/261030/0006`: Mie Pedas Rp6,500 + SIOMAY Rp1,000 + CHOCOLATE Rp9,000 = Rp16,500 reference one-each but POS gross Rp15,000, suggesting a discount/price difference (not proven without itemized POS).
+- The arithmetic screening is **not an allocation of the Rp622,000**. Its above-minimum residual is neither confirmed extra units nor proven service revenue, and no stock entry is created.
+
+Implemented in `sales-reconciliation-v1.js` as `price_arithmetic_exceptions` with a bounded, whole-unit combination test (gcd and up to 10,000 state positions); unassessable cases are never silently declared matches. A compact preview section displays top 20 prioritized receipts, ordered by receipt gross, with source ID/timestamp and product names. `tests/sales-reconciliation-v1.test.js` covers arithmetic mismatches, explainable extra units, below-reference tickets, and unknown product names. Canonical Sales build and audit gate passed.
+
+Detailed spreadsheet evidence is available in the conversation as **HASNARIA_Audit_Selisih_Harga_51_Struk_Oktober_2026.xlsx**, with Summary, 51 priority tickets, all 824 tickets, and 54 reference SKU prices (formula-driven differences).
+
+**NEXT DATA NEEDED:** Majoo itemized ticket lines showing receipt ID, SKU, actual item quantity, price, discounts, option/modifier/topping, tax and any service/event fee. Do not change October revenue, BOM, POS timestamps, or stock until source-backed reconciliation and Owner signoff.
