@@ -8,7 +8,7 @@
 
   var PAGE_SIZE=25;
   var state={
-    runs:[],periods:[],period:'',loading:false,error:'',loaded:false,
+    runs:[],periods:[],period:'',loading:false,error:'',loaded:false,subtab:'work',loyaltyLoad:null,
     activeRun:null,items:[],itemPage:1,itemTotal:0,itemLoading:false,itemError:'',
     createOpen:false,members:[],membersLoading:false,membersLoaded:false,membersError:'',
     busy:false,notice:'',actionError:'',itemSaves:0,loadSeq:0,itemSeq:0,viewSeq:0,syncSeq:0,syncing:false
@@ -92,10 +92,21 @@
     return '<div class="op1-detail"><div class="op1-detail-head"><div><span>'+esc(typeLabel(r.run_type))+'</span><h3>'+esc(r.title)+'</h3><small>'+fmtDate(r.scheduled_date)+' · '+esc(statusLabel(r.status))+'</small></div><div class="op1-detail-actions"><div class="op1-badge">'+state.itemTotal+' item</div>'+submit+'</div></div>'+rejected+renderReviewActions(r)+'<div class="op1-table-wrap"><table><thead><tr><th>Item</th><th>System Snapshot</th><th>Hitung Fisik</th><th>Catatan</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div>'+pager+'</div>';
   }
 
+  function ensureLoyalty(){
+    if(!isOwner()||!active()||state.subtab!=='loyalty')return;
+    if(window.__HASNARIA_LOYALTY_MOUNT){window.__HASNARIA_LOYALTY_MOUNT();return}
+    if(state.loyaltyLoad)return;
+    state.loyaltyLoad=new Promise(function(resolve){var sc=document.createElement('script');sc.id='hasnaria-loyalty-v1-js';sc.src='/loyalty-v1.js?v=1';sc.async=true;sc.onload=resolve;sc.onerror=function(){state.loyaltyLoad=null;resolve()};document.head.appendChild(sc)});
+    state.loyaltyLoad.then(function(){if(active()&&state.subtab==='loyalty'&&typeof window.__HASNARIA_LOYALTY_MOUNT==='function')window.__HASNARIA_LOYALTY_MOUNT()});
+  }
   function render(){
     var h=host();if(!h)return;css();var c=counts();
+    if(isOwner()&&state.subtab==='loyalty'){
+      h.innerHTML='<div class="op1-shell"><nav class="op1-loyalty-nav" aria-label="Submenu Operasional"><button type="button" data-op-action="show-work">Pekerjaan</button><button type="button" data-op-action="show-loyalty" class="on">Loyalty</button></nav><div id="opLoyaltyHost"></div></div>';
+      bind(h);ensureLoyalty();return;
+    }
     state.viewSeq++;
-    h.innerHTML='<div class="op1-shell" data-operational-v1="1"><div class="op1-head"><div><div class="op1-eyebrow">OPERASIONAL · '+esc(monthLabel(state.period))+'</div><h2>Pelaksanaan & Kontrol Harian</h2><p>Daftar pekerjaan ringan; anggota tim dan detail opname hanya dimuat saat dibutuhkan.</p></div><div class="op1-head-actions"><label class="op1-month"><span>Bulan</span><select id="op1Month" data-month-filter="operasional">'+periodOptions()+'</select></label>'+(isOwner()?'<button type="button" class="op1-new" data-op-action="new-opname">+ Stock Opname</button>':'')+'<button type="button" class="op1-refresh" data-op-action="refresh">↻ Refresh</button></div></div>'+
+    h.innerHTML='<div class="op1-shell" data-operational-v1="1">'+(isOwner()?'<nav class="op1-loyalty-nav" aria-label="Submenu Operasional"><button type="button" data-op-action="show-work" class="on">Pekerjaan</button><button type="button" data-op-action="show-loyalty">Loyalty</button></nav>':'')+'<div class="op1-head"><div><div class="op1-eyebrow">OPERASIONAL · '+esc(monthLabel(state.period))+'</div><h2>Pelaksanaan & Kontrol Harian</h2><p>Daftar pekerjaan ringan; anggota tim dan detail opname hanya dimuat saat dibutuhkan.</p></div><div class="op1-head-actions"><label class="op1-month"><span>Bulan</span><select id="op1Month" data-month-filter="operasional">'+periodOptions()+'</select></label>'+(isOwner()?'<button type="button" class="op1-new" data-op-action="new-opname">+ Stock Opname</button>':'')+'<button type="button" class="op1-refresh" data-op-action="refresh">↻ Refresh</button></div></div>'+
       '<div class="op1-kpis"><div><span>Aktif</span><strong>'+c.open+'</strong></div><div><span>Menunggu Review</span><strong>'+c.review+'</strong></div><div><span>Selesai</span><strong>'+c.done+'</strong></div></div>'+
       (state.notice?'<div class="op1-notice">'+esc(state.notice)+'</div>':'')+(state.actionError?'<div class="op1-alert">'+esc(state.actionError)+'</div>':'')+(state.error?'<div class="op1-alert">'+esc(state.error)+'</div>':'')+(state.loading&&!state.loaded?'<div class="op1-loading">Memuat daftar pekerjaan…</div>':'')+
       renderCreate()+'<div class="op1-grid"><section><div class="op1-section-title"><strong>Pekerjaan terbaru</strong><span>Maks. 30 run</span></div>'+renderRunList()+'</section>'+renderDetails()+'</div>'+
@@ -249,6 +260,8 @@
   function bind(h){
     h.onchange=function(e){if(e.target&&e.target.id==='op1Month'){state.period=String(e.target.value||'').slice(0,7);state.loadSeq++;state.itemSeq++;state.syncSeq++;state.loading=false;state.itemLoading=false;state.activeRun=null;state.items=[];state.itemTotal=0;state.itemPage=1;clearAction();loadRuns();}};
     h.onclick=function(e){var b=e.target&&e.target.closest?e.target.closest('button'):null;if(!b)return;var action=b.getAttribute('data-op-action');
+      if(action==='show-loyalty'){if(isOwner()){state.subtab='loyalty';render()}return}
+      if(action==='show-work'){state.subtab='work';render();if(!state.loaded&&!state.loading)loadRuns();return}
       if(action==='refresh'){clearAction();loadRuns(null,true);return}
       if(action==='new-opname'){state.createOpen=true;clearAction();render();loadMembers();return}
       if(action==='close-create'){state.createOpen=false;clearAction();render();return}
@@ -262,7 +275,7 @@
     };
   }
 
-  function mount(opts){if(!active())return;css();render();if(!state.loaded&&!state.loading)loadRuns();else if(opts&&opts.force&&!state.loading)loadRuns(state.activeRun&&state.activeRun.id)}
+  function mount(opts){if(!active())return;css();render();if(state.subtab==='loyalty')return;if(!state.loaded&&!state.loading)loadRuns();else if(opts&&opts.force&&!state.loading)loadRuns(state.activeRun&&state.activeRun.id)}
   window.__HASNARIA_OPERATIONS_V1_MOUNT=mount;
   registerSync();
   document.addEventListener('hasnaria:data-sync-ready',registerSync);
