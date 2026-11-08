@@ -35,11 +35,11 @@ function trendVisual(months){
  var data=Array.isArray(months)?months:[],observed=data.filter(function(m){return m.available}),max=Math.max(1,...observed.map(function(m){return Number(m.visits)||0}));
  var width=390,slot=width/Math.max(1,data.length),bar=Math.min(22,slot*.55),height=72;
  var items=data.map(function(m,i){var v=Math.max(0,Number(m.visits)||0),x=i*slot+(slot-bar)/2,y=height-height*v/max;
-  return m.available?'<rect x="'+x.toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+bar.toFixed(1)+'" height="'+Math.max(2,height-y).toFixed(1)+'" rx="3" fill="#138c88"><title>'+e(shortMonth(m.month))+': '+num(v)+' kunjungan</title></rect>':
-   '<rect x="'+x.toFixed(1)+'" y="61" width="'+bar.toFixed(1)+'" height="11" rx="3" fill="#e4ebee" stroke="#b1c4cc" stroke-dasharray="2,2"><title>'+e(shortMonth(m.month))+': belum ada laporan</title></rect>';
+  return m.available?'<rect x="'+x.toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+bar.toFixed(1)+'" height="'+Math.max(2,height-y).toFixed(1)+'" rx="3" fill="#168363"><title>'+e(shortMonth(m.month))+': '+num(v)+' kunjungan</title></rect>':
+   '<rect x="'+x.toFixed(1)+'" y="61" width="'+bar.toFixed(1)+'" height="11" rx="3" fill="#e4ebee" stroke="#bdd8c4" stroke-dasharray="2,2"><title>'+e(shortMonth(m.month))+': belum ada laporan</title></rect>';
  }).join('');
- var labels=data.map(function(m,i){return '<text x="'+(i*slot+slot/2).toFixed(1)+'" y="99" text-anchor="middle" fill="#657f8b" font-size="10">'+e(shortMonth(m.month))+'</text>'}).join('');
- return '<svg class="lo1-trend" viewBox="0 0 390 107" role="img" aria-label="Grafik batang tren kunjungan per bulan; bulan tanpa laporan ditandai abu-abu"><path d="M0 73H390" stroke="#d6e3e8"/>'+items+labels+'</svg>'
+ var labels=data.map(function(m,i){return '<text x="'+(i*slot+slot/2).toFixed(1)+'" y="99" text-anchor="middle" fill="#70897c" font-size="10">'+e(shortMonth(m.month))+'</text>'}).join('');
+ return '<svg class="lo1-trend" viewBox="0 0 390 107" role="img" aria-label="Grafik batang tren kunjungan per bulan; bulan tanpa laporan ditandai abu-abu"><path d="M0 73H390" stroke="#dce8e3"/>'+items+labels+'</svg>'
 }
 function loyalVisual(items){
  if(!Array.isArray(items)||!items.length)return '<div class="lo1-small-empty">Belum ada data pelanggan.</div>';

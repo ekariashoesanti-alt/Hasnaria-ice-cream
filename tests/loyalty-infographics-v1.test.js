@@ -40,3 +40,11 @@ test('cached analytics do not change by searching or paging customer table',()=>
  assert.match(js,/Promise\.all\(requests\)/);
  assert.match(js,/state\.infographic=null;load\(false\)/);
 });
+
+test('Hasnaria green-white identity: infographic panels, buttons and chart marks',()=>{
+ assert.match(css,/--lo-navy:#143f32;--lo-teal:#168363/);
+ assert.match(css,/#operasional \.lo1-shell \.lo1-upload,[\s\S]+background:#176b55/);
+ assert.match(css,/#operasional \.lo1-infographics>section/);
+ assert.match(js,/fill=\"#168363\"/);
+ for(const legacy of ['#15344b','#15877d','#143a55','#0b8c84']){assert.ok(!css.includes(legacy),'legacy color must be absent: '+legacy);}
+});
