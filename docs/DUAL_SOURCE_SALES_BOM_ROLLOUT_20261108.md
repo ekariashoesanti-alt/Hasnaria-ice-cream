@@ -203,3 +203,19 @@ Replayable security UAT: `supabase/uat/singapore/assert_owner_atomic_import_acl_
 - None of these changes relaxes the Singapore-only feature flag or enables any production financial/stock path.
 
 **Open blockers** remain the Rp622,000 Majoo source mismatch (not proven to be channel-specific), the physical BOM conversion/Owner approval, and authenticated visual Owner XLSX+CSV UAT.
+
+## CFD source correction — reference only (2026-11-08)
+
+**Owner context:** event Car Free Day involved Sunday morning offsite ice-cream sales, potentially recorded as one larger receipt. Source evidence corrects an earlier proposed event attribution: **the Rp1,512,000 receipt CS/01/261005/0024 is a MONDAY 20:38 WIB mixed-food receipt, not a Sunday pre-noon ice cream receipt.** Keep original POS date and monetary fields.
+
+- 25 Oct Sunday 10:52 WIB receipt CS/01/261025/0001, Rp281,000 (Ice Cream Bowl / Es Krim Turkiy) is an **event candidate**, not an approved event booking.
+- 11 Oct Sunday 07:00–09:30 WIB has 27 ice-cream-only receipts totaling Rp259,000, including source SKU name CFD Ice Cream Turki.
+- Full October has 28 *unconfirmed candidate receipts* totaling Rp540,000 under the source-only rule "Sunday before 12:00 WIB and every listed product name is ice cream". This is not a reconciliation explanation for Rp622,000.
+- CSV contains exactly 824 unique receipts, **including a `CO/`-prefix Rp35,000 transaction**. Do not filter IDs to `CS/` only.
+- Original XLSX Penjualan Per Periode SHA256 `9b3edf484e2dcaf9d9648fdd9d3d4234777bc35e2b53bb6f806cda4c782c1a83` has **31 days, 2,604 actual product units, 824 receipts, Rp21,614,500**. Each daily gross/receipt count matches CSV. Original 54-SKU report also has 2,604 units.
+- CSV contains 1,823 name appearances, which are **not** SKU unit quantities. 5 Oct: 358 source units vs 53 mentions (+305); 25 Oct: 135 vs 79 (+56); 11 Oct: 126 vs 94 (+32). No automatic allocation to SKU or inventory ledger.
+- Separate Singapore-private UAT `hasnaria_uat.period_daily_units_reference` and view `hasnaria_uat.daily_units_vs_csv_names_v1` now verify all 31 source days (2,604 units, 1,823 mentions, refund Rp35,000, no stock writes). DDL/fixture is under `supabase/uat/singapore/20261108153000_period_daily_units_audit_v1.sql` **outside** production migration tree.
+- New test cases pin all 28 real candidate receipts, a non-CFD 5 Oct ticket, mixed-outlet denial, and the non-`CS/` receipt. Node CI must pass.
+- Full corrected evidence and limits: `docs/CFD_OCTOBER_2026_SOURCE_CORRECTION.md`. Source comparison workbook available in conversation: `HASNARIA_Audit_Koreksi_CFD_Oktober_2026.xlsx`.
+
+**Owner confirmation and source itemization still required** before changing any event tag, transaction date, official revenue, BOM, or stock. Never merge PR #185 while Rp622,000 discrepancy and inventory conversion gates remain unresolved.
