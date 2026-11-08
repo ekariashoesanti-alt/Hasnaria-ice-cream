@@ -41,7 +41,7 @@
       if(index<0)err('Kolom detail wajib tidak ditemukan: '+label);
       return index;
     }
-    return {id:one('no transaksi'),order:one('waktu order'),products:one('produk'),
+    return {id:one('no transaksi'),order:one('waktu order'),outlet:one('outlet'),products:one('produk'),
       amount:one('total penjualan rp'),payment:one('metode pembayaran'),orderType:one('jenis order')};
   }
   function parseDetailMatrix(matrix){
@@ -60,7 +60,7 @@
       if(row.length>=2)meta.set(head(row[0]),row[1]);
     }
     var period=parsePeriod(meta.get('periode'));
-    var rows=[],ids=new Set(),nameOccurrences=0,perMethod=Object.create(null),perOrderType=Object.create(null),perDay=Object.create(null),total=0;
+    var rows=[],ids=new Set(),outlets=new Set(),nameOccurrences=0,perMethod=Object.create(null),perOrderType=Object.create(null),perDay=Object.create(null),total=0;
     for(var j=headerRow+1;j<matrix.length;j++){
       var rec=matrix[j]||[];
       if(!rec.some(function(x){return str(x)!=='';}))continue;
@@ -81,8 +81,12 @@
       if(!names.length)err('Daftar produk transaksi kosong: '+id);
       var pay=str(rec[cols.payment]);
       var orderType=str(rec[cols.orderType]);
+      var outlet=str(rec[cols.outlet]);
       if(!pay)err('Metode pembayaran kosong: '+id);
       if(!orderType)err('Jenis order kosong: '+id);
+      if(!outlet)err('Outlet transaksi kosong: '+id);
+      outlets.add(key(outlet));
+      if(outlets.size>1)err('File Detail Transaksi mencampur beberapa outlet. Pilih satu outlet.');
       ids.add(id);nameOccurrences+=names.length;total+=price;
       var method=perMethod[pay]||(perMethod[pay]={receipts:0,gross:0});
       method.receipts++;method.gross+=price;
@@ -90,7 +94,7 @@
       channel.receipts++;channel.gross+=price;
       var dayItem=perDay[day]||(perDay[day]={receipts:0,gross:0,appearances:0});
       dayItem.receipts++;dayItem.gross+=price;dayItem.appearances+=names.length;
-      rows.push({transaction_id:id,order_date:day,total_sales:price,payment_method:pay,order_type:orderType,names:names});
+      rows.push({transaction_id:id,order_date:day,total_sales:price,payment_method:pay,order_type:orderType,outlet:outlet,names:names});
     }
     if(!rows.length)err('Tidak ditemukan transaksi untuk direkonsiliasi');
     var expectedCount=money(meta.get('total transaksi'),'Total Transaksi');
@@ -102,6 +106,7 @@
       err('Total penjualan tidak cocok dengan footer Majoo');
     if(expectedNet>expectedSales || expectedNet<0)err('Nilai penjualan bersih tidak valid');
     return {period_month:period.period_month,date_range_complete:period.full_month,
+      outlet_name:Array.from(outlets)[0],
       detail_from:period.range_from,detail_to:period.range_to,
       receipts:rows.length,product_name_appearances:nameOccurrences,
       gross:round2(total),net:round2(expectedNet),reported_refund:round2(total-expectedNet),
@@ -113,6 +118,8 @@
       err('Preview Rekap Produk belum valid');
     var det=parseDetailMatrix(detailMatrix);
     if(det.period_month!==productReport.period_month)err('Bulan Detail Transaksi dan Rekap Produk berbeda');
+    if(!productReport.outlet_name || key(det.outlet_name)!==key(productReport.outlet_name))
+      err('Outlet Detail Transaksi tidak sama dengan Outlet Rekap Produk');
     var products=new Map();
     productReport.rows.forEach(function(p){
       var k=key(p.name);
