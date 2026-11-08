@@ -101,7 +101,7 @@ create policy sales_product_report_line_owner_insert_v1
 -- The RPC may transition DRAFT -> UNDER_REVIEW; a reviewer may reject but
 -- cannot re-open a batch and rewrite source rows. Revisions get a new SHA256.
 create or replace function private.guard_sales_product_report_batch_update_v1()
-returns trigger language plpgsql security invoker set search_path = '' as $
+returns trigger language plpgsql security invoker set search_path = '' as $$
 begin
   if row(new.brand_id,new.outlet_id,new.period_month,new.filename,new.file_sha256,
          new.payload_fingerprint,new.source_format,new.source_row_count,
@@ -119,7 +119,7 @@ begin
   end if;
   return new;
 end;
-$;
+$$;
 revoke all on function private.guard_sales_product_report_batch_update_v1() from public, anon, authenticated;
 create trigger trg_guard_sales_product_report_batch_update_v1
   before update on public.sales_product_report_batches
