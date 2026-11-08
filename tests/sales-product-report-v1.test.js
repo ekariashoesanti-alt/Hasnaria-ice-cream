@@ -368,3 +368,89 @@ test('a rejected stored batch cannot be mistaken for a successful duplicate uplo
     assert.equal(calls.filter(x=>x.method==='POST').length,0);
   } finally {globalThis.fetch=prev;}
 });
+
+
+
+test('uncertain POST response recovery: source is committed but response lost, do not POST again',async()=>{
+  const prev=globalThis.fetch,parsed=parseMatrix(matrix()),calls=[];
+  const saved=parsed.rows.map(x=>({
+    line_no:x.line_no,source_sku:x.sku,source_product_name:x.name,
+    quantity:x.quantity,source_sales_amount:x.sales_amount,
+    source_hpp_amount:x.cogs_amount,source_gross_profit:x.gross_profit,
+    refund_quantity:x.refund_qty,refund_amount:x.refund_amount,
+    refund_hpp_amount:x.refund_cogs
+  }));
+  let committed=false;
+  globalThis.fetch=async(url,opts)=>{
+    const method=opts&&opts.method||'GET';
+    calls.push({method,url:String(url)});
+    if(String(url).includes('/rpc/stage_sales_product_report_v1')){
+      committed=true; // Model: DB commits but HTTP response is lost.
+      throw new TypeError('connection closed before response');
+    }
+    if(String(url).includes('sales_product_report_batches'))
+      return {ok:true,json:async()=>committed?[{
+        id:'committed-while-offline',status:'under_review',source_row_count:2
+      }]:[]};
+    if(String(url).includes('sales_product_report_lines'))
+      return {ok:true,json:async()=>saved};
+    throw new Error('Unexpected HTTP route');
+  };
+  const bytes=new TextEncoder().encode('october XLSX bytes');
+  try{
+    const result=await stagePreview(
+      {name:'Oct.xlsx',size:bytes.length,arrayBuffer:async()=>bytes.buffer},matrix(),{
+        singaporeUatApproved:true,enableWrite:true,confirmed:true,
+        brandId:'brand-test',outletId:'outlet-test',
+        supabaseUrl:'https://rynnpndtzjwpekbiwiif.supabase.co',
+        publishableKey:'staging-public',getAccessToken:async()=> 'owner-jwt'
+      });
+    assert.equal(result.status,'existing');
+    assert.equal(result.recovered_from_uncertain_post,true);
+    assert.equal(result.receipt.batch_id,'committed-while-offline');
+    assert.equal(calls.filter(x=>x.method==='POST').length,1);
+    assert.equal(calls.filter(x=>x.method==='GET').length,3);
+  } finally {globalThis.fetch=prev;}
+});
+
+test('uncertain POST with no saved batch fails safely and never automatically retries POST',async()=>{
+  const prev=globalThis.fetch,calls=[];
+  globalThis.fetch=async(url,opts)=>{
+    const method=opts&&opts.method||'GET';
+    calls.push({method,url:String(url)});
+    if(method==='POST')throw new TypeError('network disconnected');
+    return {ok:true,json:async()=>[]};
+  };
+  const bytes=new TextEncoder().encode('unsaved XLSX');
+  try{
+    await assert.rejects(stagePreview({
+      name:'Missing.xlsx',size:bytes.length,arrayBuffer:async()=>bytes.buffer
+    },matrix(),{
+      singaporeUatApproved:true,enableWrite:true,confirmed:true,
+      brandId:'brand-test',outletId:'outlet-test',
+      supabaseUrl:'https://rynnpndtzjwpekbiwiif.supabase.co',
+      publishableKey:'staging-public',getAccessToken:async()=> 'owner-jwt'
+    }),/belum dapat dipastikan/);
+    assert.equal(calls.filter(x=>x.method==='POST').length,1);
+  } finally {globalThis.fetch=prev;}
+});
+
+test('expired Owner JWT on report lookup denies save before any POST',async()=>{
+  const prev=globalThis.fetch,calls=[];
+  globalThis.fetch=async(url,opts)=>{
+    calls.push({url:String(url),method:opts&&opts.method||'GET'});
+    return {ok:false,status:401,text:async()=> 'JWT expired'};
+  };
+  const bytes=new TextEncoder().encode('jwt test');
+  try{
+    await assert.rejects(stagePreview({
+      name:'JWT.xlsx',size:bytes.length,arrayBuffer:async()=>bytes.buffer
+    },matrix(),{
+      singaporeUatApproved:true,enableWrite:true,confirmed:true,
+      brandId:'brand-test',outletId:'outlet-test',
+      supabaseUrl:'https://rynnpndtzjwpekbiwiif.supabase.co',
+      publishableKey:'staging-public',getAccessToken:async()=> 'expired-jwt'
+    }),/login ulang/);
+    assert.equal(calls.filter(x=>x.method==='POST').length,0);
+  } finally {globalThis.fetch=prev;}
+});
