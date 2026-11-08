@@ -15,7 +15,7 @@ function detail(rows,total,net){
     ['Total Penjualan Bersih',String(net)],
     ['Total Transaksi',String(rows.length)],
     ['Date Generated','08/11/2026'],
-    header,
+    header.slice(),
     ...rows
   ];
 }
