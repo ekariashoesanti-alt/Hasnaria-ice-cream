@@ -60,7 +60,7 @@
       if(row.length>=2)meta.set(head(row[0]),row[1]);
     }
     var period=parsePeriod(meta.get('periode'));
-    var rows=[],ids=new Set(),nameOccurrences=0,perMethod={},perOrderType={},perDay={},total=0;
+    var rows=[],ids=new Set(),nameOccurrences=0,perMethod=Object.create(null),perOrderType=Object.create(null),perDay=Object.create(null),total=0;
     for(var j=headerRow+1;j<matrix.length;j++){
       var rec=matrix[j]||[];
       if(!rec.some(function(x){return str(x)!=='';}))continue;
