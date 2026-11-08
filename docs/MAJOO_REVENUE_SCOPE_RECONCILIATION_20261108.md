@@ -70,3 +70,25 @@ Modul sumber `sales-scope-bridge-v1.js` kini ikut dibundel ke runtime Sales Prev
 Pengujian `tests/sales-scope-bridge-v1.test.js` dan canonical runtime mencakup nilai awal Rp622.000, skenario bukti sintetis yang kebetulan seimbang, duplikasi lintas laporan, refund yang tidak cocok, perbedaan outlet dan larangan posting stok. CI mewajibkan seluruhnya lulus.
 
 **Rollback:** revert PR atau matikan flag Preview. Modifikasi ini tidak menambahkan tabel/migrasi, tidak mengubah transaksi production, dan tidak membuat mutasi stok di Singapore.
+
+## Keputusan Owner — Source of Truth KPI dan SKU (8 November 2026)
+
+Tidak perlu menahan perkembangan proyek untuk menebak alokasi Rp622.000. Sumber data ditetapkan **berdasarkan jenis metrik** dengan validasi yang dapat diaudit:
+
+| Metrik | Sumber utama | Angka Oktober 2026 |
+|---|---|---:|
+| Omzet bruto | Detail Transaksi Majoo; diverifikasi 1:1 terhadap Penjualan per Periode 31 hari | Rp21.614.500 |
+| Refund | Detail Transaksi dan konfirmasi total semua laporan | Rp35.000 |
+| Omzet bersih | Detail Transaksi (bruto−refund) | Rp21.579.500 |
+| Nomor dan waktu transaksi, metode bayar, jenis order | Detail Transaksi Majoo | 824 struk |
+| Unit terjual dan ranking SKU | Laporan Penjualan Produk | 54 SKU, 2.604 unit |
+| HPP SKU sumber Majoo | Laporan Penjualan Produk, **bukan** proyeksi dari nilai struk | HPP sumber; evaluasi definisi sebelum laba total |
+| Konsumsi stok | Unit SKU × BOM **yang disetujui**, dengan opening-stock valid | 0 posting sebelum approval |
+
+**Bukan double revenue:** Rp20.992.500 pada Laporan Penjualan Produk adalah atribut pembanding/detail SKU, **bukan tambahan** pada Rp21.614.500. Selisih Rp622.000 tetap dilabeli `UNALLOCATED_SOURCE_SCOPE_GAP`, tidak dialokasikan ke SKU atau omzet baru.
+
+**Bukan laba gabungan final:** nilai HPP di Laporan Produk hanya boleh dipakai sebagai HPP di dalam cakupan laporan produk. Jangan kurangi omzet Detail Transaksi dengan HPP tersebut dan menyebut selisihnya laba final tanpa kesepakatan definisi.
+
+**Status implementasi:** `sales-reconciliation-v1.js` menerbitkan objek `source_authority` dan `sales-board.part1.js` menampilkannya pada Preview. Semua flag otorisasi menolak overwrite KPI produksi dan posting stok. Belum ada migrasi atau perubahan transaksi production dalam penetapan ini.
+
+**Gate rilis:** sebelum mengalihkan KPI resmi dari 484 transaksi historis di Tokyo ke 824 transaksi pada ekspor asli, lakukan UAT Owner, deduplikasi lintas sumber dan verifikasi cutover per-bulan, dengan backup dan rollback; jangan menimpa production otomatis.
