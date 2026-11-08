@@ -25,6 +25,16 @@ try {
   if (!runtime.includes('isTokyoProduction(SB)')) throw new Error('Exact Tokyo project endpoint guard missing');
   if (!runtime.includes('resolveProductionOutlet(BRAND,token,KEY)')) throw new Error('Owner production outlet resolution missing');
   if (!runtime.includes('renderReportSourceChoiceModal')) throw new Error('Flagged two-source modal missing');
+  const excelChangeStart = runtime.indexOf('if (fileInput) {');
+  const excelChangeEnd = runtime.indexOf('var btnCancelFile',excelChangeStart);
+  if(excelChangeStart<0 || excelChangeEnd<=excelChangeStart) throw new Error('Excel file input handler missing');
+  const excelChange = runtime.slice(excelChangeStart,excelChangeEnd);
+  if(!excelChange.includes('STATE.showReportPreview=true;')) throw new Error('SKU Excel should open result preview after file parse');
+  if(!excelChange.includes('}finally{') || !excelChange.includes("STATE.importStatus=null;"))
+    throw new Error('Excel parsing 15% blocking overlay not cleared on both success and error');
+  if(!excelChange.includes("!STATE.importing && STATE.importStatus && STATE.importStatus.type==='progress'"))
+    throw new Error('Legacy Excel file-selection status must also unblock after parsing');
+
   if (!runtime.includes('renderReportPreviewModal')) throw new Error('Read-only product preview missing');
   if (!runtime.includes('Selisih cakupan laporan')) throw new Error('Majoo scope reconciliation disclosure missing');
   if (!runtime.includes('laporan-produk-tambahan-kolom-refund')) throw new Error('Official Majoo product-report definition missing');
