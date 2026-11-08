@@ -166,7 +166,7 @@ v class="sb-period">' +
         var kind=button.getAttribute('data-hsn-report-type');
         if(kind!=='detail'&&kind!=='product')return;
         STATE.selectedUploadType=kind;STATE.reportPreview=null;STATE.stagedFiles=[];
-        STATE.showReportPreview=false;
+        STATE.showReportPreview=false;STATE.reportReconciliation=null;STATE.reportReconcileError='';
         fileInput.value='';
         fileInput.accept=kind==='product'?'.xlsx,.xls':'.csv,.xlsx,.xls,.txt';
         fileInput.multiple=(kind==='detail');
@@ -182,6 +182,25 @@ v class="sb-period">' +
     if(reportPreviewOverlay)reportPreviewOverlay.onclick=function(e){
       if(e.target===reportPreviewOverlay){STATE.showReportPreview=false;draw();}
     };
+    var reconcileChooser=host.querySelector('#sbReportReconcileChoose');
+    var reconcileInput=host.querySelector('#sbReportReconcileInput');
+    if(reconcileChooser && reconcileInput){
+      reconcileChooser.onclick=function(){reconcileInput.click();};
+      reconcileInput.onchange=async function(){
+        if(!reconcileInput.files||!reconcileInput.files.length)return;
+        STATE.reportReconcileError='';STATE.reportReconciliation=null;
+        try{
+          if(!window.__HASNARIA_SALES_RECONCILE_V1 || !STATE.reportPreview)
+            throw new Error('Pembaca rekonsiliasi belum tersedia');
+          var detailFile=reconcileInput.files[0];
+          var matrix=await getFileMatrix(detailFile);
+          STATE.reportReconciliation=window.__HASNARIA_SALES_RECONCILE_V1.reconcile(matrix,STATE.reportPreview);
+        }catch(ex){
+          STATE.reportReconcileError=ex&&ex.message?ex.message:String(ex);
+        }
+        STATE.showReportPreview=true;draw();
+      };
+    }
 
     if (fileInput) {
       fileInput.onchange = async function () {
@@ -195,6 +214,7 @@ v class="sb-period">' +
               if(flist.length!==1)throw new Error('Rekap Produk harus satu file Excel per bulan.');
               if(!window.__HASNARIA_PRODUCT_REPORT_V1)throw new Error('Pembaca rekap belum siap. Refresh halaman.');
               STATE.reportPreview=window.__HASNARIA_PRODUCT_REPORT_V1.parseMatrix(await getFileMatrix(flist[0]));
+              STATE.reportReconciliation=null;STATE.reportReconcileError='';
               STATE.stagedFileType='Rekap SKU bulanan — preview saja';
               STATE.stagedFileRows=STATE.reportPreview.source_row_count;
               STATE.reportChoiceOpen=false;
@@ -229,6 +249,8 @@ v class="sb-period">' +
         STATE.stagedFiles = [];
         STATE.stagedFileType = '';
         STATE.reportPreview = null;
+        STATE.reportReconciliation = null;
+        STATE.reportReconcileError = '';
         STATE.selectedUploadType = null;
         if (fileInput) fileInput.value = '';
         draw();
