@@ -189,15 +189,41 @@
     });
   }
   async function requestJson(url,token,key,init){
-    var response=await fetch(url,Object.assign({
-      method:'GET',
-      headers:{apikey:key,Authorization:'Bearer '+token,Accept:'application/json'}
-    },init||{}));
-    if(!response.ok){
-      var raw=await response.text();
-      fail('Supabase Singapore HTTP '+response.status+': '+raw.slice(0,260));
+    var verb=String(init&&init.method||'GET').toUpperCase();
+    var timeoutMs=verb==='POST'?30000:15000;
+    var controller=typeof AbortController!=='undefined'?new AbortController():null;
+    var timeoutId=null;
+    if(controller)timeoutId=setTimeout(function(){controller.abort();},timeoutMs);
+    try{
+      var req=Object.assign({
+        method:'GET',
+        headers:{apikey:key,Authorization:'Bearer '+token,Accept:'application/json'}
+      },init||{});
+      if(controller)req.signal=controller.signal;
+      var response=await fetch(url,req);
+      if(!response.ok){
+        var message=await response.text();
+        var error=new Error(response.status===401
+          ? 'Sesi login Owner kedaluwarsa. Login ulang sebelum mencoba lagi.'
+          : 'Supabase Singapore HTTP '+response.status+': '+message.slice(0,260));
+        // Only a server-side failure after POST could have committed.
+        // Never retry a POST automatically, especially after losing its response.
+        error.maybeCommitted=verb==='POST'&&response.status>=500;
+        throw error;
+      }
+      return await response.json();
+    }catch(e){
+      if(e&&typeof e.maybeCommitted==='boolean')throw e;
+      var networkError=new Error(
+        e&&e.name==='AbortError'
+          ? 'Koneksi Singapore melewati batas waktu ('+Math.round(timeoutMs/1000)+' detik).'
+          : 'Koneksi Supabase terputus: '+(e&&e.message?e.message:String(e))
+      );
+      networkError.maybeCommitted=verb==='POST';
+      throw networkError;
+    }finally{
+      if(timeoutId!==null)clearTimeout(timeoutId);
     }
-    return response.json();
   }
   async function lookupExistingBatch(parsed,hash,opts,token){
     var path='/rest/v1/sales_product_report_batches?select=id,status,source_row_count'+
@@ -248,13 +274,31 @@
     // Stop before any POST if the exact source was already staged by a prior UAT.
     var existing=await lookupExistingBatch(parsed,fileHash,opts,token);
     if(existing)return existing;
-    var receipt=await requestJson(SINGAPORE_UAT_URL+'/rest/v1/rpc/stage_sales_product_report_v1',
-      token,opts.publishableKey,{method:'POST',
-      headers:{'Content-Type':'application/json','apikey':opts.publishableKey,
-        'Authorization':'Bearer '+token},
-      body:JSON.stringify({p_brand:opts.brandId,p_outlet:opts.outletId,
-        p_period_month:parsed.period_month,p_filename:file.name,p_file_sha256:fileHash,
-        p_rows:parsed.rows})});
+    var receipt;
+    try{
+      receipt=await requestJson(SINGAPORE_UAT_URL+'/rest/v1/rpc/stage_sales_product_report_v1',
+        token,opts.publishableKey,{method:'POST',
+        headers:{'Content-Type':'application/json','apikey':opts.publishableKey,
+          'Authorization':'Bearer '+token},
+        body:JSON.stringify({p_brand:opts.brandId,p_outlet:opts.outletId,
+          p_period_month:parsed.period_month,p_filename:file.name,p_file_sha256:fileHash,
+          p_rows:parsed.rows})});
+    }catch(e){
+      if(!e||e.maybeCommitted!==true)throw e;
+      // Network failures can occur after Postgres commits but before the reply.
+      // Read the immutable batch again instead of issuing a second POST.
+      try{
+        var recovered=await lookupExistingBatch(parsed,fileHash,opts,token);
+        if(recovered){
+          recovered.recovered_from_uncertain_post=true;
+          return recovered;
+        }
+      }catch(recoveryError){
+        // The status is still uncertain; preserve source and ask for review.
+      }
+      fail('Status simpan ke Singapore belum dapat dipastikan setelah jaringan gagal. '+
+        'Data lama aman. Jangan ubah file; periksa batch dengan checksum yang sama sebelum mencoba lagi.');
+    }
     if(!receipt || !receipt.batch_id ||
        !(['under_review','existing']).includes(String(receipt.status)))
       fail('Struktur tanda terima Supabase tidak dikenal');
