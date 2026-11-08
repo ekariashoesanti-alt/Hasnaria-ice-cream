@@ -332,3 +332,17 @@ test('real Majoo workbook layout: summary in N/O, full 54 SKU, original decimal 
   corrupted[13][1]=''; // real sold row with missing SKU, not a footer
   assert.throws(()=>parseMatrix(corrupted),/tidak lengkap/);
 });
+
+
+test('reject numeric orphan SKU row even if the original footer would remain acceptable',()=>{
+  const base=matrix();
+  const row=Array(15).fill('');
+  row[6]=2;row[8]=10000;row[11]=0;
+  base.push(row);
+  assert.throws(()=>parseMatrix(base),/angka tanpa SKU/);
+  base.pop();
+  const footer=Array(15).fill('');
+  footer[13]='Powered by Majoo';
+  base.push(footer);
+  assert.equal(parseMatrix(base).rows.length,2);
+});
