@@ -12,6 +12,9 @@ try {
   const runtime = buildCanonicalSalesRuntime(root, output);
 
   if (!runtime.includes('window.__HASNARIA_IMPORT_V2')) throw new Error('Majoo importer v2 is missing');
+  if (!runtime.includes('window.__HASNARIA_PRODUCT_REPORT_V1')) throw new Error('Monthly SKU parser is missing from canonical runtime');
+  if (!runtime.includes('renderReportSourceChoiceModal')) throw new Error('Flagged two-source modal missing');
+  if (!runtime.includes('renderReportPreviewModal')) throw new Error('Read-only product preview missing');
   if (!runtime.includes('return n==null ? null : n;')) throw new Error('revenue normalization patch missing');
   if (!runtime.includes('window.__HASNARIA_XLSX_READY')) throw new Error('XLSX preload coordination patch missing');
   if (!runtime.includes('return window.__HASNARIA_IMPORT_V2(fileOrFiles')) throw new Error('importFiles v2 delegation missing');
