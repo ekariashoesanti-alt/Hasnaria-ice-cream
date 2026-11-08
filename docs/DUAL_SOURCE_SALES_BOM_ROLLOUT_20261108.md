@@ -140,3 +140,14 @@ No production deployment. PR must remain draft until the Owner confirms source d
 - Never promote the Singapore-only scripts under `supabase/uat/singapore` into production migrations.
 
 Before merging: resolve Rp622,000 finance gap, validate legacy and exported BOM interactions, physical unit factors and effective dates, confirm no double-stock posting, run full Owner visual UAT, smoke tests, and backup/rollback.
+
+## Real October 54-SKU regression and exact-file replay
+
+- Regression fixture tests/fixtures/majoo-october-2026-product-lines.js now contains all 54 real October 2026 staged product rows, not just two made-up samples. CI validates the complete source period, 2,604 units, Rp20,992,500 sales, Rp10,345,955.24 HPP, 4 refunded units / Rp35,000, and 1-cent profit footer rounding.
+- CI caught a real parser defect: the Majoo export ends with a `Powered by Majoo` footer. A partially populated footer was incorrectly classified as an incomplete SKU record and blocked otherwise valid uploads. Parser now ignores only recognised non-SKU footer/total rows; missing SKU or outlet on any other product line still fails.
+- Source identity assertion checks `FO91` and `FO92` zero-revenue but positive HPP and `DD91`/ `DD95` Majoo reported zero HPP. These report values are treated as source facts, not verified ERP recipe COGS.
+- Reconstructed the **exact 54-row original numeric JSON payload** from Singapore staging and matched its MD5 source fingerprint; authenticated Owner repeated the same SHA-256 import via `stage_sales_product_report_v1`. RPC returned `reused=true`, same batch UUID, 1 batch / 54 lines / zero stock movements.
+- Added reusable Singapore-only assertion supabase/uat/singapore/assert_original_report_idempotency_v1.sql, which rebuilds the source JSON, tests exact replay, intentionally tampers qty under the same checksum and verifies rejection; all within BEGIN/ROLLBACK. This SQL test returned PASS.
+- Vercel build script scripts/vercel-build.js already contains a preview-only Singapore-backend and synthetic-brand rewrite. Do not change the production backend. Build-level staging isolation continues to be a mandatory CI gate.
+
+Remaining: authenticated human Owner UI/browser test with actual XLSX + CSV, financial Rp622,000 reconciliation, full BOM/conversion/physical baseline approvals, and documented production rollback. Until then, keep PR #185 in draft and do not enable stock posting.
