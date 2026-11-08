@@ -23,7 +23,7 @@ function monthName(period){var m=Number(String(period).slice(5,7));return m>0&&m
 function previewUnsafe(){
  var h=window.location&&window.location.hostname||'';
  return String(window.HASNARIA_SB||'').includes('bnnhmtkpdjlgehsvgoda')&&
- h!=='hasnaria-business-analyzer.vercel.app'&&h!=='hasnaria-business-analyzer-ekariashoesanti-9951s-projects.vercel.app';
+ h!=='hasnaria-business-analyzer.vercel.app'; // Never write customer PII to production DB from a Vercel preview/staging alias
 }
 function css(){if(document.getElementById('loyalty-v1-css'))return;var l=document.createElement('link');l.id='loyalty-v1-css';l.rel='stylesheet';l.href='/loyalty-v1.css?v=1';document.head.appendChild(l)}
 function kpi(k,v,sub){return '<div class="lo1-kpi"><span>'+e(k)+'</span><strong>'+e(v)+'</strong><small>'+e(sub||'')+'</small></div>'}
