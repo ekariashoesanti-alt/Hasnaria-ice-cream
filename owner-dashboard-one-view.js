@@ -84,7 +84,9 @@ function render(){
  h.innerHTML='<div class="hx-shell hx6-shell" data-ceo-one-view="1">'+
   '<div class="hx6-toolbar"><div><div class="hx6-eyebrow">RINGKASAN CEO · '+esc(cutLabel())+'</div><h1>Ringkasan CEO</h1><p>Visual singkat lintas Penjualan, Pembelian, Administrasi, Keuangan, dan Stok.</p></div><div class="hx6-tools"><label><span>Bulan</span><select id="hx6Period" data-month-filter="dashboard">'+periodOptions()+'</select></label><button type="button" data-hx6-detail="1">Lihat Detail</button></div></div>'+
   (S.error?'<div class="hx-error">'+esc(S.error)+'</div>':'')+
-  '<div class="hx6-kpis">'+
+  '<div id="hx7Cards" class="hx7-grid" aria-label="Empat kondisi utama bisnis"></div>'+
+  '<div class="hx7-collapsible"><button type="button" data-hx7-expand="1">Tampilkan tren & status transaksi</button></div>'+
+  '<div id="hx7Secondary" class="hx7-secondary"><div class="hx6-kpis">'+
    kpi('Penjualan',S.loading&&!S.loaded?'…':money(v.sales_revenue),n(v.sales_rows).toLocaleString('id-ID')+' transaksi','sales')+
    kpi('Pembelian',S.loading&&!S.loaded?'…':money(v.purchase_amount),n(v.purchase_rows).toLocaleString('id-ID')+' jurnal canonical','purchase')+
    kpi('Administrasi',S.loading&&!S.loaded?'…':money(v.admin_amount),n(v.admin_rows).toLocaleString('id-ID')+' transaksi · subset Pembelian','admin')+
@@ -92,9 +94,10 @@ function render(){
   '</div>'+
   '<div class="hx6-main"><article class="hx6-panel"><div class="hx6-panel-head"><div><h2>Tren 6 Periode</h2><p>Penjualan dibanding Pembelian. Administrasi tetap bagian dari Pembelian.</p></div></div>'+trendMarkup()+'</article><article class="hx6-panel"><div class="hx6-panel-head"><div><h2>Status Sinkronisasi</h2><p>Hanya mismatch nyata yang ditandai.</p></div></div>'+statusPanel(v)+'</article></div>'+
   '<article class="hx6-panel hx6-flow-panel"><div class="hx6-panel-head"><div><h2>Alur Bisnis Otomatis</h2><p>Sumber transaksi menuju modul tujuan tanpa input nilai kedua.</p></div></div>'+flowMarkup(v)+'</article>'+
-  detailMarkup(v)+
+  '</div>'+detailMarkup(v)+
  '</div>';
  bind(h);
+ if(window.__HASNARIA_CEO_KPI_V1)window.__HASNARIA_CEO_KPI_V1.mount(S.period);
 }
 function sameView(ctx,h){return window.__HASNARIA_CONTEXT===ctx&&ctx&&ctx.role==='owner'&&h===$('dashboard')&&!h.classList.contains('hidden')}
 async function loadHpp(seq){
@@ -149,6 +152,9 @@ async function syncRefresh(){
 function registerSync(){var sync=window.__HASNARIA_DATA_SYNC;if(sync)sync.register('owner-dashboard',function(reason){if(reason==='changed')window.__HASNARIA_DASHBOARD_ONE_VIEW.invalidate();return syncRefresh()})}
 function bind(h){
  h.onclick=function(e){
+  var expand=e.target&&e.target.closest?e.target.closest('[data-hx7-expand]'):null;
+  if(expand){var secondary=h.querySelector('#hx7Secondary');if(secondary){var opened=secondary.classList.toggle('is-open');expand.textContent=opened?'Sembunyikan tren & status transaksi':'Tampilkan tren & status transaksi'}return}
+
   var close=e.target&&e.target.closest?e.target.closest('[data-hx6-close]'):null;
   if(close&&(e.target===close||close.classList.contains('hx6-close'))){S.detailOpen=false;render();return}
   var detail=e.target&&e.target.closest?e.target.closest('[data-hx6-detail]'):null;
