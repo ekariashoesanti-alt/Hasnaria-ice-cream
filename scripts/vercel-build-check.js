@@ -258,6 +258,7 @@ run(process.execPath, ['tests/month-filter-owner-tabs.test.js']);
 run(process.execPath, ['--test', 'tests/owner-insights-ui.test.js']);
 run(process.execPath, ['tests/data-sync-runtime.test.js']);
 run(process.execPath, ['--test', 'tests/loyalty-majoo-v1.test.js']);
+run(process.execPath, ['--test', 'tests/attendance-dashboard-infographics.test.js']);
 run(process.execPath, ['--test', 'tests/loyalty-ytd-one-view.test.js']);
 run(process.execPath, ['--test', 'tests/stock-recipe-review-v1.test.js']);
 run(process.execPath, ['--test', 'tests/stock-recipe-owner-evidence-v1.test.js']);

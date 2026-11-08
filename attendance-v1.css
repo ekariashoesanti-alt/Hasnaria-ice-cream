@@ -42,3 +42,56 @@
 
 #operasional .at1-conversion{display:flex;flex-direction:column;gap:4px;font-size:9px;font-weight:800;color:#225343;margin:6px 0}
 #operasional .at1-conversion select{min-height:32px;padding:0 9px;background:white;border:1px solid #c1ddd0;border-radius:8px;color:#176b55;font-weight:750;font-size:9px;max-width:370px}
+
+
+/* Attendance analytics v2: six compact KPIs, four infographics and a small internal-scroll drilldown. */
+#operasional .at1-heading{margin-bottom:7px}
+#operasional .at1-heading h2{font-size:17px}
+#operasional .at1-heading p{max-width:620px}
+#operasional .at1-kpis{grid-template-columns:repeat(6,minmax(0,1fr));gap:7px;margin-bottom:8px}
+#operasional .at1-kpis>div.at2-kpi{min-width:0;min-height:66px;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:3px;padding:7px 9px;border-top:2px solid #1b8767}
+#operasional .at1-kpis .at2-kpi span{font-size:8px;line-height:1.1;color:#6c8378}
+#operasional .at1-kpis .at2-kpi strong{font-size:20px;line-height:1.05;color:#155b47}
+#operasional .at1-kpis .at2-kpi small{font-size:7px;color:#789085;font-weight:550;line-height:1.2}
+#operasional .at1-kpis .at2-kpi.at2-warn{border-top-color:#d9a345}
+#operasional .at1-kpis .at2-kpi.at2-warn strong{color:#996a21}
+#operasional .at2-dashboard{display:grid;grid-template-columns:1.15fr 1fr;gap:8px;margin-bottom:8px}
+#operasional .at2-panel{min-width:0;height:154px;background:#fff;border:1px solid #dce8e3;border-radius:12px;padding:9px 11px;overflow:hidden}
+#operasional .at2-panel-title{display:flex;align-items:baseline;justify-content:space-between;gap:8px;min-width:0;margin-bottom:4px}
+#operasional .at2-panel-title b{font-size:10px;color:#194a3a;white-space:nowrap}
+#operasional .at2-panel-title small{font-size:7px;color:#81938b;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:61%}
+#operasional .at2-plot{height:115px;min-height:0}
+#operasional .at2-plot>svg{width:100%;height:108px;display:block}
+#operasional .at2-plot .at2-gridline{stroke:#e4eee8;stroke-width:1}
+#operasional .at2-plot .at2-axis{font-size:9px;fill:#748c7f}
+#operasional .at2-plot .at2-bar-number{font-size:11px;fill:#236249;font-weight:750}
+#operasional .at2-no-data{display:grid;place-items:center;height:100%;font-size:9px;color:#92a096}
+#operasional .at2-donut-wrap{display:grid;grid-template-columns:110px minmax(0,1fr);align-items:center;gap:10px;height:109px}
+#operasional .at2-donut-wrap svg{height:105px;width:110px}
+#operasional .at2-donut-number{font-size:19px;font-weight:900;fill:#155b47}
+#operasional .at2-donut-label{font-size:7px;fill:#688b7a}
+#operasional .at2-legend{min-width:0;display:grid;gap:6px}
+#operasional .at2-legend-item{display:grid;grid-template-columns:8px minmax(0,1fr) auto;align-items:center;gap:5px;font-size:8px;color:#577567}
+#operasional .at2-legend-item span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#operasional .at2-legend-item b{font-size:11px;color:#2a5343}
+#operasional .at2-dot{height:7px;width:7px;border-radius:50%}
+#operasional .at2-dot[data-tone=green]{background:#176b55}
+#operasional .at2-dot[data-tone=amber]{background:#e7ab45}
+#operasional .at2-dot[data-tone=gray]{background:#9eafab}
+#operasional .at2-rank-columns{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+#operasional .at2-rank-columns>div{min-width:0}
+#operasional .at2-rank-columns h4{font-size:8px;margin:0 0 3px;color:#638071;font-weight:800}
+#operasional .at2-rank-row{min-width:0;display:grid;grid-template-columns:12px minmax(0,1fr) auto;align-items:center;gap:4px;padding:2px 0;border-bottom:1px solid #f0f5f1;font-size:8px}
+#operasional .at2-rank-row em{font-style:normal;color:#91a59b}
+#operasional .at2-rank-row span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#265846;font-weight:650}
+#operasional .at2-rank-row b{color:#176b55;white-space:nowrap;font-size:8px}
+#operasional .at2-rank-empty{font-size:8px;color:#93a49b}
+#operasional .at1-panel-head{padding:7px 9px}
+#operasional .at1-panel-head input{height:27px;min-height:27px}
+#operasional .at1-table-scroll{max-height:120px}
+#operasional .at1-table-scroll th{padding:6px 8px}
+#operasional .at1-table-scroll td{padding:6px 8px}
+#operasional .at1-foot{padding:4px 9px}
+#operasional .at1-caution{margin-top:5px;padding:5px 9px}
+@media(max-width:1100px){#operasional .at1-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}#operasional .at2-dashboard{grid-template-columns:1fr 1fr}#operasional .at2-panel-title{display:block}#operasional .at2-panel-title small{display:block;text-align:left;max-width:100%}}
+@media(max-width:680px){#operasional .at1-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}#operasional .at2-dashboard{grid-template-columns:1fr}#operasional .at2-panel{height:165px}#operasional .at2-panel-title{display:flex;flex-direction:column;gap:2px}#operasional .at2-plot{height:125px}}
