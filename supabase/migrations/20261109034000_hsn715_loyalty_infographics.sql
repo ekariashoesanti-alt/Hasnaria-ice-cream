@@ -77,7 +77,7 @@ begin
       'visits',visits,
       'revenue',revenue
     ) order by month_date),'[]'::jsonb) from months),
-    'top_loyal',(select coalesce(jsonb_agg(to_jsonb(t)),'[]'::jsonb) from top_three t)
+    'top_loyal',(select coalesce(jsonb_agg(to_jsonb(t) order by t.visits desc,t.revenue desc,lower(t.name)),'[]'::jsonb) from top_three t)
   ) into v_result;
   return v_result;
 end;
