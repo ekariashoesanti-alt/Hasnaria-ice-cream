@@ -111,6 +111,9 @@ jobs:
       - name: Owner Majoo SKU BOM theoretical usage no-posting tests
         run: node --test tests/stock-sku-simulation-v1.test.js
 
+      - name: Owner Majoo recipe import review safety tests
+        run: node --test tests/stock-recipe-import-v1.test.js
+
       - name: Stock Opname upload strict validation and draft-only workflow
         run: node --test tests/stock-opname-upload-v1.test.js
 
