@@ -1959,6 +1959,43 @@
     }
   }
 
+  function renderSkuSimulation(){
+    if(!isOwner())return '<div class="sc4-empty">Hanya tersedia untuk Owner.</div>';
+    if(S.skuSimLoading)return '<div class="sc3-loading">Membaca SKU Majoo dan BOM Tokyo. Saldo stok tidak diubah…</div>';
+    if(S.skuSimError)return '<div class="sc3-alert">'+esc(S.skuSimError)+'</div>'+
+      '<button type="button" class="sc5-secondary" data-sc25-refresh="1">Coba lagi</button>';
+    if(!S.skuSim)return '<button type="button" class="sc5-secondary" data-sc25-refresh="1">Muat simulasi SKU</button>';
+    var z=S.skuSim,rows=z.ingredients||[],pending=z.unresolved||[];
+    var notice='<div class="sc4-info"><b>SIMULASI / BELUM POSTING</b> — Periode laporan: '+esc(monthLabel(z.period_month))+
+      ' · Status sumber: '+esc(z.source_status)+'. Kebutuhan bruto = Qty terjual × resep aktif Tokyo.'+
+      ' Refund '+fmt(z.refunded_units)+' unit hanya dicatat sebagai paparan, tidak otomatis mengembalikan bahan.'+
+      ' KPI dan ledger stok tetap tidak berubah.</div>';
+    var summary='<div class="sc3-filters">'+
+      '<span><b>'+fmt(z.source_sku_count)+'</b> SKU</span>'+
+      '<span><b>'+fmt(z.total_units)+'</b> unit Majoo</span>'+
+      '<span><b>'+fmt(z.bom_sku_count)+'</b> SKU punya BOM ('+fmt(z.bom_units)+' unit)</span>'+
+      '<span><b>'+fmt(pending.length)+'</b> SKU perlu review</span>'+
+      '<button type="button" class="sc5-secondary" data-sc25-refresh="1">↻ Perbarui</button>'+
+      '</div>';
+    var table='<div class="sc3-table-wrap"><table class="sc3-table"><thead><tr>'+
+      '<th>Bahan</th><th>Satuan resep</th><th>Kebutuhan bruto (teoretis)</th>'+
+      '<th>Potensi refund*</th><th>Status</th></tr></thead><tbody>'+
+      rows.map(function(x){
+        return '<tr><td>'+esc(x.item_name)+'</td><td>'+esc(x.unit)+'</td>'+
+          '<td>'+fmt(x.raw_requirement)+'</td><td>'+fmt(x.possible_refund_raw)+'</td>'+
+          '<td>'+esc(x.needs_review?'Verifikasi BOM / konversi':'Komponen terverifikasi; perlu review sumber')+'</td></tr>';
+      }).join('')+'</tbody></table></div>';
+    var missing=pending.length?'<h4>SKU memerlukan tindak lanjut</h4><div class="sc3-table-wrap">'+
+      '<table class="sc3-table"><thead><tr><th>SKU</th><th>Produk</th><th>Qty</th><th>Alasan</th></tr></thead><tbody>'+
+      pending.map(function(x){return'<tr><td>'+esc(x.sku)+'</td><td>'+esc(x.name)+'</td>'+
+        '<td>'+fmt(x.quantity)+'</td><td>'+esc(x.reason)+'</td></tr>'}).join('')+'</tbody></table></div>':'';
+    return notice+summary+
+      '<p class="sc5-caption">Pemetaan produk berdasarkan nama identik (tanpa kapitalisasi); relasi kode SKU masih perlu disahkan. '+fmt(rows.length)+
+      ' kelompok bahan/satuan tidak boleh dijumlahkan silang. Belum ada izin pengurangan stok dari hasil ini.</p>'+
+      table+missing+
+      '<p class="sc5-caption">*Refund tidak selalu mengembalikan bahan yang telah diracik. Tidak tersedia tombol posting saldo di halaman simulasi.</p>';
+  }
+
   function renderModal() {
     if (!S.modal) return '';
     var title = S.modal === 'ledger' ? 'Ledger · ' + monthLabel(S.period) :
