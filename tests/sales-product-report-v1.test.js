@@ -1,5 +1,6 @@
 'use strict';
 const assert=require('node:assert/strict');
+const octoberSource=require('./fixtures/majoo-october-2026-product-lines.js');
 const test=require('node:test');
 const {parseMatrix,stagePreview,previewFeatureAllowed,resolveSingaporeOutlet,isMatchingStoredLines,isSingaporeUat}=require('../sales-product-report-v1.js');
 const h=['Produk','SKU','Outlet','Departemen','Kategori','Jenis Produk','Jumlah Terjual','Jumlah Terjual (%)','Penjualan (Rp.)','Penjualan (%)','HPP','Jumlah Refund','Refund (Rp.)','HPP Refund','Laba Kotor (Rp.)'];
@@ -252,4 +253,49 @@ test('duplicate: same file hash but different stored SKU detail fails closed wit
     }),/rincian SKU\/HPP berbeda/);
     assert.equal(calls.some(x=>x.method==='POST'),false);
   } finally {globalThis.fetch=prev;}
+});
+
+
+test('October 2026 actual staged Majoo report values pass strict 54 SKU full-month validation',()=>{
+  assert.equal(octoberSource.length,54);
+  const hdr=['Produk','SKU','Outlet','Departemen','Kategori','Jenis Produk',
+    'Jumlah Terjual','Jumlah Terjual (%)','Penjualan (Rp.)','Penjualan (%)',
+    'HPP','Jumlah Refund','Refund (Rp.)','HPP Refund','Laba Kotor (Rp.)'];
+  const row=(x)=>[
+    x.product,x.sku,'Hasnaria Ice Cream','MENU','Makanan','Produk',x.qty,0,
+    x.sales,0,x.hpp,x.refund_qty,x.refund,x.refund_hpp,x.profit
+  ];
+  const matrix=[
+    ['Laporan Penjualan Produk'],['Periode','01 Oktober 2026 - 31 Oktober 2026'],
+    ['Total Penjualan',20992500],['Total Laba Kotor',10626232.07],
+    ['Total Produk Terjual',2604],[],hdr,
+    ...octoberSource.map(row),['Powered by Majoo']
+  ];
+  const report=parseMatrix(matrix);
+  assert.equal(report.period_month,'2026-10-01');
+  assert.equal(report.rows.length,54);
+  assert.equal(report.totals.quantity,2604);
+  assert.equal(report.totals.sales,20992500);
+  assert.equal(report.totals.hpp.toFixed(2),'10345955.24');
+  assert.equal(report.totals.gross_profit.toFixed(2),'10626232.08');
+  assert.equal(report.totals.refund_qty,4);
+  assert.equal(report.totals.refund_amount,35000);
+  assert.equal(report.stock_posting_allowed,false);
+  const free=report.rows.filter(x=>x.sales_amount===0 && x.cogs_amount>0);
+  assert.deepEqual(free.map(x=>x.sku).sort(),['FO91','FO92']);
+  const noHpp=report.rows.filter(x=>x.cogs_amount===0&&x.sales_amount>0);
+  assert.ok(noHpp.some(x=>x.sku==='DD91'));
+  assert.ok(noHpp.some(x=>x.sku==='DD95'));
+  // Do not treat Majoo's reported zero HPP as validated ERP COGS.
+  for(const record of report.rows)assert.equal(record.line_no>=1,true);
+  // Another outlet, duplicate SKU, or altered total must make the whole file fail.
+  const invalidOutlet=matrix.map(r=>r.slice());
+  invalidOutlet[8][2]='Unrelated Outlet';
+  assert.throws(()=>parseMatrix(invalidOutlet),/multi-outlet/);
+  const invalidQty=matrix.map(r=>r.slice());
+  invalidQty[7][6]=999;
+  assert.throws(()=>parseMatrix(invalidQty),/Total unit berbeda/);
+  const duplicate=matrix.map(r=>r.slice());
+  duplicate[8][1]=duplicate[7][1];
+  assert.throws(()=>parseMatrix(duplicate),/SKU duplikat/);
 });
