@@ -49,3 +49,8 @@
 .lo1-shell button:disabled{opacity:.5;cursor:not-allowed}
 @media(max-width:1180px){.lo1-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}.lo1-graphs{grid-template-columns:1fr 1fr}}
 @media(max-width:700px){.lo1-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.lo1-graphs{grid-template-columns:1fr}.lo1-search>div:last-child,.lo1-controls{width:100%}.lo1-search input{flex:1}.lo1-kpi strong{font-size:16px}}
+
+.lo1-bar progress,.lo1-shell progress.lo1-meter{appearance:none;-webkit-appearance:none;width:100%;display:block;border:0;background:#e8f1f2;border-radius:9px;overflow:hidden;height:11px}
+.lo1-bar progress::-webkit-progress-bar,.lo1-meter::-webkit-progress-bar{background:#e8f1f2;border-radius:9px}
+.lo1-bar progress::-webkit-progress-value,.lo1-meter::-webkit-progress-value{background:#15877d;border-radius:9px}
+.lo1-bar progress::-moz-progress-bar,.lo1-meter::-moz-progress-bar{background:#15877d;border-radius:9px}
