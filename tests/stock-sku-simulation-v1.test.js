@@ -122,3 +122,32 @@ test('UI is lazy Owner-only, GET-only and not allowed to mutate ledger',()=>{
   assert.match(stock,/stock-sku-simulation-v1\.js/);
   assert.doesNotMatch(pure,/fetch\(|XMLHttpRequest|(?:supabase|db)\.from\(|method:\s*['"](?:POST|PATCH|DELETE)/);
 });
+
+test('all SKU get an Owner review queue ordered by actual sold Qty; never authorizes stock posting',()=>{
+  const r=mod.calculate(fixture());
+  assert.deepEqual(r.review_queue.map(x=>x.sku),['FO1','DD1','FO2']);
+  assert.equal(r.review_pending_sku_count,3);
+  assert.equal(r.review_pending_units,15);
+  assert.deepEqual(r.review_queue[0].recipe_review_reasons.sort(),
+    ['RECIPE_NOT_APPROVED','BOM_COMPONENT_UNVERIFIED','CONVERSION_UNVERIFIED'].sort());
+  assert.deepEqual(r.review_queue[1].recipe_review_reasons,[]);
+  assert.deepEqual(r.review_queue[2].recipe_review_reasons,['NO_BOM']);
+  assert.equal(r.stock_posting_allowed,false);
+  assert.equal(r.can_modify_operational_stock,false);
+});
+test('an approved recipe with missing conversion stays on the review list',()=>{
+  const a=fixture();
+  a.approvals[0].status='verified';
+  a.components[0].bom_status='verified';
+  a.conversions=a.conversions.filter(x=>x.inventory_item_id!=='rice');
+  const r=mod.calculate(a);
+  assert.deepEqual(r.review_queue[0].recipe_review_reasons,['CONVERSION_UNVERIFIED']);
+  assert.equal(r.stock_posting_allowed,false);
+});
+test('Owner modal presents per-SKU review queue without posting controls',()=>{
+  const src=fs.readFileSync(path.join(__dirname,'..','stock-control-v3.js'),'utf8');
+  assert.match(src,/Prioritas pemeriksaan SKU/);
+  assert.match(src,/review_queue/);
+  assert.match(src,/Konversi satuan belum diverifikasi/);
+  assert.doesNotMatch(mod.calculate(fixture()),/POST|PATCH|DELETE/);
+});
