@@ -2211,6 +2211,21 @@
       "owner": "Codex/ChatGPT",
       "updated_at": "2026-10-10",
       "notes": "Fresh precise outside tetap disampling sampai posisi dalamradius/deadline; timestamp max5s lama/1s future; budget setelahizin/callback; resume preview tanpa autowrite.30 kasus GPS,25 berkas tes/full build, dua mode Chromium Android dan review independen lulus. Tidak ada perubahan radius50m, titik toko, UI/auth/DB. RealAndroid physicalGPS acceptance masih diperlukan. Bukti: docs/TEAM_ANDROID_GPS_2026-10-10.md."
+    },
+    {
+      "id": "HSN-712",
+      "milestone": "M7",
+      "priority": "P1",
+      "status": "IN_PROGRESS",
+      "title": "Majoo customer loyalty: safe monthly snapshots, duplicate-proof import and operational analytics dashboard",
+      "dependencies": [
+        "HSN-108",
+        "HSN-708"
+      ],
+      "acceptance": "Owner-only Loyalty subtab in Operasional; Majoo XLSX preview with phone normalization and period validation; idempotent monthly snapshot versioning; no sales/finance postings; masked customer data, RLS and atomic RPC; repeat KPIs, segmentation, search/sort; regression and production reconciliation.",
+      "owner": "Codex/ChatGPT",
+      "updated_at": "2026-11-08",
+      "notes": "Implementation initiated in feature/hsn-712-loyalty-majoo-dashboard. Production mutations blocked pending staging test and checks."
     }
   ]
 }
