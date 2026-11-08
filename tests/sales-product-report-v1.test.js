@@ -2,7 +2,7 @@
 const assert=require('node:assert/strict');
 const octoberSource=require('./fixtures/majoo-october-2026-product-lines.js');
 const test=require('node:test');
-const {parseMatrix,stagePreview,previewFeatureAllowed,resolveSingaporeOutlet,isMatchingStoredLines,isSingaporeUat}=require('../sales-product-report-v1.js');
+const {parseMatrix,stagePreview,previewFeatureAllowed,resolveSingaporeOutlet,resolveProductionOutlet,isMatchingStoredLines,isSingaporeUat,isTokyoProduction}=require('../sales-product-report-v1.js');
 const h=['Produk','SKU','Outlet','Departemen','Kategori','Jenis Produk','Jumlah Terjual','Jumlah Terjual (%)','Penjualan (Rp.)','Penjualan (%)','HPP','Jumlah Refund','Refund (Rp.)','HPP Refund','Laba Kotor (Rp.)'];
 const r=(name,sku,qty,sales,cogs,refundQty=0,refund=0,profit)=>[
   name,sku,'Hasnaria Ice Cream','Tanpa Departemen','MENU UTAMA','Produk Satuan',
@@ -102,6 +102,9 @@ test('checks sales totals and handles Indonesian numeric formatted values',()=>{
 });
 test('product report chooser is disabled on production even with query flag',()=>{
   assert.equal(previewFeatureAllowed({HASNARIA_SB:'https://bnnhmtkpdjlgehsvgoda.supabase.co',location:{search:'?sales_product_preview=1'}}),false);
+  assert.equal(previewFeatureAllowed({HASNARIA_SB:'https://bnnhmtkpdjlgehsvgoda.supabase.co',location:{search:'?sku_review=1'}}),true);
+  assert.equal(previewFeatureAllowed({HASNARIA_SB:'https://bnnhmtkpdjlgehsvgoda.supabase.co',location:{search:''}}),false);
+  assert.equal(previewFeatureAllowed({HASNARIA_SB:'https://bnnhmtkpdjlgehsvgoda.supabase.co.evil.test',location:{search:'?sku_review=1'}}),false);
   assert.equal(previewFeatureAllowed({HASNARIA_SB:'https://rynnpndtzjwpekbiwiif.supabase.co',location:{search:''}}),false);
   assert.equal(previewFeatureAllowed({HASNARIA_SB:'https://rynnpndtzjwpekbiwiif.supabase.co',location:{search:'?sales_product_preview=1'}}),true);
 });
@@ -453,4 +456,78 @@ test('expired Owner JWT on report lookup denies save before any POST',async()=>{
     }),/login ulang/i);
     assert.equal(calls.filter(x=>x.method==='POST').length,0);
   } finally {globalThis.fetch=prev;}
+});
+
+
+test('Tokyo upload is isolated, opt-in, Owner review-only, and fails closed without all gates',async()=>{
+  const base={name:'October.xlsx',size:16,arrayBuffer:async()=>new ArrayBuffer(16)};
+  const opts={supabaseUrl:'https://bnnhmtkpdjlgehsvgoda.supabase.co',
+    brandId:'brand-1',outletId:'out-1',publishableKey:'publishable',
+    getAccessToken:async()=> 'owner-jwt',enableWrite:true,confirmed:true};
+  assert.equal(isTokyoProduction(opts.supabaseUrl),true);
+  assert.equal(isTokyoProduction('https://bnnhmtkpdjlgehsvgoda.supabase.co.evil.test'),false);
+  await assert.rejects(stagePreview(base,matrix(),opts),/Tokyo Owner review-only/);
+  await assert.rejects(stagePreview(base,matrix(),{...opts,tokyoReviewApproved:true}),/Tokyo Owner review-only/);
+  await assert.rejects(stagePreview(base,matrix(),{...opts,reviewOnly:true}),/Tokyo Owner review-only/);
+  await assert.rejects(stagePreview(base,matrix(),{...opts,tokyoReviewApproved:true,reviewOnly:true,enableWrite:false}),/konfirmasi Owner/);
+  await assert.rejects(stagePreview(base,matrix(),{...opts,tokyoReviewApproved:true,reviewOnly:true,confirmed:false}),/konfirmasi Owner/);
+  await assert.rejects(stagePreview(base,matrix(),{
+    ...opts,tokyoReviewApproved:true,reviewOnly:true,
+    supabaseUrl:'https://bnnhmtkpdjlgehsvgoda.supabase.co.attacker.example'
+  }),/Tokyo Owner review-only/);
+});
+
+test('Tokyo production outlet resolver rejects cross-brand or multiple active outlets',async()=>{
+  const original=globalThis.fetch;let rows=[{id:'prod-outlet',brand_id:'brand-1',name:'Hasnaria Ice Cream',active:true}];
+  globalThis.fetch=async()=>({ok:true,json:async()=>rows});
+  try{
+    assert.equal((await resolveProductionOutlet('brand-1','owner-jwt','pk')).id,'prod-outlet');
+    rows=[{id:'elsewhere',brand_id:'other-brand',name:'Another',active:true}];
+    await assert.rejects(resolveProductionOutlet('brand-1','owner-jwt','pk'),/sesuai brand/);
+    rows=[{id:'a',brand_id:'brand-1',active:true},{id:'b',brand_id:'brand-1',active:true}];
+    await assert.rejects(resolveProductionOutlet('brand-1','owner-jwt','pk'),/Satu outlet aktif/);
+    rows=[];await assert.rejects(resolveProductionOutlet('brand-1','owner-jwt','pk'),/Satu outlet aktif/);
+  }finally{globalThis.fetch=original;}
+});
+
+test('Tokyo review-only upload routes Owner JWT to exact Tokyo host, never inventory or sales',async()=>{
+  const saved=globalThis.fetch;const parsed=parseMatrix(matrix()),calls=[];let inserted=false;
+  const lines=parsed.rows.map(x=>({
+    line_no:x.line_no,source_sku:x.sku,source_product_name:x.name,
+    quantity:x.quantity,source_sales_amount:x.sales_amount,
+    source_hpp_amount:x.cogs_amount,source_gross_profit:x.gross_profit,
+    refund_quantity:x.refund_qty,refund_amount:x.refund_amount,refund_hpp_amount:x.refund_cogs
+  }));
+  globalThis.fetch=async(url,opts)=>{
+    const u=String(url),m=opts&&opts.method||'GET';calls.push([u,m]);
+    assert.ok(u.startsWith('https://bnnhmtkpdjlgehsvgoda.supabase.co/'));
+    assert.ok(!/(inventory_movements|sale_items|\/rest\/v1\/sales(?:\?|$))/.test(u));
+    if(u.includes('sales_product_report_batches'))
+      return {ok:true,json:async()=>inserted?[{id:'tokyo-review',status:'under_review',source_row_count:2}]:[]};
+    if(u.includes('sales_product_report_lines'))return {ok:true,json:async()=>lines};
+    if(u.includes('/rpc/stage_sales_product_report_v1')){
+      const b=JSON.parse(opts.body);
+      assert.equal(b.p_rows.length,2);
+      inserted=true;
+      return {ok:true,json:async()=>({batch_id:'tokyo-review',status:'under_review',line_count:2,quantity:3,sales:21000})};
+    }
+    throw Error('Unexpected route '+u);
+  };
+  const bytes=new TextEncoder().encode('actual test workbook bytes');
+  try{
+    const result=await stagePreview({
+      name:'Oct-2026.xlsx',size:bytes.length,arrayBuffer:async()=>bytes.buffer
+    },matrix(),{
+      enableWrite:true,confirmed:true,tokyoReviewApproved:true,reviewOnly:true,
+      supabaseUrl:'https://bnnhmtkpdjlgehsvgoda.supabase.co',
+      endpointUrl:'https://attacker.example', // MUST NOT leak the Owner token
+      brandId:'brand-1',outletId:'out-1',publishableKey:'pk',
+      getAccessToken:async()=> 'owner-jwt'
+    });
+    assert.equal(result.status,'under_review');
+    assert.equal(result.receipt.batch_id,'tokyo-review');
+    assert.equal(calls.filter(x=>x[1]==='POST').length,1);
+    assert.equal(calls.filter(x=>x[1]==='GET').length,3);
+    assert.equal(result.preview.stock_posting_allowed,false);
+  }finally{globalThis.fetch=saved;}
 });
