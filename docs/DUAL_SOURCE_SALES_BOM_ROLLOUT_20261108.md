@@ -94,3 +94,35 @@ Singapore staging project rynnpndtzjwpekbiwiif; isolated synthetic test brand. P
 - Singapore-only schema scripts live under supabase/uat/singapore/, not supabase/migrations/. CI blocks accidental release of private UAT schema.
 - Before go-live, reconcile Rp622,000 and seven BOM-less SKUs; validate physical units, effective recipe dates and stock baseline with Owner approval.
 - New monthly report is NOT an automatic source of daily financial metrics, per-SKU item transactions or inventory postings.
+
+
+## UAT follow-up: financial exceptions and legacy BOM overlap
+
+2026-11-08 read-only audit of full original 824-row Majoo Detail Transaksi CSV vs 54-SKU Product Sales export:
+
+- All 54 distinct product names appearing in the transaction CSV map to the 54 product names in the monthly SKU report, after whitespace/case normalization; no unmapped name.
+- Detail CSV reports 1,823 product-name occurrences, whereas SKU report has 2,604 gross units. Qty gap 781 is **not** proof of missing sales: CSV omits per-line quantities; the same name can represent many items.
+- Comparing each receipt to one reference unit of each listed product at SKU report average unit price: 490 match that baseline, 333 are higher, and one is Rp1,500 lower. **The baseline is only a diagnostic reference; it is not a receipt-item reconstruction and price promotions are possible.**
+- High-priority source exception: transaction CS/01/261005/0024 on 2026-10-05 reports Rp1,512,000 but six listed product-name occurrences yield one-each reference Rp37,000. This may be a large-quantity sale or source problem; require Majoo original receipt/line quantities before changing finance or stock.
+- Other source exception: CS/01/261030/0006 on 2026-10-30 reports Rp15,000 vs one-each reference Rp16,500. Check discount or price changes.
+- The Detail CSV gross is Rp21,614,500 and net is Rp21,579,500; implied refund is Rp35,000, matching the monthly product report's refund Rp35,000. Monthly product gross Rp20,992,500, net Rp20,957,500. Both gross-to-gross and net-to-net differences remain Rp622,000. **Refund is not the explanation.**
+- New source audit module sales-reconciliation-v1.js compares original headers, transaction IDs, financial totals, payment methods and exceptions without changing official sales or ledger. A Singapore-only flagged upload preview offers in-browser CSV comparison.
+- Verify original receipts and transaction-level discount, taxes, service charges, modifiers or alternate POS export definitions before selecting a canonical revenue source.
+
+Seven sold SKUs (304 units) absent from the uploaded **Majoo recipe export** actually have one active legacy ERP inventory_recipe_components candidate each. They are NOT BOM-less in the database:
+
+| SKU | Legacy ingredient and dose | Component status | Overall recipe verification |
+|---|---|---|---|
+| DD91 French fries | KENTANG 1 porsi | suggested | draft |
+| DD95 Tempura sosis | SOSIS AYAM 1 pcs | suggested | draft |
+| DR56 AIR MINERAL BESAR | AIR MINERAL BESAR 1 pcs | verified | missing |
+| FO41 AYAM KATSU | AYAM KATSU 1 porsi | verified | draft |
+| FO51 Mie Pedas | MIE KUNING 1 porsi | verified | missing |
+| FO91 KUAH TOMYAM | PLASTIK BUMBU TOMYAM 1 pcs | suggested | draft |
+| FO92 KUAH ODENG | PLASTIK BUMBU ODENG 1 porsi | suggested | draft |
+
+A verified component flag alone does not approve the complete recipe, conversion factor, date of effectiveness or physical stock posting. Kuah ODENG and Kuah TOMYAM have **zero product sales but positive Majoo HPP**, so they must be checked as potentially complimentary/subcomponent consumption before attempting a standalone stock deduction.
+
+Private Singapore UAT has a reference-only overlay: 47 SKU / 2,300 units have exported BOM, 7 SKU / 304 units have old ERP BOM candidates. Full **structural** coverage is 54/54 sold SKUs; **stock-approved** coverage remains 0. The separate UAT assertion file requires this invariant and blocks direct ledger posting.
+
+No production deployment. PR must remain draft until the Owner confirms source discrepancy, packaging/kuah treatment, unit conversions, UAT visual verification, and deployment rollback.
