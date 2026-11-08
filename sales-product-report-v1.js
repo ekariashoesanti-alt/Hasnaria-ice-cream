@@ -108,8 +108,12 @@
       if(!row.some(function(v){return str(v)!=='';}))continue;
       var name=str(row[fields.name]),sku=str(row[fields.sku]),outlet=str(row[fields.outlet]);
       if(!name && !sku)continue;
+      // Majoo appends a human-readable footer (e.g. "Powered by Majoo")
+      // after product rows. Ignore only a recognisable footer lacking SKU/outlet.
+      // Every other incomplete record MUST fail closed to prevent silent omissions.
+      if(!sku && !outlet && (/^powered by(?:\\s|$)/i.test(name) ||
+          /^(?:grand total|total)(?:\\s|$)/i.test(name))) continue;
       if(!name || !sku || !outlet)fail('Baris '+(rowIdx+1)+' tidak lengkap (Produk/SKU/Outlet)');
-      if(/^total|grand total$/i.test(name))continue;
       if(name.length>300||sku.length>100)fail('Nama/SKU terlalu panjang baris '+(rowIdx+1));
       var key=sku.toUpperCase();
       if(seen.has(key))fail('SKU duplikat: '+sku);
