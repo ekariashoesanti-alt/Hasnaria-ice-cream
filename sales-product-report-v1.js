@@ -209,6 +209,8 @@
     if(matches.length>1)fail('Lebih dari satu batch dengan checksum sama');
     if(!matches.length)return null;
     var b=matches[0];
+    if(b.status==='rejected')fail('Rekap dengan checksum sama pernah ditolak. Unggah file revisi dengan checksum baru untuk review.');
+    if(b.status!=='under_review')fail('Status batch belum terkunci atau tidak dikenal; hubungi Owner sebelum unggah ulang.');
     var lines=await requestJson(SINGAPORE_UAT_URL+'/rest/v1/sales_product_report_lines?select='+
       'line_no,source_sku,source_product_name,quantity,source_sales_amount,source_hpp_amount,'+
       'source_gross_profit,refund_quantity,refund_amount,refund_hpp_amount'+
