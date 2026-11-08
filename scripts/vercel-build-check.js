@@ -257,6 +257,7 @@ run(process.execPath, ['--test', 'tests/purchase-upload-canonical-finance-v1.tes
 run(process.execPath, ['tests/month-filter-owner-tabs.test.js']);
 run(process.execPath, ['--test', 'tests/owner-insights-ui.test.js']);
 run(process.execPath, ['tests/data-sync-runtime.test.js']);
+run(process.execPath, ['--test', 'tests/loyalty-majoo-v1.test.js']);
 run(process.execPath, ['--test', 'tests/stock-recipe-review-v1.test.js']);
 run(process.execPath, ['--test', 'tests/stock-recipe-owner-evidence-v1.test.js']);
 run(process.execPath, ['--test', 'tests/stock-recipe-approval-guard-v1.test.js']);
@@ -292,6 +293,8 @@ run(process.execPath, ['--check', path.join(dist, 'sales-board.js')]);
 hardenRuntimeStyleAttachment(dist);
 run(process.execPath, ['--check', path.join(dist, 'sales-ui-patch.js')]);
 run(process.execPath, ['--check', path.join(dist, 'stock-monitor.js')]);
+run(process.execPath, ['--check', path.join(dist, 'loyalty-v1.js')]);
+run(process.execPath, ['--check', path.join(dist, 'operational-v1.js')]);
 
 for (const asset of ['stock-recipe-import-v1.js', 'stock-recipe-import-model-v1.js', 'stock-recipe-import-v1.css']) {
   if (!fs.existsSync(path.join(dist, asset))) fail('Owner Majoo recipe import asset missing: '+asset);

@@ -50,6 +50,12 @@ patch('purchase-finance-alignment-v1.js',s=>{
 });
 
 patch('operational-v1.js',s=>{
+ // HSN-712 already uses P0 stable shell with a lazy Owner-only loyalty subtab.
+ // Verify the stable implementation instead of applying the obsolete string replacement.
+ if(s.includes("var shell=h.querySelector('[data-operational-v1=\"1\"]')")&&s.includes('shell.innerHTML=(isOwner()?')){
+   if(!s.includes("h.replaceChildren(shell)")||!s.includes("data-op-action=\"show-loyalty\"")||!s.includes("bind(h);"))throw new Error('operational loyalty stable-root contract missing');
+   return s;
+ }
  s=one(s,"    h.innerHTML='<div class=\"op1-shell\" data-operational-v1=\"1\"><div class=\"op1-head\">","    var shell=h.querySelector('[data-operational-v1=\"1\"]');if(!shell){shell=document.createElement('div');shell.className='op1-shell';shell.setAttribute('data-operational-v1','1');h.replaceChildren(shell)}\n    shell.innerHTML='<div class=\"op1-head\">",'operational stable root');
  s=one(s,"      '<div class=\"op1-foot\"><span>Loading policy</span><b>30 run header → 25 item/page → pegawai hanya saat create.</b></div></div>';","      '<div class=\"op1-foot\"><span>Loading policy</span><b>30 run header → 25 item/page → pegawai hanya saat create.</b></div>';",'operational close');return s;
 });

@@ -1,5 +1,16 @@
 # Hasnaria ERP Session Log
 
+## 2026-11-08 — HSN-712 Majoo Loyalty dashboard (staging)
+
+**Scope**
+- Audited the separate November Majoo customer report, reconciled 72 identified customers, 86 visits, Rp2,263,000 and 12 repeat customers; these are a customer-identified revenue subset only.
+- Added lazy Owner-only Operasional → Loyalty subtab, compact 5-KPI dashboard, frequency/contribution graphs, searchable and sortable masked-customer directory, and guarded XLS/XLSX upload with review before save.
+- Added monthly snapshot provenance, versioned source batches, transactional idempotent import RPC, owner-only RLS and read RPC.
+- Staging migration executed successfully; read-only verification found 2 tables, 2 RLS policies, 2 RPCs, 0 imports.
+- No production database write or data import. Staging tests, deployment preview acceptance and production migration remain release gates.
+- Proof: docs/HSN_712_LOYALTY_MAJOO_2026_11_08.md.
+
+
 Append-only working journal. Newest session goes at the top.
 
 ## 2026-09-25 — HSN-300 Purchase canonical render cleanup
