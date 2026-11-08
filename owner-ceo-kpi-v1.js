@@ -81,6 +81,118 @@ function summarizeWorkforce(rows,scans,employees,rosters,templates){
  return {total:total,average:valid.length?total/valid.length:null,validShifts:valid.length,
   rawScans:Number(scans||0),ranking:ranking};
 }
+/* Decisions are conditional on database evidence, not LLM-generated claims.
+   Priorities are recomputed whenever the selected period or live KPI values change. */
+function businessPriorities(data,errors,period){
+ data=data||{};errors=errors||{};
+ var out=[],f=data.finance,s=data.stock,c=data.loyalty,w=data.workforce;
+ function add(id,priority,title,evidence,action,guard,confidence,area){
+  out.push({id:id,priority:priority,title:title,evidence:evidence,action:action,guard:guard,confidence:confidence,area:area});
+ }
+ if(s&&s.critical&&s.critical.ratio<1){
+  add('inventory','P1','Validasi stok kritis sebelum restock',
+   String(s.critical.name)+' '+dec(s.critical.qty)+' '+String(s.critical.unit||'')+' / batas '+dec(s.critical.min)+
+   ' ('+dec(s.critical.ratio)+'×); '+num(s.eligible)+'/'+num(s.total)+' SKU memenuhi filter audit',
+   'Cek fisik SKU kritis, riwayat konsumsi BOM dan penerimaan yang sah; putuskan pembelian berdasarkan hasil verifikasi.',
+   'Jika angka berbeda dengan fisik, lakukan koreksi melalui alur opname/approval, bukan mengubah saldo otomatis.',
+   'Terbatas untuk kondisi fisik','Stok → Periksa Hitungan');
+ }else if(s&&s.total&&s.eligible<s.total){
+  add('inventory','P2','Perluas validasi stok sebelum menyimpulkan aman',
+   num(s.eligible)+' dari '+num(s.total)+' SKU layak diranking; sisanya belum memenuhi aturan baseline/ambiguitas.',
+   'Prioritaskan opname dan pemeriksaan BOM pada SKU bernilai/bergerak tinggi.',
+   'Jangan memaknai SKU yang belum tercakup sebagai stok aman atau stok habis.','Terbatas','Stok → Audit');
+ }else if(errors.stock||!s){
+  add('inventory','P2','Pulihkan visibilitas persediaan',
+   'KPI persediaan tidak tersedia dari sumber audit.',
+   'Periksa pembacaan inventory, minimum stok dan baseline fisik.',
+   'Tunda keputusan reorder berbasis peringkat sampai data tersedia.','Belum tersedia','Stok');
+ }
+ if(f&&f.months>0&&(!f.reconciled||f.provisional>0||f.months<f.expected)){
+  add('finance',f.reconciled?'P1':'P1',f.reconciled?'Pastikan laba YTD benar sebelum keputusan ekspansi':'Rekonsiliasi selisih laporan keuangan',
+   'Laba tercatat '+money(f.profit)+' (provisional); '+num(f.months)+'/'+num(f.expected)+
+   ' bulan tercakup; '+num(f.provisional)+' bulan HPP belum final'+(f.reconciled?'':'; aritmetika laporan tidak cocok'),
+   'Lengkapi periode yang kosong, verifikasi biaya dan HPP berbasis resep/stock, lalu cocokkan kembali jurnal dan laporan.',
+   'Pertahankan label provisional; jangan gunakan margin sementara sebagai laba final atau dasar komitmen investasi.',
+   'Terbatas','Keuangan → Laporan Laba Rugi');
+ }else if(f&&f.months===0){
+  add('finance','P1','Lengkapi laporan finansial YTD',
+   'Belum ada periode yang dapat dihitung untuk tahun '+String(period).slice(0,4)+'.',
+   'Audit impor penjualan, pembelian dan jurnal, lalu lakukan rekonsiliasi.',
+   'Tahan interpretasi laba; jangan mengganti data kosong dengan nol.','Belum tersedia','Keuangan');
+ }else if(errors.finance||!f){
+  add('finance','P1','Periksa sumber keuangan',
+   'KPI laporan keuangan belum berhasil dimuat.',
+   'Periksa Finance provisional, akses dan sinkronisasi laporan.',
+   'Tidak menyimpulkan hasil bisnis dari angka yang belum dapat diverifikasi.','Belum tersedia','Keuangan');
+ }else{
+  add('finance','P3','Pantau margin dan pertumbuhan terukur',
+   'Margin periode akumulasi '+dec(f.margin)+'%, '+num(f.months)+' bulan terlapor dengan HPP final.',
+   'Bandingkan tren penjualan dan efisiensi biaya dengan periode sebelumnya sebelum menetapkan target.',
+   'Pertahankan aturan rekonsiliasi sumber jika periode berubah.','Cukup','Keuangan');
+ }
+ if(w&&w.validShifts===0){
+  add('workforce','P2','Lengkapi absen masuk–keluar sebelum menilai disiplin',
+   num(w.rawScans)+' scan perangkat di bulan pilihan; '+num(w.validShifts)+' pasangan masuk–keluar sah.',
+   'Pastikan staf melakukan check-out yang benar; lengkapi jadwal dan koreksi berbukti melalui prosedur.',
+   'Jam kerja dan ranking disiplin ditahan sampai tersedia pasangan waktu yang sah, bukan estimasi dari scan masuk.',
+   'Tinggi untuk kelengkapan data','Operasional → Attendance');
+ }else if(w&&w.ranking.length===0){
+  add('workforce','P2','Perbaiki cakupan penilaian disiplin',
+   num(w.validShifts)+' shift lengkap, tetapi belum cukup jadwal/pasangan absensi untuk peringkat adil.',
+   'Lengkapi roster, shift serta check-in/out untuk cakupan yang representatif.',
+   'Jangan menyebut pegawai paling disiplin sebelum syarat minimal ranking tercapai.',
+   'Terbatas','Operasional → Attendance');
+ }else if(w){
+  add('workforce','P3','Pertahankan kepatuhan dan pemerataan jam kerja',
+   num(w.validShifts)+' shift tervalidasi; rata-rata '+hours(w.average)+' per shift.',
+   'Pantau staf dengan kelengkapan absensi rendah serta perbedaan jam aktual vs roster.',
+   'Evaluasi dengan bukti dan aturan jadwal yang berlaku, bukan dari ranking semata.','Sedang','Operasional → Attendance');
+ }else{
+  add('workforce','P2','Pulihkan sumber absensi terverifikasi','Data jam kerja belum tersedia.',
+   'Periksa attendance dan jadwal shift tanpa membuat estimasi jam kerja.',
+   'Jangan tampilkan peringkat disiplin tanpa data.','Belum tersedia','Operasional → Attendance');
+ }
+ if(c&&c.expected>0&&c.coverage<c.expected){
+  add('loyalty','P2','Lengkapi riwayat loyalitas sebelum ekspansi CRM',
+   num(c.coverage)+'/'+num(c.expected)+' bulan laporan pelanggan tersedia (YTD hingga '+monthTitle(period)+').',
+   'Impor snapshot Majoo bulan yang hilang; jalankan uji retensi terbatas pada pelanggan yang sudah teridentifikasi.',
+   'Jangan menyatakan pelanggan terloyal sepanjang tahun dari bulan yang belum tercakup; cegah duplikasi snapshot.',
+   'Terbatas','Operasional → Loyalty');
+ }else if(c&&c.mostLoyal){
+  add('loyalty','P3','Pertahankan pelanggan dengan pembelian berulang',
+   'Pelanggan teratas yang tercatat memiliki '+num(c.mostLoyal.visits)+' kunjungan pada data YTD lengkap.',
+   'Uji program apresiasi dan pantau peningkatan repeat visit yang terukur.',
+   'Gunakan kontak hanya sesuai izin pemasaran dan hindari menambah omzet dari snapshot Loyalty.',
+   'Cukup','Operasional → Loyalty');
+ }else{
+  add('loyalty','P2','Lengkapi intelijen pelanggan','Ranking dan cakupan Loyalty belum dapat diperiksa.',
+   'Periksa laporan pelanggan Majoo dan periode yang benar sebelum menargetkan program retensi.',
+   'Jangan menyimpulkan churn dari data kosong.','Belum tersedia','Operasional → Loyalty');
+ }
+ var order={P1:0,P2:1,P3:2};out.sort(function(a,b){return order[a.priority]-order[b.priority]||a.id.localeCompare(b.id)});
+ return out.map(function(p,i){p.rank=i+1;return p});
+}
+function insightsMarkup(items){
+ return '<section class="hx7-insights" aria-labelledby="hx7InsightTitle">'+
+  '<div class="hx7-insights-heading"><div><span class="hx7-overline">CEO DECISION INTELLIGENCE</span>'+
+  '<h2 id="hx7InsightTitle">Insight & Prioritas Bisnis</h2><p>Prioritas otomatis berdasarkan 4 KPI dan kualitas data yang tersedia; bukan prediksi atau laba audit.</p></div>'+
+  '<span class="hx7-insight-count">'+num(items.length)+' tindakan</span></div>'+
+  '<div class="hx7-insight-grid">'+items.map(function(p){
+    return '<article class="hx7-insight-item">'+
+     '<div class="hx7-insight-top"><span class="hx7-insight-priority '+(p.priority==='P1'?'urgent':'')+'">'+esc(p.priority)+'</span>'+
+     '<small>#'+p.rank+' · '+esc(p.area)+'</small></div>'+
+     '<h3>'+esc(p.title)+'</h3>'+
+     '<p class="hx7-insight-evidence">'+esc(p.evidence)+'</p>'+
+     '<p class="hx7-insight-action"><b>Aksi:</b> '+esc(p.action)+'</p>'+
+     '<details class="hx7-insight-more"><summary>Mitigasi & kualitas data</summary><p>'+esc(p.guard)+'</p><small>Keyakinan sumber: '+esc(p.confidence)+'</small></details>'+
+     '</article>';
+  }).join('')+'</div></section>';
+}
+function renderInsights(){
+ var root=document.getElementById('hx7Insights');if(!root||!owner())return;
+ if(state.loading&&state.loaded!==state.period){root.textContent='Menyusun prioritas dari KPI Supabase…';return}
+ root.innerHTML=insightsMarkup(businessPriorities(state.data,state.errors,state.period));
+}
 function pill(t,cls){return '<span class="hx7-pill '+esc(cls||'')+'">'+esc(t)+'</span>'}
 function metric(label,value,cls){return '<div class="hx7-metric"><span>'+esc(label)+'</span><strong class="'+esc(cls||'')+'" title="'+esc(value)+'">'+esc(value)+'</strong></div>'}
 function stockRow(label,x,cls){
@@ -135,6 +247,7 @@ function render(){
    '<div class="hx7-body">'+body+'</div>'+
    '<div class="hx7-source">SUMBER · '+esc(['Finance provisional','Inventory + Audit','Majoo Loyalty','Attendance + Roster'][i])+'</div></article>';
  }).join('');
+ renderInsights();
 }
 async function workforceData(period){
  var start=period+'-01',end=monthEnd(period);
@@ -190,5 +303,5 @@ function mount(period){
 }
 function invalidate(){state.loaded='';state.seq++;state.loading=false;if(state.period&&document.getElementById('hx7Cards'))load()}
 window.__HASNARIA_CEO_KPI_V1={mount:mount,invalidate:invalidate};
-window.__HASNARIA_CEO_KPI_MATH={summarizeFinance:summarizeFinance,summarizeStock:summarizeStock,summarizeLoyalty:summarizeLoyalty,summarizeWorkforce:summarizeWorkforce};
+window.__HASNARIA_CEO_KPI_MATH={summarizeFinance:summarizeFinance,summarizeStock:summarizeStock,summarizeLoyalty:summarizeLoyalty,summarizeWorkforce:summarizeWorkforce,businessPriorities:businessPriorities};
 })();
