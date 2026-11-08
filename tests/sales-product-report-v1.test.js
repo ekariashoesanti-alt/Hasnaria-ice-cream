@@ -299,3 +299,36 @@ test('October 2026 actual staged Majoo report values pass strict 54 SKU full-mon
   duplicate[8][1]=duplicate[7][1];
   assert.throws(()=>parseMatrix(duplicate),/SKU duplikat/);
 });
+
+
+test('real Majoo workbook layout: summary in N/O, full 54 SKU, original decimal precision, footer in N71',()=>{
+  const blanks=()=>Array(15).fill('');
+  const rows=Array.from({length:71},blanks);
+  rows[0][0]='Laporan Penjualan Produk';rows[0][14]='Hasnaria Ice Cream';
+  rows[1][14]='Semua Outlet';
+  rows[3][0]='Periode';rows[3][1]='01 Oktober 2026 - 31 Oktober 2026';
+  rows[3][13]='Total Penjualan';rows[3][14]=20992500;
+  rows[4][0]='Zona Waktu';rows[4][1]='Asia/Jakarta (GMT +7)';
+  rows[4][13]='Total Laba Kotor';rows[4][14]=10626232.07;
+  rows[6][13]='Total Produk Terjual';rows[6][14]=2604;
+  rows[8][12]='Date Generated 08/11/2026 - 09:54 WIB';
+  rows[10]=h;
+  octoberSource.forEach((x,i)=>{
+    rows[i+11]=[x.product,x.sku,'Hasnaria Ice Cream','Tanpa Departemen',
+      'MENU UTAMA','Produk Satuan',x.qty,0,x.sales,0,x.hpp,
+      x.refund_qty,x.refund,x.refund_hpp,x.profit];
+  });
+  // The original Excel source has higher precision than displayed HPP.
+  rows[11][10]=619104.9504950496;
+  rows[70][13]='Powered by';
+  const report=parseMatrix(rows);
+  assert.equal(report.source_row_count,54);
+  assert.equal(report.header_row,11);
+  assert.equal(report.totals.quantity,2604);
+  assert.equal(report.totals.sales,20992500);
+  assert.equal(report.rows[0].cogs_amount,619104.9504950496);
+  assert.equal(report.stock_posting_allowed,false);
+  const corrupted=rows.map(row=>row.slice());
+  corrupted[13][1]=''; // real sold row with missing SKU, not a footer
+  assert.throws(()=>parseMatrix(corrupted),/tidak lengkap/);
+});
