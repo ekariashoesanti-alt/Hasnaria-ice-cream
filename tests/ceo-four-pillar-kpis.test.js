@@ -59,4 +59,28 @@ const guard=fs.readFileSync(path.join(ROOT,'owner-shell-guard.js'),'utf8');
 assert.ok(dashboard.includes('id="hx7Cards"'));
 assert.ok(dashboard.includes('__HASNARIA_CEO_KPI_V1.mount'));
 assert.ok(guard.includes('/owner-ceo-kpi-v1.js?v=1'));
+const priorities=m.businessPriorities({
+ stock:{eligible:19,total:198,critical:{name:'FISHROLL',qty:2,min:14,ratio:2/14,unit:'pcs'}},
+ finance:{revenue:179397000,cost:59279465,profit:120117535,months:10,expected:11,provisional:10,reconciled:true,margin:67},
+ workforce:{rawScans:39,validShifts:0,ranking:[],average:null,total:0},
+ loyalty:{coverage:2,expected:11,top3:[],mostLoyal:null}
+}, {},'2026-11');
+assert.equal(priorities.length,4,'four KPI sources must yield four actions');
+assert.equal(priorities[0].priority,'P1');
+assert.deepEqual([...priorities.map(x=>x.id)].sort(),['finance','inventory','loyalty','workforce']);
+assert.ok(priorities.some(p=>p.id==='inventory'&&p.evidence.includes('FISHROLL')));
+assert.ok(priorities.some(p=>p.id==='finance'&&p.evidence.includes('10/11')));
+
+assert.ok(priorities.some(p=>p.id==='workforce'&&p.evidence.includes('39 scan')));
+assert.ok(priorities.some(p=>p.id==='loyalty'&&p.evidence.includes('2/11')));
+assert.ok(priorities.every(p=>/P[1-3]/.test(p.priority)&&p.action&&p.guard&&p.confidence));
+const complete=m.businessPriorities({
+ stock:{eligible:198,total:198,critical:{name:'Safe',qty:80,min:10,ratio:8,unit:'pcs'}},
+ finance:{months:12,expected:12,provisional:0,reconciled:true,margin:15,profit:2000},
+ workforce:{rawScans:20,validShifts:15,average:8,ranking:[{name:'A',score:95}]},
+ loyalty:{coverage:12,expected:12,mostLoyal:{visits:20}}
+}, {},'2026-12');
+assert.ok(complete.every(p=>p.priority!=='P1'),'fully verified healthy data should not generate false urgent alerts');
+assert.ok(dashboard.includes('id="hx7Insights"'),'insight host must be available');
+
 console.log('HSN-814 CEO KPI arithmetic + safety gate: PASS');
