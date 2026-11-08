@@ -233,3 +233,54 @@ test('28 actual Sunday-morning ice-cream receipts sum Rp540,000 but do NOT expla
   assert.notEqual(parsed.cfd_candidate_gross,622000);
   assert.equal(parsed.stock_posting_allowed,false);
 });
+
+
+test('cannot explain ice cream bowl receipt Rp11,000 from a Rp5,000 unit price even with extra whole units',()=>{
+  const rec=row('CS/PRICE','11-10-2026','ICE CREAM BOWL',11000);
+  rec[1]='11-10-2026 08:06:16';
+  const p={period_month:'2026-10-01',outlet_name:'Hasnaria Ice Cream',
+    totals:{sales:545000,refund_amount:0,quantity:109},
+    rows:[{name:'ICE CREAM BOWL',sku:'IC60',quantity:109,sales_amount:545000}]};
+  const r=reconcile(detail([rec],11000,11000),p);
+  assert.equal(r.arithmetic_assessed_receipts,1);
+  assert.equal(r.price_arithmetic_exceptions.length,1);
+  assert.equal(r.price_arithmetic_exceptions[0].issue,'PRICE_OR_ADJUSTMENT_REVIEW');
+  assert.equal(r.price_arithmetic_exceptions[0].reference_residual,6000);
+  assert.equal(r.price_arithmetic_icecream_bowl_count,1);
+  assert.equal(r.price_arithmetic_icecream_count,1);
+  assert.equal(r.has_reliable_per_receipt_sku_qty,false);
+  assert.equal(r.stock_posting_allowed,false);
+});
+test('extra units at an exact reference price are possible, but not proven',()=>{
+  const rec=row('CS/EXTRA','11-10-2026','ICE CREAM BOWL',25000);
+  const p={period_month:'2026-10-01',outlet_name:'Hasnaria Ice Cream',
+    totals:{sales:545000,refund_amount:0,quantity:109},
+    rows:[{name:'ICE CREAM BOWL',sku:'IC60',quantity:109,sales_amount:545000}]};
+  const r=reconcile(detail([rec],25000,25000),p);
+  assert.equal(r.arithmetic_assessed_receipts,1);
+  assert.equal(r.price_arithmetic_exceptions.length,0);
+  assert.equal(r.has_reliable_per_receipt_sku_qty,false);
+});
+test('one below-reference receipt is a price/discount review candidate, not a missing SKU',()=>{
+  const rec=row('CS/DISCOUNT','30-10-2026','Mie Pedas,SIOMAY,CHOCOLATE',15000);
+  const p={period_month:'2026-10-01',outlet_name:'Hasnaria Ice Cream',
+    totals:{sales:16500,refund_amount:0,quantity:3},
+    rows:[
+      {name:'Mie Pedas',sku:'FO51',quantity:1,sales_amount:6500},
+      {name:'SIOMAY',sku:'FO21',quantity:1,sales_amount:1000},
+      {name:'CHOCOLATE',sku:'DR70',quantity:1,sales_amount:9000}
+    ]};
+  const r=reconcile(detail([rec],15000,15000),p);
+  assert.equal(r.unknown_names.length,0);
+  assert.equal(r.price_arithmetic_exceptions.length,1);
+  assert.equal(r.price_arithmetic_exceptions[0].reference_residual,-1500);
+  assert.equal(r.stock_posting_allowed,false);
+});
+test('ignore unknown product names in reference arithmetic rather than invent prices',()=>{
+  const rec=row('CS/UNKNOWN','11-10-2026','MISSING SKU',12000);
+  const p=product();
+  const r=reconcile(detail([rec],12000,12000),p);
+  assert.deepEqual(r.unknown_names,['MISSING SKU']);
+  assert.equal(r.arithmetic_assessed_receipts,0);
+  assert.equal(r.price_arithmetic_exceptions.length,0);
+});
