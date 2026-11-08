@@ -51,6 +51,20 @@ begin
      raise exception '4-source UAT: product revenue drift';
   end if;
 
+  if (select count(*) from hasnaria_uat.legacy_recipe_candidates where batch_key=k)<>7
+     or exists (select 1 from hasnaria_uat.legacy_recipe_candidates where approved_for_stock) then
+    raise exception '4-source UAT: legacy BOM candidate total or stock permissions unsafe';
+  end if;
+  if (select count(*) from hasnaria_uat.sold_product_bom_coverage_v2
+      where source_coverage_status='LEGACY_BOM_REVIEW_ONLY')<>7
+     or (select sum(quantity) from hasnaria_uat.sold_product_bom_coverage_v2
+      where source_coverage_status='LEGACY_BOM_REVIEW_ONLY')<>304
+     or (select count(*) from hasnaria_uat.sold_product_bom_coverage_v2
+      where source_coverage_status='EXPORTED_BOM_UNAPPROVED')<>47
+     or exists(select 1 from hasnaria_uat.sold_product_bom_coverage_v2
+      where source_coverage_status='UNRESOLVED' or recipe_approved or stock_posting_allowed) then
+    raise exception '4-source UAT: reference overlay coverage/approval invariant violated';
+  end if;
   if exists (select 1 from hasnaria_uat.raw_bom_demand_preview_v1
       where not simulation_only or conversion_verified or stock_posting_allowed) then
      raise exception '4-source UAT: unapproved BOM demand can affect stock';
