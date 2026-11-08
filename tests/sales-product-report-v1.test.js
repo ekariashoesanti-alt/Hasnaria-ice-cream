@@ -450,7 +450,7 @@ test('expired Owner JWT on report lookup denies save before any POST',async()=>{
       brandId:'brand-test',outletId:'outlet-test',
       supabaseUrl:'https://rynnpndtzjwpekbiwiif.supabase.co',
       publishableKey:'staging-public',getAccessToken:async()=> 'expired-jwt'
-    }),/login ulang/);
+    }),/login ulang/i);
     assert.equal(calls.filter(x=>x.method==='POST').length,0);
   } finally {globalThis.fetch=prev;}
 });
