@@ -1,5 +1,13 @@
 # Hasnaria ERP Session Log
 
+## 2026-11-09 — HSN-713 Loyalty YTD / one-view
+- Fixed Customer Intelligence search/sort wrapping and lower-table clipping at desktop 100% zoom with bounded 5-row pagination.
+- Added Owner-only YTD RPC summing identified customer monthly visits/revenue from January to selected month by unique customer ID, excluding old superseded batch versions.
+- Added explicit 1/11 report month coverage warning for production Nov 2026; no invented January–October data.
+- Staging schema migration + rollback fixture verified cross-month dedup, aggregation, replacement, pagination and search. Tests wired into Vercel build.
+- Release evidence: docs/HSN_713_LOYALTY_YTD_ONE_VIEW_2026_11_09.md.
+
+
 ## 2026-11-08 — HSN-712 Majoo Loyalty dashboard (staging)
 
 **Scope**
@@ -303,7 +311,6 @@ Validasi:30 kasus GPS (9 tambahan),25 berkas tes/full build, review independen d
 - Production verified recipe status: **54 draft / 0 verified**. October has **484 sales and 1,035 sale items**, but canonical inventory movement last date was 30 Sep. `private.sync_sale_item_inventory_movement` requires verified recipe effective date; do NOT automatically authorize all recipes or post retrospective consumption.
 - Added direct audit marker and SKU drilldown to Stock to avoid hiding gaps behind green KPI, pending upload counter, exact month alignment for Purchase-cycle stock cards.
 - Validation: GitHub Audit Gate passed including test `tests/stock-opname-upload-v1.test.js` (strict parsing, duplicate prevention, no posting, owner-only, saved draft) and existing Stock/Operations sync tests. Database/Owner authenticated browser E2E and Vercel preview still outstanding. Release remains **REVIEW**; do not merge solely based on CI.
-
 
 ## 2026-11-09 — HSN-814 · CEO Four-Pillar Scorecards
 
