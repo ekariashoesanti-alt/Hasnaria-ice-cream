@@ -123,3 +123,44 @@
  #operasional .lo1-coverage span{white-space:normal}
  #operasional .lo1-disclaimer{white-space:normal}
 }
+
+
+/* HSN-715 · infographic-first executive Loyalty: 3 side-by-side cards, table secondary. */
+#operasional .lo1-graphs.lo1-infographics{
+ display:grid;grid-template-columns:minmax(0,1.26fr) minmax(0,1fr) minmax(0,1.06fr);
+ gap:7px;align-items:stretch;min-width:0;
+}
+#operasional .lo1-infographics>section{height:154px;min-height:154px;overflow:hidden;padding:9px 11px;border:1px solid #dbe6e8;border-radius:10px;background:#fff}
+#operasional .lo1-panel-head{display:flex;align-items:center;justify-content:space-between;gap:6px;min-width:0}
+#operasional .lo1-panel-head strong{font-size:11px;color:#15344b;line-height:1.2}
+#operasional .lo1-panel-head small{font-size:9px;color:#68818b;white-space:nowrap;flex:0 0 auto}
+#operasional .lo1-trend{display:block;width:100%;height:112px;max-width:100%;margin-top:6px}
+#operasional .lo1-segments-card .lo1-chart{margin-top:9px;gap:6px}
+#operasional .lo1-segments-card .lo1-bar{grid-template-columns:43px minmax(0,1fr) 26px;gap:6px}
+#operasional .lo1-repeat{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;column-gap:6px;row-gap:4px;margin-top:10px;border-top:1px solid #e9f0f2;padding-top:6px;font-size:9px}
+#operasional .lo1-repeat span{color:#607985;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+#operasional .lo1-repeat b{color:#0a8077;font-size:12px}
+#operasional .lo1-repeat progress{grid-column:1/-1;height:6px;appearance:none;-webkit-appearance:none;width:100%;border:0;background:#e5eeee;border-radius:20px;overflow:hidden}
+#operasional .lo1-repeat progress::-webkit-progress-bar{background:#e5eeee;border-radius:20px}
+#operasional .lo1-repeat progress::-webkit-progress-value{background:#0b8b83;border-radius:20px}
+#operasional .lo1-repeat progress::-moz-progress-bar{background:#0b8b83;border-radius:20px}
+#operasional .lo1-leaders{display:grid;gap:6px;margin-top:10px}
+#operasional .lo1-leader{display:grid;grid-template-columns:27px minmax(0,1fr) auto;align-items:center;gap:7px;border-radius:7px;padding:5px 6px;background:#f4f8fa;min-width:0;height:31px}
+#operasional .lo1-leader:first-child{background:#edf8f6}
+#operasional .lo1-rank{background:#143a55;color:white;text-align:center;border-radius:5px;font-size:10px;font-weight:800;padding:4px 0}
+#operasional .lo1-leader:first-child .lo1-rank{background:#0b8c84}
+#operasional .lo1-leader-name{font-size:10px;color:#173e51;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#operasional .lo1-leader strong{font-size:13px;color:#14344a;white-space:nowrap}
+#operasional .lo1-leader strong small{font-size:9px;color:#789099;font-weight:500}
+#operasional .lo1-small-empty{min-height:92px;display:grid;place-items:center;color:#789099;font-size:10px;text-align:center}
+@media(max-width:1150px){
+ #operasional .lo1-graphs.lo1-infographics{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+ #operasional .lo1-top-card{grid-column:1/-1}
+ #operasional .lo1-top-card .lo1-leaders{grid-template-columns:repeat(3,minmax(0,1fr))}
+ #operasional .lo1-top-card{height:90px;min-height:90px}
+}
+@media(max-width:700px){
+ #operasional .lo1-graphs.lo1-infographics{grid-template-columns:1fr}
+ #operasional .lo1-top-card{grid-column:auto;height:154px;min-height:154px}
+ #operasional .lo1-top-card .lo1-leaders{grid-template-columns:1fr}
+}
