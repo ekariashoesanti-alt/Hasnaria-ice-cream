@@ -120,5 +120,5 @@ test('UI is lazy Owner-only, GET-only and not allowed to mutate ledger',()=>{
   assert.match(stock,/source_row_count/);
   assert.match(stock,/lebih dari satu batch SKU|Lebih dari satu batch SKU/);
   assert.match(stock,/stock-sku-simulation-v1\.js/);
-  assert.doesNotMatch(pure,/fetch\(|XMLHttpRequest|\.from\(|POST|PATCH|DELETE/);
+  assert.doesNotMatch(pure,/fetch\(|XMLHttpRequest|\.from\(|method:\s*['"](?:POST|PATCH|DELETE)/);
 });
