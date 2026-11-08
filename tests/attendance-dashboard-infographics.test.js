@@ -25,7 +25,7 @@ test('pairs scans only when at least two distinct times and first_last', () => {
   assert.equal(m.firstAvg,(15*60+11+11*60+28+11*60+12)/3);
   assert.equal(m.lastAvg,21*60+16);
   assert.match(chart.kpis(m),/33%/);
-  assert.match(chart.kpis(m),/2.*perlu review/i);
+  assert.match(chart.kpis(m),/Perlu review<\/span><strong>2<\/strong>/i);
 });
 test('repeated same-time scans do not become a verified exit', () => {
   const m=chart.analyze([log('1','Dania','2026-11-01','08:00:00'),log('1','Dania','2026-11-01','08:00:00')],'2026-11');
