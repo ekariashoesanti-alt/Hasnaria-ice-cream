@@ -197,7 +197,7 @@
     if(typeof window.__HASNARIA_OPERATIONS_V1_MOUNT==='function'){window.__HASNARIA_OPERATIONS_V1_MOUNT({force:!!requestRender});return}
     if(state.operationalLoad){state.operationalLoad.then(function(){if(isOwner()&&state.active==='operasional'&&typeof window.__HASNARIA_OPERATIONS_V1_MOUNT==='function')window.__HASNARIA_OPERATIONS_V1_MOUNT({force:!!requestRender})});return}
     state.operationalLoad=new Promise(function(resolve){
-      var s=document.createElement('script');s.id='hasnaria-operational-v1-js';s.src='/operational-v1.js?v=5';s.async=true;
+      var s=document.createElement('script');s.id='hasnaria-operational-v1-js';s.src='/operational-v1.js?v=6';s.async=true;
       s.onload=resolve;s.onerror=function(){state.operationalLoad=null;resolve()};document.head.appendChild(s);
     });
     state.operationalLoad.then(function(){if(isOwner()&&state.active==='operasional'&&typeof window.__HASNARIA_OPERATIONS_V1_MOUNT==='function')window.__HASNARIA_OPERATIONS_V1_MOUNT({force:!!requestRender})});
