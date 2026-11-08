@@ -14,6 +14,8 @@ try {
   if (!runtime.includes('window.__HASNARIA_IMPORT_V2')) throw new Error('Majoo importer v2 is missing');
   if (!runtime.includes('window.__HASNARIA_PRODUCT_REPORT_V1')) throw new Error('Monthly SKU parser is missing from canonical runtime');
   if (!runtime.includes('window.__HASNARIA_SALES_RECONCILE_V1')) throw new Error('Read-only reconciler missing from canonical runtime');
+  if (!runtime.includes('window.__HASNARIA_SCOPE_BRIDGE_V1')) throw new Error('Evidence-gated revenue scope bridge missing from canonical runtime');
+  if (!runtime.includes('economic_event_key')) throw new Error('Cross-source economic-event deduplication guard missing');
   if (!runtime.includes('sbReportReconcileChoose')) throw new Error('Read-only reconciliation UI missing');
   if (!runtime.includes('Simpan ke Staging Singapore')) throw new Error('Explicit Singapore save UI action missing');
   if (!runtime.includes('resolveSingaporeOutlet(BRAND,token,KEY)')) throw new Error('Singapore Owner/Outlet resolution missing');
