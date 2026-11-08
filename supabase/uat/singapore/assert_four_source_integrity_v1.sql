@@ -51,6 +51,25 @@ begin
      raise exception '4-source UAT: product revenue drift';
   end if;
 
+  -- Compare all 54 real workbook source rows to pre-staged immutable values.
+  -- MD5 is a local reconciliation fingerprint (NOT a security checksum).
+  -- Source original file SHA-256 remains available on the batch.
+  if (select md5(string_agg(
+       l.source_sku||'|'||l.quantity::text||'|'||
+       l.source_sales_amount::numeric(18,2)::text||'|'||
+       l.source_hpp_amount::numeric(18,2)::text||'|'||
+       l.source_gross_profit::numeric(18,2)::text||'|'||
+       l.refund_quantity::text||'|'||
+       l.refund_amount::numeric(18,2)::text||'|'||
+       l.refund_hpp_amount::numeric(18,2)::text,
+       E'\n' order by l.source_sku))
+      from public.sales_product_report_lines l
+      join public.sales_product_report_batches b on b.id=l.batch_id
+      where b.file_sha256=h) is distinct from 'a5368cfb4d09adfce797dcccab62a480' then
+     raise exception '4-source UAT: original workbook line-by-line fingerprint drift';
+  end if;
+
+
   if (select count(*) from hasnaria_uat.legacy_recipe_candidates where batch_key=k)<>7
      or exists (select 1 from hasnaria_uat.legacy_recipe_candidates where approved_for_stock) then
     raise exception '4-source UAT: legacy BOM candidate total or stock permissions unsafe';
