@@ -1263,6 +1263,7 @@
         '<label><span>Bulan</span><select id="sc4Period" data-month-filter="stok">'+options+'</select></label>'+
         '<button type="button" class="sc5-text-btn" data-sc4-modal="ledger" aria-haspopup="dialog">Ledger Periode</button>'+ 
         (isOwner()?'<button type="button" class="sc5-text-btn" data-sc4-modal="recipes" aria-haspopup="dialog">Cek Resep Produk</button>':'')+
+        (isOwner()?'<button type="button" class="sc5-text-btn" data-sc4-action="import-recipe" aria-haspopup="dialog">Impor & Review Resep</button>':'')+
         (isOwner()?'<button type="button" class="sc5-text-btn" data-sc4-modal="sku-sim" aria-haspopup="dialog">Simulasi Qty × BOM</button>':'')+
         (isOwner()?'<button type="button" class="sc5-text-btn" data-sc4-modal="formula-audit" aria-haspopup="dialog">Periksa Hitungan</button>':'')+
         (isOwner()?'<button type="button" class="sc5-text-btn" data-sc4-action="upload-purchase">Upload Pembelian</button>':'')+
@@ -2477,6 +2478,23 @@
       var ui4 = e.target && e.target.closest ? e.target.closest('[data-sc4-action]') : null;
       if (ui4 && ui4.getAttribute('data-sc4-action') === 'open-operasional') {
         stockNavigate('operasional');
+        return;
+      }
+      if (ui4 && ui4.getAttribute('data-sc4-action') === 'import-recipe') {
+        if(!isOwner())return;
+        if(window.__HASNARIA_RECIPE_IMPORT_V1) {
+          window.__HASNARIA_RECIPE_IMPORT_V1.open();
+        } else {
+          var loader=document.createElement('script');
+          loader.src='/stock-recipe-import-v1.js?v=1';
+          loader.async=true;
+          loader.onload=function(){
+            if(isOwner()&&window.__HASNARIA_RECIPE_IMPORT_V1)
+              window.__HASNARIA_RECIPE_IMPORT_V1.open();
+          };
+          loader.onerror=function(){window.alert('Modul impor resep gagal dimuat. Coba refresh halaman.');};
+          document.head.appendChild(loader);
+        }
         return;
       }
       if (ui4 && ui4.getAttribute('data-sc4-action') === 'upload-opname') {
