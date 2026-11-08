@@ -172,7 +172,7 @@
       var message=await response.text();fail('Supabase menolak draft ('+response.status+'): '+message.slice(0,350));
     }
     var receipt=await response.json();
-    return {status:'draft',receipt:receipt,preview:parsed};
+    return {status:receipt && receipt.status === 'under_review' ? 'under_review' : (receipt && receipt.status === 'existing' ? 'existing' : 'unknown'),receipt:receipt,preview:parsed};
   }
   // Preview can be explicitly opted into ONLY against the Singapore synthetic UAT backend.
   // URL alone cannot enable the feature on Tokyo production.
