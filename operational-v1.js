@@ -37,7 +37,7 @@
   function typeLabel(t){return{stock_opname:'Stock Opname',opening:'Opening',closing:'Closing',hygiene:'Hygiene',equipment:'Peralatan',custom:'Operasional'}[t]||t||'Operasional'}
   function editable(r){return!!(r&&['draft','in_progress','rejected'].indexOf(r.status)>=0)}
   function reviewable(r){return!!(r&&r.status==='submitted'&&isOwner())}
-  function css(){if(document.getElementById('operational-v1-css'))return;var l=document.createElement('link');l.id='operational-v1-css';l.rel='stylesheet';l.href='/operational-v1.css?v=3';document.head.appendChild(l)}
+  function css(){if(document.getElementById('operational-v1-css'))return;var l=document.createElement('link');l.id='operational-v1-css';l.rel='stylesheet';l.href='/operational-v1.css?v=4';document.head.appendChild(l)}
   function memberName(m){return m.full_name||m.display_name||m.email||m.id}
   function clearAction(){state.notice='';state.actionError=''}
   function notifyChange(){if(window.__HASNARIA_DATA_SYNC)window.__HASNARIA_DATA_SYNC.notify()}
@@ -103,7 +103,7 @@
     if(!isOwner()||!active()||state.subtab!=='attendance')return;
     if(window.__HASNARIA_ATTENDANCE_MOUNT){window.__HASNARIA_ATTENDANCE_MOUNT();return}
     if(state.attendanceLoad)return;
-    state.attendanceLoad=new Promise(function(resolve){var sc=document.createElement('script');sc.src='/attendance-v1.js?v=1';sc.async=true;sc.onload=resolve;sc.onerror=function(){state.attendanceLoad=null;resolve()};document.head.appendChild(sc)});
+    state.attendanceLoad=Promise.all(['/attendance-charts-v2.js?v=1','/attendance-v1.js?v=2'].map(function(url){return new Promise(function(resolve){var sc=document.createElement('script');sc.src=url;sc.async=true;sc.onload=resolve;sc.onerror=function(){resolve()};document.head.appendChild(sc)})}));
     state.attendanceLoad.then(function(){if(active()&&state.subtab==='attendance'&&window.__HASNARIA_ATTENDANCE_MOUNT)window.__HASNARIA_ATTENDANCE_MOUNT()});
   }
   function subnav(tab){return '<nav class="op1-loyalty-nav" aria-label="Submenu Operasional"><button type="button" data-op-action="show-attendance"'+(tab==='attendance'?' class="on"':'')+'>Attendance</button><button type="button" data-op-action="show-loyalty"'+(tab==='loyalty'?' class="on"':'')+'>Loyalty</button><button type="button" data-op-action="show-work"'+(tab==='work'?' class="on"':'')+'>Stock Opname</button></nav>'}
