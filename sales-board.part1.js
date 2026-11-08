@@ -167,9 +167,12 @@ ice && STATE.slice.type === 'day' && STATE.slice.id === x.key;
           ' struk lainnya — memerlukan rincian item POS untuk kepastian.</p>':'')+'</details>';
       // Source-scope explanation is based on public Majoo report documentation,
       // not an allocation or a stock correction.
+      var scopeBridge=window.__HASNARIA_SCOPE_BRIDGE_V1 &&
+        window.__HASNARIA_SCOPE_BRIDGE_V1.calculate(r,[]);
       var scopeAudit='<details class="sb-fmt-box"><summary>🧾 Selisih cakupan laporan: '+
-        money(r.gross_gap)+' (belum terurai)</summary>'+
+        money(scopeBridge?scopeBridge.unallocated_rupiah:r.gross_gap)+' (belum terurai)</summary>'+
         '<p>Majoo menjelaskan bahwa Laporan Penjualan Produk dapat berbeda dari total laporan penjualan karena komponen tingkat transaksi, termasuk pajak dan diskon. Nilai masing-masing komponen pada bulan ini BELUM tersedia.</p>'+
+        '<p><b>Kontrol bukti:</b> '+(scopeBridge?scopeBridge.evidence_count:0)+' komponen diajukan; selisih tanpa alokasi terverifikasi '+money(scopeBridge?scopeBridge.unallocated_rupiah:r.gross_gap)+'. Ini belum memiliki bukti Ringkasan/Ekstra untuk dialokasikan.</p>'+ 
         '<p>Prioritas verifikasi di Majoo: (1) Ringkasan Penjualan, (2) Penjualan Ekstra / Sub Ekstra, dan (3) Pajak serta diskon/promosi; gunakan filter periode dan outlet yang sama.</p>'+
         '<p>Jangan tambahkan selisih ini ke SKU, omzet KPI, HPP, BOM atau stok sebelum nilai komponennya diperiksa dan disetujui Owner.</p>'+
         '<p>Sumber: <a href="https://majoo.id/informasi-update/laporan-produk-tambahan-kolom-refund" target="_blank" rel="noopener noreferrer">Definisi Laporan Produk Majoo</a> · '+
