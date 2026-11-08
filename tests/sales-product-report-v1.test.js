@@ -1,7 +1,7 @@
 'use strict';
 const assert=require('node:assert/strict');
 const test=require('node:test');
-const {parseMatrix,stagePreview}=require('../sales-product-report-v1.js');
+const {parseMatrix,stagePreview,previewFeatureAllowed}=require('../sales-product-report-v1.js');
 const h=['Produk','SKU','Outlet','Departemen','Kategori','Jenis Produk','Jumlah Terjual','Jumlah Terjual (%)','Penjualan (Rp.)','Penjualan (%)','HPP','Jumlah Refund','Refund (Rp.)','HPP Refund','Laba Kotor (Rp.)'];
 const r=(name,sku,qty,sales,cogs,refundQty=0,refund=0,profit)=>[
   name,sku,'Hasnaria Ice Cream','Tanpa Departemen','MENU UTAMA','Produk Satuan',
@@ -99,4 +99,10 @@ test('checks sales totals and handles Indonesian numeric formatted values',()=>{
   m[11][6]='2';m[11][8]='10.000,00';
   assert.equal(parseMatrix(m).totals.sales,21000);
 });
+test('product report chooser is disabled on production even with query flag',()=>{
+  assert.equal(previewFeatureAllowed({HASNARIA_SB:'https://bnnhmtkpdjlgehsvgoda.supabase.co',location:{search:'?sales_product_preview=1'}}),false);
+  assert.equal(previewFeatureAllowed({HASNARIA_SB:'https://rynnpndtzjwpekbiwiif.supabase.co',location:{search:''}}),false);
+  assert.equal(previewFeatureAllowed({HASNARIA_SB:'https://rynnpndtzjwpekbiwiif.supabase.co',location:{search:'?sales_product_preview=1'}}),true);
+});
+
 console.log('Sales product report strict staging parser regression: registered');
