@@ -126,3 +126,17 @@ A verified component flag alone does not approve the complete recipe, conversion
 Private Singapore UAT has a reference-only overlay: 47 SKU / 2,300 units have exported BOM, 7 SKU / 304 units have old ERP BOM candidates. Full **structural** coverage is 54/54 sold SKUs; **stock-approved** coverage remains 0. The separate UAT assertion file requires this invariant and blocks direct ledger posting.
 
 No production deployment. PR must remain draft until the Owner confirms source discrepancy, packaging/kuah treatment, unit conversions, UAT visual verification, and deployment rollback.
+
+## Phase 3 UAT-only report save wiring — 2026-11-08
+
+- One Upload Penjualan chooser is implemented in the Singapore Preview only, behind URL query flag and exact Singapore backend URL. Existing Detail Transaksi importer remains unchanged.
+- Uploading a monthly Product Sales workbook first runs strict file format/period/SKU/reconciliation validation in-browser, then a separate Owner-confirmed button **Simpan ke Staging Singapore** appears. There is no silent save on file selection.
+- The save button checks a valid Owner session, resolves exactly one active synthetic outlet from the staging brand (it never reuses a production outlet), hashes the actual file with browser SHA-256, then calls the Owner-only atomic staging RPC. No service_role or secret keys in browser code.
+- Repeated file SHA-256 is read first; **every line's identity, qty, sales, COGS and refund value** must agree with the immutable batch before the uploader reports 'existing'. A same-hash but different saved line fails closed, never overwrites the batch.
+- On new insert the browser rereads the immutable batch + lines; the success receipt is shown only after matching database confirmation. The report remains UNDER_REVIEW and has no direct write path into sales, daily_metrics, product_recipe_verifications, inventory_movements or finance.
+- Automated regression tests include Singapore-only restriction, synthetic outlet-only routing, no-token/no-write guards, first save with reread, duplicate replay without POST, modified same-hash rejection, and canonical Vercel runtime packaging.
+- Singapore synthetic Owner role can select exactly one active synthetic outlet and view its previously seeded October report (54 SKU). CI tests pass. Vercel Preview build is separate from live production.
+- **Owner UI/browser UAT with the actual workbook is still a release blocker**, as a green build and simulated fetches do not replace an authenticated end-to-end browser test. The earlier UAT imported the real monthly numbers via SQL; the original workbook's browser-normalized fields may require review if a line is inconsistent with the immutable preloaded batch.
+- Never promote the Singapore-only scripts under `supabase/uat/singapore` into production migrations.
+
+Before merging: resolve Rp622,000 finance gap, validate legacy and exported BOM interactions, physical unit factors and effective dates, confirm no double-stock posting, run full Owner visual UAT, smoke tests, and backup/rollback.
