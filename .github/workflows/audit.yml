@@ -63,6 +63,12 @@ jobs:
           test -s supabase/uat/singapore/20261108095500_singapore_raw_bom_demand_preview_uat_v1.sql
           test -s supabase/uat/singapore/assert_four_source_integrity_v1.sql
           test -s supabase/uat/singapore/assert_original_report_idempotency_v1.sql
+          test -s supabase/uat/singapore/assert_owner_atomic_import_acl_v2.sql
+          test -s supabase/migrations/20261108133000_secure_sales_product_report_acl_v2.sql
+          grep -q 'REVOKE ALL PRIVILEGES ON TABLE public.sales_product_report_batches' supabase/migrations/20261108133000_secure_sales_product_report_acl_v2.sql
+          grep -q 'REVOKE ALL PRIVILEGES ON TABLE public.sales_product_report_lines' supabase/migrations/20261108133000_secure_sales_product_report_acl_v2.sql
+          grep -q 'SECURITY DEFINER' supabase/migrations/20261108133000_secure_sales_product_report_acl_v2.sql
+          grep -q 'has_table_privilege' supabase/uat/singapore/assert_owner_atomic_import_acl_v2.sql
           test -s supabase/uat/singapore/20261108101000_legacy_bom_candidates_review_only_uat_v1.sql
           if grep -l 'hasnaria_uat' supabase/migrations/*.sql; then
             echo 'Singapore-only UAT schema accidentally entered production migrations' >&2
