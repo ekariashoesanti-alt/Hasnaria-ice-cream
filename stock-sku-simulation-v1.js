@@ -89,6 +89,29 @@
         product_id:p?p.id:null,mapping_by_name_only:!!p,has_bom:!!(p&&p.active&&componentsValid),
         status:reason});
     });
+    // Owner review queue: rank by REAL Majoo quantity, not sale-item name occurrences.
+    // It is diagnostic only. Even an empty recipe warning list never permits posting.
+    var reviewQueue=productResults.map(function(r){
+      var reasons=[];
+      if(!r.has_bom){ reasons.push(r.status); }
+      else {
+        var approvalRow=approval.get(r.product_id),recipe=componentMap.get(r.product_id)||[];
+        if(!approvalRow||approvalRow.status!=='verified')reasons.push('RECIPE_NOT_APPROVED');
+        if(recipe.some(function(c){return c.bom_status!=='verified'}))
+          reasons.push('BOM_COMPONENT_UNVERIFIED');
+        if(recipe.some(function(c){var item=inventory.get(c.inventory_item_id);
+          return !item||!String(item.unit||'').trim();}))
+          reasons.push('STOCK_UNIT_UNKNOWN');
+        if(recipe.some(function(c){
+          var arr=convertMap.get(r.product_id+'|'+c.inventory_item_id)||[];
+          return !arr.length||!arr.every(function(x){
+            return x.status==='verified'&&Number.isFinite(Number(x.units_per_purchase_unit))&&Number(x.units_per_purchase_unit)>0;
+          });
+        }))reasons.push('CONVERSION_UNVERIFIED');
+      }
+      return {sku:r.sku,name:r.name,quantity:r.quantity,has_bom:r.has_bom,
+        recipe_review_reasons:reasons,requires_owner_review:reasons.length>0};
+    }).sort(function(a,b){return b.quantity-a.quantity||text(a.name).localeCompare(text(b.name))});
     var summary=Array.from(ingredients.values()).map(function(x){return {
       inventory_item_id:x.inventory_item_id,item_name:x.item_name,unit:x.unit,
       raw_requirement:Number(x.raw_requirement.toFixed(6)),
@@ -105,6 +128,9 @@
       bom_sku_count:skuWithBom,bom_units:unitsWithBom,
       no_bom_sku_count:missingBom,no_bom_units:unitsNoBom,
       recipe_verified_sku_count:qtySourceReady,
+      review_queue:reviewQueue,
+      review_pending_sku_count:reviewQueue.filter(function(x){return x.requires_owner_review}).length,
+      review_pending_units:reviewQueue.reduce(function(n,x){return n+(x.requires_owner_review?x.quantity:0)},0),
       ingredients:summary,unresolved:unresolved,products:productResults,
       report_not_final:b.status!=='approved',all_source_units_raw:true,
       can_modify_operational_stock:false,stock_posting_allowed:false,
