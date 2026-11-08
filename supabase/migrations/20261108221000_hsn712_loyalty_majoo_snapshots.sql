@@ -157,7 +157,7 @@ begin
       raise exception 'Tanggal registrasi di luar jangkauan.';
     end if;
     select c.id into v_customer from public.customers c
-    where c.brand_id=v_brand and regexp_replace(c.phone,'[^0-9]','','g')=v_phone limit 1;
+    where c.brand_id=v_brand and (case when regexp_replace(c.phone,'[^0-9]','','g') ~ '^08' then '62'||substring(regexp_replace(c.phone,'[^0-9]','','g') from 2) else regexp_replace(c.phone,'[^0-9]','','g') end)=v_phone limit 1;
     if v_customer is null then
       insert into public.customers(brand_id,name,phone,first_seen_at,last_seen_at)
       values(v_brand,v_name,v_phone,v_first_seen,v_last_seen)
@@ -224,7 +224,7 @@ begin
   select count(*) into v_total from public.loyalty_customer_snapshots s
   where s.batch_id=v_batch.id and
     (coalesce(btrim(p_search),'')='' or s.source_name ilike '%'||btrim(p_search)||'%' or
-      exists(select 1 from public.customers c where c.id=s.customer_id and c.phone like '%'||regexp_replace(p_search,'[^0-9]','','g')||'%'));
+      exists(select 1 from public.customers c where c.id=s.customer_id and (regexp_replace(p_search,'[^0-9]','','g')<>'' and c.phone like '%'||regexp_replace(p_search,'[^0-9]','','g')||'%')));
   select coalesce(jsonb_agg(to_jsonb(z)),'[]'::jsonb) into v_rows from (
     select s.customer_id,s.source_name as name,right(c.phone,4) as phone_last4,
       s.period_visits as visits,s.period_revenue as revenue,s.last_visit_at,
@@ -234,7 +234,7 @@ begin
     from public.loyalty_customer_snapshots s
     join public.customers c on c.id=s.customer_id and c.brand_id=v_brand
     where s.batch_id=v_batch.id and (coalesce(btrim(p_search),'')='' or
-      s.source_name ilike '%'||btrim(p_search)||'%' or c.phone like '%'||regexp_replace(p_search,'[^0-9]','','g')||'%')
+      s.source_name ilike '%'||btrim(p_search)||'%' or (regexp_replace(p_search,'[^0-9]','','g')<>'' and c.phone like '%'||regexp_replace(p_search,'[^0-9]','','g')||'%'))
     order by
       case when p_sort='spend' then s.period_revenue end desc nulls last,
       case when p_sort='visits' then s.period_visits end desc nulls last,
