@@ -174,7 +174,16 @@
     var receipt=await response.json();
     return {status:'draft',receipt:receipt,preview:parsed};
   }
-  var api={parseMatrix:parseMatrix,stagePreview:stagePreview};
+  // Preview can be explicitly opted into ONLY against the Singapore synthetic UAT backend.
+  // URL alone cannot enable the feature on Tokyo production.
+  function previewFeatureAllowed(host) {
+    var target=String(host && host.HASNARIA_SB || '');
+    var search=String(host && host.location && host.location.search || '');
+    return /^https:\/\/rynnpndtzjwpekbiwiif\.supabase\.co\/?$/.test(target)
+      && /(?:^\?|&)sales_product_preview=1(?:&|$)/.test(search);
+  }
+  if (root) root.__HASNARIA_ENABLE_PRODUCT_REPORT_V1=previewFeatureAllowed(root);
+  var api={parseMatrix:parseMatrix,stagePreview:stagePreview,previewFeatureAllowed:previewFeatureAllowed};
   if(root)root.__HASNARIA_PRODUCT_REPORT_V1=api;
   if(typeof module!=='undefined'&&module.exports)module.exports=api;
 })(typeof window!=='undefined'?window:null);
