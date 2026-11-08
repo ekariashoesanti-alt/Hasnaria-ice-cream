@@ -54,3 +54,72 @@
 .lo1-bar progress::-webkit-progress-bar,.lo1-meter::-webkit-progress-bar{background:#e8f1f2;border-radius:9px}
 .lo1-bar progress::-webkit-progress-value,.lo1-meter::-webkit-progress-value{background:#15877d;border-radius:9px}
 .lo1-bar progress::-moz-progress-bar,.lo1-meter::-moz-progress-bar{background:#15877d;border-radius:9px}
+
+
+/* HSN-713: one-view 100% zoom. Override global full-width form controls. */
+#operasional .lo1-shell{gap:6px;min-width:0;grid-auto-rows:min-content}
+#operasional .lo1-heading{padding:8px 11px;gap:12px;min-height:58px;flex-wrap:nowrap}
+#operasional .lo1-heading>div:first-child{min-width:0;flex:1}
+#operasional .lo1-heading strong{font-size:16px;line-height:1.15;white-space:nowrap}
+#operasional .lo1-heading strong em{font-size:10px;font-style:normal;color:#0e8278;background:#e9f6f3;border-radius:20px;padding:3px 6px;vertical-align:middle}
+#operasional .lo1-heading small{font-size:10px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#operasional .lo1-controls{display:flex;align-items:end;flex:0 0 auto;flex-wrap:nowrap;gap:6px;width:auto;min-width:0}
+#operasional .lo1-shell label:not(.lo1-upload){min-width:0;margin:0;font-size:9px}
+#operasional .lo1-shell button,#operasional .lo1-shell select,#operasional .lo1-shell input,#operasional .lo1-upload{width:auto;min-height:29px;height:29px;padding:4px 8px;font-size:11px;line-height:1.2;border-radius:7px;max-width:100%}
+#operasional .lo1-shell input{min-width:0}
+#operasional .lo1-shell #lo1Period{width:152px;min-width:152px}
+#operasional .lo1-shell .lo1-upload{white-space:nowrap;align-items:center}
+#operasional .lo1-notice,#operasional .lo1-alert{padding:6px 10px;font-size:10px;line-height:1.2;min-height:28px;display:flex;align-items:center}
+#operasional .lo1-coverage{display:flex;align-items:center;gap:9px;min-height:29px;padding:5px 10px;background:#fff9ed;border:1px solid #e9d8b7;border-radius:8px;color:#805b24;font-size:10px;line-height:1.2;min-width:0}
+#operasional .lo1-coverage.complete{background:#eff8f5;border-color:#c7e2d7;color:#176b55}
+#operasional .lo1-coverage b{white-space:nowrap;flex:0 0 auto;font-weight:800}
+#operasional .lo1-coverage span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#operasional .lo1-kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:7px}
+#operasional .lo1-kpi{padding:7px 9px;border-radius:9px;min-width:0}
+#operasional .lo1-kpi span{font-size:9px;line-height:1.1}
+#operasional .lo1-kpi strong{font-size:17px;margin:3px 0 2px;line-height:1.15}
+#operasional .lo1-kpi small{font-size:9px;line-height:1.15}
+#operasional .lo1-graphs{grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:7px}
+#operasional .lo1-graphs section{padding:8px 10px;min-height:111px}
+#operasional .lo1-graphs section>strong{font-size:11px}
+#operasional .lo1-chart{gap:5px;margin-top:6px}
+#operasional .lo1-bar{grid-template-columns:45px minmax(0,1fr) 24px;gap:6px;line-height:1.1}
+#operasional .lo1-bar progress,#operasional .lo1-meter{height:9px;margin-bottom:5px}
+#operasional .lo1-share{font-size:22px;line-height:1.15;margin:7px 0 5px}
+#operasional .lo1-customers{display:flex;flex-direction:column;min-width:0}
+#operasional .lo1-search{display:flex;flex-direction:row;flex-wrap:nowrap;align-items:center;gap:12px;padding:6px 10px;min-height:45px}
+#operasional .lo1-search>div:first-child{min-width:0;flex:1}
+#operasional .lo1-search b{font-size:11px;line-height:1.2}
+#operasional .lo1-search small{font-size:9px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+#operasional .lo1-search .lo1-filterbar{display:grid;grid-template-columns:170px 165px 55px;gap:6px;align-items:center;flex:0 0 auto;width:auto;min-width:0}
+#operasional .lo1-filterbar #lo1Search,#operasional .lo1-filterbar #lo1Sort{width:100%;min-width:0;max-width:100%;height:30px;min-height:30px;margin:0;font-size:10px}
+#operasional .lo1-filterbar [data-lo1="search"]{width:55px;min-width:55px;height:30px}
+#operasional .lo1-tablewrap{max-height:none;overflow-x:auto;overflow-y:visible;min-width:0}
+#operasional .lo1-tablewrap table{font-size:10px;table-layout:fixed;width:100%;border-collapse:collapse}
+#operasional .lo1-tablewrap th{font-size:9px;white-space:nowrap;padding:5px 8px;height:25px}
+#operasional .lo1-tablewrap td{font-size:10px;line-height:1.15;padding:5px 8px;height:26px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#operasional .lo1-tablewrap th:first-child,#operasional .lo1-tablewrap td:first-child{width:23%}
+#operasional .lo1-tablewrap th:nth-child(2),#operasional .lo1-tablewrap td:nth-child(2){width:15%}
+#operasional .lo1-tablewrap th:nth-child(3),#operasional .lo1-tablewrap td:nth-child(3){width:14%}
+#operasional .lo1-tablewrap th:nth-child(4),#operasional .lo1-tablewrap td:nth-child(4){width:17%}
+#operasional .lo1-tablewrap th:nth-child(5),#operasional .lo1-tablewrap td:nth-child(5){width:15%}
+#operasional .lo1-tablewrap th:last-child,#operasional .lo1-tablewrap td:last-child{width:16%}
+#operasional .lo1-chip{font-size:9px;padding:2px 6px}
+#operasional .lo1-pager{padding:5px;gap:8px;font-size:10px;min-height:29px}
+#operasional .lo1-shell .lo1-pager button{min-height:25px;height:25px;padding:3px 7px;font-size:10px}
+#operasional .lo1-disclaimer{font-size:9px;line-height:1.2;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#operasional .lo1-preview{padding:7px 10px;gap:8px}
+#operasional .lo1-preview>div:last-child{width:auto;flex-wrap:nowrap}
+@media(max-width:1050px){
+ #operasional .lo1-heading{flex-wrap:wrap}
+ #operasional .lo1-controls{width:100%;justify-content:flex-end}
+ #operasional .lo1-search{flex-wrap:wrap}
+ #operasional .lo1-search .lo1-filterbar{width:100%;grid-template-columns:minmax(0,1fr) minmax(0,1fr) 55px}
+}
+@media(max-width:900px){
+ #operasional .lo1-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}
+ #operasional .lo1-graphs{grid-template-columns:1fr}
+ #operasional .lo1-coverage{flex-wrap:wrap}
+ #operasional .lo1-coverage span{white-space:normal}
+ #operasional .lo1-disclaimer{white-space:normal}
+}
