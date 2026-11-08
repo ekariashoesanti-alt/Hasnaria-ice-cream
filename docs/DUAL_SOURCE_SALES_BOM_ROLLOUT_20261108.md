@@ -183,3 +183,23 @@ Applied and tested in Singapore **only**. Verified: Owner direct INSERT and auth
 Replayable security UAT: `supabase/uat/singapore/assert_owner_atomic_import_acl_v2.sql`. CI now requires both the ACL migration and its UAT evidence file.
 
 **Production release rule:** never apply only the initial table migration; the ACL hardening migration must be applied and validated before exposing the new report endpoint. There is no approved merge or stock-posting activation.
+
+## Stage 4: Order-channel controls and ambiguous POST recovery (2026-11-08)
+
+**Original October Majoo receipt breakdown (all 824 receipts / Rp21,614,500):**
+
+| Majoo Jenis Order | Receipts | Receipt gross |
+|---|---:|---:|
+| Bungkus | 501 | Rp10,252,500 |
+| Free Table | 138 | Rp5,378,000 |
+| Lainnya | 94 | Rp3,325,000 |
+| Ojek Online - Go-Jek | 60 | Rp1,456,000 |
+| Table | 31 | Rp1,203,000 |
+
+- Parsed from the original uploaded Detail Transaksi CSV using the `Jenis Order` column, not inferred from payment. The original CSV has separate `Metode Pembayaran` (Cash, QRIS Mandiri, GOJEK); payment and order categories are distinct dimensions. Do NOT assume the Ojek Online category explains the unexplained Rp622,000 difference without itemized source evidence.
+- Updated `sales-reconciliation-v1.js` to retain per-category receipts and gross amounts as `by_order_type` and `by_payment_method`, and use prototype-free aggregation dictionaries for untrusted CSV text. The Preview shows a compact, expandable breakdown; still read-only, no new revenue or stock posting.
+- Added Singapore-private `hasnaria_uat.transaction_order_type_reference` and five actual category rows under `supabase/uat/singapore/20261108141000_order_type_reconciliation_uat_v1.sql`. Cross-checked against original daily and payment controls; all sum to 824 receipts and Rp21,614,500. The four-source assertion suite explicitly checks the channel totals. This UAT-only table must never enter production migration history.
+- Hardened the Owner-confirmed product report saving client against lost HTTP replies: GET timeout 15 sec, POST timeout 30 sec, and explicit 401 login message. When POST response might have been lost after a DB commit, it **does not re-POST**. It performs an immutable SHA-256 + every-field source reread; if the batch exists, returns `recovered_from_uncertain_post=true` and reports a safe recovery. If unable to confirm, it reports *unknown save state* and asks for a check of the same checksum. Tests simulate connection lost after commit, no commit, and expired Owner login.
+- None of these changes relaxes the Singapore-only feature flag or enables any production financial/stock path.
+
+**Open blockers** remain the Rp622,000 Majoo source mismatch (not proven to be channel-specific), the physical BOM conversion/Owner approval, and authenticated visual Owner XLSX+CSV UAT.
