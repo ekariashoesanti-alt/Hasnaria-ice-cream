@@ -163,8 +163,8 @@
     Array.prototype.forEach.call(host.querySelectorAll('*'), function (el) {
       if (el.children.length) return;
       var text = (el.textContent || '').replace(/\s+/g, ' ').trim();
-      if (text === 'Produk Terjual (Qty)') el.textContent = 'Kemunculan Produk';
-      else if (el.matches && el.matches('[data-sku-metric="qty"]') && text === 'Qty') el.textContent = 'Kemunculan';
+      if (text === 'Produk Terjual (Qty)' || text === 'Kemunculan Produk') el.textContent = 'Kuantitas Produk';
+      else if (el.matches && el.matches('.sb-top-seller [data-sku-metric="qty"]') && text === 'Kemunculan') el.textContent = 'Qty';
       else if (/^\d[\d.]* SKU terdaftar$/.test(text)) el.textContent = text.replace(' SKU terdaftar', ' menu unik');
       else if (/^\d[\d.]* pcs(?:\s|$|\()/.test(text)) el.textContent = text.replace(/ pcs\b/, '×');
     });
