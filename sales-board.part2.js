@@ -78,7 +78,7 @@ v class="sb-period">' +
       '</div>' +
       '</div>';
 
-    html += '</div>' + renderFormatHelpModal() + renderImportStatusModal();
+    html += '</div>' + renderFormatHelpModal() + renderReportSourceChoiceModal() + renderReportPreviewModal() + renderImportStatusModal();
     board.innerHTML = html;
     STATE.draw = false;
     bind();
@@ -144,12 +144,44 @@ v class="sb-period">' +
       };
     }
 
-    // File selection & staging
+    // Two-source selection is preview-only behind explicit feature flag.
     var fileInput = host.querySelector('#sbFileInput');
     var btnChoose = host.querySelector('#sbBtnChoose') || host.querySelector('#sbBtnChooseEmpty');
+    var reportFlag = window.__HASNARIA_ENABLE_PRODUCT_REPORT_V1 === true;
     if (btnChoose && fileInput) {
-      btnChoose.onclick = function () { fileInput.click(); };
+      btnChoose.onclick = function () {
+        if(reportFlag){STATE.reportChoiceOpen=true;draw();}
+        else fileInput.click();
+      };
     }
+    var reportChoiceClose=host.querySelector('#sbReportChoiceClose');
+    if(reportChoiceClose)reportChoiceClose.onclick=function(){STATE.reportChoiceOpen=false;draw();};
+    var reportChoiceOverlay=host.querySelector('#sbReportChoiceOverlay');
+    if(reportChoiceOverlay)reportChoiceOverlay.onclick=function(e){
+      if(e.target===reportChoiceOverlay){STATE.reportChoiceOpen=false;draw();}
+    };
+    host.querySelectorAll('[data-hsn-report-type]').forEach(function(button){
+      button.onclick=function(){
+        if(!reportFlag||!fileInput)return;
+        var kind=button.getAttribute('data-hsn-report-type');
+        if(kind!=='detail'&&kind!=='product')return;
+        STATE.selectedUploadType=kind;STATE.reportPreview=null;STATE.stagedFiles=[];
+        STATE.showReportPreview=false;
+        fileInput.value='';
+        fileInput.accept=kind==='product'?'.xlsx,.xls':'.csv,.xlsx,.xls,.txt';
+        fileInput.multiple=(kind==='detail');
+        // Keep the input alive until onchange; do not redraw here.
+        fileInput.click();
+      };
+    });
+    var reportPreviewClose=host.querySelector('#sbReportPreviewClose');
+    var reportPreviewOkay=host.querySelector('#sbReportPreviewOkay');
+    if(reportPreviewClose)reportPreviewClose.onclick=function(){STATE.showReportPreview=false;draw();};
+    if(reportPreviewOkay)reportPreviewOkay.onclick=function(){STATE.showReportPreview=false;draw();};
+    var reportPreviewOverlay=host.querySelector('#sbReportPreviewOverlay');
+    if(reportPreviewOverlay)reportPreviewOverlay.onclick=function(e){
+      if(e.target===reportPreviewOverlay){STATE.showReportPreview=false;draw();}
+    };
 
     if (fileInput) {
       fileInput.onchange = async function () {
@@ -158,6 +190,22 @@ v class="sb-period">' +
           STATE.stagedFiles = flist;
           STATE.error = '';
           STATE.msg = '';
+          if(reportFlag && STATE.selectedUploadType==='product'){
+            try{
+              if(flist.length!==1)throw new Error('Rekap Produk harus satu file Excel per bulan.');
+              if(!window.__HASNARIA_PRODUCT_REPORT_V1)throw new Error('Pembaca rekap belum siap. Refresh halaman.');
+              STATE.reportPreview=window.__HASNARIA_PRODUCT_REPORT_V1.parseMatrix(await getFileMatrix(flist[0]));
+              STATE.stagedFileType='Rekap SKU bulanan — preview saja';
+              STATE.stagedFileRows=STATE.reportPreview.source_row_count;
+              STATE.reportChoiceOpen=false;
+            }catch(e){
+              STATE.error='Rekap Produk ditolak: '+(e&&e.message?e.message:e);
+              STATE.reportPreview=null;STATE.stagedFiles=[];STATE.stagedFileType='';
+              STATE.reportChoiceOpen=false;
+            }
+            draw();return;
+          }
+          STATE.reportChoiceOpen=false;
           if (flist.length === 1) {
             try {
               var rawPreview = await previewFileType(flist[0]);
@@ -180,6 +228,8 @@ v class="sb-period">' +
       btnCancelFile.onclick = function () {
         STATE.stagedFiles = [];
         STATE.stagedFileType = '';
+        STATE.reportPreview = null;
+        STATE.selectedUploadType = null;
         if (fileInput) fileInput.value = '';
         draw();
       };
@@ -190,6 +240,11 @@ v class="sb-period">' +
     if (btnSubmit) {
       btnSubmit.onclick = function () {
         if (STATE.stagedFiles && STATE.stagedFiles.length && !STATE.importing) {
+          if(reportFlag && STATE.selectedUploadType==='product'){
+            if(STATE.reportPreview){STATE.showReportPreview=true;draw();}
+            else {STATE.error='Preview rekap belum valid. Pilih ulang file.';draw();}
+            return;
+          }
           importFiles(STATE.stagedFiles);
         }
       };
