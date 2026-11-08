@@ -346,3 +346,25 @@ test('reject numeric orphan SKU row even if the original footer would remain acc
   base.push(footer);
   assert.equal(parseMatrix(base).rows.length,2);
 });
+
+
+test('a rejected stored batch cannot be mistaken for a successful duplicate upload',async()=>{
+  const prev=globalThis.fetch,calls=[];
+  globalThis.fetch=async(url,options)=>{
+    calls.push({url:String(url),method:options&&options.method||'GET'});
+    return {ok:true,json:async()=>[{id:'old-rejected-batch',status:'rejected',source_row_count:2}]};
+  };
+  const bytes=new TextEncoder().encode('rejected file bytes');
+  try{
+    await assert.rejects(
+      stagePreview({name:'Rejected.xlsx',size:bytes.length,arrayBuffer:async()=>bytes.buffer},matrix(),{
+        singaporeUatApproved:true,enableWrite:true,confirmed:true,
+        brandId:'brand-1',outletId:'out-1',
+        supabaseUrl:'https://rynnpndtzjwpekbiwiif.supabase.co',
+        publishableKey:'staging-publishable',getAccessToken:async()=> 'owner-jwt'
+      }),
+      /pernah ditolak/
+    );
+    assert.equal(calls.filter(x=>x.method==='POST').length,0);
+  } finally {globalThis.fetch=prev;}
+});
