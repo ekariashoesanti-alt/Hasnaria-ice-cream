@@ -1,0 +1,41 @@
+/* Owner Attendance module; compact one-view cards consistent with HASNARIA green palette. */
+#operasional .at1-shell{min-width:0;color:#194a3a}
+#operasional .at1-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:10px}
+#operasional .at1-eyebrow{font-size:8px;color:#168363;letter-spacing:.13em;font-weight:900}
+#operasional .at1-heading h2{font-size:20px;line-height:1.2;margin:2px 0 3px;color:#143f32}
+#operasional .at1-heading p{font-size:9px;margin:0;color:#728079}
+#operasional .at1-controls{display:flex;align-items:end;gap:8px}
+#operasional .at1-controls label:not(.at1-upload){display:flex;flex-direction:column;font-size:8px;font-weight:800;color:#728079;gap:3px}
+#operasional .at1-controls select,#operasional .at1-controls button,#operasional .at1-upload{box-sizing:border-box;height:34px;border:1px solid #d2e4db;border-radius:9px;background:white;color:#225343;font-size:9px;font-weight:800;padding:0 12px;cursor:pointer}
+#operasional .at1-controls select{min-width:150px}
+#operasional .at1-upload{display:flex;align-items:center;background:#176b55;color:#fff;border-color:#176b55}
+#operasional .at1-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin-bottom:10px}
+#operasional .at1-kpis>div{border:1px solid #dce8e3;border-radius:11px;background:#fff;padding:9px 10px;display:flex;justify-content:space-between;gap:8px;align-items:center}
+#operasional .at1-kpis span{font-size:8px;font-weight:850;color:#73827b;text-transform:uppercase}
+#operasional .at1-kpis strong{font-size:18px;color:#176b55}
+#operasional .at1-panel{border:1px solid #dce8e3;border-radius:12px;background:#fff;overflow:hidden}
+#operasional .at1-panel-head{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px;border-bottom:1px solid #e5eee9}
+#operasional .at1-panel-head strong{font-size:11px;color:#194a3a}
+#operasional .at1-panel-head input{min-width:210px;height:31px;padding:0 9px;border:1px solid #dce8e3;border-radius:8px;font-size:9px}
+#operasional .at1-table-scroll{max-height:min(54vh,490px);overflow:auto}
+#operasional .at1-table-scroll table{width:100%;border-collapse:collapse;font-size:9px}
+#operasional .at1-table-scroll th{position:sticky;top:0;background:#f3faf6;text-align:left;padding:10px 9px;color:#386b58;font-weight:850;white-space:nowrap}
+#operasional .at1-table-scroll td{padding:9px;border-bottom:1px solid #eef3f0;white-space:nowrap;color:#34584a}
+#operasional .at1-table-scroll td strong{font-size:9px;color:#194a3a}
+#operasional .at1-tag{padding:4px 7px;border-radius:6px;background:#e7f5ee;color:#176b55;font-weight:800;font-size:8px}
+#operasional .at1-foot,#operasional .at1-caution{padding:8px 10px;color:#6b8175;font-size:8px}
+#operasional .at1-caution{margin-top:8px;background:#f4faf7;border:1px solid #dce8e3;border-radius:9px}
+#operasional .at1-empty{display:grid;place-items:center;min-height:160px;color:#71877d;font-size:10px}
+#operasional .at1-error,#operasional .at1-success,#operasional .at1-info{border-radius:9px;padding:10px;margin-bottom:8px;font-size:9px}
+#operasional .at1-error{background:#fff3f0;border:1px solid #efc8bd;color:#a5432e}
+#operasional .at1-success{background:#edf9f3;border:1px solid #b9ddcc;color:#176b55}
+#operasional .at1-info{background:#f6faf8;border:1px solid #dce8e3;color:#5b786b}
+#operasional .at1-preview{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px;background:#f3faf6;border:1px solid #bcdccc;border-radius:10px;margin-bottom:8px}
+#operasional .at1-preview>div:first-child{display:flex;flex-direction:column;gap:4px}
+#operasional .at1-preview b{font-size:10px}
+#operasional .at1-preview small{font-size:8px;color:#617d6f}
+#operasional .at1-preview>div:last-child{display:flex;gap:6px}
+#operasional .at1-preview button{height:30px;padding:0 10px;border:1px solid #c5ddd2;background:white;color:#176b55;border-radius:8px;font-weight:800;font-size:9px;cursor:pointer}
+#operasional .at1-preview button.at1-primary{background:#176b55;color:white;border-color:#176b55}
+@media(max-width:900px){#operasional .at1-heading{align-items:flex-start;flex-direction:column}#operasional .at1-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:620px){#operasional .at1-controls{flex-wrap:wrap;width:100%}#operasional .at1-panel-head{align-items:stretch;flex-direction:column}#operasional .at1-panel-head input{width:100%;min-width:0}}
