@@ -100,13 +100,32 @@ test('checks sales totals and handles Indonesian numeric formatted values',()=>{
   m[11][6]='2';m[11][8]='10.000,00';
   assert.equal(parseMatrix(m).totals.sales,21000);
 });
-test('product report chooser is disabled on production even with query flag',()=>{
-  assert.equal(previewFeatureAllowed({HASNARIA_SB:'https://bnnhmtkpdjlgehsvgoda.supabase.co',location:{search:'?sales_product_preview=1'}}),false);
-  assert.equal(previewFeatureAllowed({HASNARIA_SB:'https://bnnhmtkpdjlgehsvgoda.supabase.co',location:{search:'?sku_review=1'}}),true);
-  assert.equal(previewFeatureAllowed({HASNARIA_SB:'https://bnnhmtkpdjlgehsvgoda.supabase.co',location:{search:''}}),false);
-  assert.equal(previewFeatureAllowed({HASNARIA_SB:'https://bnnhmtkpdjlgehsvgoda.supabase.co.evil.test',location:{search:'?sku_review=1'}}),false);
+test('Tokyo owner sees XLS/XLSX SKU chooser without URL flag, staff cannot activate via URL',()=>{
+  const owner={HASNARIA_SB:'https://bnnhmtkpdjlgehsvgoda.supabase.co',
+    __HASNARIA_CONTEXT:{role:'owner'},location:{search:''}};
+  assert.equal(previewFeatureAllowed(owner),true);
+  assert.equal(previewFeatureAllowed({...owner,location:{search:'?sku_review=1'}}),true);
+  assert.equal(previewFeatureAllowed({...owner,__HASNARIA_CONTEXT:{role:'head_store'}}),false);
+  assert.equal(previewFeatureAllowed({...owner,__HASNARIA_CONTEXT:{role:'head_store'},location:{search:'?sku_review=1'}}),false);
+  assert.equal(previewFeatureAllowed({...owner,__HASNARIA_CONTEXT:undefined}),false);
+  assert.equal(previewFeatureAllowed({...owner,HASNARIA_SB:'https://bnnhmtkpdjlgehsvgoda.supabase.co.evil.test'}),false);
+  assert.equal(previewFeatureAllowed({...owner,HASNARIA_SB:'https://rynnpndtzjwpekbiwiif.supabase.co'}),false);
   assert.equal(previewFeatureAllowed({HASNARIA_SB:'https://rynnpndtzjwpekbiwiif.supabase.co',location:{search:''}}),false);
   assert.equal(previewFeatureAllowed({HASNARIA_SB:'https://rynnpndtzjwpekbiwiif.supabase.co',location:{search:'?sales_product_preview=1'}}),true);
+});
+
+test('late login and logout update the Owner UI permission flag without refresh or lost query',()=>{
+  const vm=require('node:vm'),fs=require('node:fs'),path=require('node:path');
+  const code=fs.readFileSync(path.join(__dirname,'..','sales-product-report-v1.js'),'utf8');
+  const win={HASNARIA_SB:'https://bnnhmtkpdjlgehsvgoda.supabase.co',location:{search:''}};
+  vm.runInNewContext(code,{window:win,module:{exports:{}},console},{timeout:1000});
+  assert.equal(win.__HASNARIA_ENABLE_PRODUCT_REPORT_V1,false);
+  win.__HASNARIA_CONTEXT={role:'owner'};
+  assert.equal(win.__HASNARIA_ENABLE_PRODUCT_REPORT_V1,true);
+  win.__HASNARIA_CONTEXT={role:'pelaksana'};
+  assert.equal(win.__HASNARIA_ENABLE_PRODUCT_REPORT_V1,false);
+  delete win.__HASNARIA_CONTEXT;
+  assert.equal(win.__HASNARIA_ENABLE_PRODUCT_REPORT_V1,false);
 });
 
 console.log('Sales product report strict staging parser regression: registered');
