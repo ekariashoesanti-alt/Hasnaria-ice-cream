@@ -107,7 +107,11 @@
     integrationSeq: 0,
     integrationPeriod: '',
     chartUnit: '',
-    chartPage: 1
+    chartPage: 1,
+    skuSim: null,
+    skuSimLoading: false,
+    skuSimError: '',
+    skuSimSeq: 0
   };
 
   function esc(value) {
@@ -1259,6 +1263,7 @@
         '<label><span>Bulan</span><select id="sc4Period" data-month-filter="stok">'+options+'</select></label>'+
         '<button type="button" class="sc5-text-btn" data-sc4-modal="ledger" aria-haspopup="dialog">Ledger Periode</button>'+ 
         (isOwner()?'<button type="button" class="sc5-text-btn" data-sc4-modal="recipes" aria-haspopup="dialog">Cek Resep Produk</button>':'')+
+        (isOwner()?'<button type="button" class="sc5-text-btn" data-sc4-modal="sku-sim" aria-haspopup="dialog">Simulasi Qty × BOM</button>':'')+
         (isOwner()?'<button type="button" class="sc5-text-btn" data-sc4-modal="formula-audit" aria-haspopup="dialog">Periksa Hitungan</button>':'')+
         (isOwner()?'<button type="button" class="sc5-text-btn" data-sc4-action="upload-purchase">Upload Pembelian</button>':'')+
         '<button type="button" class="sc5-refresh" data-sc3-action="refresh" aria-label="Refresh data Stok">↻</button>'+
@@ -1887,16 +1892,122 @@
       '</div>';
   }
 
+  // Owner-only, on-demand simulation against the immutable monthly Majoo
+  // product-report source. Never write or run a stock-posting RPC here.
+  var skuSimEnginePromise=null;
+  function ensureSkuSimEngine(){
+    if(window.__HASNARIA_STOCK_SKU_SIM_V1)return Promise.resolve(window.__HASNARIA_STOCK_SKU_SIM_V1);
+    if(skuSimEnginePromise)return skuSimEnginePromise;
+    skuSimEnginePromise=new Promise(function(resolve,reject){
+      var el=document.createElement('script');
+      el.src='/stock-sku-simulation-v1.js?v=1';
+      el.async=true;
+      el.onload=function(){
+        if(window.__HASNARIA_STOCK_SKU_SIM_V1)resolve(window.__HASNARIA_STOCK_SKU_SIM_V1);
+        else reject(new Error('Modul simulasi belum termuat'));
+      };
+      el.onerror=function(){reject(new Error('Gagal memuat modul simulasi SKU'));};
+      document.head.appendChild(el);
+    }).catch(function(err){skuSimEnginePromise=null;throw err;});
+    return skuSimEnginePromise;
+  }
+  async function loadSkuSimulation(){
+    if(!isOwner()||S.skuSimLoading)return;
+    var seq=++S.skuSimSeq;
+    S.skuSimLoading=true;S.skuSimError='';S.skuSim=null;render();
+    try{
+      var api=await ensureSkuSimEngine();
+      var batches=await request('sales_product_report_batches?'+qs({
+        brand_id:'eq.'+BRAND,
+        select:'id,brand_id,outlet_id,period_month,status,source_row_count,file_sha256,created_at',
+        order:'created_at.desc',limit:'30'
+      }));
+      if(seq!==S.skuSimSeq)return;
+      var valid=(batches||[]).filter(function(x){
+        return x.brand_id===BRAND&&(x.status==='under_review'||x.status==='approved');
+      });
+      // Match Stock's selected month first; otherwise show the most recently
+      // uploaded month, clearly labeling it as such in the modal.
+      var chosen=valid.find(function(x){return monthKey(x.period_month)===S.period;})||valid[0];
+      if(!chosen)throw new Error('Belum ada Rekap Penjualan Produk untuk disimulasikan. Unggah Excel dari tab Penjualan dahulu.');
+      if(valid.filter(function(x){return x.period_month===chosen.period_month;}).length>1)
+        throw new Error('Lebih dari satu batch SKU pada bulan sama. Periksa sumber agar tidak menggandakan Qty.');
+      var lineQuery=qs({batch_id:'eq.'+chosen.id,
+        select:'line_no,source_sku,source_product_name,quantity,refund_quantity,source_sales_amount',
+        order:'line_no.asc',limit:'500'});
+      var all=await Promise.all([
+        request('sales_product_report_lines?'+lineQuery),
+        request('products?'+qs({brand_id:'eq.'+BRAND,select:'id,name,sku,active',limit:'500'})),
+        request('inventory_recipe_components?'+qs({brand_id:'eq.'+BRAND,
+          select:'product_id,inventory_item_id,qty_per_sale,bom_status,active',active:'eq.true',limit:'1000'})),
+        request('inventory_items?'+qs({brand_id:'eq.'+BRAND,select:'id,item_name,unit',limit:'1000'})),
+        request('product_recipe_verifications?'+qs({brand_id:'eq.'+BRAND,
+          select:'product_id,status,effective_from',limit:'500'})),
+        request('inventory_unit_conversions?'+qs({brand_id:'eq.'+BRAND,
+          select:'product_id,inventory_item_id,status,units_per_purchase_unit,purchase_unit,sale_unit',limit:'1000'}))
+      ]);
+      if(seq!==S.skuSimSeq)return;
+      S.skuSim=api.calculate({batch:chosen,lines:all[0],products:all[1],
+        components:all[2],items:all[3],approvals:all[4],conversions:all[5]});
+    }catch(err){
+      if(seq===S.skuSimSeq)S.skuSimError=err&&err.message?err.message:String(err);
+    }finally{
+      if(seq===S.skuSimSeq){
+        S.skuSimLoading=false;
+        if(S.modal==='sku-sim')render();
+      }
+    }
+  }
+
+  function renderSkuSimulation(){
+    if(!isOwner())return '<div class="sc4-empty">Hanya tersedia untuk Owner.</div>';
+    if(S.skuSimLoading)return '<div class="sc3-loading">Membaca SKU Majoo dan BOM Tokyo. Saldo stok tidak diubah…</div>';
+    if(S.skuSimError)return '<div class="sc3-alert">'+esc(S.skuSimError)+'</div>'+
+      '<button type="button" class="sc5-secondary" data-sc25-refresh="1">Coba lagi</button>';
+    if(!S.skuSim)return '<button type="button" class="sc5-secondary" data-sc25-refresh="1">Muat simulasi SKU</button>';
+    var z=S.skuSim,rows=z.ingredients||[],pending=z.unresolved||[];
+    var notice='<div class="sc4-info"><b>SIMULASI / BELUM POSTING</b> — Periode laporan: '+esc(monthLabel(z.period_month))+
+      ' · Status sumber: '+esc(z.source_status)+'. Kebutuhan bruto = Qty terjual × resep aktif Tokyo.'+
+      ' Refund '+fmt(z.refunded_units)+' unit hanya dicatat sebagai paparan, tidak otomatis mengembalikan bahan.'+
+      ' KPI dan ledger stok tetap tidak berubah.</div>';
+    var summary='<div class="sc3-filters">'+
+      '<span><b>'+fmt(z.source_sku_count)+'</b> SKU</span>'+
+      '<span><b>'+fmt(z.total_units)+'</b> unit Majoo</span>'+
+      '<span><b>'+fmt(z.bom_sku_count)+'</b> SKU punya BOM ('+fmt(z.bom_units)+' unit)</span>'+
+      '<span><b>'+fmt(pending.length)+'</b> SKU perlu review</span>'+
+      '<button type="button" class="sc5-secondary" data-sc25-refresh="1">↻ Perbarui</button>'+
+      '</div>';
+    var table='<div class="sc3-table-wrap"><table class="sc3-table"><thead><tr>'+
+      '<th>Bahan</th><th>Satuan resep</th><th>Kebutuhan bruto (teoretis)</th>'+
+      '<th>Potensi refund*</th><th>Status</th></tr></thead><tbody>'+
+      rows.map(function(x){
+        return '<tr><td>'+esc(x.item_name)+'</td><td>'+esc(x.unit)+'</td>'+
+          '<td>'+fmt(x.raw_requirement)+'</td><td>'+fmt(x.possible_refund_raw)+'</td>'+
+          '<td>'+esc(x.needs_review?'Verifikasi BOM / konversi':'Komponen terverifikasi; perlu review sumber')+'</td></tr>';
+      }).join('')+'</tbody></table></div>';
+    var missing=pending.length?'<h4>SKU memerlukan tindak lanjut</h4><div class="sc3-table-wrap">'+
+      '<table class="sc3-table"><thead><tr><th>SKU</th><th>Produk</th><th>Qty</th><th>Alasan</th></tr></thead><tbody>'+
+      pending.map(function(x){return'<tr><td>'+esc(x.sku)+'</td><td>'+esc(x.name)+'</td>'+
+        '<td>'+fmt(x.quantity)+'</td><td>'+esc(x.reason)+'</td></tr>'}).join('')+'</tbody></table></div>':'';
+    return notice+summary+
+      '<p class="sc5-caption">Pemetaan produk berdasarkan nama identik (tanpa kapitalisasi); relasi kode SKU masih perlu disahkan. '+fmt(rows.length)+
+      ' kelompok bahan/satuan tidak boleh dijumlahkan silang. Belum ada izin pengurangan stok dari hasil ini.</p>'+
+      table+missing+
+      '<p class="sc5-caption">*Refund tidak selalu mengembalikan bahan yang telah diracik. Tidak tersedia tombol posting saldo di halaman simulasi.</p>';
+  }
+
   function renderModal() {
     if (!S.modal) return '';
     var title = S.modal === 'ledger' ? 'Ledger · ' + monthLabel(S.period) :
       S.modal === 'recipes' ? 'Cek Resep Produk · ' + monthLabel(S.period) :
+      S.modal === 'sku-sim' ? 'Simulasi Penjualan Produk → BOM' :
       S.modal === 'formula-audit' ? 'Periksa Hitungan Stok' : 'Posisi SKU Saat Ini';
     var body = S.modal === 'ledger' ? renderLedgerTable() :
       S.modal === 'recipes' ? renderRecipeReview() :
+      S.modal === 'sku-sim' ? renderSkuSimulation() :
       S.modal === 'formula-audit' ? renderFormulaAudit() :
       renderFormula() + renderAuxState() + renderFilters() + renderTable();
-    return '<div class="sc4-modal-backdrop" data-sc4-close="1"><section class="sc4-modal" role="dialog" aria-modal="true" aria-labelledby="sc4ModalTitle" tabindex="-1"><div class="sc4-modal-head"><div><div class="sc3-eyebrow">DETAIL STOK</div><h3 id="sc4ModalTitle">' + esc(title) + '</h3><p>' + (S.modal === 'ledger' ? 'Movement periode terpilih; quantity tetap dalam satuan masing-masing SKU.' : S.modal === 'recipes' ? 'Penjualan berdasarkan bulan; resep berlaku terus sejak disetujui sampai diubah.' :
+    return '<div class="sc4-modal-backdrop" data-sc4-close="1"><section class="sc4-modal" role="dialog" aria-modal="true" aria-labelledby="sc4ModalTitle" tabindex="-1"><div class="sc4-modal-head"><div><div class="sc3-eyebrow">DETAIL STOK</div><h3 id="sc4ModalTitle">' + esc(title) + '</h3><p>' + (S.modal === 'sku-sim' ? 'Simulasi teoretis dari rekap Majoo, tidak mengurangi saldo atau menyetujui BOM.' : S.modal === 'ledger' ? 'Movement periode terpilih; quantity tetap dalam satuan masing-masing SKU.' : S.modal === 'recipes' ? 'Penjualan berdasarkan bulan; resep berlaku terus sejak disetujui sampai diubah.' :
         S.modal === 'formula-audit' ? 'Audit hitung ulang semua SKU berdasarkan data yang sudah tercatat, bukan stok fisik baru.' :
         'Saldo terkini, opname, incoming, kebutuhan dan days cover.') + '</p></div><button type="button" data-sc4-close="1" class="sc4-close" aria-label="Tutup">×</button></div><div class="sc4-modal-body">' + body + '</div></section></div>';
   }
@@ -2269,6 +2380,8 @@
 
   function bind(host) {
     host.onclick = function (e) {
+      var skuSimRefresh=e.target&&e.target.closest?e.target.closest('[data-sc25-refresh]'):null;
+      if(skuSimRefresh&&isOwner()&&S.modal==='sku-sim'){loadSkuSimulation();return;}
       var stockChartPage=e.target&&e.target.closest?e.target.closest('[data-sc21-page]'):null;
       if(stockChartPage&&!stockChartPage.disabled){
         S.chartPage=Number(stockChartPage.getAttribute('data-sc21-page'))||1;
@@ -2323,6 +2436,7 @@
         S.modal = modal.getAttribute('data-sc4-modal') || '';
         if (S.modal === 'ledger' && !S.ledgerLoading) loadLedger();
         else if (S.modal === 'recipes') loadRecipeReview();
+        else if (S.modal === 'sku-sim') loadSkuSimulation();
         else if (S.modal === 'formula-audit') loadFormulaAudit();
         else render();
         stockDialogFocus(host);

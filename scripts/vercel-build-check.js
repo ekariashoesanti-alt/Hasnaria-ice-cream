@@ -293,6 +293,8 @@ hardenRuntimeStyleAttachment(dist);
 run(process.execPath, ['--check', path.join(dist, 'sales-ui-patch.js')]);
 run(process.execPath, ['--check', path.join(dist, 'stock-monitor.js')]);
 
+if (!fs.existsSync(path.join(dist, 'stock-sku-simulation-v1.js'))) fail('Owner stock SKU BOM read-only model not deployed');
+run(process.execPath, ['--check', path.join(dist, 'stock-sku-simulation-v1.js')]);
 if (!fs.existsSync(path.join(dist, 'index.html'))) fail('dist/index.html was not produced');
 assertRuntimeArtifactClosure(dist);
 console.log('Vercel build gate: PASS');
