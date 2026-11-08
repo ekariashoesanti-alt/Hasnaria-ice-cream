@@ -128,6 +128,46 @@
       cfd_candidates:cfdCandidates,cfd_candidate_gross:round2(cfdCandidates.reduce(function(t,c){return t+c.receipt_total;},0)),
       sku_quantity_known:false,stock_posting_allowed:false};
   }
+  // Diagnostic only. Given the average price per sold SKU from the monthly
+  // report, can a receipt total be reached by at least one unit for EACH
+  // listed name, plus any number of extra units from THOSE SAME names?
+  // If not, itemized price/discount/fee review is needed. This CANNOT prove
+  // a missing SKU, identify the actual extra charge, or estimate stock.
+  function canExplainAtReferencePrices(residual,names,products){
+    if(!Number.isFinite(residual))return null;
+    if(residual < -0.011)return false;
+    var amount=Math.round(residual*100);
+    if(Math.abs(residual*100-amount)>0.02)return null;
+    if(amount===0)return true;
+    var seen=new Set(),denominations=[],g=0;
+    function gcd(a,b){while(b){var t=a%b;a=b;b=t;}return a;}
+    for(var i=0;i<names.length;i++){
+      var product=products.get(key(names[i]));
+      if(!product)return null;
+      var cents=Math.round(product.price*100);
+      if(!Number.isSafeInteger(cents)||
+          Math.abs(product.price*100-cents)>0.02)return null;
+      if(cents>0 && !seen.has(cents)){
+        seen.add(cents);
+        denominations.push(cents);
+        g=gcd(g,cents);
+      }
+    }
+    if(!denominations.length)return false;
+    if(amount%g!==0)return false;
+    var target=amount/g;
+    // Fail as unassessable instead of burning CPU on huge or hostile files.
+    if(target>10000)return null;
+    var reachable=new Uint8Array(target+1);
+    reachable[0]=1;
+    for(var d=0;d<denominations.length;d++){
+      var coin=denominations[d]/g;
+      for(var t=coin;t<=target;t++){
+        if(reachable[t-coin])reachable[t]=1;
+      }
+    }
+    return !!reachable[target];
+  }
   function reconcile(detailMatrix,productReport){
     if(!productReport||!Array.isArray(productReport.rows)||!productReport.period_month)
       err('Preview Rekap Produk belum valid');
@@ -142,7 +182,7 @@
       if(!(p.quantity>0)||!(p.sales_amount>=0))err('Qty/harga SKU tidak valid: '+p.sku);
       products.set(k,{sku:p.sku,name:p.name,qty:p.quantity,price:p.sales_amount/p.quantity});
     });
-    var appearances={}, unknown=[], exceptions=[];
+    var appearances={}, unknown=[], exceptions=[],priceArithmeticExceptions=[],arithmeticAssessed=0;
     det.rows.forEach(function(rec){
       var ref=0,missing=[];
       rec.names.forEach(function(name){
@@ -152,6 +192,22 @@
         else ref+=p.price;
       });
       var gap=round2(rec.total_sales-ref);
+      if(!missing.length){
+        var compatible=canExplainAtReferencePrices(gap,rec.names,products);
+        if(compatible!==null){
+          arithmeticAssessed++;
+          if(!compatible){
+            priceArithmeticExceptions.push({
+              transaction_id:rec.transaction_id,order_time:rec.order_time,
+              order_date:rec.order_date,receipt_total:rec.total_sales,
+              reference_one_each:round2(ref),reference_residual:gap,
+              product_names:rec.names.slice(),
+              issue:'PRICE_OR_ADJUSTMENT_REVIEW',
+              review_status:'needs_itemized_pos_evidence'
+            });
+          }
+        }
+      }
       if(missing.length||gap< -0.01 || (rec.total_sales>=500000 && ref>0 && rec.total_sales/ref>=10)){
         exceptions.push({transaction_id:rec.transaction_id,date:rec.order_date,
           receipt_total:rec.total_sales,reference_one_each:round2(ref),gap:gap,
@@ -182,6 +238,14 @@
       refund_gap:round2(det.reported_refund-refunds),
       unknown_names:Array.from(new Set(unknown)),quantity_exceptions:qtyExceptions,
       receipt_exceptions:exceptions,
+      arithmetic_assessed_receipts:arithmeticAssessed,
+      price_arithmetic_exceptions:priceArithmeticExceptions,
+      price_arithmetic_icecream_bowl_count:priceArithmeticExceptions.filter(function(r){
+        return r.product_names.some(function(n){return key(n)==='ice cream bowl';});
+      }).length,
+      price_arithmetic_icecream_count:priceArithmeticExceptions.filter(function(r){
+        return r.product_names.some(isIceCreamName);
+      }).length,
       complete_month_requested:det.date_range_complete,
       requires_review:true,
       has_reliable_per_receipt_sku_qty:false,
