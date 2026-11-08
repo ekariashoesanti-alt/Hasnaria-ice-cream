@@ -145,6 +145,12 @@ ice && STATE.slice.type === 'day' && STATE.slice.id === x.key;
         '<p><b>Bukan dasar posting stok:</b> Qty SKU per struk belum tersedia.</p>'+exceptions+'</div>';
     }
     var auditError=STATE.reportReconcileError?'<div class="sb-fmt-box"><b>Rekonsiliasi gagal</b><p>'+esc(STATE.reportReconcileError)+'</p></div>':'';
+    var saveResult=STATE.reportSaveResult?'<div class="sb-fmt-box"><b>✅ Tersimpan untuk review Singapore</b>'+
+      '<p>Status: '+esc(STATE.reportSaveResult.status||'under_review')+'</p>'+
+      '<p>Batch ID: '+esc(STATE.reportSaveResult.batch_id||'')+'</p>'+
+      '<p>Tidak mengubah omzet resmi atau ledger stok.</p></div>':'';
+    var saveError=STATE.reportSaveError?'<div class="sb-fmt-box"><b>⚠️ Simpan staging ditolak</b><p>'+esc(STATE.reportSaveError)+'</p></div>':'';
+
     return '<div class="sb-modal-overlay" id="sbReportPreviewOverlay">' +
       '<div class="sb-modal-card">' +
       '<div class="sb-modal-head"><h3>Preview Rekap Produk</h3>' +
@@ -155,12 +161,14 @@ ice && STATE.slice.type === 'day' && STATE.slice.id === x.key;
       '<p>'+p.source_row_count+' SKU · '+Number(t.quantity).toLocaleString('id-ID')+' unit · '+money(t.sales)+'</p>' +
       '<p>HPP Majoo: '+money(t.hpp)+' · Refund: '+money(t.refund_amount)+'</p></div>' +
       '<div class="sb-fmt-box">' +
-      '<b>🔒 Preview saja — tidak tersimpan ke Supabase</b>' +
-      '<p>Tidak mengubah transaksi, KPI, resep, HPP resmi atau saldo stok. Tombol simpan akan dibuka setelah migrasi staging dan verifikasi Owner lulus.</p></div>' +
-      auditBox+auditError+
+      '<b>🔒 Supabase Singapore UAT — hanya data review</b>' +
+      '<p>Detail dan rekap terpisah. Simpan staging hanya setelah konfirmasi Owner. Tidak mengubah KPI resmi, resep, HPP atau stok.</p></div>' +
+      auditBox+auditError+saveResult+saveError+
       '</div><div class="sb-modal-foot">' +
       '<input type="file" accept=".csv,.txt" id="sbReportReconcileInput" hidden>' +
       '<button type="button" class="sb-btn-modal-ok" id="sbReportReconcileChoose">Bandingkan Detail CSV</button>' +
+      (STATE.reportSaveResult ? '' : '<button type="button" class="sb-btn-modal-ok" id="sbReportStageConfirm" '+
+        (STATE.reportSaving?'disabled':'')+'>'+(STATE.reportSaving?'Menyimpan di Singapore…':'Simpan ke Staging Singapore')+'</button>') +
       '<button type="button" class="sb-btn-modal-ok" id="sbReportPreviewOkay">Tutup Preview</button>' +
       '</div></div></div>';
   }
