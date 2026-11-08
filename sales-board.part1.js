@@ -131,6 +131,20 @@ ice && STATE.slice.type === 'day' && STATE.slice.id === x.key;
   function renderReportPreviewModal() {
     if (!window.__HASNARIA_ENABLE_PRODUCT_REPORT_V1 || !STATE.showReportPreview || !STATE.reportPreview) return '';
     var p=STATE.reportPreview,t=p.totals;
+    var r=STATE.reportReconciliation, auditBox='';
+    if(r){
+      var auditFlag=Math.abs(r.gross_gap)>0.01||r.unknown_names.length||r.quantity_exceptions.length||r.receipt_exceptions.length;
+      var exceptions=r.receipt_exceptions.slice(0,3).map(function(x){
+        return '<p>'+esc(x.transaction_id)+' · '+esc(x.issue)+' · '+money(x.receipt_total)+'</p>';
+      }).join('');
+      auditBox='<div class="sb-fmt-box"><b>Rekonsiliasi '+(auditFlag?'PERLU REVIEW':'COCOK')+'</b>' +
+        '<p>Detail: '+r.transaction_count+' struk · '+r.product_occurrences+' kemunculan nama produk</p>' +
+        '<p>Rekap: '+r.report_skus+' SKU · '+r.report_units+' unit</p>' +
+        '<p>Selisih bruto: '+money(r.gross_gap)+' · Selisih bersih: '+money(r.net_gap)+'</p>' +
+        '<p>Selisih refund: '+money(r.refund_gap)+' · Pengecualian struk: '+r.receipt_exceptions.length+'</p>' +
+        '<p><b>Bukan dasar posting stok:</b> Qty SKU per struk belum tersedia.</p>'+exceptions+'</div>';
+    }
+    var auditError=STATE.reportReconcileError?'<div class="sb-fmt-box"><b>Rekonsiliasi gagal</b><p>'+esc(STATE.reportReconcileError)+'</p></div>':'';
     return '<div class="sb-modal-overlay" id="sbReportPreviewOverlay">' +
       '<div class="sb-modal-card">' +
       '<div class="sb-modal-head"><h3>Preview Rekap Produk</h3>' +
@@ -143,7 +157,10 @@ ice && STATE.slice.type === 'day' && STATE.slice.id === x.key;
       '<div class="sb-fmt-box">' +
       '<b>🔒 Preview saja — tidak tersimpan ke Supabase</b>' +
       '<p>Tidak mengubah transaksi, KPI, resep, HPP resmi atau saldo stok. Tombol simpan akan dibuka setelah migrasi staging dan verifikasi Owner lulus.</p></div>' +
+      auditBox+auditError+
       '</div><div class="sb-modal-foot">' +
+      '<input type="file" accept=".csv,.txt" id="sbReportReconcileInput" hidden>' +
+      '<button type="button" class="sb-btn-modal-ok" id="sbReportReconcileChoose">Bandingkan Detail CSV</button>' +
       '<button type="button" class="sb-btn-modal-ok" id="sbReportPreviewOkay">Tutup Preview</button>' +
       '</div></div></div>';
   }
