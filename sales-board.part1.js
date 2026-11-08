@@ -181,13 +181,25 @@ ice && STATE.slice.type === 'day' && STATE.slice.id === x.key;
       var exceptions=r.receipt_exceptions.slice(0,3).map(function(x){
         return '<p>'+esc(x.transaction_id)+' · '+esc(x.issue)+' · '+money(x.receipt_total)+'</p>';
       }).join('');
+      var so=r.source_authority||{};
+      var rev=so.revenue||{},skus=so.products||{};
+      var authorityAudit='<div class="sb-fmt-box"><b>✅ Acuan Perhitungan Penjualan HASNARIA</b>'+
+        '<p><b>Omzet bruto:</b> '+money(rev.gross)+' · <b>Omzet bersih:</b> '+money(rev.net)+
+        ' · <b>Refund:</b> '+money(rev.refund)+' (sumber: Detail Transaksi Majoo)</p>'+
+        '<p><b>Transaksi:</b> '+Number(rev.transaction_count||0).toLocaleString('id-ID')+
+        ' · <b>Unit produk:</b> '+Number(skus.quantity||0).toLocaleString('id-ID')+
+        ' · <b>SKU:</b> '+Number(skus.sku_count||0).toLocaleString('id-ID')+
+        ' (unit/SKU: Penjualan Produk Majoo)</p>'+
+        '<p><b>HPP SKU sumber Majoo:</b> '+(skus.hpp==null?'Belum tersedia':money(skus.hpp))+
+        ' · <b>Laba gabungan:</b> Belum final, tidak dihitung otomatis dari dua cakupan berbeda.</p>'+
+        '<p>Acuan ini hanya Preview; tidak mengganti KPI production, membuat transaksi, atau posting stok.</p></div>';
       auditBox='<div class="sb-fmt-box"><b>Rekonsiliasi '+(auditFlag?'PERLU REVIEW':'COCOK')+'</b>' +
         '<p>Detail: '+r.transaction_count+' struk · '+r.product_occurrences+' kemunculan nama produk</p>' +
         '<p>Rekap: '+r.report_skus+' SKU · '+r.report_units+' unit</p>' +
         '<p>Selisih bruto: '+money(r.gross_gap)+' · Selisih bersih: '+money(r.net_gap)+'</p>' +
         '<p>Selisih refund: '+money(r.refund_gap)+' · Pengecualian struk: '+r.receipt_exceptions.length+'</p>' +
         '<p><b>Bukan dasar posting stok:</b> Qty SKU per struk belum tersedia.</p>'+exceptions+'</div>'+
-        sourceBreakdown+scopeAudit+priceAudit+cfdAudit;
+        authorityAudit+sourceBreakdown+scopeAudit+priceAudit+cfdAudit;
     }
     var auditError=STATE.reportReconcileError?'<div class="sb-fmt-box"><b>Rekonsiliasi gagal</b><p>'+esc(STATE.reportReconcileError)+'</p></div>':'';
     var saveResult=STATE.reportSaveResult?'<div class="sb-fmt-box"><b>✅ Tersimpan untuk review Singapore</b>'+
