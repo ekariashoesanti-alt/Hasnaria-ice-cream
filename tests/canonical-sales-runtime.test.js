@@ -20,6 +20,9 @@ try {
   if (!runtime.includes('singaporeUatApproved:true,enableWrite:true,confirmed:true')) throw new Error('Explicit UAT-only save guard missing');
   if (!runtime.includes('renderReportSourceChoiceModal')) throw new Error('Flagged two-source modal missing');
   if (!runtime.includes('renderReportPreviewModal')) throw new Error('Read-only product preview missing');
+  if (!runtime.includes('raw: !!preciseNumbers')) throw new Error('Original numeric HPP precision missing for SKU workbook');
+  if (!runtime.includes("var mode = preciseNumbers ? 'sku_precision' : 'legacy_display';")) throw new Error('SKU and legacy Excel matrix caches not isolated');
+  if (!runtime.includes('cellDates: !preciseNumbers')) throw new Error('Legacy date parsing protection missing');
   if (!runtime.includes('return n==null ? null : n;')) throw new Error('revenue normalization patch missing');
   if (!runtime.includes('window.__HASNARIA_XLSX_READY')) throw new Error('XLSX preload coordination patch missing');
   if (!runtime.includes('return window.__HASNARIA_IMPORT_V2(fileOrFiles')) throw new Error('importFiles v2 delegation missing');
