@@ -107,7 +107,14 @@
       var row=matrix[rowIdx]||[];
       if(!row.some(function(v){return str(v)!=='';}))continue;
       var name=str(row[fields.name]),sku=str(row[fields.sku]),outlet=str(row[fields.outlet]);
-      if(!name && !sku)continue;
+      if(!name && !sku){
+        // A numeric line without a SKU is never a harmless blank/footer row.
+        // Reject it rather than silently ignoring potentially missing product sales.
+        if(str(row[fields.qty]) || str(row[fields.sales]) ||
+           str(row[fields.refundQty]) || str(row[fields.refundSales]))
+          fail('Baris '+(rowIdx+1)+' memiliki angka tanpa SKU produk');
+        continue;
+      }
       // Majoo appends a human-readable footer (e.g. "Powered by Majoo")
       // after product rows. Ignore only a recognisable footer lacking SKU/outlet.
       // Every other incomplete record MUST fail closed to prevent silent omissions.
