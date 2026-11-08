@@ -5,6 +5,7 @@ const PARTS = [0, 1, 2, 3, 4].map((n) => `sales-board.part${n}.js`);
 const IMPORTER = 'sales-import-v2.js';
 const REPORT_PARSER = 'sales-product-report-v1.js';
 const RECONCILER = 'sales-reconciliation-v1.js';
+const SCOPE_BRIDGE = 'sales-scope-bridge-v1.js';
 const WIDTH_CLASS_CSS = Array.from({ length: 101 }, (_, i) => `.sb-w-${i}{width:${i}%}`).join('');
 
 function replaceOnce(code, search, replacement, label) {
@@ -81,11 +82,13 @@ function buildCanonicalSalesRuntime(rootDir, destination) {
   // Read-only monthly SKU parser, inert unless the two-source preview flag is enabled.
   const reportParser = fs.readFileSync(path.join(root, REPORT_PARSER), 'utf8');
   const reconciler = fs.readFileSync(path.join(root, RECONCILER), 'utf8');
+  const scopeBridge = fs.readFileSync(path.join(root, SCOPE_BRIDGE), 'utf8');
   const output = [
     '/* Hasnaria Sales canonical runtime — generated at build time; do not edit dist output directly. */',
     importer,
     reportParser,
     reconciler,
+    scopeBridge,
     patched
   ].join('\n');
 
@@ -95,6 +98,7 @@ function buildCanonicalSalesRuntime(rootDir, destination) {
   if (!output.includes('window.__HASNARIA_IMPORT_V2')) throw new Error('Majoo importer v2 missing from canonical Sales artifact');
   if (!output.includes('window.__HASNARIA_PRODUCT_REPORT_V1')) throw new Error('Monthly SKU parser missing from canonical Sales artifact');
   if (!output.includes('window.__HASNARIA_SALES_RECONCILE_V1')) throw new Error('Read-only reconciler missing from canonical Sales artifact');
+  if (!output.includes('window.__HASNARIA_SCOPE_BRIDGE_V1')) throw new Error('Evidence-gated read-only scope bridge missing');
   if (/style=\"width:'\s*\+/.test(output)) throw new Error('dynamic Sales width style attribute leaked into canonical artifact');
 
   if (destination) {
@@ -109,6 +113,7 @@ module.exports = {
   IMPORTER,
   REPORT_PARSER,
   RECONCILER,
+  SCOPE_BRIDGE,
   WIDTH_CLASS_CSS,
   patchLegacySalesSource,
   buildCanonicalSalesRuntime
