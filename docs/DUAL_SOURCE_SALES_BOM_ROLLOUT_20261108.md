@@ -151,3 +151,18 @@ Before merging: resolve Rp622,000 finance gap, validate legacy and exported BOM 
 - Vercel build script scripts/vercel-build.js already contains a preview-only Singapore-backend and synthetic-brand rewrite. Do not change the production backend. Build-level staging isolation continues to be a mandatory CI gate.
 
 Remaining: authenticated human Owner UI/browser test with actual XLSX + CSV, financial Rp622,000 reconciliation, full BOM/conversion/physical baseline approvals, and documented production rollback. Until then, keep PR #185 in draft and do not enable stock posting.
+
+
+## 2026-11-08 original Majoo Excel precision audit
+
+This phase inspected the uploaded XLSX workbook directly rather than relying on the prior synthetic two-row fixture.
+
+- Actual worksheet: metadata "Total Penjualan" in cells N4/O4, "Total Laba Kotor" in N5/O5, "Total Produk Terjual" in N7/O7; product header row 11, 54 actual product rows 12–65, trailing footer "Powered by" in N71.
+- The actual source's HPP cells use the currency number format `[$Rp-421]#,##0.00` despite holding more precise numeric values (example: K12 = 619104.9504950496). SheetJS `sheet_to_json(... raw:false)` can round the displayed currency and undermine source-fidelity checks.
+- Fixed the **new SKU-report-only reader** to use precise numeric cells `raw:true` and `cellDates:false`. Legacy Detail Transaksi read path retains its existing `raw:false`, `cellDates:true` behavior. Cache keys now distinguish `sku_precision` and `legacy_display` for the same File object.
+- Added a 54-row source-layout regression with metadata at N/O and the actual bottom footer, plus a high-precision HPP cell.
+- Reject numeric Qty/Sales/Refund rows without product name and SKU, instead of silently dropping potentially real transactions.
+- Re-uploading a previously rejected monthly batch now fails closed with a revision-required message and cannot display a false 'success' confirmation.
+- Confirmed Github Audit Gate PASS. Real authenticated Owner browser/UAT with the original XLSX and CSV remains necessary before merging or production activation.
+
+All writes remain limited to the Singapore synthetic UAT brand; October operational sales/stock remain read-only and unchanged.
