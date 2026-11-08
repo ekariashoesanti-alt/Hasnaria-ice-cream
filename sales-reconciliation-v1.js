@@ -42,7 +42,7 @@
       return index;
     }
     return {id:one('no transaksi'),order:one('waktu order'),products:one('produk'),
-      amount:one('total penjualan rp'),payment:one('metode pembayaran')};
+      amount:one('total penjualan rp'),payment:one('metode pembayaran'),orderType:one('jenis order')};
   }
   function parseDetailMatrix(matrix){
     if(!Array.isArray(matrix)||matrix.length<2)err('File Detail Transaksi kosong');
@@ -60,7 +60,7 @@
       if(row.length>=2)meta.set(head(row[0]),row[1]);
     }
     var period=parsePeriod(meta.get('periode'));
-    var rows=[],ids=new Set(),nameOccurrences=0,perMethod={},perDay={},total=0;
+    var rows=[],ids=new Set(),nameOccurrences=0,perMethod={},perOrderType={},perDay={},total=0;
     for(var j=headerRow+1;j<matrix.length;j++){
       var rec=matrix[j]||[];
       if(!rec.some(function(x){return str(x)!=='';}))continue;
@@ -80,13 +80,17 @@
       var names=str(rec[cols.products]).split(',').map(str).filter(Boolean);
       if(!names.length)err('Daftar produk transaksi kosong: '+id);
       var pay=str(rec[cols.payment]);
+      var orderType=str(rec[cols.orderType]);
       if(!pay)err('Metode pembayaran kosong: '+id);
+      if(!orderType)err('Jenis order kosong: '+id);
       ids.add(id);nameOccurrences+=names.length;total+=price;
       var method=perMethod[pay]||(perMethod[pay]={receipts:0,gross:0});
       method.receipts++;method.gross+=price;
+      var channel=perOrderType[orderType]||(perOrderType[orderType]={receipts:0,gross:0});
+      channel.receipts++;channel.gross+=price;
       var dayItem=perDay[day]||(perDay[day]={receipts:0,gross:0,appearances:0});
       dayItem.receipts++;dayItem.gross+=price;dayItem.appearances+=names.length;
-      rows.push({transaction_id:id,order_date:day,total_sales:price,payment_method:pay,names:names});
+      rows.push({transaction_id:id,order_date:day,total_sales:price,payment_method:pay,order_type:orderType,names:names});
     }
     if(!rows.length)err('Tidak ditemukan transaksi untuk direkonsiliasi');
     var expectedCount=money(meta.get('total transaksi'),'Total Transaksi');
@@ -101,7 +105,7 @@
       detail_from:period.range_from,detail_to:period.range_to,
       receipts:rows.length,product_name_appearances:nameOccurrences,
       gross:round2(total),net:round2(expectedNet),reported_refund:round2(total-expectedNet),
-      per_payment:perMethod,per_day:perDay,rows:rows,
+      per_payment:perMethod,per_order_type:perOrderType,per_day:perDay,rows:rows,
       sku_quantity_known:false,stock_posting_allowed:false};
   }
   function reconcile(detailMatrix,productReport){
@@ -148,6 +152,7 @@
       detail_gross:det.gross,detail_net:det.net,
       product_gross:grossReport,product_net:netReport,
       detail_refund:det.reported_refund,product_refund:refunds,
+      by_order_type:det.per_order_type,by_payment_method:det.per_payment,
       gross_gap:round2(det.gross-grossReport),
       net_gap:round2(det.net-netReport),
       refund_gap:round2(det.reported_refund-refunds),
