@@ -111,8 +111,8 @@
       // Majoo appends a human-readable footer (e.g. "Powered by Majoo")
       // after product rows. Ignore only a recognisable footer lacking SKU/outlet.
       // Every other incomplete record MUST fail closed to prevent silent omissions.
-      if(!sku && !outlet && (/^powered by(?:\\s|$)/i.test(name) ||
-          /^(?:grand total|total)(?:\\s|$)/i.test(name))) continue;
+      if(!sku && !outlet && (/^powered by(?:\s|$)/i.test(name) ||
+          /^(?:grand total|total)(?:\s|$)/i.test(name))) continue;
       if(!name || !sku || !outlet)fail('Baris '+(rowIdx+1)+' tidak lengkap (Produk/SKU/Outlet)');
       if(name.length>300||sku.length>100)fail('Nama/SKU terlalu panjang baris '+(rowIdx+1));
       var key=sku.toUpperCase();
