@@ -145,6 +145,13 @@ ice && STATE.slice.type === 'day' && STATE.slice.id === x.key;
       var sourceBreakdown='<details class="sb-fmt-box"><summary>Rincian jenis order &amp; pembayaran</summary>'+
         '<b>Jenis order</b>'+renderSources(r.by_order_type)+
         '<b>Metode pembayaran</b>'+renderSources(r.by_payment_method)+'</details>';
+      var cfdAudit='<details class="sb-fmt-box"><summary>🔎 Kandidat CFD (belum dikonfirmasi): '+
+        (r.cfd_candidates||[]).length+' transaksi · '+money(r.cfd_candidate_gross||0)+'</summary>'+
+        '<p>Kriteria: Minggu sebelum 12.00 WIB, seluruh nama produk es krim. Nominal besar saja tidak cukup.</p>'+
+        (r.cfd_candidates||[]).map(function(c){
+          return '<p>'+esc(c.transaction_id)+' · '+esc(c.pos_timestamp)+
+            ' · '+money(c.receipt_total)+' · '+esc(c.review_status)+'</p>';
+        }).join('')+'</details>';
       var exceptions=r.receipt_exceptions.slice(0,3).map(function(x){
         return '<p>'+esc(x.transaction_id)+' · '+esc(x.issue)+' · '+money(x.receipt_total)+'</p>';
       }).join('');
@@ -154,7 +161,7 @@ ice && STATE.slice.type === 'day' && STATE.slice.id === x.key;
         '<p>Selisih bruto: '+money(r.gross_gap)+' · Selisih bersih: '+money(r.net_gap)+'</p>' +
         '<p>Selisih refund: '+money(r.refund_gap)+' · Pengecualian struk: '+r.receipt_exceptions.length+'</p>' +
         '<p><b>Bukan dasar posting stok:</b> Qty SKU per struk belum tersedia.</p>'+exceptions+'</div>'+
-        sourceBreakdown;
+        sourceBreakdown+cfdAudit;
     }
     var auditError=STATE.reportReconcileError?'<div class="sb-fmt-box"><b>Rekonsiliasi gagal</b><p>'+esc(STATE.reportReconcileError)+'</p></div>':'';
     var saveResult=STATE.reportSaveResult?'<div class="sb-fmt-box"><b>✅ Tersimpan untuk review Singapore</b>'+
