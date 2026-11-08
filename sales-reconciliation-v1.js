@@ -224,7 +224,7 @@
     var refunds=round2(productReport.totals.refund_amount);
     var netReport=round2(grossReport-refunds);
     return {
-      period_month:det.period_month,transaction_count:det.receipts,
+      period_month:det.period_month,outlet_name:det.outlet_name,transaction_count:det.receipts,
       product_occurrences:det.product_name_appearances,
       report_skus:productReport.rows.length,report_units:productReport.totals.quantity,
       detail_gross:det.gross,detail_net:det.net,
