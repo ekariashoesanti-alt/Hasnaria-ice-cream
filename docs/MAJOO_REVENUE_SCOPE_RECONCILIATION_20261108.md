@@ -46,3 +46,27 @@ Penjelasan dokumentasi tersebut memberikan **mekanisme perbedaan cakupan**, teta
 ## Sistem HASNARIA
 
 Preview Singapore diberi bagian *Selisih cakupan laporan* serta tautan dokumentasi resmi. Ini hanya menunjukkan anomali, **tidak melakukan reclass, refund, pemindahan tanggal POS, pembukuan HPP, pengurangan persediaan atau posting stok**. PR #185 tetap draft sampai audit itemisasi, BOM, UI Owner, dan rollback lulus.
+
+## Tahap lanjutan — Evidence-gated Revenue Scope Bridge
+
+Modul sumber `sales-scope-bridge-v1.js` kini ikut dibundel ke runtime Sales Preview dan **bersifat read-only murni**. Tujuannya bukan membuat jurnal koreksi, tetapi menerima rincian bukti laporan Majoo jika suatu saat tersedia tanpa mengalihkan Rp622.000 ke akun sembarang.
+
+**Status data pada 8 November 2026:** belum ada rincian nilai pajak, biaya layanan, ekstra/sub-ekstra, diskon transaksi, atau pembulatan yang tervalidasi untuk menjelaskan Rp622.000. Karena itu kalkulasi saat ini adalah:
+
+- Omzet struk: Rp21.614.500; omzet produk: Rp20.992.500.
+- Penyesuaian dengan referensi sumber yang dapat ditelusuri: **Rp0 teralokasi** (bukan berarti komponen transaksi sesungguhnya nol).
+- **Saldo belum teralokasi: Rp622.000**.
+- Refund kedua laporan Rp35.000, konsisten.
+- `review_status=EVIDENCE_PENDING` dan `stock_posting_allowed=false`.
+
+**Bila laporan pendukung tersedia kemudian:** setiap entri bukti harus memiliki tipe laporan, komponen, tanda (+ biaya/ekstra, − diskon), nominal dua desimal, tanggal bulan dan outlet yang identik, SHA-256 berkas, referensi baris asli, serta kunci komponen ekonomi agar nilai yang sama dari dua laporan tidak dihitung berulang.
+
+- Komponen yang diperbolehkan: diskon transaksi, pajak, biaya layanan, ongkos kirim, ekstra, pembulatan, dan penyesuaian lain yang harus ditinjau.
+- Modul memblokir referensi baris yang identik maupun kunci komponen ekonomi yang berulang, bulan/outlet berbeda, arah penambahan yang tidak sesuai tipe komponen, presisi berlebih dan nilai yang tak terbatas.
+- Hash dan referensi dalam entri merupakan **metadata yang harus diverifikasi terhadap file asli secara terpisah**; memasukkan string SHA-256 tidak dengan sendirinya membuktikan keaslian dokumen.
+- Bila nominal seluruh entri kebetulan sama dengan Rp622.000, status hanya menjadi `MATH_MATCH_OWNER_REVIEW`. Aplikasi tetap menetapkan `owner_approval_recorded=false` dan `posting_authorized=false`, tanpa mutation database.
+- UI Preview menampilkan saldo yang belum dialokasikan; **belum ada antarmuka impor/approval baru untuk laporan Ekstra atau Ringkasan**. Tidak boleh mengklaim rekonsiliasi final sebelum bukti sumber asli dan Owner signoff tersedia.
+
+Pengujian `tests/sales-scope-bridge-v1.test.js` dan canonical runtime mencakup nilai awal Rp622.000, skenario bukti sintetis yang kebetulan seimbang, duplikasi lintas laporan, refund yang tidak cocok, perbedaan outlet dan larangan posting stok. CI mewajibkan seluruhnya lulus.
+
+**Rollback:** revert PR atau matikan flag Preview. Modifikasi ini tidak menambahkan tabel/migrasi, tidak mengubah transaksi production, dan tidak membuat mutasi stok di Singapore.
