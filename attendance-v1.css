@@ -39,3 +39,6 @@
 #operasional .at1-preview button.at1-primary{background:#176b55;color:white;border-color:#176b55}
 @media(max-width:900px){#operasional .at1-heading{align-items:flex-start;flex-direction:column}#operasional .at1-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:620px){#operasional .at1-controls{flex-wrap:wrap;width:100%}#operasional .at1-panel-head{align-items:stretch;flex-direction:column}#operasional .at1-panel-head input{width:100%;min-width:0}}
+
+#operasional .at1-conversion{display:flex;flex-direction:column;gap:4px;font-size:9px;font-weight:800;color:#225343;margin:6px 0}
+#operasional .at1-conversion select{min-height:32px;padding:0 9px;background:white;border:1px solid #c1ddd0;border-radius:8px;color:#176b55;font-weight:750;font-size:9px;max-width:370px}
