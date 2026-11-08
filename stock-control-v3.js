@@ -1965,7 +1965,15 @@
     if(S.skuSimError)return '<div class="sc3-alert">'+esc(S.skuSimError)+'</div>'+
       '<button type="button" class="sc5-secondary" data-sc25-refresh="1">Coba lagi</button>';
     if(!S.skuSim)return '<button type="button" class="sc5-secondary" data-sc25-refresh="1">Muat simulasi SKU</button>';
-    var z=S.skuSim,rows=z.ingredients||[],pending=z.unresolved||[];
+    var z=S.skuSim,rows=z.ingredients||[],pending=z.unresolved||[],reviewQueue=z.review_queue||[];
+    var reviewReasonLabels={
+      NO_BOM:'Belum ada BOM',INVALID_BOM:'Takaran / referensi bahan salah',
+      UNMATCHED_NAME:'Nama belum terhubung',AMBIGUOUS_NAME:'Nama menu ambigu',
+      INACTIVE_PRODUCT:'Menu tidak aktif',RECIPE_NOT_APPROVED:'Resep belum disetujui',
+      BOM_COMPONENT_UNVERIFIED:'Komponen BOM belum diverifikasi',
+      STOCK_UNIT_UNKNOWN:'Satuan stok belum tersedia',
+      CONVERSION_UNVERIFIED:'Konversi satuan belum diverifikasi'
+    };
     var notice='<div class="sc4-info"><b>SIMULASI / BELUM POSTING</b> — Periode laporan: '+esc(monthLabel(z.period_month))+
       ' · Status sumber: '+esc(z.source_status)+'. Kebutuhan bruto = Qty terjual × resep aktif Tokyo.'+
       ' Refund '+fmt(z.refunded_units)+' unit hanya dicatat sebagai paparan, tidak otomatis mengembalikan bahan.'+
@@ -1974,7 +1982,8 @@
       '<span><b>'+fmt(z.source_sku_count)+'</b> SKU</span>'+
       '<span><b>'+fmt(z.total_units)+'</b> unit Majoo</span>'+
       '<span><b>'+fmt(z.bom_sku_count)+'</b> SKU punya BOM ('+fmt(z.bom_units)+' unit)</span>'+
-      '<span><b>'+fmt(pending.length)+'</b> SKU perlu review</span>'+
+      '<span><b>'+fmt(z.no_bom_sku_count)+'</b> SKU tanpa BOM</span>'+
+      '<span><b>'+fmt(z.review_pending_sku_count)+'</b> SKU perlu verifikasi resep</span>'+
       '<button type="button" class="sc5-secondary" data-sc25-refresh="1">↻ Perbarui</button>'+
       '</div>';
     var table='<div class="sc3-table-wrap"><table class="sc3-table"><thead><tr>'+
@@ -1985,6 +1994,17 @@
           '<td>'+fmt(x.raw_requirement)+'</td><td>'+fmt(x.possible_refund_raw)+'</td>'+
           '<td>'+esc(x.needs_review?'Verifikasi BOM / konversi':'Komponen terverifikasi; perlu review sumber')+'</td></tr>';
       }).join('')+'</tbody></table></div>';
+    var reviewTable=reviewQueue.length?'<h4>Prioritas pemeriksaan SKU — urut Qty terjual</h4>'+
+      '<p class="sc5-caption">Buka Cek Resep Produk untuk memeriksa bukti takaran dan konversi. Status belum menyetujui resep, pengurangan stok, atau posting historis.</p>'+
+      '<div class="sc3-table-wrap"><table class="sc3-table"><thead><tr>'+
+      '<th>SKU</th><th>Menu</th><th>Qty Majoo</th><th>Validasi diperlukan</th></tr></thead><tbody>'+
+      reviewQueue.map(function(x){
+        var reason=(x.recipe_review_reasons||[]).map(function(code){
+          return reviewReasonLabels[code]||code;
+        }).join(' · ')||'Resep tampak lengkap; tetap perlu verifikasi sumber dan histori';
+        return '<tr><td>'+esc(x.sku)+'</td><td>'+esc(x.name)+'</td>'+
+          '<td>'+fmt(x.quantity)+'</td><td>'+esc(reason)+'</td></tr>';
+      }).join('')+'</tbody></table></div>':'';
     var missing=pending.length?'<h4>SKU memerlukan tindak lanjut</h4><div class="sc3-table-wrap">'+
       '<table class="sc3-table"><thead><tr><th>SKU</th><th>Produk</th><th>Qty</th><th>Alasan</th></tr></thead><tbody>'+
       pending.map(function(x){return'<tr><td>'+esc(x.sku)+'</td><td>'+esc(x.name)+'</td>'+
@@ -1992,7 +2012,7 @@
     return notice+summary+
       '<p class="sc5-caption">Pemetaan produk berdasarkan nama identik (tanpa kapitalisasi); relasi kode SKU masih perlu disahkan. '+fmt(rows.length)+
       ' kelompok bahan/satuan tidak boleh dijumlahkan silang. Belum ada izin pengurangan stok dari hasil ini.</p>'+
-      table+missing+
+      reviewTable+table+missing+
       '<p class="sc5-caption">*Refund tidak selalu mengembalikan bahan yang telah diracik. Tidak tersedia tombol posting saldo di halaman simulasi.</p>';
   }
 
