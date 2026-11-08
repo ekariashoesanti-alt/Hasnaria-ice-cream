@@ -15,6 +15,9 @@ try {
   if (!runtime.includes('window.__HASNARIA_PRODUCT_REPORT_V1')) throw new Error('Monthly SKU parser is missing from canonical runtime');
   if (!runtime.includes('window.__HASNARIA_SALES_RECONCILE_V1')) throw new Error('Read-only reconciler missing from canonical runtime');
   if (!runtime.includes('sbReportReconcileChoose')) throw new Error('Read-only reconciliation UI missing');
+  if (!runtime.includes('Simpan ke Staging Singapore')) throw new Error('Explicit Singapore save UI action missing');
+  if (!runtime.includes('resolveSingaporeOutlet(BRAND,token,KEY)')) throw new Error('Singapore Owner/Outlet resolution missing');
+  if (!runtime.includes('singaporeUatApproved:true,enableWrite:true,confirmed:true')) throw new Error('Explicit UAT-only save guard missing');
   if (!runtime.includes('renderReportSourceChoiceModal')) throw new Error('Flagged two-source modal missing');
   if (!runtime.includes('renderReportPreviewModal')) throw new Error('Read-only product preview missing');
   if (!runtime.includes('return n==null ? null : n;')) throw new Error('revenue normalization patch missing');
