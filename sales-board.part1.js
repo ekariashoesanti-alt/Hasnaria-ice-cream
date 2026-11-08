@@ -112,6 +112,124 @@ ice && STATE.slice.type === 'day' && STATE.slice.id === x.key;
     }).join('') + '</div>';
   }
 
+  // Preview-only two-source chooser. No write path exists in this UI stage.
+  // Enable on PR preview with ?sales_product_preview=1; production defaults OFF.
+  function renderReportSourceChoiceModal() {
+    if (!window.__HASNARIA_ENABLE_PRODUCT_REPORT_V1 || !STATE.reportChoiceOpen) return '';
+    return '<div class="sb-modal-overlay" id="sbReportChoiceOverlay">' +
+      '<div class="sb-modal-card">' +
+      '<div class="sb-modal-head"><h3>Upload Penjualan Majoo</h3>' +
+      '<button type="button" id="sbReportChoiceClose" class="sb-modal-close" aria-label="Tutup">✕</button></div>' +
+      '<div class="sb-modal-body">' +
+      '<button type="button" data-hsn-report-type="detail" class="sb-fmt-box">' +
+      '<b>📋 Detail Transaksi</b><p>Nomor transaksi, tanggal/jam, pembayaran dan nama produk. Importer eksisting.</p></button>' +
+      '<button type="button" data-hsn-report-type="product" class="sb-fmt-box">' +
+      '<b>📦 Rekap Penjualan Produk</b><p>SKU, jumlah terjual, omzet, HPP, dan refund bulanan. Tahap ini: preview read-only.</p></button>' +
+      '</div></div></div>';
+  }
+
+  function renderReportPreviewModal() {
+    if (!window.__HASNARIA_ENABLE_PRODUCT_REPORT_V1 || !STATE.showReportPreview || !STATE.reportPreview) return '';
+    var p=STATE.reportPreview,t=p.totals;
+    var r=STATE.reportReconciliation, auditBox='';
+    if(r){
+      var auditFlag=Math.abs(r.gross_gap)>0.01||r.unknown_names.length||r.quantity_exceptions.length||r.receipt_exceptions.length;
+      var renderSources=function(summary){
+        return Object.keys(summary||{}).sort(function(a,b){
+          return Number(summary[b].gross)-Number(summary[a].gross);
+        }).map(function(k){
+          return '<p>'+esc(k)+': '+Number(summary[k].receipts).toLocaleString('id-ID')+
+            ' struk · '+money(summary[k].gross)+'</p>';
+        }).join('');
+      };
+      var sourceBreakdown='<details class="sb-fmt-box"><summary>Rincian jenis order &amp; pembayaran</summary>'+
+        '<b>Jenis order</b>'+renderSources(r.by_order_type)+
+        '<b>Metode pembayaran</b>'+renderSources(r.by_payment_method)+'</details>';
+      var cfdAudit='<details class="sb-fmt-box"><summary>🔎 Kandidat CFD (belum dikonfirmasi): '+
+        (r.cfd_candidates||[]).length+' transaksi · '+money(r.cfd_candidate_gross||0)+'</summary>'+
+        '<p>Kriteria: Minggu sebelum 12.00 WIB, seluruh nama produk es krim. Nominal besar saja tidak cukup.</p>'+
+        (r.cfd_candidates||[]).map(function(c){
+          return '<p>'+esc(c.transaction_id)+' · '+esc(c.pos_timestamp)+
+            ' · '+money(c.receipt_total)+' · '+esc(c.review_status)+'</p>';
+        }).join('')+'</details>';
+      var pricingCandidates=(r.price_arithmetic_exceptions||[]).slice();
+      pricingCandidates.sort(function(a,b){return Number(b.receipt_total)-Number(a.receipt_total);});
+      var priceAudit='<details class="sb-fmt-box"><summary>💰 Periksa harga es krim &amp; penyesuaian: '+
+        pricingCandidates.length+' struk ('+(r.price_arithmetic_icecream_bowl_count||0)+
+        ' menyebut ICE CREAM BOWL)</summary>'+
+        '<p>Uji harga rata-rata per SKU dari rekap bulanan. Nilai struk ini tidak bisa dihasilkan hanya dengan tambahan unit utuh dari nama produk yang tercantum. Ini bukan bukti biaya tambahan, diskon atau stok hilang.</p>'+
+        pricingCandidates.slice(0,20).map(function(x){
+          return '<p>'+esc(x.transaction_id)+' · '+esc(x.order_time)+' · '+money(x.receipt_total)+
+            ' (minimal 1 per nama: '+money(x.reference_one_each)+') · '+
+            esc(x.product_names.join(', '))+'</p>';
+        }).join('')+
+        (pricingCandidates.length>20?'<p>Dan '+(pricingCandidates.length-20)+
+          ' struk lainnya — memerlukan rincian item POS untuk kepastian.</p>':'')+'</details>';
+      // Source-scope explanation is based on public Majoo report documentation,
+      // not an allocation or a stock correction.
+      var scopeBridge=window.__HASNARIA_SCOPE_BRIDGE_V1 &&
+        window.__HASNARIA_SCOPE_BRIDGE_V1.calculate(r,[]);
+      var scopeAudit='<details class="sb-fmt-box"><summary>🧾 Selisih cakupan laporan: '+
+        money(scopeBridge?scopeBridge.unallocated_rupiah:r.gross_gap)+' (belum terurai)</summary>'+
+        '<p>Majoo menjelaskan bahwa Laporan Penjualan Produk dapat berbeda dari total laporan penjualan karena komponen tingkat transaksi, termasuk pajak dan diskon. Nilai masing-masing komponen pada bulan ini BELUM tersedia.</p>'+
+        '<p><b>Kontrol bukti:</b> '+(scopeBridge?scopeBridge.evidence_count:0)+' komponen diajukan; selisih tanpa alokasi terverifikasi '+money(scopeBridge?scopeBridge.unallocated_rupiah:r.gross_gap)+'. Ini belum memiliki bukti Ringkasan/Ekstra untuk dialokasikan.</p>'+ 
+        '<p>Prioritas verifikasi di Majoo: (1) Ringkasan Penjualan, (2) Penjualan Ekstra / Sub Ekstra, dan (3) Pajak serta diskon/promosi; gunakan filter periode dan outlet yang sama.</p>'+
+        '<p>Jangan tambahkan selisih ini ke SKU, omzet KPI, HPP, BOM atau stok sebelum nilai komponennya diperiksa dan disetujui Owner.</p>'+
+        '<p>Sumber: <a href="https://majoo.id/informasi-update/laporan-produk-tambahan-kolom-refund" target="_blank" rel="noopener noreferrer">Definisi Laporan Produk Majoo</a> · '+
+        '<a href="https://majoo.id/panduan-pengguna/detail/184" target="_blank" rel="noopener noreferrer">Komponen Ringkasan Penjualan</a> · '+
+        '<a href="https://majoo.id/panduan-pengguna/detail/194" target="_blank" rel="noopener noreferrer">Penjualan Ekstra</a></p></details>';
+      var exceptions=r.receipt_exceptions.slice(0,3).map(function(x){
+        return '<p>'+esc(x.transaction_id)+' · '+esc(x.issue)+' · '+money(x.receipt_total)+'</p>';
+      }).join('');
+      var so=r.source_authority||{};
+      var rev=so.revenue||{},skus=so.products||{};
+      var authorityAudit='<div class="sb-fmt-box"><b>✅ Acuan Perhitungan Penjualan HASNARIA</b>'+
+        '<p><b>Omzet bruto:</b> '+money(rev.gross)+' · <b>Omzet bersih:</b> '+money(rev.net)+
+        ' · <b>Refund:</b> '+money(rev.refund)+' (sumber: Detail Transaksi Majoo)</p>'+
+        '<p><b>Transaksi:</b> '+Number(rev.transaction_count||0).toLocaleString('id-ID')+
+        ' · <b>Unit produk:</b> '+Number(skus.quantity||0).toLocaleString('id-ID')+
+        ' · <b>SKU:</b> '+Number(skus.sku_count||0).toLocaleString('id-ID')+
+        ' (unit/SKU: Penjualan Produk Majoo)</p>'+
+        '<p><b>HPP SKU sumber Majoo:</b> '+(skus.hpp==null?'Belum tersedia':money(skus.hpp))+
+        ' · <b>Laba gabungan:</b> Belum final, tidak dihitung otomatis dari dua cakupan berbeda.</p>'+
+        '<p>Acuan ini hanya Preview; tidak mengganti KPI production, membuat transaksi, atau posting stok.</p></div>';
+      auditBox='<div class="sb-fmt-box"><b>Rekonsiliasi '+(auditFlag?'PERLU REVIEW':'COCOK')+'</b>' +
+        '<p>Detail: '+r.transaction_count+' struk · '+r.product_occurrences+' kemunculan nama produk</p>' +
+        '<p>Rekap: '+r.report_skus+' SKU · '+r.report_units+' unit</p>' +
+        '<p>Selisih bruto: '+money(r.gross_gap)+' · Selisih bersih: '+money(r.net_gap)+'</p>' +
+        '<p>Selisih refund: '+money(r.refund_gap)+' · Pengecualian struk: '+r.receipt_exceptions.length+'</p>' +
+        '<p><b>Bukan dasar posting stok:</b> Qty SKU per struk belum tersedia.</p>'+exceptions+'</div>'+
+        authorityAudit+sourceBreakdown+scopeAudit+priceAudit+cfdAudit;
+    }
+    var auditError=STATE.reportReconcileError?'<div class="sb-fmt-box"><b>Rekonsiliasi gagal</b><p>'+esc(STATE.reportReconcileError)+'</p></div>':'';
+    var saveResult=STATE.reportSaveResult?'<div class="sb-fmt-box"><b>✅ Tersimpan untuk review Singapore</b>'+
+      '<p>Status: '+esc(STATE.reportSaveResult.status||'under_review')+'</p>'+
+      '<p>Batch ID: '+esc(STATE.reportSaveResult.batch_id||'')+'</p>'+
+      '<p>Tidak mengubah omzet resmi atau ledger stok.</p></div>':'';
+    var saveError=STATE.reportSaveError?'<div class="sb-fmt-box"><b>⚠️ Simpan staging ditolak</b><p>'+esc(STATE.reportSaveError)+'</p></div>':'';
+
+    return '<div class="sb-modal-overlay" id="sbReportPreviewOverlay">' +
+      '<div class="sb-modal-card">' +
+      '<div class="sb-modal-head"><h3>Preview Rekap Produk</h3>' +
+      '<button type="button" id="sbReportPreviewClose" class="sb-modal-close" aria-label="Tutup">✕</button></div>' +
+      '<div class="sb-modal-body">' +
+      '<div class="sb-fmt-box"><b>Periode: '+esc(p.period_month)+'</b>' +
+      '<p>Outlet: '+esc(p.outlet_name)+'</p>' +
+      '<p>'+p.source_row_count+' SKU · '+Number(t.quantity).toLocaleString('id-ID')+' unit · '+money(t.sales)+'</p>' +
+      '<p>HPP Majoo: '+money(t.hpp)+' · Refund: '+money(t.refund_amount)+'</p></div>' +
+      '<div class="sb-fmt-box">' +
+      '<b>🔒 Supabase Singapore UAT — hanya data review</b>' +
+      '<p>Detail dan rekap terpisah. Simpan staging hanya setelah konfirmasi Owner. Tidak mengubah KPI resmi, resep, HPP atau stok.</p></div>' +
+      auditBox+auditError+saveResult+saveError+
+      '</div><div class="sb-modal-foot">' +
+      '<input type="file" accept=".csv,.txt" id="sbReportReconcileInput" hidden>' +
+      '<button type="button" class="sb-btn-modal-ok" id="sbReportReconcileChoose">Bandingkan Detail CSV</button>' +
+      (STATE.reportSaveResult ? '' : '<button type="button" class="sb-btn-modal-ok" id="sbReportStageConfirm" '+
+        (STATE.reportSaving?'disabled':'')+'>'+(STATE.reportSaving?'Menyimpan di Singapore…':'Simpan ke Staging Singapore')+'</button>') +
+      '<button type="button" class="sb-btn-modal-ok" id="sbReportPreviewOkay">Tutup Preview</button>' +
+      '</div></div></div>';
+  }
+
   function renderUploadSection() {
     var hasFiles = STATE.stagedFiles && STATE.stagedFiles.length > 0;
     var pillHtml = '';
@@ -137,11 +255,11 @@ ice && STATE.slice.type === 'day' && STATE.slice.id === x.key;
     return '<div class="sb-upload-wrap">' +
       '<input id="sbFileInput" type="file" accept=".csv,.xlsx,.xls,.txt" multiple style="display:none">' +
       '<button type="button" class="sb-btn-upload" id="sbBtnChoose">' +
-      '<span>📁</span> Upload dari Majoo' +
+      '<span>📁</span> ' + (window.__HASNARIA_ENABLE_PRODUCT_REPORT_V1 ? 'Upload Penjualan' : 'Upload dari Majoo') +
       '</button>' +
       pillHtml +
       '<button type="button" class="sb-btn-submit ' + (hasFiles && !STATE.importing ? 'ready' : '') + '" id="sbBtnSubmit" ' + (!hasFiles || STATE.importing ? 'disabled' : '') + '>' +
-      (STATE.importing ? '<span class="sb-spin">⏳</span> ' + esc(STATE.importProgress || 'Memproses…') : '<span>⬆</span> Submit Data') +
+      (STATE.importing ? '<span class="sb-spin">⏳</span> ' + esc(STATE.importProgress || 'Memproses…') : (window.__HASNARIA_ENABLE_PRODUCT_REPORT_V1 && STATE.selectedUploadType==='product' ? '<span>🔎</span> Preview Rekap' : '<span>⬆</span> Submit Data')) +
       '</button>' +
       '<button type="button" class="sb-btn-format" id="sbBtnFormat" title="Panduan multi-periode & 3 format file Majoo">' +
       'Format & Multi-Periode' +
@@ -271,7 +389,7 @@ ice && STATE.slice.type === 'day' && STATE.slice.id === x.key;
     // Do not briefly show the empty-data screen before the initial GET resolves.
     // Keep the same canonical board skeleton until data (or an error) is known.
     if (STATE.loading || (!STATE.fetched && !STATE.error)) {
-      board.innerHTML = html + '<div class="sb-loading">Memuat data penjualan…</div></div>' + renderFormatHelpModal();
+      board.innerHTML = html + '<div class="sb-loading">Memuat data penjualan…</div></div>' + renderFormatHelpModal() + renderReportSourceChoiceModal() + renderReportPreviewModal();
       STATE.draw = false; bind(); return;
     }
 
@@ -284,7 +402,7 @@ ice && STATE.slice.type === 'day' && STATE.slice.id === x.key;
         '<button type="button" class="sb-btn-upload" id="sbBtnChooseEmpty"><span>📁</span> Pilih File Majoo Sekarang</button>' +
         '<button type="button" class="sb-help" id="sbBtnSeedDemo" style="background:#eef7f3;border-color:#176b55;color:#176b55;font-weight:700">⚡ Muat Data Majoo Jan 2026 (337 Transaksi)</button>' +
         '</div>' +
-        '</div></div>' + renderFormatHelpModal();
+        '</div></div>' + renderFormatHelpModal() + renderReportSourceChoiceModal() + renderReportPreviewModal();
       board.innerHTML = html; STATE.draw = false; bind(); return;
     }
 

@@ -78,7 +78,7 @@ v class="sb-period">' +
       '</div>' +
       '</div>';
 
-    html += '</div>' + renderFormatHelpModal() + renderImportStatusModal();
+    html += '</div>' + renderFormatHelpModal() + renderReportSourceChoiceModal() + renderReportPreviewModal() + renderImportStatusModal();
     board.innerHTML = html;
     STATE.draw = false;
     bind();
@@ -144,11 +144,108 @@ v class="sb-period">' +
       };
     }
 
-    // File selection & staging
+    // Two-source selection is preview-only behind explicit feature flag.
     var fileInput = host.querySelector('#sbFileInput');
     var btnChoose = host.querySelector('#sbBtnChoose') || host.querySelector('#sbBtnChooseEmpty');
+    var reportFlag = window.__HASNARIA_ENABLE_PRODUCT_REPORT_V1 === true;
     if (btnChoose && fileInput) {
-      btnChoose.onclick = function () { fileInput.click(); };
+      btnChoose.onclick = function () {
+        if(reportFlag){STATE.reportChoiceOpen=true;draw();}
+        else fileInput.click();
+      };
+    }
+    var reportChoiceClose=host.querySelector('#sbReportChoiceClose');
+    if(reportChoiceClose)reportChoiceClose.onclick=function(){STATE.reportChoiceOpen=false;draw();};
+    var reportChoiceOverlay=host.querySelector('#sbReportChoiceOverlay');
+    if(reportChoiceOverlay)reportChoiceOverlay.onclick=function(e){
+      if(e.target===reportChoiceOverlay){STATE.reportChoiceOpen=false;draw();}
+    };
+    host.querySelectorAll('[data-hsn-report-type]').forEach(function(button){
+      button.onclick=function(){
+        if(!reportFlag||!fileInput)return;
+        var kind=button.getAttribute('data-hsn-report-type');
+        if(kind!=='detail'&&kind!=='product')return;
+        STATE.selectedUploadType=kind;STATE.reportPreview=null;STATE.stagedFiles=[];
+        STATE.showReportPreview=false;STATE.reportReconciliation=null;STATE.reportReconcileError='';
+        STATE.reportSaveResult=null;STATE.reportSaveError='';STATE.reportSaving=false;
+        fileInput.value='';
+        fileInput.accept=kind==='product'?'.xlsx,.xls':'.csv,.xlsx,.xls,.txt';
+        fileInput.multiple=(kind==='detail');
+        // Keep the input alive until onchange; do not redraw here.
+        fileInput.click();
+      };
+    });
+    var reportPreviewClose=host.querySelector('#sbReportPreviewClose');
+    var reportPreviewOkay=host.querySelector('#sbReportPreviewOkay');
+    if(reportPreviewClose)reportPreviewClose.onclick=function(){STATE.showReportPreview=false;draw();};
+    if(reportPreviewOkay)reportPreviewOkay.onclick=function(){STATE.showReportPreview=false;draw();};
+    var reportPreviewOverlay=host.querySelector('#sbReportPreviewOverlay');
+    if(reportPreviewOverlay)reportPreviewOverlay.onclick=function(e){
+      if(e.target===reportPreviewOverlay){STATE.showReportPreview=false;draw();}
+    };
+    var reportStageButton=host.querySelector('#sbReportStageConfirm');
+    if(reportStageButton){
+      reportStageButton.onclick=async function(){
+        if(!reportFlag || STATE.reportSaving || STATE.reportSaveResult)return;
+        if(!STATE.reportPreview || !STATE.stagedFiles || STATE.stagedFiles.length!==1)
+          { STATE.reportSaveError='Preview satu file Excel harus valid sebelum menyimpan.';draw();return; }
+        if(!window.__HASNARIA_PRODUCT_REPORT_V1 ||
+          !window.__HASNARIA_PRODUCT_REPORT_V1.isSingaporeUat(SB))
+          { STATE.reportSaveError='Konfigurasi Singapore UAT tidak valid.';draw();return; }
+        if(!window.confirm('Simpan Rekap Produk '+STATE.reportPreview.period_month+
+           ' ke Supabase Singapore TEST sebagai UNDER_REVIEW? Tidak akan memengaruhi production, KPI, BOM aktif, atau stok.'))
+          return;
+        STATE.reportSaving=true;STATE.reportSaveError='';
+        draw();
+        try {
+          var service=window.__HASNARIA_PRODUCT_REPORT_V1;
+          var token=await getTok();
+          if(!token)throw new Error('Sesi Owner tidak tersedia. Silakan login ulang.');
+          var outlet=await service.resolveSingaporeOutlet(BRAND,token,KEY);
+          var result=await service.stagePreview(
+            STATE.stagedFiles[0],await getFileMatrix(STATE.stagedFiles[0]),{
+              singaporeUatApproved:true,enableWrite:true,confirmed:true,
+              brandId:BRAND,outletId:outlet.id,supabaseUrl:SB,publishableKey:KEY,
+              getAccessToken:async function(){return token;}
+            });
+          if(!result || !result.receipt || !result.receipt.batch_id)
+            throw new Error('Tanda terima database tidak lengkap');
+          STATE.reportSaveResult={
+            status:result.receipt.status || result.status,
+            batch_id:result.receipt.batch_id
+          };
+          STATE.msg=result.recovered_from_uncertain_post
+            ? 'Koneksi sempat terputus, tetapi batch ditemukan di Singapore. Tidak ada unggah ulang.'
+            : (result.status==='existing'
+              ? 'Rekap SKU sudah tersimpan di Singapore. Tidak dibuat duplikat.'
+              : 'Rekap SKU disimpan untuk review di Singapore; belum memengaruhi stok.');
+        } catch(err){
+          STATE.reportSaveError=err&&err.message?err.message:String(err);
+        } finally {
+          STATE.reportSaving=false;
+          STATE.showReportPreview=true;draw();
+        }
+      };
+    }
+
+    var reconcileChooser=host.querySelector('#sbReportReconcileChoose');
+    var reconcileInput=host.querySelector('#sbReportReconcileInput');
+    if(reconcileChooser && reconcileInput){
+      reconcileChooser.onclick=function(){reconcileInput.click();};
+      reconcileInput.onchange=async function(){
+        if(!reconcileInput.files||!reconcileInput.files.length)return;
+        STATE.reportReconcileError='';STATE.reportReconciliation=null;
+        try{
+          if(!window.__HASNARIA_SALES_RECONCILE_V1 || !STATE.reportPreview)
+            throw new Error('Pembaca rekonsiliasi belum tersedia');
+          var detailFile=reconcileInput.files[0];
+          var matrix=await getFileMatrix(detailFile);
+          STATE.reportReconciliation=window.__HASNARIA_SALES_RECONCILE_V1.reconcile(matrix,STATE.reportPreview);
+        }catch(ex){
+          STATE.reportReconcileError=ex&&ex.message?ex.message:String(ex);
+        }
+        STATE.showReportPreview=true;draw();
+      };
     }
 
     if (fileInput) {
@@ -158,6 +255,24 @@ v class="sb-period">' +
           STATE.stagedFiles = flist;
           STATE.error = '';
           STATE.msg = '';
+          if(reportFlag && STATE.selectedUploadType==='product'){
+            try{
+              if(flist.length!==1)throw new Error('Rekap Produk harus satu file Excel per bulan.');
+              if(!window.__HASNARIA_PRODUCT_REPORT_V1)throw new Error('Pembaca rekap belum siap. Refresh halaman.');
+              STATE.reportPreview=window.__HASNARIA_PRODUCT_REPORT_V1.parseMatrix(await getFileMatrix(flist[0]));
+              STATE.reportReconciliation=null;STATE.reportReconcileError='';
+              STATE.reportSaveResult=null;STATE.reportSaveError='';
+              STATE.stagedFileType='Rekap SKU bulanan — staging UAT';
+              STATE.stagedFileRows=STATE.reportPreview.source_row_count;
+              STATE.reportChoiceOpen=false;
+            }catch(e){
+              STATE.error='Rekap Produk ditolak: '+(e&&e.message?e.message:e);
+              STATE.reportPreview=null;STATE.stagedFiles=[];STATE.stagedFileType='';
+              STATE.reportChoiceOpen=false;
+            }
+            draw();return;
+          }
+          STATE.reportChoiceOpen=false;
           if (flist.length === 1) {
             try {
               var rawPreview = await previewFileType(flist[0]);
@@ -180,6 +295,13 @@ v class="sb-period">' +
       btnCancelFile.onclick = function () {
         STATE.stagedFiles = [];
         STATE.stagedFileType = '';
+        STATE.reportPreview = null;
+        STATE.reportReconciliation = null;
+        STATE.reportReconcileError = '';
+        STATE.reportSaveResult = null;
+        STATE.reportSaveError = '';
+        STATE.reportSaving = false;
+        STATE.selectedUploadType = null;
         if (fileInput) fileInput.value = '';
         draw();
       };
@@ -190,6 +312,11 @@ v class="sb-period">' +
     if (btnSubmit) {
       btnSubmit.onclick = function () {
         if (STATE.stagedFiles && STATE.stagedFiles.length && !STATE.importing) {
+          if(reportFlag && STATE.selectedUploadType==='product'){
+            if(STATE.reportPreview){STATE.showReportPreview=true;draw();}
+            else {STATE.error='Preview rekap belum valid. Pilih ulang file.';draw();}
+            return;
+          }
           importFiles(STATE.stagedFiles);
         }
       };
@@ -263,7 +390,7 @@ v class="sb-period">' +
     return lines.map(split);
   }
 
-  async function readFileMatrix(file) {
+  async function readFileMatrix(file, preciseNumbers) {
     var ext = file.name.toLowerCase().split('.').pop();
     if (ext === 'xlsx' || ext === 'xls') {
       await ensureXLSX();
@@ -274,9 +401,13 @@ v class="sb-period">' +
       STATE.importStatus = {type:'progress',message:'Memproses file Excel',detail:file.name,percent:15};
       STATE.importProgress = 'Memproses sheet…';
       draw();
-      var wb = XLSX.read(buf, { type: 'array', cellDates: true, raw: true, dense: true, cellStyles: false, cellHTML: false, cellFormula: false });
+      // Monthly SKU reports carry sub-rupiah HPP precision. Using formatted
+      // display text can round the real cell value and cause false mismatch
+      // against immutable Supabase source lines. Keep the legacy Detail path
+      // byte-for-byte equivalent to its previous raw:false behavior.
+      var wb = XLSX.read(buf, { type: 'array', cellDates: !preciseNumbers, raw: true, dense: true, cellStyles: false, cellHTML: false, cellFormula: false });
       var sh = wb.Sheets[wb.SheetNames[0]];
-      return XLSX.utils.sheet_to_json(sh, { header: 1, defval: '', raw: false });
+      return XLSX.utils.sheet_to_json(sh, { header: 1, defval: '', raw: !!preciseNumbers });
     }
     return parseTextLines(await file.text());
   }
@@ -300,14 +431,23 @@ v class="sb-period">' +
     return { type: 'generic', headerRow: 0, label: 'File Majoo Standard' };
   }
 
-  // Cache parsed matrices by File object so preview and submit do not parse the
-  // same Excel workbook twice.
+  // Cache separately by File object and precision mode: legacy Detail imports
+  // must never reuse the SKU report raw-number matrix (or vice versa).
   var fileMatrixCache = typeof WeakMap !== 'undefined' ? new WeakMap() : null;
 
   async function getFileMatrix(file) {
-    if (fileMatrixCache && fileMatrixCache.has(file)) return fileMatrixCache.get(file);
-    var matrix = await readFileMatrix(file);
-    if (fileMatrixCache) fileMatrixCache.set(file, matrix);
+    var ext = String(file && file.name || '').toLowerCase().split('.').pop();
+    var preciseNumbers = window.__HASNARIA_ENABLE_PRODUCT_REPORT_V1 === true &&
+      STATE.selectedUploadType === 'product' && (ext === 'xlsx' || ext === 'xls');
+    var mode = preciseNumbers ? 'sku_precision' : 'legacy_display';
+    var cached = fileMatrixCache && fileMatrixCache.get(file);
+    if (cached && cached[mode]) return cached[mode];
+    var matrix = await readFileMatrix(file, preciseNumbers);
+    if (fileMatrixCache) {
+      if (!cached) cached = {};
+      cached[mode] = matrix;
+      fileMatrixCache.set(file, cached);
+    }
     return matrix;
   }
 

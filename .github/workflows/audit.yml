@@ -48,6 +48,45 @@ jobs:
       - name: Majoo importer smoke test
         run: node tests/majoo-import-v2.test.js
 
+      - name: Majoo monthly product report strict parser test
+        run: node --test tests/sales-product-report-v1.test.js
+
+      - name: Majoo transaction-vs-product reconciliation safety tests
+        run: node --test tests/sales-reconciliation-v1.test.js
+
+      - name: Majoo evidence-gated revenue scope bridge tests
+        run: node --test tests/sales-scope-bridge-v1.test.js
+
+      - name: Keep Singapore UAT schemas out of production migrations
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s supabase/uat/singapore/20261108094500_singapore_four_source_uat_corpus_v1.sql
+          test -s supabase/uat/singapore/20261108095000_singapore_transaction_daily_reference_uat_v1.sql
+          test -s supabase/uat/singapore/20261108095500_singapore_raw_bom_demand_preview_uat_v1.sql
+          test -s supabase/uat/singapore/assert_four_source_integrity_v1.sql
+          test -s supabase/uat/singapore/assert_original_report_idempotency_v1.sql
+          test -s supabase/uat/singapore/assert_owner_atomic_import_acl_v2.sql
+          test -s supabase/uat/singapore/20261108141000_order_type_reconciliation_uat_v1.sql
+          test -s supabase/uat/singapore/20261108153000_period_daily_units_audit_v1.sql
+          test -s supabase/uat/singapore/20261108180000_bom_readonly_simulation_v2.sql
+          test -s supabase/uat/singapore/assert_bom_readonly_simulation_v2.sql
+          grep -q 'security_invoker = true' supabase/uat/singapore/20261108180000_bom_readonly_simulation_v2.sql
+          grep -q 'stock_posting_allowed' supabase/uat/singapore/assert_bom_readonly_simulation_v2.sql
+          test -s docs/CFD_OCTOBER_2026_SOURCE_CORRECTION.md
+          test -s supabase/migrations/20261108133000_secure_sales_product_report_acl_v2.sql
+          grep -q 'REVOKE ALL PRIVILEGES ON TABLE public.sales_product_report_batches' supabase/migrations/20261108133000_secure_sales_product_report_acl_v2.sql
+          grep -q 'REVOKE ALL PRIVILEGES ON TABLE public.sales_product_report_lines' supabase/migrations/20261108133000_secure_sales_product_report_acl_v2.sql
+          grep -q 'SECURITY DEFINER' supabase/migrations/20261108133000_secure_sales_product_report_acl_v2.sql
+          grep -q 'has_table_privilege' supabase/uat/singapore/assert_owner_atomic_import_acl_v2.sql
+          test -s supabase/uat/singapore/20261108101000_legacy_bom_candidates_review_only_uat_v1.sql
+          if grep -l 'hasnaria_uat' supabase/migrations/*.sql; then
+            echo 'Singapore-only UAT schema accidentally entered production migrations' >&2
+            exit 1
+          fi
+          grep -q 'stock_posting_allowed' supabase/uat/singapore/20261108095500_singapore_raw_bom_demand_preview_uat_v1.sql
+          grep -q 'stage_sales_product_report_v1' supabase/migrations/20261108093000_dual_source_sales_product_report_staging_v1.sql
+
       - name: Native user profile authority test
         run: node tests/native-user-profiles.test.js
 
