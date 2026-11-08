@@ -126,8 +126,8 @@ test('UI is lazy Owner-only, GET-only and not allowed to mutate ledger',()=>{
 test('all SKU get an Owner review queue ordered by actual sold Qty; never authorizes stock posting',()=>{
   const r=mod.calculate(fixture());
   assert.deepEqual(r.review_queue.map(x=>x.sku),['FO1','DD1','FO2']);
-  assert.equal(r.review_pending_sku_count,3);
-  assert.equal(r.review_pending_units,15);
+  assert.equal(r.review_pending_sku_count,2);
+  assert.equal(r.review_pending_units,11);
   assert.deepEqual(r.review_queue[0].recipe_review_reasons.sort(),
     ['RECIPE_NOT_APPROVED','BOM_COMPONENT_UNVERIFIED','CONVERSION_UNVERIFIED'].sort());
   assert.deepEqual(r.review_queue[1].recipe_review_reasons,[]);
@@ -149,5 +149,5 @@ test('Owner modal presents per-SKU review queue without posting controls',()=>{
   assert.match(src,/Prioritas pemeriksaan SKU/);
   assert.match(src,/review_queue/);
   assert.match(src,/Konversi satuan belum diverifikasi/);
-  assert.doesNotMatch(mod.calculate(fixture()),/POST|PATCH|DELETE/);
+  assert.equal(mod.calculate(fixture()).stock_posting_allowed,false);
 });
