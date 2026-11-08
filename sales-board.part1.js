@@ -134,6 +134,17 @@ ice && STATE.slice.type === 'day' && STATE.slice.id === x.key;
     var r=STATE.reportReconciliation, auditBox='';
     if(r){
       var auditFlag=Math.abs(r.gross_gap)>0.01||r.unknown_names.length||r.quantity_exceptions.length||r.receipt_exceptions.length;
+      var renderSources=function(summary){
+        return Object.keys(summary||{}).sort(function(a,b){
+          return Number(summary[b].gross)-Number(summary[a].gross);
+        }).map(function(k){
+          return '<p>'+esc(k)+': '+Number(summary[k].receipts).toLocaleString('id-ID')+
+            ' struk · '+money(summary[k].gross)+'</p>';
+        }).join('');
+      };
+      var sourceBreakdown='<details class="sb-fmt-box"><summary>Rincian jenis order &amp; pembayaran</summary>'+
+        '<b>Jenis order</b>'+renderSources(r.by_order_type)+
+        '<b>Metode pembayaran</b>'+renderSources(r.by_payment_method)+'</details>';
       var exceptions=r.receipt_exceptions.slice(0,3).map(function(x){
         return '<p>'+esc(x.transaction_id)+' · '+esc(x.issue)+' · '+money(x.receipt_total)+'</p>';
       }).join('');
@@ -142,7 +153,8 @@ ice && STATE.slice.type === 'day' && STATE.slice.id === x.key;
         '<p>Rekap: '+r.report_skus+' SKU · '+r.report_units+' unit</p>' +
         '<p>Selisih bruto: '+money(r.gross_gap)+' · Selisih bersih: '+money(r.net_gap)+'</p>' +
         '<p>Selisih refund: '+money(r.refund_gap)+' · Pengecualian struk: '+r.receipt_exceptions.length+'</p>' +
-        '<p><b>Bukan dasar posting stok:</b> Qty SKU per struk belum tersedia.</p>'+exceptions+'</div>';
+        '<p><b>Bukan dasar posting stok:</b> Qty SKU per struk belum tersedia.</p>'+exceptions+'</div>'+
+        sourceBreakdown;
     }
     var auditError=STATE.reportReconcileError?'<div class="sb-fmt-box"><b>Rekonsiliasi gagal</b><p>'+esc(STATE.reportReconcileError)+'</p></div>':'';
     var saveResult=STATE.reportSaveResult?'<div class="sb-fmt-box"><b>✅ Tersimpan untuk review Singapore</b>'+
