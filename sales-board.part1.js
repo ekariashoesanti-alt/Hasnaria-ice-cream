@@ -131,6 +131,8 @@ ice && STATE.slice.type === 'day' && STATE.slice.id === x.key;
   function renderReportPreviewModal() {
     if (!window.__HASNARIA_ENABLE_PRODUCT_REPORT_V1 || !STATE.showReportPreview || !STATE.reportPreview) return '';
     var p=STATE.reportPreview,t=p.totals;
+    var targetProd=window.__HASNARIA_PRODUCT_REPORT_V1&&
+      window.__HASNARIA_PRODUCT_REPORT_V1.isTokyoProduction(window.HASNARIA_SB);
     var r=STATE.reportReconciliation, auditBox='';
     if(r){
       var auditFlag=Math.abs(r.gross_gap)>0.01||r.unknown_names.length||r.quantity_exceptions.length||r.receipt_exceptions.length;
@@ -218,14 +220,14 @@ ice && STATE.slice.type === 'day' && STATE.slice.id === x.key;
       '<p>'+p.source_row_count+' SKU · '+Number(t.quantity).toLocaleString('id-ID')+' unit · '+money(t.sales)+'</p>' +
       '<p>HPP Majoo: '+money(t.hpp)+' · Refund: '+money(t.refund_amount)+'</p></div>' +
       '<div class="sb-fmt-box">' +
-      '<b>🔒 Supabase Singapore UAT — hanya data review</b>' +
+      '<b>🔒 '+(targetProd?'Tokyo Production — sumber SKU REVIEW ONLY':'Supabase Singapore UAT — hanya data review')+'</b>' +
       '<p>Detail dan rekap terpisah. Simpan staging hanya setelah konfirmasi Owner. Tidak mengubah KPI resmi, resep, HPP atau stok.</p></div>' +
       auditBox+auditError+saveResult+saveError+
       '</div><div class="sb-modal-foot">' +
       '<input type="file" accept=".csv,.txt" id="sbReportReconcileInput" hidden>' +
       '<button type="button" class="sb-btn-modal-ok" id="sbReportReconcileChoose">Bandingkan Detail CSV</button>' +
       (STATE.reportSaveResult ? '' : '<button type="button" class="sb-btn-modal-ok" id="sbReportStageConfirm" '+
-        (STATE.reportSaving?'disabled':'')+'>'+(STATE.reportSaving?'Menyimpan di Singapore…':'Simpan ke Staging Singapore')+'</button>') +
+        (STATE.reportSaving?'disabled':'')+'>'+(STATE.reportSaving?'Menyimpan review…':(targetProd?'Simpan SKU untuk Review Owner':'Simpan ke Staging Singapore'))+'</button>') +
       '<button type="button" class="sb-btn-modal-ok" id="sbReportPreviewOkay">Tutup Preview</button>' +
       '</div></div></div>';
   }

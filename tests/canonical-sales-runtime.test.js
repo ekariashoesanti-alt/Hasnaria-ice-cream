@@ -19,7 +19,11 @@ try {
   if (!runtime.includes('sbReportReconcileChoose')) throw new Error('Read-only reconciliation UI missing');
   if (!runtime.includes('Simpan ke Staging Singapore')) throw new Error('Explicit Singapore save UI action missing');
   if (!runtime.includes('resolveSingaporeOutlet(BRAND,token,KEY)')) throw new Error('Singapore Owner/Outlet resolution missing');
-  if (!runtime.includes('singaporeUatApproved:true,enableWrite:true,confirmed:true')) throw new Error('Explicit UAT-only save guard missing');
+  if (!runtime.includes('singaporeUatApproved:!targetProd')) throw new Error('Singapore test source gate missing');
+  if (!runtime.includes('tokyoReviewApproved:targetProd,reviewOnly:targetProd')) throw new Error('Tokyo review-only source gate missing');
+  if (!runtime.includes('enableWrite:true,confirmed:true')) throw new Error('Explicit Owner save confirmation guard missing');
+  if (!runtime.includes('isTokyoProduction(SB)')) throw new Error('Exact Tokyo project endpoint guard missing');
+  if (!runtime.includes('resolveProductionOutlet(BRAND,token,KEY)')) throw new Error('Owner production outlet resolution missing');
   if (!runtime.includes('renderReportSourceChoiceModal')) throw new Error('Flagged two-source modal missing');
   if (!runtime.includes('renderReportPreviewModal')) throw new Error('Read-only product preview missing');
   if (!runtime.includes('Selisih cakupan laporan')) throw new Error('Majoo scope reconciliation disclosure missing');

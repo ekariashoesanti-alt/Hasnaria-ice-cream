@@ -189,22 +189,27 @@ v class="sb-period">' +
         if(!reportFlag || STATE.reportSaving || STATE.reportSaveResult)return;
         if(!STATE.reportPreview || !STATE.stagedFiles || STATE.stagedFiles.length!==1)
           { STATE.reportSaveError='Preview satu file Excel harus valid sebelum menyimpan.';draw();return; }
-        if(!window.__HASNARIA_PRODUCT_REPORT_V1 ||
-          !window.__HASNARIA_PRODUCT_REPORT_V1.isSingaporeUat(SB))
-          { STATE.reportSaveError='Konfigurasi Singapore UAT tidak valid.';draw();return; }
+        var service=window.__HASNARIA_PRODUCT_REPORT_V1;
+        if(!service || !(service.isSingaporeUat(SB)||service.isTokyoProduction(SB)))
+          { STATE.reportSaveError='Target database upload SKU tidak valid.';draw();return; }
+        var targetProd=service.isTokyoProduction(SB);
+        var destination=targetProd?'Tokyo Production (REVIEW ONLY)':'Singapore TEST';
         if(!window.confirm('Simpan Rekap Produk '+STATE.reportPreview.period_month+
-           ' ke Supabase Singapore TEST sebagai UNDER_REVIEW? Tidak akan memengaruhi production, KPI, BOM aktif, atau stok.'))
+           ' ke '+destination+' sebagai UNDER_REVIEW? Ini bukan penjualan baru; tidak akan mengubah KPI, BOM aktif, atau stok.'))
           return;
         STATE.reportSaving=true;STATE.reportSaveError='';
         draw();
         try {
-          var service=window.__HASNARIA_PRODUCT_REPORT_V1;
           var token=await getTok();
           if(!token)throw new Error('Sesi Owner tidak tersedia. Silakan login ulang.');
-          var outlet=await service.resolveSingaporeOutlet(BRAND,token,KEY);
+          var outlet=targetProd
+            ? await service.resolveProductionOutlet(BRAND,token,KEY)
+            : await service.resolveSingaporeOutlet(BRAND,token,KEY);
           var result=await service.stagePreview(
             STATE.stagedFiles[0],await getFileMatrix(STATE.stagedFiles[0]),{
-              singaporeUatApproved:true,enableWrite:true,confirmed:true,
+              singaporeUatApproved:!targetProd,
+              tokyoReviewApproved:targetProd,reviewOnly:targetProd,
+              enableWrite:true,confirmed:true,
               brandId:BRAND,outletId:outlet.id,supabaseUrl:SB,publishableKey:KEY,
               getAccessToken:async function(){return token;}
             });
@@ -215,10 +220,10 @@ v class="sb-period">' +
             batch_id:result.receipt.batch_id
           };
           STATE.msg=result.recovered_from_uncertain_post
-            ? 'Koneksi sempat terputus, tetapi batch ditemukan di Singapore. Tidak ada unggah ulang.'
+            ? 'Koneksi sempat terputus, tetapi batch ditemukan di '+destination+'. Tidak ada unggah ulang.'
             : (result.status==='existing'
-              ? 'Rekap SKU sudah tersimpan di Singapore. Tidak dibuat duplikat.'
-              : 'Rekap SKU disimpan untuk review di Singapore; belum memengaruhi stok.');
+              ? 'Rekap SKU sudah tersimpan di '+destination+'. Tidak dibuat duplikat.'
+              : 'Rekap SKU disimpan untuk review di '+destination+'; belum memengaruhi stok.');
         } catch(err){
           STATE.reportSaveError=err&&err.message?err.message:String(err);
         } finally {

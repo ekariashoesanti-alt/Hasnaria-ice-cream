@@ -162,8 +162,12 @@
     return Array.from(new Uint8Array(hash)).map(function(x){return x.toString(16).padStart(2,'0');}).join('');
   }
   var SINGAPORE_UAT_URL='https://rynnpndtzjwpekbiwiif.supabase.co';
+  var TOKYO_PRODUCTION_URL='https://bnnhmtkpdjlgehsvgoda.supabase.co';
   function isSingaporeUat(url) {
     return String(url||'').replace(/\/+$/,'')===SINGAPORE_UAT_URL;
+  }
+  function isTokyoProduction(url) {
+    return String(url||'').replace(/\/+$/,'')===TOKYO_PRODUCTION_URL;
   }
   function eqSourceNumber(a,b) {
     if(a==null||b==null)return a==null&&b==null;
@@ -205,7 +209,7 @@
         var message=await response.text();
         var error=new Error(response.status===401
           ? 'Sesi login Owner kedaluwarsa. Login ulang sebelum mencoba lagi.'
-          : 'Supabase Singapore HTTP '+response.status+': '+message.slice(0,260));
+          : 'Supabase laporan SKU HTTP '+response.status+': '+message.slice(0,260));
         // Only a server-side failure after POST could have committed.
         // Never retry a POST automatically, especially after losing its response.
         error.maybeCommitted=verb==='POST'&&response.status>=500;
@@ -216,7 +220,7 @@
       if(e&&typeof e.maybeCommitted==='boolean')throw e;
       var networkError=new Error(
         e&&e.name==='AbortError'
-          ? 'Koneksi Singapore melewati batas waktu ('+Math.round(timeoutMs/1000)+' detik).'
+          ? 'Koneksi laporan SKU melewati batas waktu ('+Math.round(timeoutMs/1000)+' detik).'
           : 'Koneksi Supabase terputus: '+(e&&e.message?e.message:String(e))
       );
       networkError.maybeCommitted=verb==='POST';
@@ -231,13 +235,13 @@
       '&outlet_id=eq.'+encodeURIComponent(opts.outletId)+
       '&period_month=eq.'+encodeURIComponent(parsed.period_month)+
       '&file_sha256=eq.'+encodeURIComponent(hash)+'&limit=2';
-    var matches=await requestJson(SINGAPORE_UAT_URL+path,token,opts.publishableKey);
+    var matches=await requestJson(opts.endpointUrl+path,token,opts.publishableKey);
     if(matches.length>1)fail('Lebih dari satu batch dengan checksum sama');
     if(!matches.length)return null;
     var b=matches[0];
     if(b.status==='rejected')fail('Rekap dengan checksum sama pernah ditolak. Unggah file revisi dengan checksum baru untuk review.');
     if(b.status!=='under_review')fail('Status batch belum terkunci atau tidak dikenal; hubungi Owner sebelum unggah ulang.');
-    var lines=await requestJson(SINGAPORE_UAT_URL+'/rest/v1/sales_product_report_lines?select='+
+    var lines=await requestJson(opts.endpointUrl+'/rest/v1/sales_product_report_lines?select='+
       'line_no,source_sku,source_product_name,quantity,source_sales_amount,source_hpp_amount,'+
       'source_gross_profit,refund_quantity,refund_amount,refund_hpp_amount'+
       '&batch_id=eq.'+encodeURIComponent(b.id)+'&order=line_no.asc&limit=5001',
@@ -258,11 +262,29 @@
       fail('Outlet bukan outlet sintetis Singapore; simpan diblokir');
     return outlet;
   }
+  // A production outlet is a real business outlet: unlike synthetic Singapore
+  // test data it must NEVER accept ambiguity or an outlet from another brand.
+  async function resolveProductionOutlet(brandId,token,publishableKey){
+    if(!brandId||!token||!publishableKey)fail('Sesi Owner / brand tidak lengkap');
+    var url=TOKYO_PRODUCTION_URL+'/rest/v1/outlets?select=id,brand_id,name,active'+
+      '&brand_id=eq.'+encodeURIComponent(brandId)+'&active=eq.true&limit=3';
+    var outlets=await requestJson(url,token,publishableKey);
+    if(!Array.isArray(outlets)||outlets.length!==1 ||
+       outlets[0].brand_id!==brandId||outlets[0].active!==true)
+      fail('Satu outlet aktif yang sesuai brand wajib dipilih dan dikonfirmasi Owner');
+    return outlets[0];
+  }
   async function stagePreview(file,matrix,opts){
     opts=opts||{};
     if(opts.enableWrite!==true||opts.confirmed!==true)fail('Simpan staging perlu konfirmasi Owner');
-    if(opts.singaporeUatApproved!==true||!isSingaporeUat(opts.supabaseUrl))
-      fail('Simpan rekap hanya tersedia untuk Supabase Singapore UAT');
+    var singapore=isSingaporeUat(opts.supabaseUrl)&&opts.singaporeUatApproved===true;
+    var tokyo=isTokyoProduction(opts.supabaseUrl)&&opts.tokyoReviewApproved===true&&
+      opts.reviewOnly===true;
+    if(!singapore&&!tokyo)
+      fail('Simpan rekap hanya tersedia untuk Singapore UAT atau Tokyo Owner review-only');
+    // Never let an arbitrary request opts.endpointUrl redirect the Owner JWT.
+    // Choose this base URL from a hardcoded allowlist only after explicit gate.
+    opts=Object.assign({},opts,{endpointUrl:singapore?SINGAPORE_UAT_URL:TOKYO_PRODUCTION_URL});
     if(!opts.brandId||!opts.outletId||!opts.publishableKey||
        typeof opts.getAccessToken!=='function')fail('Konfigurasi staging tidak lengkap');
     if(!file||!file.size||file.size>20*1024*1024)
@@ -276,7 +298,7 @@
     if(existing)return existing;
     var receipt;
     try{
-      receipt=await requestJson(SINGAPORE_UAT_URL+'/rest/v1/rpc/stage_sales_product_report_v1',
+      receipt=await requestJson(opts.endpointUrl+'/rest/v1/rpc/stage_sales_product_report_v1',
         token,opts.publishableKey,{method:'POST',
         headers:{'Content-Type':'application/json','apikey':opts.publishableKey,
           'Authorization':'Bearer '+token},
@@ -296,7 +318,7 @@
       }catch(recoveryError){
         // The status is still uncertain; preserve source and ask for review.
       }
-      fail('Status simpan ke Singapore belum dapat dipastikan setelah jaringan gagal. '+
+      fail('Status simpan rekap belum dapat dipastikan setelah jaringan gagal. '+
         'Data lama aman. Jangan ubah file; periksa batch dengan checksum yang sama sebelum mencoba lagi.');
     }
     if(!receipt || !receipt.batch_id ||
@@ -308,16 +330,22 @@
       fail('Simpan ditangguhkan: pemeriksaan ulang database tidak cocok; jangan unggah ulang sampai diaudit');
     return {status:receipt.status,receipt:receipt,preview:parsed};
   }
-  // Preview can be explicitly opted into ONLY against the Singapore synthetic UAT backend.
-  // URL alone cannot enable the feature on Tokyo production.
+  // Singapore UAT retains its existing switch. In Tokyo, a distinct explicit
+  // review-only opt-in is required; there is no global silent enablement.
   function previewFeatureAllowed(host) {
     var target=String(host && host.HASNARIA_SB || '');
     var search=String(host && host.location && host.location.search || '');
-    return /^https:\/\/rynnpndtzjwpekbiwiif\.supabase\.co\/?$/.test(target)
-      && /(?:^\?|&)sales_product_preview=1(?:&|$)/.test(search);
+    var sg=isSingaporeUat(target)&&/(?:^\?|&)sales_product_preview=1(?:&|$)/.test(search);
+    var prod=isTokyoProduction(target)&&/(?:^\?|&)sku_review=1(?:&|$)/.test(search);
+    return sg||prod;
   }
   if (root) root.__HASNARIA_ENABLE_PRODUCT_REPORT_V1=previewFeatureAllowed(root);
-  var api={parseMatrix:parseMatrix,stagePreview:stagePreview,previewFeatureAllowed:previewFeatureAllowed,resolveSingaporeOutlet:resolveSingaporeOutlet,isMatchingStoredLines:isMatchingStoredLines,isSingaporeUat:isSingaporeUat};
+  var api={parseMatrix:parseMatrix,stagePreview:stagePreview,
+    previewFeatureAllowed:previewFeatureAllowed,
+    resolveSingaporeOutlet:resolveSingaporeOutlet,
+    resolveProductionOutlet:resolveProductionOutlet,
+    isMatchingStoredLines:isMatchingStoredLines,
+    isSingaporeUat:isSingaporeUat,isTokyoProduction:isTokyoProduction};
   if(root)root.__HASNARIA_PRODUCT_REPORT_V1=api;
   if(typeof module!=='undefined'&&module.exports)module.exports=api;
 })(typeof window!=='undefined'?window:null);
