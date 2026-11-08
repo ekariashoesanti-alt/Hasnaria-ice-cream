@@ -21,7 +21,7 @@ function ensureStyles(){
   var l=document.getElementById('hsri-css');
   if(l&&l.sheet){resolve();return;}
   if(!l){l=document.createElement('link');l.rel='stylesheet';l.id='hsri-css';
-   l.href='/stock-recipe-import-v1.css?v=2';}
+   l.href='/stock-recipe-import-v1.css?v=3';}
   l.addEventListener('load',function(){resolve();},{once:true});
   l.addEventListener('error',function(){reject(Error('Desain popup gagal dimuat. Silakan refresh halaman.'));},{once:true});
   if(!l.isConnected)document.head.appendChild(l);
