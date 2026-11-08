@@ -33,3 +33,37 @@
 #hsri-root .hsri-panel footer span{max-width:540px!important}
 #hsri-root .hsri-panel footer button{margin-left:auto!important}
 @media(max-width:680px){#hsri-root .hsri-backdrop{padding:6px!important}#hsri-root .hsri-panel{width:calc(100vw - 12px)!important;max-height:94vh!important;border-radius:11px!important}#hsri-root .hsri-header{padding:14px!important}#hsri-root .hsri-header h3{font-size:18px!important}#hsri-root .hsri-upload{margin:12px!important;padding:12px!important}#hsri-root .hsri-choose{width:100%!important}#hsri-root .hsri-kpis{grid-template-columns:repeat(2,minmax(0,1fr))!important;margin:10px 12px!important}#hsri-root .hsri-table-wrap{margin:0 12px!important}#hsri-root .hsri-panel h4{margin:13px 12px 6px!important}#hsri-root .hsri-caption{padding:0 12px!important}#hsri-root .hsri-panel footer{padding:12px!important}#hsri-root .hsri-panel footer button{width:100%!important}#hsri-root .hsri-error,#hsri-root .hsri-notice,#hsri-root .hsri-warning{margin:10px 12px!important}}
+
+/* v3: prevent flex children from compressing two review tables to a single line. */
+#hsri-root .hsri-panel>.hsri-header,
+#hsri-root .hsri-panel>.hsri-upload,
+#hsri-root .hsri-panel>.hsri-kpis,
+#hsri-root .hsri-panel>.hsri-transfer,
+#hsri-root .hsri-panel>.hsri-history,
+#hsri-root .hsri-panel>.hsri-table-wrap,
+#hsri-root .hsri-panel>footer,
+#hsri-root .hsri-panel>h4,
+#hsri-root .hsri-panel>.hsri-caption{flex:0 0 auto!important}
+#hsri-root .hsri-panel>.hsri-table-wrap{height:168px!important;max-height:168px!important;min-height:126px!important;overflow:auto!important}
+#hsri-root .hsri-transfer{margin:12px 22px 0!important;padding:12px 14px!important;border:1px solid #dbe8e1!important;background:#f7faf8!important;border-radius:10px!important;display:grid!important;gap:9px!important;color:#244739!important}
+#hsri-root .hsri-transfer-header{display:flex!important;align-items:center!important;gap:12px!important;justify-content:space-between!important;font-size:12px!important}
+#hsri-root .hsri-transfer small{font-size:10px!important;color:#577366!important;overflow-wrap:anywhere}
+#hsri-root .hsri-transfer-done{background:#eaf6f0!important;border-color:#bee2cc!important;color:#176b55!important}
+#hsri-root .hsri-transfer-warning{background:#fff4e9!important;border-color:#f4d6b5!important;color:#854f29!important}
+#hsri-root .hsri-stepper{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:5px!important}
+#hsri-root .hsri-stepper span{display:block!important;text-align:center!important;border-radius:5px!important;background:#e9f0eb!important;color:#6d8076!important;font-size:10px!important;padding:5px 3px!important;white-space:nowrap!important}
+#hsri-root .hsri-stepper .hsri-step-active{background:#176b55!important;color:#fff!important;font-weight:750!important}
+#hsri-root .hsri-spinner{height:17px!important;width:17px!important;border:2px solid #c5dbcd!important;border-top-color:#176b55!important;border-radius:50%!important;animation:hsri-spin .85s linear infinite}
+@keyframes hsri-spin{to{transform:rotate(360deg)}}
+#hsri-root .hsri-history{margin:15px 22px 0!important;border:1px solid #e0e8e2!important;border-radius:10px!important;background:#fff!important;padding:11px 13px!important;display:flex!important;justify-content:space-between!important;align-items:flex-start!important;gap:12px!important;font-size:11px!important;color:#63756a!important;flex-wrap:wrap!important}
+#hsri-root .hsri-history>strong{font-size:11px!important;color:#24473b!important}
+#hsri-root .hsri-history-detail{display:grid!important;gap:4px!important;text-align:right!important;overflow-wrap:anywhere!important}
+#hsri-root .hsri-history-detail b{color:#176b55!important;font-weight:750!important}
+#hsri-root .hsri-history-detail small{color:#667a6e!important}
+#hsri-root .hsri-panel footer button[data-hsri-recheck]{background:#fff!important;color:#176b55!important;border-color:#aac8b8!important}
+@media(max-width:680px){
+ #hsri-root .hsri-transfer,#hsri-root .hsri-history{margin:10px 12px 0!important}
+ #hsri-root .hsri-stepper{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+ #hsri-root .hsri-history-detail{text-align:left!important}
+ #hsri-root .hsri-panel>.hsri-table-wrap{height:155px!important}
+}
