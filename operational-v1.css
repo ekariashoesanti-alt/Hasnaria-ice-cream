@@ -87,6 +87,6 @@
 @media(max-width:620px){#operasional .op1-head{flex-direction:column}#operasional .op1-head-actions{width:100%}#operasional .op1-head-actions button{flex:1}#operasional .op1-kpis{grid-template-columns:1fr}#operasional .op1-create-grid{grid-template-columns:1fr}#operasional .op1-create-grid label.wide{grid-column:auto}#operasional .op1-detail-head{flex-direction:column}#operasional .op1-detail-actions{width:100%;justify-content:space-between}#operasional .op1-foot{align-items:flex-start;flex-direction:column}}
 
 /* HSN-712 - lazy Loyalty navigation, aligned with existing Operational cards */
-.op1-loyalty-nav{display:flex;align-items:center;gap:5px;background:#edf4f5;border:1px solid #d3e1e6;border-radius:11px;padding:4px;margin-bottom:10px;width:max-content;max-width:100%}
-.op1-loyalty-nav button{border:0;min-height:29px;padding:6px 15px;border-radius:8px;background:transparent;color:#345267;font-size:12px;font-weight:700}
-.op1-loyalty-nav button.on{background:#15344b;color:#fff;box-shadow:0 1px 3px #132e4520}
+.op1-loyalty-nav{display:flex;align-items:center;gap:5px;background:#edf7f2;border:1px solid #cfe3da;border-radius:11px;padding:4px;margin-bottom:10px;width:max-content;max-width:100%}
+.op1-loyalty-nav button{border:0;min-height:29px;padding:6px 15px;border-radius:8px;background:transparent;color:#225343;font-size:12px;font-weight:700}
+.op1-loyalty-nav button.on{background:#176b55;color:#fff;box-shadow:0 1px 3px #0c4f3d20}
