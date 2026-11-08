@@ -165,6 +165,16 @@ ice && STATE.slice.type === 'day' && STATE.slice.id === x.key;
         }).join('')+
         (pricingCandidates.length>20?'<p>Dan '+(pricingCandidates.length-20)+
           ' struk lainnya — memerlukan rincian item POS untuk kepastian.</p>':'')+'</details>';
+      // Source-scope explanation is based on public Majoo report documentation,
+      // not an allocation or a stock correction.
+      var scopeAudit='<details class="sb-fmt-box"><summary>🧾 Selisih cakupan laporan: '+
+        money(r.gross_gap)+' (belum terurai)</summary>'+
+        '<p>Majoo menjelaskan bahwa Laporan Penjualan Produk dapat berbeda dari total laporan penjualan karena komponen tingkat transaksi, termasuk pajak dan diskon. Nilai masing-masing komponen pada bulan ini BELUM tersedia.</p>'+
+        '<p>Prioritas verifikasi di Majoo: (1) Ringkasan Penjualan, (2) Penjualan Ekstra / Sub Ekstra, dan (3) Pajak serta diskon/promosi; gunakan filter periode dan outlet yang sama.</p>'+
+        '<p>Jangan tambahkan selisih ini ke SKU, omzet KPI, HPP, BOM atau stok sebelum nilai komponennya diperiksa dan disetujui Owner.</p>'+
+        '<p>Sumber: <a href="https://majoo.id/informasi-update/laporan-produk-tambahan-kolom-refund" target="_blank" rel="noopener noreferrer">Definisi Laporan Produk Majoo</a> · '+
+        '<a href="https://majoo.id/panduan-pengguna/detail/184" target="_blank" rel="noopener noreferrer">Komponen Ringkasan Penjualan</a> · '+
+        '<a href="https://majoo.id/panduan-pengguna/detail/194" target="_blank" rel="noopener noreferrer">Penjualan Ekstra</a></p></details>';
       var exceptions=r.receipt_exceptions.slice(0,3).map(function(x){
         return '<p>'+esc(x.transaction_id)+' · '+esc(x.issue)+' · '+money(x.receipt_total)+'</p>';
       }).join('');
@@ -174,7 +184,7 @@ ice && STATE.slice.type === 'day' && STATE.slice.id === x.key;
         '<p>Selisih bruto: '+money(r.gross_gap)+' · Selisih bersih: '+money(r.net_gap)+'</p>' +
         '<p>Selisih refund: '+money(r.refund_gap)+' · Pengecualian struk: '+r.receipt_exceptions.length+'</p>' +
         '<p><b>Bukan dasar posting stok:</b> Qty SKU per struk belum tersedia.</p>'+exceptions+'</div>'+
-        sourceBreakdown+priceAudit+cfdAudit;
+        sourceBreakdown+scopeAudit+priceAudit+cfdAudit;
     }
     var auditError=STATE.reportReconcileError?'<div class="sb-fmt-box"><b>Rekonsiliasi gagal</b><p>'+esc(STATE.reportReconcileError)+'</p></div>':'';
     var saveResult=STATE.reportSaveResult?'<div class="sb-fmt-box"><b>✅ Tersimpan untuk review Singapore</b>'+
