@@ -192,3 +192,44 @@ test('CSV export includes non-CS prefixes and still counts those tickets',()=>{
   assert.equal(raw.gross,35000);
   assert.equal(raw.rows[0].transaction_id,'CO/01/261004/0001');
 });
+
+
+test('28 actual Sunday-morning ice-cream receipts sum Rp540,000 but do NOT explain Rp622,000',()=>{
+  const oct11=[
+    ['0001','07:00:25',10000,'Es krim Turkiy'],['0002','07:02:01',10000,'Es krim Turkiy'],
+    ['0003','07:05:52',6000,'CFD Ice Cream Turki'],['0004','07:11:38',10000,'Es krim Turkiy'],
+    ['0005','07:12:30',10000,'Es krim Turkiy'],['0006','07:12:42',10000,'Es krim Turkiy'],
+    ['0007','07:19:37',6000,'CFD Ice Cream Turki'],['0008','07:27:39',6000,'CFD Ice Cream Turki'],
+    ['0009','07:38:38',11000,'ICE CREAM BOWL'],['0010','07:46:16',6000,'CFD Ice Cream Turki'],
+    ['0011','07:46:24',6000,'CFD Ice Cream Turki'],['0012','07:46:33',10000,'Es krim Turkiy'],
+    ['0013','07:49:19',6000,'CFD Ice Cream Turki'],['0014','07:49:35',10000,'ICE CREAM BOWL'],
+    ['0015','07:56:58',6000,'CFD Ice Cream Turki'],['0016','08:03:12',10000,'Es krim Turkiy'],
+    ['0017','08:03:29',8000,'ICE CREAM BOWL'],['0018','08:06:16',11000,'ICE CREAM BOWL'],
+    ['0019','08:06:26',6000,'CFD Ice Cream Turki'],['0020','08:08:15',10000,'Es krim Turkiy'],
+    ['0021','08:12:32',10000,'Es krim Turkiy'],['0022','08:27:28',6000,'CFD Ice Cream Turki'],
+    ['0023','08:30:37',22000,'ICE CREAM BOWL'],['0024','08:36:10',6000,'CFD Ice Cream Turki'],
+    ['0025','09:26:32',5000,'Es krim Turkiy'],['0026','09:29:16',18000,'CFD Ice Cream Turki'],
+    ['0027','09:30:46',24000,'ICE CREAM BOWL']
+  ];
+  const source=oct11.map(x=>{
+    const rec=row('CS/01/261011/'+x[0],'11-10-2026',x[3],x[2]);
+    rec[1]='11-10-2026 '+x[1];return rec;
+  });
+  const oct25=row('CS/01/261025/0001','25-10-2026',
+    'ICE CREAM BOWL,Es krim Turkiy,ICE CREAM BOWL,ICE CREAM BOWL,ICE CREAM BOWL',281000);
+  oct25[1]='25-10-2026 10:52:42';oct25[5]='Lainnya';
+  source.push(oct25);
+  const total=source.reduce((n,r)=>n+Number(r[7]),0);
+  assert.equal(oct11.length,27);
+  assert.equal(oct11.reduce((n,r)=>n+r[2],0),259000);
+  assert.equal(total,540000);
+  const parsed=parseDetailMatrix(detail(source,total,total));
+  assert.equal(parsed.receipts,28);
+  assert.equal(parsed.cfd_candidates.length,28);
+  assert.equal(parsed.cfd_candidate_gross,540000);
+  assert.equal(parsed.cfd_candidates.filter(c=>c.order_date==='2026-10-11').length,27);
+  assert.equal(parsed.cfd_candidates.filter(c=>c.order_date==='2026-10-25').length,1);
+  assert.ok(parsed.cfd_candidates.every(c=>c.review_status==='needs_owner_confirmation'));
+  assert.notEqual(parsed.cfd_candidate_gross,622000);
+  assert.equal(parsed.stock_posting_allowed,false);
+});
