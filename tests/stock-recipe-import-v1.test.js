@@ -81,3 +81,58 @@ test('owner UI and atomic DB proposal never mutate operational tables',()=>{
  assert.doesNotMatch(sql,/\b(?:insert\s+into|update|delete\s+from)\s+public\.(?:inventory_movements|inventory_recipe_components|product_recipe_verifications|sales|sale_items)\b/i);
  assert.doesNotMatch(ui,/.from\(['"](?:inventory_movements|inventory_recipe_components|product_recipe_verifications)['"]\)\.(?:insert|update|delete|upsert)\(/);
 });
+
+test('Stock recipe popup is independently styled and XLSX file chooser works without preload',async()=>{
+ const ui=fs.readFileSync(path.join(__dirname,'..','stock-recipe-import-v1.js'),'utf8');
+ const css=fs.readFileSync(path.join(__dirname,'..','stock-recipe-import-v1.css'),'utf8');
+ assert.match(css,/#hsri-root \.hsri-header/);
+ assert.match(css,/background:#fff!important/);
+ assert.match(ui,/cdn\.sheetjs\.com\/xlsx-0\.20\.3/);
+ assert.match(ui,/data-hsri-choose/);
+ assert.match(ui,/fileInput\.click\(\)/);
+ assert.match(ui,/await ensureExcelEngine\(\)/);
+ const mock={
+  __HASNARIA_CONTEXT:{role:'owner'},
+  location:{hostname:'hasnaria-business-analyzer.vercel.app'},
+  HASNARIA_SB:'https://bnnhmtkpdjlgehsvgoda.supabase.co'
+ };
+ const linked={};
+ const handlers={};
+ let scriptLoads=0,chooserClicks=0,dialog=null;
+ function element(tag){
+  return {
+   tag, isConnected:false, handlers:{},
+   addEventListener(name,fn){this.handlers[name]=fn;},
+   querySelector(q){if(q==='#hsriFile')return {disabled:false,click(){chooserClicks++;}};return null;},
+   remove(){},
+  };
+ }
+ const doc={
+  getElementById(id){return linked[id]||null;},
+  createElement:element,
+  head:{appendChild(el){
+   el.isConnected=true;if(el.id)linked[el.id]=el;
+   if(el.tag==='link'){el.sheet={};setImmediate(()=>el.handlers.load?.());return;}
+   if(el.tag==='script'){
+    scriptLoads++;
+    if(el.src.includes('cdn.sheetjs.com'))mock.XLSX={read(){}};
+    setImmediate(()=>el.onload?.());
+   }
+  }},
+  body:{appendChild(el){el.isConnected=true;dialog=el;linked[el.id]=el;}},
+  addEventListener(name,fn){handlers[name]=fn;},
+  removeEventListener(name){delete handlers[name];}
+ };
+ const vm=require('node:vm');
+ vm.runInNewContext(ui,{window:mock,document:doc,setTimeout,clearTimeout,Promise,console});
+ assert.equal(typeof mock.__HASNARIA_RECIPE_IMPORT_V1?.open,'function');
+ mock.__HASNARIA_RECIPE_IMPORT_V1.open();
+ await new Promise(resolve=>setTimeout(resolve,25));
+ assert.ok(dialog,'modal exists');
+ assert.match(dialog.innerHTML,/data-hsri-choose/);
+ assert.match(dialog.innerHTML,/File Resep Produk Majoo/);
+ assert.ok(scriptLoads>=1,'XLSX CDN loaded without Sales preloader');
+ assert.equal(typeof mock.XLSX.read,'function');
+ dialog.handlers.click({target:{closest(sel){return sel==='[data-hsri-choose]'?{}:null;}}});
+ assert.equal(chooserClicks,1,'file input is opened by a direct user click');
+});
