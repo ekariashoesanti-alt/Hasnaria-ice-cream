@@ -112,8 +112,8 @@ ice && STATE.slice.type === 'day' && STATE.slice.id === x.key;
     }).join('') + '</div>';
   }
 
-  // Preview-only two-source chooser. No write path exists in this UI stage.
-  // Enable on PR preview with ?sales_product_preview=1; production defaults OFF.
+  // Owner-only two-source chooser; production SKU upload stores an immutable
+  // monthly report as UNDER_REVIEW and never posts sales or inventory.
   function renderReportSourceChoiceModal() {
     if (!window.__HASNARIA_ENABLE_PRODUCT_REPORT_V1 || !STATE.reportChoiceOpen) return '';
     return '<div class="sb-modal-overlay" id="sbReportChoiceOverlay">' +
@@ -124,7 +124,7 @@ ice && STATE.slice.type === 'day' && STATE.slice.id === x.key;
       '<button type="button" data-hsn-report-type="detail" class="sb-fmt-box">' +
       '<b>📋 Detail Transaksi</b><p>Nomor transaksi, tanggal/jam, pembayaran dan nama produk. Importer eksisting.</p></button>' +
       '<button type="button" data-hsn-report-type="product" class="sb-fmt-box">' +
-      '<b>📦 Rekap Penjualan Produk</b><p>SKU, jumlah terjual, omzet, HPP, dan refund bulanan. Tahap ini: preview read-only.</p></button>' +
+      '<b>📦 Penjualan Produk (Excel .xls/.xlsx)</b><p>54 SKU, Qty terjual, omzet produk, HPP dan refund bulanan. Disimpan untuk review Owner; tidak mengurangi stok.</p></button>' +
       '</div></div></div>';
   }
 

@@ -330,16 +330,24 @@
       fail('Simpan ditangguhkan: pemeriksaan ulang database tidak cocok; jangan unggah ulang sampai diaudit');
     return {status:receipt.status,receipt:receipt,preview:parsed};
   }
-  // Singapore UAT retains its existing switch. In Tokyo, a distinct explicit
-  // review-only opt-in is required; there is no global silent enablement.
+  // Owner in Tokyo always sees the monthly SKU XLS/XLSX report chooser.
+  // OAuth redirects can discard URL query params; access must be derived from
+  // the authenticated Owner context and exact backend, NOT a query string.
+  // Singapore synthetic UAT still requires explicit opt-in.
   function previewFeatureAllowed(host) {
     var target=String(host && host.HASNARIA_SB || '');
     var search=String(host && host.location && host.location.search || '');
+    var context=host && host.__HASNARIA_CONTEXT;
     var sg=isSingaporeUat(target)&&/(?:^\?|&)sales_product_preview=1(?:&|$)/.test(search);
-    var prod=isTokyoProduction(target)&&/(?:^\?|&)sku_review=1(?:&|$)/.test(search);
-    return sg||prod;
+    var prod=isTokyoProduction(target)&&!!context&&context.role==='owner';
+    return !!(sg||prod);
   }
-  if (root) root.__HASNARIA_ENABLE_PRODUCT_REPORT_V1=previewFeatureAllowed(root);
+  // Evaluate at render/click time, after Core resolves Owner authentication.
+  // A one-time boolean captured before login would permanently hide the chooser.
+  if (root) Object.defineProperty(root,'__HASNARIA_ENABLE_PRODUCT_REPORT_V1',{
+    configurable:true,enumerable:true,
+    get:function(){return previewFeatureAllowed(root);}
+  });
   var api={parseMatrix:parseMatrix,stagePreview:stagePreview,
     previewFeatureAllowed:previewFeatureAllowed,
     resolveSingaporeOutlet:resolveSingaporeOutlet,
