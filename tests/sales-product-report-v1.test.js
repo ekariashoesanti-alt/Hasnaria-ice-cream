@@ -1,7 +1,7 @@
 'use strict';
 const assert=require('node:assert/strict');
 const test=require('node:test');
-const {parseMatrix,stagePreview,previewFeatureAllowed}=require('../sales-product-report-v1.js');
+const {parseMatrix,stagePreview,previewFeatureAllowed,resolveSingaporeOutlet,isMatchingStoredLines,isSingaporeUat}=require('../sales-product-report-v1.js');
 const h=['Produk','SKU','Outlet','Departemen','Kategori','Jenis Produk','Jumlah Terjual','Jumlah Terjual (%)','Penjualan (Rp.)','Penjualan (%)','HPP','Jumlah Refund','Refund (Rp.)','HPP Refund','Laba Kotor (Rp.)'];
 const r=(name,sku,qty,sales,cogs,refundQty=0,refund=0,profit)=>[
   name,sku,'Hasnaria Ice Cream','Tanpa Departemen','MENU UTAMA','Produk Satuan',
@@ -106,3 +106,150 @@ test('product report chooser is disabled on production even with query flag',()=
 });
 
 console.log('Sales product report strict staging parser regression: registered');
+
+
+
+test('security: only exact Singapore URL may ever stage a report',async()=>{
+  assert.equal(isSingaporeUat('https://rynnpndtzjwpekbiwiif.supabase.co'),true);
+  assert.equal(isSingaporeUat('https://bnnhmtkpdjlgehsvgoda.supabase.co'),false);
+  assert.equal(isSingaporeUat('https://rynnpndtzjwpekbiwiif.supabase.co.evil.test'),false);
+  await assert.rejects(stagePreview({size:1},matrix(),{
+    enableWrite:true,confirmed:true,singaporeUatApproved:true,
+    supabaseUrl:'https://bnnhmtkpdjlgehsvgoda.supabase.co'
+  }),/Singapore UAT/);
+  await assert.rejects(stagePreview({size:1},matrix(),{
+    enableWrite:true,confirmed:true,
+    supabaseUrl:'https://rynnpndtzjwpekbiwiif.supabase.co'
+  }),/Singapore UAT/);
+});
+
+test('source identity: replay only when every saved SKU, sale and refund field matches',()=>{
+  const rows=parseMatrix(matrix()).rows;
+  const stored=rows.map(x=>({
+    line_no:x.line_no,source_sku:x.sku,source_product_name:x.name,
+    quantity:String(x.quantity),source_sales_amount:String(x.sales_amount),
+    source_hpp_amount:String(x.cogs_amount),source_gross_profit:String(x.gross_profit),
+    refund_quantity:String(x.refund_qty),refund_amount:String(x.refund_amount),
+    refund_hpp_amount:String(x.refund_cogs)
+  }));
+  assert.equal(isMatchingStoredLines(rows,stored),true);
+  assert.equal(isMatchingStoredLines(rows,stored.slice(0,1)),false);
+  stored[1].quantity='99';
+  assert.equal(isMatchingStoredLines(rows,stored),false);
+  stored[1].quantity='1';
+  stored[1].refund_amount='10';
+  assert.equal(isMatchingStoredLines(rows,stored),false);
+});
+
+test('synthetic outlet resolution must reject any production-like or ambiguous outlet',async()=>{
+  const prev=globalThis.fetch;
+  let response=[{id:'out-1',brand_id:'brand-1',name:'[UAT SYNTHETIC] Outlet',active:true}];
+  globalThis.fetch=async()=>({ok:true,json:async()=>response});
+  try{
+    const out=await resolveSingaporeOutlet('brand-1','owner-jwt','staging-publishable');
+    assert.equal(out.id,'out-1');
+    response=[{id:'prod-1',brand_id:'brand-1',name:'Hasnaria Ice Cream',active:true}];
+    await assert.rejects(resolveSingaporeOutlet('brand-1','owner-jwt','staging-publishable'),/bukan outlet sintetis/);
+    response=[{id:'one',brand_id:'brand-1',name:'[UAT SYNTHETIC] Outlet'},{id:'two',brand_id:'brand-1',name:'[UAT SYNTHETIC] Outlet'}];
+    await assert.rejects(resolveSingaporeOutlet('brand-1','owner-jwt','staging-publishable'),/tepat satu outlet/);
+  } finally {globalThis.fetch=prev;}
+});
+
+test('network: confirmed Owner staging request writes only once and rereads immutable rows',async()=>{
+  const prev=globalThis.fetch,parsed=parseMatrix(matrix()),calls=[];
+  const stored=parsed.rows.map(x=>({
+    line_no:x.line_no,source_sku:x.sku,source_product_name:x.name,
+    quantity:x.quantity,source_sales_amount:x.sales_amount,
+    source_hpp_amount:x.cogs_amount,source_gross_profit:x.gross_profit,
+    refund_quantity:x.refund_qty,refund_amount:x.refund_amount,
+    refund_hpp_amount:x.refund_cogs
+  }));
+  let created=false;
+  globalThis.fetch=async(url,opts)=>{
+    calls.push({url:String(url),method:opts&&opts.method||'GET'});
+    if(String(url).includes('sales_product_report_batches')){
+      return {ok:true,json:async()=>created?[{id:'test-batch',status:'under_review',source_row_count:2}]:[]};
+    }
+    if(String(url).includes('sales_product_report_lines')){
+      return {ok:true,json:async()=>stored};
+    }
+    if(String(url).includes('/rpc/stage_sales_product_report_v1')){
+      const body=JSON.parse(opts.body);
+      assert.equal(body.p_rows.length,2);
+      assert.equal(body.p_rows[0].sku,'FO1');
+      created=true;
+      return {ok:true,json:async()=>({batch_id:'test-batch',status:'under_review',
+        reused:false,line_count:2,quantity:3,sales:21000})};
+    }
+    throw Error('Unexpected URL '+url);
+  };
+  const bytes=new TextEncoder().encode('test Excel bytes');
+  const file={name:'October.xlsx',size:bytes.length,arrayBuffer:async()=>bytes.buffer};
+  try{
+    const result=await stagePreview(file,matrix(),{
+      singaporeUatApproved:true,enableWrite:true,confirmed:true,
+      brandId:'brand-1',outletId:'out-1',
+      supabaseUrl:'https://rynnpndtzjwpekbiwiif.supabase.co',
+      publishableKey:'staging-publishable',getAccessToken:async()=> 'owner-jwt'
+    });
+    assert.equal(result.receipt.batch_id,'test-batch');
+    assert.equal(result.status,'under_review');
+    assert.equal(calls.filter(c=>c.method==='POST').length,1);
+    assert.equal(calls.filter(c=>c.url.includes('sales_product_report_lines')).length,1);
+  } finally {globalThis.fetch=prev;}
+});
+
+test('duplicate: replay verification never POSTs on exact original saved report',async()=>{
+  const prev=globalThis.fetch,parsed=parseMatrix(matrix()),calls=[];
+  const rows=parsed.rows.map(x=>({
+    line_no:x.line_no,source_sku:x.sku,source_product_name:x.name,
+    quantity:x.quantity,source_sales_amount:x.sales_amount,
+    source_hpp_amount:x.cogs_amount,source_gross_profit:x.gross_profit,
+    refund_quantity:x.refund_qty,refund_amount:x.refund_amount,
+    refund_hpp_amount:x.refund_cogs
+  }));
+  globalThis.fetch=async(url,opts)=>{
+    calls.push({url:String(url),method:opts&&opts.method||'GET'});
+    return {ok:true,json:async()=>String(url).includes('sales_product_report_batches')
+      ?[{id:'preexisting',status:'under_review',source_row_count:2}]:rows};
+  };
+  const bytes=new TextEncoder().encode('existing report bytes');
+  try{
+    const result=await stagePreview({name:'Existing.xlsx',size:bytes.length,arrayBuffer:async()=>bytes.buffer},matrix(),{
+      singaporeUatApproved:true,enableWrite:true,confirmed:true,
+      brandId:'brand-1',outletId:'out-1',
+      supabaseUrl:'https://rynnpndtzjwpekbiwiif.supabase.co',
+      publishableKey:'staging-publishable',getAccessToken:async()=> 'owner-jwt'
+    });
+    assert.equal(result.status,'existing');
+    assert.equal(result.receipt.reused,true);
+    assert.equal(calls.some(x=>x.method==='POST'),false);
+  } finally {globalThis.fetch=prev;}
+});
+
+test('duplicate: same file hash but different stored SKU detail fails closed without POST',async()=>{
+  const prev=globalThis.fetch,parsed=parseMatrix(matrix()),calls=[];
+  const mismatch=parsed.rows.map(x=>({
+    line_no:x.line_no,source_sku:x.sku,source_product_name:x.name,
+    quantity:x.quantity,source_sales_amount:x.sales_amount,
+    source_hpp_amount:x.cogs_amount,source_gross_profit:x.gross_profit,
+    refund_quantity:x.refund_qty,refund_amount:x.refund_amount,
+    refund_hpp_amount:x.refund_cogs
+  }));
+  mismatch[0].quantity=999;
+  globalThis.fetch=async(url,opts)=>{
+    calls.push({url:String(url),method:opts&&opts.method||'GET'});
+    return {ok:true,json:async()=>String(url).includes('sales_product_report_batches')
+      ?[{id:'preexisting',status:'under_review',source_row_count:2}]:mismatch};
+  };
+  const bytes=new TextEncoder().encode('existing mismatch bytes');
+  try{
+    await assert.rejects(stagePreview({name:'Existing.xlsx',size:bytes.length,arrayBuffer:async()=>bytes.buffer},matrix(),{
+      singaporeUatApproved:true,enableWrite:true,confirmed:true,
+      brandId:'brand-1',outletId:'out-1',
+      supabaseUrl:'https://rynnpndtzjwpekbiwiif.supabase.co',
+      publishableKey:'staging-publishable',getAccessToken:async()=> 'owner-jwt'
+    }),/rincian SKU\/HPP berbeda/);
+    assert.equal(calls.some(x=>x.method==='POST'),false);
+  } finally {globalThis.fetch=prev;}
+});
