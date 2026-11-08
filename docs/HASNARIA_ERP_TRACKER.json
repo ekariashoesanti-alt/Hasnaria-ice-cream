@@ -2226,6 +2226,22 @@
       "owner": "Codex/ChatGPT",
       "updated_at": "2026-11-08",
       "notes": "Implemented Owner-only Loyalty UI, versioned Majoo monthly snapshots and owner RPC. Staging schema migrated; transactional test checked duplicate no-op, updated month, KPI summaries, sales unchanged and rollback. GitHub Hasnaria Audit Gate run #2996 passed (2026-11-08). Production deploy and real-file authenticated UAT pending Vercel build-rate-limit resolution; production DB not changed. PR #192 draft."
+    },
+    {
+      "id": "HSN-814",
+      "milestone": "M8",
+      "priority": "P0",
+      "status": "IN_PROGRESS",
+      "title": "Ringkasan CEO empat pilar data produksi: finance YTD, stok tervalidasi, loyalty, workforce",
+      "dependencies": [
+        "HSN-800",
+        "HSN-801",
+        "HSN-712"
+      ],
+      "acceptance": "4 kolom desktop navy-teal green, finance Januari–periode dengan label provisional, stock ranking hanya baseline & perhitungan aman, 3 customer bulan berjalan + most loyal YTD dan coverage, jam kerja dari pasangan timestamp nyata & ranking berbasis roster, owner access, one-view desktop, tests+preview+authenticated smoke sebelum produksi",
+      "owner": "Codex/ChatGPT",
+      "updated_at": "2026-11-09",
+      "notes": "Branch feature/hsn-814-ceo-four-pillar-kpis: implementasi frontend read-only terpisah + unit regression. Tokyo production diinspeksi read-only. Finance 10 bulan 2026 provisional, 19 dari 198 SKU memenuhi filter ranking ketat, loyalty 2/11 bulan, attendance 74 raw scans dan 0 pasangan absensi sah; indikator yang belum terverifikasi tidak ditebak. Menunggu CI Vercel preview dan Owner browser acceptance; produksi tidak diubah."
     }
   ]
 }
