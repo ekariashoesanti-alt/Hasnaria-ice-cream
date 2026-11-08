@@ -54,6 +54,9 @@ jobs:
       - name: Majoo transaction-vs-product reconciliation safety tests
         run: node --test tests/sales-reconciliation-v1.test.js
 
+      - name: Majoo evidence-gated revenue scope bridge tests
+        run: node --test tests/sales-scope-bridge-v1.test.js
+
       - name: Keep Singapore UAT schemas out of production migrations
         shell: bash
         run: |
