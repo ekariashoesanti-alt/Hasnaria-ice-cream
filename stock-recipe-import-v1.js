@@ -7,7 +7,7 @@ var TOKYO='bnnhmtkpdjlgehsvgoda.supabase.co';
 var PROD_HOSTS=['hasnaria-business-analyzer.vercel.app','hasnaria-business-analyzer-ekariashoesanti-9951s-projects.vercel.app'];
 var state={open:false,busy:false,error:'',notice:'',file:null,hash:'',parsed:null,comparison:null,
   savedBatch:'',saving:false,dbData:null};
-var dialog=null,enginePromise=null;
+var dialog=null,enginePromise=null,stylePromise=null,excelPromise=null;
 function owner(){var ctx=root.__HASNARIA_CONTEXT;return !!(ctx&&ctx.role==='owner');}
 function esc(x){return String(x==null?'':x).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
 function productionTarget(){
@@ -16,9 +16,52 @@ function productionTarget(){
 }
 function db(){if(!root.__HASNARIA_DB)throw Error('Koneksi database tidak tersedia; login ulang.');return root.__HASNARIA_DB;}
 function ensureStyles(){
- if(document.getElementById('hsri-css'))return;
- var l=document.createElement('link');l.rel='stylesheet';l.id='hsri-css';
- l.href='/stock-recipe-import-v1.css?v=1';document.head.appendChild(l);
+ if(stylePromise)return stylePromise;
+ stylePromise=new Promise(function(resolve,reject){
+  var l=document.getElementById('hsri-css');
+  if(l&&l.sheet){resolve();return;}
+  if(!l){l=document.createElement('link');l.rel='stylesheet';l.id='hsri-css';
+   l.href='/stock-recipe-import-v1.css?v=2';}
+  l.addEventListener('load',function(){resolve();},{once:true});
+  l.addEventListener('error',function(){reject(Error('Desain popup gagal dimuat. Silakan refresh halaman.'));},{once:true});
+  if(!l.isConnected)document.head.appendChild(l);
+ }).catch(function(e){stylePromise=null;throw e;});
+ return stylePromise;
+}
+/* Stock must load its own pinned Excel parser even if Sales was never opened. */
+function ensureExcelEngine(){
+ if(root.XLSX&&typeof root.XLSX.read==='function')return Promise.resolve(root.XLSX);
+ if(excelPromise)return excelPromise;
+ excelPromise=(async function(){
+  if(root.__HASNARIA_XLSX_READY){
+   try{
+    await Promise.race([
+     Promise.resolve(root.__HASNARIA_XLSX_READY),
+     new Promise(function(resolve){setTimeout(resolve,3000);})
+    ]);
+   }catch(_){}
+   if(root.XLSX&&typeof root.XLSX.read==='function')return root.XLSX;
+  }
+  return await new Promise(function(resolve,reject){
+   var script=document.createElement('script'),settled=false;
+   var guard=setTimeout(function(){
+    if(settled)return;settled=true;
+    reject(Error('Parser Excel tidak merespons. Periksa koneksi cdn.sheetjs.com dan coba lagi.'));
+   },15000);
+   function finish(error){
+    if(settled)return;settled=true;clearTimeout(guard);
+    if(error)reject(error);
+    else if(root.XLSX&&typeof root.XLSX.read==='function')resolve(root.XLSX);
+    else reject(Error('Library Excel termuat tetapi XLSX.read tidak tersedia.'));
+   }
+   script.src='https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js';
+   script.async=true;
+   script.onload=function(){finish();};
+   script.onerror=function(){finish(Error('Gagal memuat parser Excel. Periksa koneksi internet dan coba lagi.'));};
+   document.head.appendChild(script);
+  });
+ })().catch(function(err){excelPromise=null;throw err;});
+ return excelPromise;
 }
 function model(){
  if(root.__HASNARIA_RECIPE_IMPORT_MODEL_V1)return Promise.resolve(root.__HASNARIA_RECIPE_IMPORT_MODEL_V1);
@@ -53,14 +96,17 @@ function render(){
     ' ('+esc(r.inventory_unit||'—')+')</td><td>'+esc(reason(r.reason_codes))+'</td></tr>';
  }).join(''):'';
  dialog.innerHTML='<div class="hsri-backdrop"><section class="hsri-panel" role="dialog" aria-modal="true" aria-labelledby="hsriTitle">'+
- '<header><div><small>STOK · REVIEW RESEP MAJOO</small><h3 id="hsriTitle">Impor &amp; Review Resep Produk</h3>'+
- '<p>Sumber Majoo dibandingkan dengan BOM Tokyo. Penyimpanan hanya sebagai bukti review — tidak mengubah resep aktif, ledger, HPP atau stok.</p></div>'+
- '<button type="button" data-hsri-close aria-label="Tutup" '+(state.busy||state.saving?'disabled':'')+'>×</button></header>'+
+ '<header class="hsri-header"><div class="hsri-heading"><small>STOK / RESEP PRODUK</small><h3 id="hsriTitle">Impor &amp; Review Resep</h3>'+
+ '<p>Bandingkan sumber Majoo dengan BOM Tokyo. File hanya disimpan sebagai usulan, tidak mengubah stok.</p></div>'+
+ '<button type="button" class="hsri-close" data-hsri-close aria-label="Tutup" '+(state.busy||state.saving?'disabled':'')+'>×</button></header>'+
  (state.error?'<div class="hsri-error" role="alert">'+esc(state.error)+'</div>':'')+
  (state.notice?'<div class="hsri-notice" role="status">'+esc(state.notice)+'</div>':'')+
- '<div class="hsri-controls"><label>Ekspor Resep Produk Majoo (.xlsx)'+
- '<input id="hsriFile" type="file" accept=".xlsx" '+(state.busy||state.saving?'disabled':'')+'></label>'+
- '<span>'+esc(state.file?state.file.name:'Belum ada file yang dipilih')+'</span></div>'+
+ '<div class="hsri-upload"><div class="hsri-upload-copy"><strong>File Resep Produk Majoo (.xlsx)</strong>'+
+ '<small>Pilih ekspor asli berisi 3 sheet. Maksimal 5 MB.</small>'+
+ '<span class="hsri-file-name" aria-live="polite">'+esc(state.file?'✓ '+state.file.name:'Belum ada file dipilih')+'</span></div>'+
+ '<input id="hsriFile" class="hsri-file-input" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" tabindex="-1" aria-label="File resep Majoo" '+(state.busy||state.saving?'disabled':'')+'>'+
+ '<button type="button" class="hsri-choose" data-hsri-choose '+(state.busy||state.saving?'disabled':'')+'>Pilih File Excel</button></div>'+
+ (state.parserStatus==='loading'?'<div class="hsri-loader" role="status">Menyiapkan parser Excel…</div>':'')+
  (state.busy?'<div class="hsri-loading">Memvalidasi workbook dan mencocokkan master Tokyo…</div>':'')+
  (p?'<div class="hsri-kpis"><div><b>'+esc(p.source_skus)+'</b><span>SKU ekspor</span></div>'+
  '<div><b>'+esc(p.rows.length)+'</b><span>Komponen</span></div>'+
@@ -83,6 +129,7 @@ function render(){
 function close(){
  if(state.busy||state.saving)return;
  state.open=false;state.file=null;state.parsed=null;state.comparison=null;state.dbData=null;
+ document.removeEventListener('keydown',onEscape,true);
  if(dialog){dialog.remove();dialog=null;}
 }
 async function loadDatabase(){
@@ -116,18 +163,17 @@ async function read(file){
   if(!/\.xlsx$/i.test(file.name))throw Error('Pilih ekspor resep berformat .xlsx');
   if(file.size<100||file.size>5*1024*1024)throw Error('Ukuran file harus 100 B – 5 MB');
   var m=await model();
-  if(!root.XLSX&&root.__HASNARIA_XLSX_READY)await root.__HASNARIA_XLSX_READY;
-  if(!root.XLSX)throw Error('Parser Excel belum siap; muat ulang halaman.');
+  var xlsx=await ensureExcelEngine();
   if(!root.crypto||!root.crypto.subtle)throw Error('SHA-256 memerlukan HTTPS / peramban modern');
   var buffer=await file.arrayBuffer();
   var digest=await root.crypto.subtle.digest('SHA-256',buffer);
   var hash=Array.from(new Uint8Array(digest)).map(function(x){return x.toString(16).padStart(2,'0');}).join('');
-  var w=root.XLSX.read(buffer,{type:'array',cellDates:false});
+  var w=xlsx.read(buffer,{type:'array',cellDates:false});
   var sheets={};
   ['Ekspor Resep','Daftar Bahan','Daftar Master Resep'].forEach(function(name){
    var exact=w.SheetNames.find(function(x){return x.trim().toLowerCase()===name.toLowerCase();});
    if(!exact)throw Error('Sheet tidak ada: '+name);
-   sheets[name]=root.XLSX.utils.sheet_to_json(w.Sheets[exact],{header:1,raw:true,defval:''});
+   sheets[name]=xlsx.utils.sheet_to_json(w.Sheets[exact],{header:1,raw:true,defval:''});
   });
   var parsed=m.parse(sheets),data=await loadDatabase();
   if(String(data.outlet.name).toLocaleLowerCase('id-ID')===''){
@@ -163,14 +209,31 @@ function open(){
  if(!owner())return;
  if(state.open)return;
  state={open:true,busy:false,error:'',notice:'',file:null,hash:'',parsed:null,
-  comparison:null,savedBatch:'',saving:false,dbData:null};
- ensureStyles();
+  comparison:null,savedBatch:'',saving:false,dbData:null,parserStatus:'loading'};
  dialog=document.createElement('div');dialog.id='hsri-root';document.body.appendChild(dialog);
+ ensureStyles().then(function(){
+  if(!state.open)return;
+  render();
+  ensureExcelEngine().then(function(){
+   if(!state.open)return;
+   state.parserStatus='ready';render();
+  }).catch(function(error){
+   if(!state.open)return;
+   state.parserStatus='error';
+   state.error=(error&&error.message?error.message:String(error))+' Pilih ulang file untuk mencoba kembali.';
+   render();
+  });
+ }).catch(function(error){if(state.open){state.error=error&&error.message?error.message:String(error);render();}});
  dialog.addEventListener('change',function(ev){
   if(ev.target&&ev.target.id==='hsriFile'&&ev.target.files&&ev.target.files[0])read(ev.target.files[0]);
  });
  dialog.addEventListener('click',function(ev){
   if(ev.target.closest('[data-hsri-close]')){close();return;}
+  if(ev.target.closest('[data-hsri-choose]')){
+   var fileInput=dialog&&dialog.querySelector('#hsriFile');
+   if(fileInput&&!fileInput.disabled)fileInput.click();
+   return;
+  }
   if(ev.target.closest('[data-hsri-save]')){stage();return;}
  });
  document.addEventListener('keydown',onEscape,true);
