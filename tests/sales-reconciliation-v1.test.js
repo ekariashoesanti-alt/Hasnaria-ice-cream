@@ -284,3 +284,39 @@ test('ignore unknown product names in reference arithmetic rather than invent pr
   assert.equal(r.arithmetic_assessed_receipts,0);
   assert.equal(r.price_arithmetic_exceptions.length,0);
 });
+
+test('metric-specific source authority: receipts own revenue, product export owns units/HPP; no mixed profit',()=>{
+  const receipt=row('CS/SOT/1','01-10-2026','ODENG',20000);
+  const report={period_month:'2026-10-01',outlet_name:'Hasnaria Ice Cream',
+    totals:{sales:15000,refund_amount:1000,quantity:3,hpp:6000},
+    rows:[{name:'ODENG',sku:'FO1',quantity:3,sales_amount:15000}]};
+  const result=reconcile(detail([receipt],20000,19000),report);
+  const a=result.source_authority;
+  assert.equal(a.revenue.source,'majoo_detail_transactions');
+  assert.equal(a.revenue.gross,20000);
+  assert.equal(a.revenue.refund,1000);
+  assert.equal(a.revenue.net,19000);
+  assert.equal(a.revenue.transaction_count,1);
+  assert.equal(a.products.source,'majoo_monthly_product_report');
+  assert.equal(a.products.quantity,3);
+  assert.equal(a.products.sku_count,1);
+  assert.equal(a.products.hpp,6000);
+  assert.equal(a.products.gross_for_source_comparison_only,15000);
+  assert.equal(result.gross_gap,5000);
+  assert.equal(a.gross_profit_combined,null);
+  assert.equal(a.may_overwrite_official_kpi,false);
+  assert.equal(a.may_post_stock,false);
+  assert.equal(a.may_infer_daily_sku_units,false);
+  assert.equal(a.receipt_vs_period_report_confirmed_in_this_session,false);
+});
+
+test('cannot invent HPP or automatically certify profit from missing SKU cost',()=>{
+  const receipt=row('CS/SOT/2','01-10-2026','ODENG',5000);
+  const p=product();
+  delete p.totals.hpp;
+  const r=reconcile(detail([receipt],5000,5000),p);
+  assert.equal(r.source_authority.products.hpp,null);
+  assert.equal(r.source_authority.gross_profit_combined,null);
+  assert.equal(r.source_authority.may_overwrite_official_kpi,false);
+  assert.equal(r.source_authority.may_post_stock,false);
+});
