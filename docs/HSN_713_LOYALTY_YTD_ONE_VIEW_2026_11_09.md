@@ -10,7 +10,7 @@
 - Recurring same customer in different months counts once in customer KPI; visits add across months.
 - A customer's YTD frequency >=2 is repeat, 3+ is high frequency. Grouped repeat revenue reflects all YTD revenue of repeat customers.
 - Generated month coverage lists loaded and missing periods. No extrapolation, silent zeros, or deduction from unrelated sales transaction data.
-- Current production has **only November 2026**. Existing Nov figures 72 unique / 86 visits / Rp2,263,000 are partial YTD (1/11 months). Jan–Oct are not imported.
+- During implementation, October was also imported. Production YTD latest source is **October+November 2026**, covering 2/11 months: 243 unique customers, 296 visits, Rp7,523,000 identified revenue and 37 repeat customers. January–September remain unavailable. Source coverage is dynamic.
 - No changes to monthly import RPC, sales, finance, BOM, inventory or customer opt-in.
 
 ## UX correction
@@ -24,3 +24,9 @@
 - Regression source tests `tests/loyalty-ytd-one-view.test.js` in full Vercel build gate.
 - Do not merge if Vercel preview or GitHub Audit Gate fails.
 - After production migration, baseline data and 1/11 coverage must match without mutating Sales, Stock or Revenue.
+
+## Release blocker / recovery (9 Nov 2026)
+- Full GitHub Audit Gate PASS (run #3025) and owner access denial test PASS.
+- YTD read-only RPC applied to Tokyo production, no Sales mutation (still 7,612 rows); current reported YTD as above.
+- Vercel API refused deployment with HTTP 402 `api-deployments-free-per-day` (>100/day), retry-after 86400 seconds. No linked Vercel CLI available. Automated preview deployments for this branch have ERROR state.
+- PR #196 remains draft/unmerged so existing frontend remains stable. Re-attempt a preview only after Vercel quota recovers or the user resolves limits. Recheck audit and preview/viewport before merging.
