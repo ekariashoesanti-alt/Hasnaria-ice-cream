@@ -2226,6 +2226,20 @@
       "owner": "Codex/ChatGPT",
       "updated_at": "2026-11-08",
       "notes": "Implemented Owner-only Loyalty UI, versioned Majoo monthly snapshots and owner RPC. Staging schema migrated; transactional test checked duplicate no-op, updated month, KPI summaries, sales unchanged and rollback. GitHub Hasnaria Audit Gate run #2996 passed (2026-11-08). Production deploy and real-file authenticated UAT pending Vercel build-rate-limit resolution; production DB not changed. PR #192 draft."
+    },
+    {
+      "id": "HSN-713",
+      "milestone": "M7",
+      "priority": "P1",
+      "status": "REVIEW",
+      "title": "Loyalty YTD cumulative unique customers and compact one-view operational dashboard",
+      "dependencies": [
+        "HSN-712"
+      ],
+      "acceptance": "Jan-to-selected-month YTD sums visits and revenue by unique customer across latest monthly snapshots, repeat segments based on cumulative visits, missing-month coverage explicit, no synthetic history or double-counted imports, compact search/table + pagination visible at 100% zoom, audit gate and production reconciliation.",
+      "owner": "ChatGPT",
+      "updated_at": "2026-11-09",
+      "notes": "Code and SQL complete in PR #196. Staging YTD cross-month fixture passed incl duplicate-safe replacement and missing month warning; Owner-only enforcement passed. GitHub Audit Gate run 3025 PASS. Additive production RPC migrated, read-only checked 2 active months (Oct-Nov), 243 distinct customers, 296 visits, Rp7,523,000 and 37 repeat; sales count unchanged 7612. Preview/production deploy BLOCKED by Vercel free daily API cap 100 (402), CLI fallback unavailable. UI one-view visual acceptance not possible yet; do NOT mark DONE or claim live."
     }
   ]
 }

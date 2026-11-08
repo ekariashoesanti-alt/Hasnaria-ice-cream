@@ -48,8 +48,8 @@ test('Customer phone privacy, analytic distinctions, compact responsive UI',()=>
  assert.match(sql,/right\(c\.phone,4\)/);
  assert.doesNotMatch(sql,/select\s+c\.phone\s+as/);
  assert.match(js,/•••• /);
- assert.match(js,/bukan retention antarbulan/i);
- assert.match(js,/Tidak ada perubahan Penjualan, Stok, BOM, atau jurnal Keuangan/);
+ assert.match(js,/Bulan belum diunggah tidak diestimasi/i);
+ assert.match(js,/Tidak mengubah Penjualan\/Stok\/BOM\/Keuangan/);
  assert.match(js,/page\*LIMIT/);
  assert.match(css,/@media\(max-width:700px\)/);
 });

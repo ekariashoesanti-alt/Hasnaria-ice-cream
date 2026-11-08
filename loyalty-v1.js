@@ -4,7 +4,7 @@
 if(window.__HASNARIA_LOYALTY_V1)return;
 window.__HASNARIA_LOYALTY_V1=true;
 var state={loaded:false,loading:false,period:'',months:[],search:'',sort:'spend',page:0,data:null,preview:null,file:null,busy:false,error:'',notice:'',seq:0};
-var LIMIT=25, MONTHS={'januari':'01','februari':'02','maret':'03','april':'04','mei':'05','juni':'06','juli':'07','agustus':'08','september':'09','oktober':'10','november':'11','desember':'12'};
+var LIMIT=5, MONTHS={'januari':'01','februari':'02','maret':'03','april':'04','mei':'05','juni':'06','juli':'07','agustus':'08','september':'09','oktober':'10','november':'11','desember':'12'};
 function host(){return document.getElementById('opLoyaltyHost')}
 function db(){return window.__HASNARIA_DB}
 function ctxt(){return window.__HASNARIA_CONTEXT||{}}
@@ -20,6 +20,8 @@ function parseMoney(x){if(typeof x==='number')return x;var s=String(x==null?'':x
 function isoDate(x){if(x instanceof Date&&!isNaN(x))return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0');if(typeof x==='number'&&window.XLSX&&XLSX.SSF){var d=XLSX.SSF.parse_date_code(x);return d?d.y+'-'+String(d.m).padStart(2,'0')+'-'+String(d.d).padStart(2,'0'):''}var s=String(x||'').trim(),m=s.match(/^(\d{4})-(\d{2})-(\d{2})/);if(m)return m[1]+'-'+m[2]+'-'+m[3];m=s.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})/);return m?m[3]+'-'+m[2].padStart(2,'0')+'-'+m[1].padStart(2,'0'):''}
 function isoTime(x){if(!x)return'';if(x instanceof Date&&!isNaN(x))return isoDate(x)+' '+String(x.getHours()).padStart(2,'0')+':'+String(x.getMinutes()).padStart(2,'0')+':'+String(x.getSeconds()).padStart(2,'0');var s=String(x).trim();return /^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}(:\d{2})?$/.test(s)?s.replace('T',' '):''}
 function monthName(period){var m=Number(String(period).slice(5,7));return m>0&&m<=12?Object.keys(MONTHS)[m-1].replace(/^./,function(x){return x.toUpperCase()})+' '+String(period).slice(0,4):'—'}
+function shortMonth(v){var n=Number(String(v).slice(5,7));return n>=1&&n<=12?['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'][n-1]:'?'}
+function coverageLine(c){if(!c)return'';var missing=Array.isArray(c.missing_months)?c.missing_months:[];var received=Array.isArray(c.loaded_months)?c.loaded_months:[];return '<div class="lo1-coverage '+(c.complete?'complete':'partial')+'" role="status"><b>'+(c.complete?'YTD lengkap':'YTD parsial')+' · '+num(c.imported_months)+'/'+num(c.expected_months)+' bulan</b><span>'+(c.complete?'Seluruh laporan bulanan tersedia.':'Tersedia: '+(received.length?received.map(shortMonth).join(', '):'belum ada')+' · Belum ada: '+missing.map(shortMonth).join(', ')+'. Total dari bulan terunggah saja.')+'</span></div>'}
 function previewUnsafe(){
  var h=window.location&&window.location.hostname||'';
  return String(window.HASNARIA_SB||'').includes('bnnhmtkpdjlgehsvgoda')&&
@@ -30,30 +32,40 @@ function kpi(k,v,sub){return '<div class="lo1-kpi"><span>'+e(k)+'</span><strong>
 function chart(dist){var sum=dist.reduce(function(a,x){return a+Number(x.customers||0)},0);
  return '<div class="lo1-chart">'+dist.map(function(x){var width=sum?100*Number(x.customers)/sum:0;return '<div class="lo1-bar"><span>'+e(x.group)+' kali</span><progress max="100" value="'+width.toFixed(2)+'"></progress><b>'+num(x.customers)+'</b></div>'}).join('')+'</div>'}
 function table(a){if(!a.length)return '<div class="lo1-empty">Tidak ada pelanggan yang cocok dengan filter.</div>';
- return '<div class="lo1-tablewrap"><table><thead><tr><th>Pelanggan</th><th>Telepon</th><th>Transaksi</th><th>Penjualan</th><th>Terakhir</th><th>Segmen</th></tr></thead><tbody>'+a.map(function(r){return '<tr><td>'+e(r.name)+'</td><td>•••• '+e(r.phone_last4)+'</td><td>'+num(r.visits)+'</td><td>'+money(r.revenue)+'</td><td>'+date(r.last_visit_at)+'</td><td><span class="lo1-chip '+e(r.segment)+'">'+(r.segment==='high_frequency'?'High Frequency':r.segment==='repeat'?'Repeat':'Satu kali')+'</span></td></tr>'}).join('')+'</tbody></table></div>'}
+ return '<div class="lo1-tablewrap"><table><thead><tr><th>Pelanggan</th><th>Telepon</th><th>Kunjungan YTD</th><th>Belanja YTD</th><th>Terakhir</th><th>Segmen</th></tr></thead><tbody>'+a.map(function(r){return '<tr><td>'+e(r.name)+'</td><td>•••• '+e(r.phone_last4)+'</td><td>'+num(r.visits)+'</td><td>'+money(r.revenue)+'</td><td>'+date(r.last_visit_at)+'</td><td><span class="lo1-chip '+e(r.segment)+'">'+(r.segment==='high_frequency'?'High Frequency':r.segment==='repeat'?'Repeat':'Satu kali')+'</span></td></tr>'}).join('')+'</tbody></table></div>'}
 function render(){
  var h=host();if(!h)return;css();if(!owner()){h.innerHTML='<div class="lo1-alert">Halaman Loyalty khusus Owner.</div>';return}
- var d=state.data, sm=d&&d.summary, batch=d&&d.batch, dist=d&&d.distribution||[],rows=d&&d.customers||[];
+ var d=state.data, sm=d&&d.summary, batch=d&&d.batch, cov=d&&d.coverage, dist=d&&d.distribution||[],rows=d&&d.customers||[];
  var options=state.months.length?state.months:[state.period||new Date().toISOString().slice(0,7)+'-01'];
- h.innerHTML='<div class="lo1-shell"><div class="lo1-heading"><div><strong>Customer Loyalty</strong><small>Analitik pelanggan teridentifikasi dari laporan Majoo. Tidak menambah omzet Penjualan.</small></div><div class="lo1-controls"><label>Bulan<select id="lo1Period">'+options.map(function(m){return '<option value="'+e(m)+'"'+(m===state.period?' selected':'')+'>'+e(monthName(m))+'</option>'}).join('')+'</select></label><button type="button" data-lo1="refresh">↻ Refresh</button><label class="lo1-upload">+ Upload Excel<input id="lo1File" type="file" accept=".xlsx,.xls" hidden></label></div></div>'+
+ h.innerHTML='<div class="lo1-shell"><div class="lo1-heading"><div><strong>Customer Loyalty <em>YTD</em></strong><small>Akumulasi Januari–'+e(monthName(state.period))+' · pelanggan teridentifikasi Majoo, bukan omzet toko keseluruhan.</small></div><div class="lo1-controls"><label>Bulan<select id="lo1Period">'+options.map(function(m){return '<option value="'+e(m)+'"'+(m===state.period?' selected':'')+'>'+e(monthName(m))+'</option>'}).join('')+'</select></label><button type="button" data-lo1="refresh">↻ Refresh</button><label class="lo1-upload">+ Upload Excel<input id="lo1File" type="file" accept=".xlsx,.xls" hidden></label></div></div>'+
  (state.error?'<div role="alert" class="lo1-alert">'+e(state.error)+'</div>':'')+
  (state.notice?'<div class="lo1-notice">'+e(state.notice)+'</div>':'')+
- (state.loading&&!d?'<div class="lo1-empty">Memuat data pelanggan…</div>':'')+
- (sm?'<div class="lo1-kpis">'+kpi('Pelanggan',num(sm.customers),'Teridentifikasi')+kpi('Repeat Customer',pct(sm.repeat_customers,sm.customers),num(sm.repeat_customers)+' pelanggan')+kpi('Transaksi',num(sm.transactions),'Bukan penambahan transaksi')+kpi('Penjualan Tercatat',money(sm.revenue),'Khusus pelanggan teridentifikasi')+kpi('Avg Order Value',money(sm.transactions?sm.revenue/sm.transactions:0),'Per transaksi teridentifikasi')+'</div>'+
- '<div class="lo1-graphs"><section><strong>Frekuensi Pembelian</strong>'+chart(dist)+'</section><section><strong>Kontribusi Pelanggan Berulang</strong><div class="lo1-share">'+pct(sm.repeat_revenue,sm.revenue)+'</div><progress class="lo1-meter" max="100" value="'+(sm.revenue?Math.min(100,100*sm.repeat_revenue/sm.revenue):0).toFixed(2)+'"></progress><small>'+money(sm.repeat_revenue)+' dari '+money(sm.revenue)+'</small></section></div>':'')+
+ (state.loading&&!d?'<div class="lo1-empty">Memuat akumulasi pelanggan…</div>':'')+
+ (cov?coverageLine(cov):'')+
+ (sm?'<div class="lo1-kpis">'+kpi('Pelanggan Unik YTD',num(sm.customers),'Tidak dihitung ganda')+kpi('Repeat Customer YTD',pct(sm.repeat_customers,sm.customers),num(sm.repeat_customers)+' pelanggan')+kpi('Kunjungan YTD',num(sm.transactions),'Datang Jan–bulan terpilih')+kpi('Belanja Tercatat YTD',money(sm.revenue),'Pelanggan teridentifikasi')+kpi('Rata-rata / Kunjungan',money(sm.transactions?sm.revenue/sm.transactions:0),'Belanja ÷ kunjungan')+'</div>'+
+ '<div class="lo1-graphs"><section><strong>Frekuensi Kunjungan YTD</strong>'+chart(dist)+'</section><section><strong>Kontribusi Pelanggan Berulang YTD</strong><div class="lo1-share">'+pct(sm.repeat_revenue,sm.revenue)+'</div><progress class="lo1-meter" max="100" value="'+(sm.revenue?Math.min(100,100*sm.repeat_revenue/sm.revenue):0).toFixed(2)+'"></progress><small>'+money(sm.repeat_revenue)+' dari '+money(sm.revenue)+'</small></section></div>':'')+
  (state.preview?renderPreview():'')+
- '<div class="lo1-customers"><div class="lo1-search"><div><b>Customer Intelligence</b>'+(batch?'<small>'+e(batch.source_file)+' · dibuat '+date(batch.source_generated_at)+' · '+num(d.matched_rows)+' hasil</small>':'<small>Belum ada laporan yang disimpan untuk bulan ini.</small>')+'</div><div><input id="lo1Search" placeholder="Cari nama atau nomor HP" value="'+e(state.search)+'"><select id="lo1Sort"><option value="spend"'+(state.sort==='spend'?' selected':'')+'>Belanja tertinggi</option><option value="visits"'+(state.sort==='visits'?' selected':'')+'>Paling sering</option><option value="recent"'+(state.sort==='recent'?' selected':'')+'>Kunjungan terbaru</option><option value="name"'+(state.sort==='name'?' selected':'')+'>Nama A–Z</option></select><button type="button" data-lo1="search">Cari</button></div></div>'+
+ '<div class="lo1-customers"><div class="lo1-search"><div><b>Customer Intelligence · YTD</b>'+(batch?'<small>Data sampai '+e(monthName(state.period))+' · sumber terbaru: '+e(batch.source_file)+' · '+num(d.matched_rows)+' hasil</small>':'<small>Belum ada laporan Majoo hingga bulan ini. Upload laporan per bulan.</small>')+'</div><div class="lo1-filterbar"><input id="lo1Search" placeholder="Cari nama / HP" value="'+e(state.search)+'"><select id="lo1Sort"><option value="spend"'+(state.sort==='spend'?' selected':'')+'>Belanja tertinggi</option><option value="visits"'+(state.sort==='visits'?' selected':'')+'>Paling sering</option><option value="recent"'+(state.sort==='recent'?' selected':'')+'>Kunjungan terbaru</option><option value="name"'+(state.sort==='name'?' selected':'')+'>Nama A–Z</option></select><button type="button" data-lo1="search">Cari</button></div></div>'+
  table(rows)+(d&&d.matched_rows>LIMIT?'<div class="lo1-pager"><button data-lo1="prev" '+(!state.page?'disabled':'')+'>← Sebelumnya</button><span>Halaman '+(state.page+1)+' / '+Math.ceil(d.matched_rows/LIMIT)+'</span><button data-lo1="next" '+((state.page+1)*LIMIT>=d.matched_rows?'disabled':'')+'>Berikutnya →</button></div>':'')+'</div>'+
- '<p class="lo1-disclaimer">Indikator repeat hanya berdasarkan transaksi dalam laporan bulanan pelanggan teridentifikasi, bukan retention antarbulan. Nomor kontak disamarkan. Tidak ada perubahan Penjualan, Stok, BOM, atau jurnal Keuangan.</p></div>';
+ '<p class="lo1-disclaimer">YTD dari snapshot Majoo bulanan terbaru; pelanggan unik per nomor dan kunjungan dijumlahkan. Bulan belum diunggah tidak diestimasi. Tidak mengubah Penjualan/Stok/BOM/Keuangan.</p></div>';
  bind(h);
 }
 function renderPreview(){var p=state.preview;
  return '<section class="lo1-preview"><div><b>Review impor · '+e(p.period.slice(0,7))+'</b><small>'+e(state.file.name)+' · '+num(p.rows.length)+' pelanggan · '+num(p.visits)+' transaksi · '+money(p.revenue)+'</small></div><div><span>'+e(p.warnings.join(' · ')||'Data lolos validasi format')+'</span><button data-lo1="cancel" type="button">Batal</button><button class="lo1-primary" data-lo1="commit" type="button" '+(state.busy?'disabled':'')+'>'+(state.busy?'Menyimpan…':'Konfirmasi Simpan')+'</button></div></section>'}
-async function loadMonths(){var r=await db().from('loyalty_import_batches').select('period_month').eq('is_current',true).order('period_month',{ascending:false}).limit(80);if(r.error)throw r.error;state.months=Array.from(new Set((r.data||[]).map(function(x){return x.period_month}))).filter(Boolean);if(!state.period)state.period=state.months[0]||new Date().toISOString().slice(0,7)+'-01';if(state.period&&!state.months.includes(state.period))state.months.unshift(state.period)}
+async function loadMonths(){
+ var r=await db().from('loyalty_import_batches').select('period_month').eq('is_current',true).order('period_month',{ascending:false}).limit(100);
+ if(r.error)throw r.error;
+ var recorded=Array.from(new Set((r.data||[]).map(function(x){return x.period_month}))).filter(Boolean);
+ var today=new Date(),year=today.getFullYear(),month=today.getMonth()+1;
+ if(!state.period)state.period=recorded[0]||year+'-'+String(month).padStart(2,'0')+'-01';
+ var years=Array.from(new Set([year].concat(recorded.map(function(m){return Number(m.slice(0,4))})).concat([Number(state.period.slice(0,4))]))).filter(function(y){return y>=2020&&y<=2100});
+ var options=[];years.forEach(function(y){var last=y===year?month:12;for(var m=1;m<=last;m++)options.push(y+'-'+String(m).padStart(2,'0')+'-01')});
+ state.months=Array.from(new Set(options.concat(recorded).concat([state.period]))).sort().reverse();
+}
 async function load(resetMonths){if(!owner()||!db())return;var seq=++state.seq;state.loading=true;state.error='';render();
  try{
   if(resetMonths)await loadMonths();
-  var q=await db().rpc('get_loyalty_dashboard_v1',{p_period_month:state.period||null,p_search:state.search,p_sort:state.sort,p_limit:LIMIT,p_offset:state.page*LIMIT});
+  var q=await db().rpc('get_loyalty_ytd_dashboard_v1',{p_period_month:state.period||null,p_search:state.search,p_sort:state.sort,p_limit:LIMIT,p_offset:state.page*LIMIT});
   if(q.error)throw q.error;if(seq!==state.seq)return;
   state.data=q.data;state.loaded=true;state.loading=false;render();
  }catch(err){if(seq!==state.seq)return;state.loading=false;state.loaded=true;state.error='Dashboard Loyalty belum tersedia: '+(err.message||String(err));render()}
@@ -111,7 +123,7 @@ async function commit(){
  }catch(err){state.error=err.message||String(err)}finally{state.busy=false;render()}
 }
 function bind(h){
- h.onchange=function(ev){var t=ev.target;if(t.id==='lo1Period'){state.period=t.value;state.page=0;state.preview=null;load(false)}else if(t.id==='lo1Sort'){state.sort=t.value;state.page=0;load(false)}else if(t.id==='lo1File')chooseFile(t.files&&t.files[0])};
+ h.onchange=function(ev){var t=ev.target;if(t.id==='lo1Period'){state.period=t.value;state.page=0;state.preview=null;state.data=null;load(false)}else if(t.id==='lo1Sort'){state.sort=t.value;state.page=0;load(false)}else if(t.id==='lo1File')chooseFile(t.files&&t.files[0])};
  h.onclick=function(ev){var t=ev.target.closest&&ev.target.closest('[data-lo1]');if(!t)return;var k=t.getAttribute('data-lo1');
  if(k==='refresh')load(true);else if(k==='search'){state.search=(h.querySelector('#lo1Search')||{}).value||'';state.page=0;load(false)}
  else if(k==='next'){state.page++;load(false)}else if(k==='prev'){state.page=Math.max(0,state.page-1);load(false)}
