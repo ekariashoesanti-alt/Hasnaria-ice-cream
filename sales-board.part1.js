@@ -117,13 +117,13 @@ ice && STATE.slice.type === 'day' && STATE.slice.id === x.key;
   function renderReportSourceChoiceModal() {
     if (!window.__HASNARIA_ENABLE_PRODUCT_REPORT_V1 || !STATE.reportChoiceOpen) return '';
     return '<div class="sb-modal-overlay" id="sbReportChoiceOverlay">' +
-      '<div class="sb-modal-card" style="max-width:480px">' +
+      '<div class="sb-modal-card">' +
       '<div class="sb-modal-head"><h3>Upload Penjualan Majoo</h3>' +
       '<button type="button" id="sbReportChoiceClose" class="sb-modal-close" aria-label="Tutup">✕</button></div>' +
-      '<div class="sb-modal-body" style="display:grid;gap:10px">' +
-      '<button type="button" data-hsn-report-type="detail" class="sb-fmt-box" style="text-align:left;cursor:pointer">' +
+      '<div class="sb-modal-body">' +
+      '<button type="button" data-hsn-report-type="detail" class="sb-fmt-box">' +
       '<b>📋 Detail Transaksi</b><p>Nomor transaksi, tanggal/jam, pembayaran dan nama produk. Importer eksisting.</p></button>' +
-      '<button type="button" data-hsn-report-type="product" class="sb-fmt-box" style="text-align:left;cursor:pointer">' +
+      '<button type="button" data-hsn-report-type="product" class="sb-fmt-box">' +
       '<b>📦 Rekap Penjualan Produk</b><p>SKU, jumlah terjual, omzet, HPP, dan refund bulanan. Tahap ini: preview read-only.</p></button>' +
       '</div></div></div>';
   }
@@ -132,7 +132,7 @@ ice && STATE.slice.type === 'day' && STATE.slice.id === x.key;
     if (!window.__HASNARIA_ENABLE_PRODUCT_REPORT_V1 || !STATE.showReportPreview || !STATE.reportPreview) return '';
     var p=STATE.reportPreview,t=p.totals;
     return '<div class="sb-modal-overlay" id="sbReportPreviewOverlay">' +
-      '<div class="sb-modal-card" style="max-width:480px">' +
+      '<div class="sb-modal-card">' +
       '<div class="sb-modal-head"><h3>Preview Rekap Produk</h3>' +
       '<button type="button" id="sbReportPreviewClose" class="sb-modal-close" aria-label="Tutup">✕</button></div>' +
       '<div class="sb-modal-body">' +
@@ -140,7 +140,7 @@ ice && STATE.slice.type === 'day' && STATE.slice.id === x.key;
       '<p>Outlet: '+esc(p.outlet_name)+'</p>' +
       '<p>'+p.source_row_count+' SKU · '+Number(t.quantity).toLocaleString('id-ID')+' unit · '+money(t.sales)+'</p>' +
       '<p>HPP Majoo: '+money(t.hpp)+' · Refund: '+money(t.refund_amount)+'</p></div>' +
-      '<div class="sb-fmt-box" style="background:#fff7ed;border-color:#fed7aa">' +
+      '<div class="sb-fmt-box">' +
       '<b>🔒 Preview saja — tidak tersimpan ke Supabase</b>' +
       '<p>Tidak mengubah transaksi, KPI, resep, HPP resmi atau saldo stok. Tombol simpan akan dibuka setelah migrasi staging dan verifikasi Owner lulus.</p></div>' +
       '</div><div class="sb-modal-foot">' +
