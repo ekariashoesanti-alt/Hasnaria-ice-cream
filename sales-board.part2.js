@@ -214,9 +214,11 @@ v class="sb-period">' +
             status:result.receipt.status || result.status,
             batch_id:result.receipt.batch_id
           };
-          STATE.msg=result.status==='existing'
-            ? 'Rekap SKU sudah tersimpan di Singapore. Tidak dibuat duplikat.'
-            : 'Rekap SKU disimpan untuk review di Singapore; belum memengaruhi stok.';
+          STATE.msg=result.recovered_from_uncertain_post
+            ? 'Koneksi sempat terputus, tetapi batch ditemukan di Singapore. Tidak ada unggah ulang.'
+            : (result.status==='existing'
+              ? 'Rekap SKU sudah tersimpan di Singapore. Tidak dibuat duplikat.'
+              : 'Rekap SKU disimpan untuk review di Singapore; belum memengaruhi stok.');
         } catch(err){
           STATE.reportSaveError=err&&err.message?err.message:String(err);
         } finally {
