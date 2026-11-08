@@ -223,8 +223,30 @@
     var grossReport=round2(productReport.totals.sales);
     var refunds=round2(productReport.totals.refund_amount);
     var netReport=round2(grossReport-refunds);
+    // Source-of-truth is metric-specific. Transaction receipts govern revenue;
+    // the monthly SKU export governs quantities and SKU-level source HPP.
+    // Never sum the two revenue reports or treat mismatched scopes as profit.
+    var skuHpp=productReport.totals.hpp;
+    var normalizedSkuHpp=typeof skuHpp==='number'&&Number.isFinite(skuHpp)
+      && skuHpp>=0?round2(skuHpp):null;
+    var sourceAuthority={
+      revenue:{source:'majoo_detail_transactions',gross:det.gross,
+        refund:det.reported_refund,net:det.net,transaction_count:det.receipts},
+      products:{source:'majoo_monthly_product_report',
+        sku_count:productReport.rows.length,quantity:productReport.totals.quantity,
+        hpp:normalizedSkuHpp,gross_for_source_comparison_only:grossReport},
+      reporting_period_complete:det.date_range_complete,
+      receipt_vs_period_report_confirmed_in_this_session:false,
+      gross_profit_combined:null,
+      gross_profit_status:'NOT_COMPARABLE_UNTIL_REVENUE_SCOPE_VERIFIED',
+      difference_is_additional_revenue:false,
+      may_overwrite_official_kpi:false,
+      may_post_stock:false,
+      may_infer_daily_sku_units:false
+    };
     return {
       period_month:det.period_month,outlet_name:det.outlet_name,transaction_count:det.receipts,
+      source_authority:sourceAuthority,
       product_occurrences:det.product_name_appearances,
       report_skus:productReport.rows.length,report_units:productReport.totals.quantity,
       detail_gross:det.gross,detail_net:det.net,
