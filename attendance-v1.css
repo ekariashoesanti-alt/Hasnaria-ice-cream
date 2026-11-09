@@ -95,3 +95,41 @@
 #operasional .at1-caution{margin-top:5px;padding:5px 9px}
 @media(max-width:1100px){#operasional .at1-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}#operasional .at2-dashboard{grid-template-columns:1fr 1fr}#operasional .at2-panel-title{display:block}#operasional .at2-panel-title small{display:block;text-align:left;max-width:100%}}
 @media(max-width:680px){#operasional .at1-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}#operasional .at2-dashboard{grid-template-columns:1fr}#operasional .at2-panel{height:165px}#operasional .at2-panel-title{display:flex;flex-direction:column;gap:2px}#operasional .at2-plot{height:125px}}
+
+
+/* Attendance history v3 — compact modal, table removed from the dashboard viewport. */
+#operasional .at1-controls button.at1-history-trigger{display:inline-flex;align-items:center;justify-content:center;gap:5px;min-width:120px;width:auto;white-space:nowrap;background:#e9f5ef;border-color:#bad9c8;color:#176b55;font-weight:850}
+#operasional .at1-history-backdrop{position:fixed;inset:0;z-index:10020;background:rgba(12,34,26,.54);display:grid;place-items:center;padding:18px;overflow:auto;overscroll-behavior:contain}
+#operasional .at1-history-dialog{width:min(930px,100%);max-height:min(87vh,760px);min-height:0;display:flex;flex-direction:column;overflow:hidden;border:1px solid #cee2d7;border-radius:17px;background:#fff;box-shadow:0 24px 75px rgba(12,35,25,.25);color:#194a3a}
+#operasional .at1-history-header{display:flex;justify-content:space-between;align-items:start;gap:14px;padding:17px 21px 12px;border-bottom:1px solid #e3eee8}
+#operasional .at1-history-eyebrow{display:block;color:#168363;font-size:9px;letter-spacing:.1em;font-weight:900}
+#operasional .at1-history-header h3{font-size:19px;line-height:1.2;color:#143f32;margin:3px 0 4px}
+#operasional .at1-history-header p{font-size:10px;color:#74877e;margin:0;line-height:1.4}
+#operasional .at1-history-close{flex:0 0 auto;display:grid;place-items:center;min-width:32px;width:32px;min-height:32px;height:32px;padding:0;border:1px solid #deebe4;border-radius:9px;background:#f5faf7;color:#386c58;font-size:22px;line-height:1;cursor:pointer}
+#operasional .at1-history-filters{display:flex;align-items:end;gap:10px;padding:11px 21px;background:#f8fbf9;border-bottom:1px solid #e5eee9}
+#operasional .at1-history-filters label{display:flex;flex-direction:column;gap:4px;min-width:0;margin:0;color:#648071;font-size:9px;font-weight:850;line-height:1.1}
+#operasional .at1-history-filters label:first-child{flex:1}
+#operasional .at1-history-filters label:last-child{flex:0 0 190px}
+#operasional .at1-history-filters input,#operasional .at1-history-filters select{width:100%;max-width:100%;height:34px;min-height:34px;padding:6px 11px;border:1px solid #cbded4;border-radius:9px;background:#fff;color:#204f3c;font-size:11px;font-weight:650;box-sizing:border-box}
+#operasional .at1-history-filters input:focus-visible,#operasional .at1-history-filters select:focus-visible{outline:2px solid #67b595;outline-offset:1px}
+#operasional #at1HistoryResults{min-height:0;display:flex;flex-direction:column}
+#operasional .at1-history-table-scroll{max-height:min(48vh,420px);overflow:auto;min-height:0}
+#operasional .at1-history-table-scroll table{width:100%;border-collapse:collapse;font-size:11px;table-layout:auto}
+#operasional .at1-history-table-scroll th{position:sticky;top:0;z-index:1;background:#f1f8f4;padding:10px 12px;color:#426d5c;font-size:10px;white-space:nowrap}
+#operasional .at1-history-table-scroll td{padding:10px 12px;color:#365a4c;border-bottom:1px solid #eef3f0;white-space:nowrap}
+#operasional .at1-history-table-scroll tr:last-child td{border-bottom:0}
+#operasional .at1-history-person{display:flex;flex-direction:column;gap:2px}
+#operasional .at1-history-person b{font-size:11px;color:#1b4d39;font-weight:850}
+#operasional .at1-history-person small{font-size:9px;color:#899c91}
+#operasional .at1-history-status{display:inline-flex;align-items:center;padding:5px 7px;border-radius:7px;font-size:9px;font-weight:800;white-space:nowrap}
+#operasional .at1-history-status.paired{background:#e6f5ed;color:#176b55}
+#operasional .at1-history-status.single{background:#fff2dc;color:#996a21}
+#operasional .at1-history-status.raw{background:#eef2f0;color:#687e72}
+#operasional .at1-history-empty{display:grid;place-items:center;min-height:150px;padding:16px;font-size:11px;text-align:center;color:#81978b}
+#operasional .at1-history-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 21px;border-top:1px solid #e5eee9;color:#71887b;font-size:10px}
+#operasional .at1-history-pagination{display:flex;align-items:center;gap:6px}
+#operasional .at1-history-pagination button{height:29px;min-height:29px;padding:0 9px;border:1px solid #d5e6dd;border-radius:8px;background:#fff;color:#176b55;font-size:10px;font-weight:800;white-space:nowrap}
+#operasional .at1-history-pagination button:disabled{opacity:.45;cursor:not-allowed}
+#operasional .at1-history-note{margin:0;padding:10px 21px;background:#fbfdfb;border-top:1px solid #e5eee9;color:#819487;font-size:9px;line-height:1.35}
+@media(max-width:900px){#operasional .at1-controls{flex-wrap:wrap}#operasional .at1-history-dialog{max-height:90vh}}
+@media(max-width:620px){#operasional .at1-history-backdrop{padding:10px}#operasional .at1-history-dialog{max-height:92vh;border-radius:13px}#operasional .at1-history-header{padding:12px 13px}#operasional .at1-history-header h3{font-size:17px}#operasional .at1-history-filters{padding:9px 13px;flex-direction:column;align-items:stretch}#operasional .at1-history-filters label:last-child{flex:unset;width:100%}#operasional .at1-history-table-scroll{max-height:48vh}#operasional .at1-history-footer{padding:9px 13px;flex-wrap:wrap}#operasional .at1-history-note{padding:9px 13px}#operasional .at1-history-table-scroll td,#operasional .at1-history-table-scroll th{padding:8px 10px}}
