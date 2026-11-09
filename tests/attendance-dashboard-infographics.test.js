@@ -96,7 +96,8 @@ test('history modal opens from header, filters by name/status and closes safely'
   };
   vm.runInNewContext(fs.readFileSync('attendance-v1.js','utf8'),{window:instance,document,location:{hostname:'localhost'}});
   instance.__HASNARIA_ATTENDANCE_MOUNT();
-  await Promise.resolve();await Promise.resolve();
+  // Let the fake Supabase promise and the module's async load()/finally finish before asserting the rendered rows.
+  await new Promise(resolve=>setImmediate(resolve));
   assert.match(root.innerHTML,/data-at="history"/);
   assert.ok(!root.innerHTML.includes('at1-history-dialog'));
   assert.ok(!root.innerHTML.includes('at1-panel'));
