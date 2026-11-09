@@ -4,7 +4,7 @@
 'use strict';
 if(window.__HASNARIA_CEO_KPI_V1)return;
 var BRAND='a36d4b4f-3ccc-4a78-8aeb-b868f0407ea4';
-var state={period:'',loaded:'',loading:false,seq:0,data:{},errors:{}};
+var state={period:'',loaded:'',loading:false,seq:0,data:{},errors:{},refreshedAt:0};
 var TITLES=['Kondisi Finansial','Kondisi Persediaan','Kondisi Pelanggan','Kondisi Karyawan'];
 function db(){return window.__HASNARIA_DB}
 function owner(){var c=window.__HASNARIA_CONTEXT||{};return c.role==='owner'&&c.brandId===BRAND}
@@ -204,7 +204,7 @@ function rankRow(i,x,suffix){
  return '<li><span class="hx7-rank-number">'+(i+1)+'</span><b title="'+esc(x.name)+'">'+esc(x.name)+'</b><strong>'+esc(suffix(x))+'</strong></li>';
 }
 function cardBody(i,d){
- if(i===0){if(!d)return'<div class="hx7-empty">Laporan keuangan belum tersedia.</div>';
+ if(i===0){if(!d||!d.months)return'<div class="hx7-empty">Laporan keuangan periode ini belum tersedia. Angka tidak diisi dengan asumsi nol.</div>';
   return '<div class="hx7-main-value"><small>Akumulasi Januari–'+esc(monthTitle(state.period))+'</small>'+metric('Pendapatan',money(d.revenue))+metric('Biaya',money(d.cost))+metric('Laba / Rugi',money(d.profit),d.profit<0?'negative':'positive')+'</div>'+
    '<div class="hx7-detail">'+pill(d.provisional?'HPP provisional':'HPP final',d.provisional?'caution':'good')+
    '<span>'+d.months+'/'+d.expected+' bulan · margin '+(d.margin==null?'—':dec(d.margin)+'%')+'</span></div>'+
@@ -294,14 +294,15 @@ async function load(){
     i===2?summarizeLoyalty(check(v[0]),check(v[1])):v;
   }catch(e){state.data[k]=null;state.errors[k]=(e&&e.message)||String(e)}
  });
- state.loading=false;state.loaded=period;render();
+ state.loading=false;state.loaded=period;state.refreshedAt=Date.now();render();
 }
 function mount(period){
  if(!owner()||!db()||!/^\d{4}-\d{2}$/.test(period||''))return;
- if(state.period!==period){state.period=period;state.data={};state.errors={};state.loaded='';state.seq++;state.loading=false}
+ if(state.period!==period){state.period=period;state.data={};state.errors={};state.loaded='';state.refreshedAt=0;state.seq++;state.loading=false}
  render();if(state.loaded!==period&&!state.loading)load();
 }
-function invalidate(){state.loaded='';state.seq++;state.loading=false;if(state.period&&document.getElementById('hx7Cards'))load()}
-window.__HASNARIA_CEO_KPI_V1={mount:mount,invalidate:invalidate};
+function invalidate(){state.loaded='';state.refreshedAt=0;state.seq++;state.loading=false;if(state.period&&document.getElementById('hx7Cards'))load()}
+function maybeRefresh(){var root=document.getElementById('hx7Cards'),h=document.getElementById('dashboard');if(!root||!h||h.classList.contains('hidden')||!owner()||state.loading||!state.loaded)return; if(Date.now()-state.refreshedAt>=300000)load()}
+window.__HASNARIA_CEO_KPI_V1={mount:mount,invalidate:invalidate,maybeRefresh:maybeRefresh};
 window.__HASNARIA_CEO_KPI_MATH={summarizeFinance:summarizeFinance,summarizeStock:summarizeStock,summarizeLoyalty:summarizeLoyalty,summarizeWorkforce:summarizeWorkforce,businessPriorities:businessPriorities};
 })();
