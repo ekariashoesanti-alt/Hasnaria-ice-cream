@@ -17,7 +17,7 @@ function hours(x){return val(x).toLocaleString('id-ID',{maximumFractionDigits:1}
 function monthTitle(s){return new Intl.DateTimeFormat('id-ID',{month:'long',year:'numeric',timeZone:'UTC'}).format(new Date(s+'-01T00:00:00Z'))}
 function monthEnd(p){return p+'-'+String(new Date(Number(p.slice(0,4)),Number(p.slice(5,7)),0).getDate()).padStart(2,'0')}
 function check(r){if(r.error)throw r.error;return r.data}
-function css(){if(document.getElementById('hx7-css'))return;var l=document.createElement('link');l.id='hx7-css';l.rel='stylesheet';l.href='/owner-ceo-kpi-v1.css?v=1';document.head.appendChild(l)}
+function css(){if(document.getElementById('hx7-css'))return;var l=document.createElement('link');l.id='hx7-css';l.rel='stylesheet';l.href='/owner-ceo-kpi-v1.css?v=2';document.head.appendChild(l)}
 function summarizeFinance(rows,period){
  var y=Number(period.slice(0,4)),expected=Number(period.slice(5,7)),months=new Set(),revenue=0,cost=0,profit=0,provisional=0;
  (rows||[]).forEach(function(r){
@@ -79,8 +79,44 @@ function summarizeWorkforce(rows,scans,employees,rosters,templates){
   .filter(function(r){return r.scheduled>=3&&r.complete>=1})
   .sort(function(a,b){return b.score-a.score||b.complete-a.complete||a.name.localeCompare(b.name)}).slice(0,3);
  return {total:total,average:valid.length?total/valid.length:null,validShifts:valid.length,
-  rawScans:Number(scans||0),ranking:ranking};
+  rawScans:Number(scans||0),ranking:ranking,device:summarizeDeviceScans(arguments.length>5?arguments[5]:[])};
 }
+
+/* Scan-based durations are only an ESTIMATE of the within-day first-to-last scan span.
+   Never post these values to payroll or conflate them with verified shift attendance. */
+function summarizeDeviceScans(scans){
+ var groups=Object.create(null),people=Object.create(null);
+ (scans||[]).forEach(function(s){
+  if(!s||!s.scan_date||!s.device_person_id)return;
+  var key=String(s.cloud_id||'')+'|'+String(s.device_person_id);
+  var groupKey=key+'|'+String(s.scan_date);
+  if(!groups[groupKey])groups[groupKey]={person:key,times:[],raw:false};
+  var time=String(s.scan_time||'').slice(0,5);
+  if(/^\d{2}:\d{2}$/.test(time)){
+   var parts=time.split(':').map(Number),mins=parts[0]*60+parts[1];
+   if(parts[0]<24&&parts[1]<60)groups[groupKey].times.push(mins);
+  }
+  if(s.conversion_mode==='raw_only')groups[groupKey].raw=true;
+  if(!people[key])people[key]={name:String(s.employee_name||'Pegawai').trim(),days:0,validDays:0,totalMinutes:0};
+ });
+ Object.keys(groups).forEach(function(key){
+  var g=groups[key],p=people[g.person];
+  var times=Array.from(new Set(g.times)).sort(function(a,b){return a-b});
+  p.days++;
+  if(!g.raw&&times.length>=2&&times[times.length-1]>times[0]){
+   p.validDays++;
+   p.totalMinutes+=times[times.length-1]-times[0];
+  }
+ });
+ var all=Object.keys(people).map(function(k){var p=people[k];p.rate=p.days?p.validDays/p.days:0;return p});
+ all.sort(function(a,b){return b.rate-a.rate||b.validDays-a.validDays||a.name.localeCompare(b.name,'id')});
+ var days=all.reduce(function(n,p){return n+p.days},0);
+ var paired=all.reduce(function(n,p){return n+p.validDays},0);
+ var minutes=all.reduce(function(n,p){return n+p.totalMinutes},0);
+ return {rawScans:(scans||[]).length,people:all.length,personDays:days,pairedDays:paired,
+  totalHours:minutes/60,averageHours:paired?minutes/60/paired:null,ranking:all.slice(0,3)};
+}
+
 /* Decisions are conditional on database evidence, not LLM-generated claims.
    Priorities are recomputed whenever the selected period or live KPI values change. */
 function businessPriorities(data,errors,period){
@@ -131,11 +167,12 @@ function businessPriorities(data,errors,period){
    'Pertahankan aturan rekonsiliasi sumber jika periode berubah.','Cukup','Keuangan');
  }
  if(w&&w.validShifts===0){
-  add('workforce','P2','Lengkapi absen masuk–keluar sebelum menilai disiplin',
-   num(w.rawScans)+' scan perangkat di bulan pilihan; '+num(w.validShifts)+' pasangan masuk–keluar sah.',
-   'Pastikan staf melakukan check-out yang benar; lengkapi jadwal dan koreksi berbukti melalui prosedur.',
-   'Jam kerja dan ranking disiplin ditahan sampai tersedia pasangan waktu yang sah, bukan estimasi dari scan masuk.',
-   'Tinggi untuk kelengkapan data','Operasional → Attendance');
+  var device=w.device||{},pairDays=Number(device.pairedDays||0);
+  add('workforce','P2',pairDays?'Validasi estimasi jam kerja sebelum menilai disiplin':'Lengkapi absen masuk–keluar sebelum menilai disiplin',
+   num(w.rawScans)+' scan perangkat di bulan pilihan; '+num(pairDays)+'/'+num(device.personDays||0)+' hari memiliki pasangan scan; '+num(w.validShifts)+' shift terverifikasi.',
+   pairDays?'Verifikasi pasangan scan pertama–terakhir terhadap shift dan bukti kehadiran, lalu lengkapi check-out resmi.':'Pastikan staf melakukan check-out yang benar; lengkapi jadwal dan koreksi berbukti melalui prosedur.',
+   'Rentang scan hanya estimasi; bukan bukti jam kerja, ketepatan waktu, lembur, atau dasar payroll.',
+   'Tinggi untuk cakupan scan, rendah untuk jam kerja resmi','Operasional → Attendance');
  }else if(w&&w.ranking.length===0){
   add('workforce','P2','Perbaiki cakupan penilaian disiplin',
    num(w.validShifts)+' shift lengkap, tetapi belum cukup jadwal/pasangan absensi untuk peringkat adil.',
@@ -226,13 +263,16 @@ function cardBody(i,d){
    '<div class="hx7-detail">'+pill('Cakupan '+d.coverage+'/'+d.expected+' bulan',d.coverage===d.expected?'good':'caution')+'</div>';
  }
  if(i===3){if(!d)return'<div class="hx7-empty">Data absensi belum tersedia.</div>';
-  return metric('Total jam hadir',d.average==null?'—':hours(d.total))+
-   metric('Rata-rata per shift lengkap',d.average==null?'—':hours(d.average))+
-   '<div class="hx7-subhead second">RANKING DISIPLIN ABSEN MASUK–KELUAR <small>Jadwal, ketepatan waktu & kelengkapan</small></div>'+
-   (d.ranking.length?'<ol class="hx7-rankings">'+d.ranking.map(function(x,j){return rankRow(j,x,function(y){return dec(y.score)+'%'})}).join('')+'</ol>':
-    '<div class="hx7-empty small">Belum ada shift terverifikasi yang memenuhi syarat ranking.</div>')+
-   '<div class="hx7-detail">'+pill(num(d.validShifts)+' shift lengkap',d.validShifts?'good':'caution')+
-   '<span>'+num(d.rawScans)+' scan perangkat tidak otomatis dihitung</span></div>';
+  var scanned=d.device||{},hasPair=scanned.pairedDays>0;
+  return '<div class="hx7-workforce-estimate">'+
+   metric('Total durasi scan*',hasPair?hours(scanned.totalHours):'—')+
+   metric('Rerata / hari berpasangan*',hasPair?hours(scanned.averageHours):'—')+'</div>'+
+   '<div class="hx7-subhead second">KELENGKAPAN SCAN KARYAWAN <small>Pasangan scan / hari tercatat · bukan ranking disiplin</small></div>'+
+   ((scanned.ranking||[]).length?'<ol class="hx7-rankings">'+scanned.ranking.map(function(x,j){return rankRow(j,x,function(y){return num(y.validDays)+'/'+num(y.days)+' hari'})}).join('')+'</ol>':
+    '<div class="hx7-empty small">Belum ada log scan pada bulan ini.</div>')+
+   '<div class="hx7-detail">'+pill(num(scanned.pairedDays||0)+'/'+num(scanned.personDays||0)+' hari berpasangan',hasPair?'good':'caution')+
+   '<span>'+num(d.validShifts)+' shift resmi · '+num(d.rawScans)+' scan</span></div>'+
+   '<p class="hx7-foot hx7-workforce-note">* Estimasi jarak scan pertama–terakhir, bukan jam kerja resmi atau dasar payroll.</p>';
  }
  return '';
 }
@@ -253,17 +293,17 @@ async function workforceData(period){
  var start=period+'-01',end=monthEnd(period);
  var pair=await Promise.all([
   db().from('attendance').select('employee_id,attendance_date,check_in_at,check_out_at,roster_id,status').eq('brand_id',BRAND).gte('attendance_date',start).lte('attendance_date',end),
-  db().from('attendance_device_scans_v1').select('id',{count:'exact',head:true}).eq('brand_id',BRAND).gte('scan_date',start).lte('scan_date',end)
+  db().from('attendance_device_scans_v1').select('cloud_id,device_person_id,employee_name,scan_date,scan_time,conversion_mode').eq('brand_id',BRAND).gte('scan_date',start).lte('scan_date',end).limit(3000)
  ]);
- var attendance=check(pair[0]),scans=pair[1];if(scans.error)throw scans.error;
+ var attendance=check(pair[0]),scans=check(pair[1])||[];
  var validated=(attendance||[]).some(function(x){return x.check_in_at&&x.check_out_at&&Date.parse(x.check_out_at)>Date.parse(x.check_in_at)});
- if(!validated)return summarizeWorkforce(attendance,scans.count||0,[],[],[]);
+ if(!validated)return summarizeWorkforce(attendance,scans.length,[],[],[],scans);
  var refs=await Promise.all([
   db().from('employees').select('id,full_name').eq('brand_id',BRAND),
   db().from('shift_roster').select('id,employee_id,shift_date,shift_template_id,status').eq('brand_id',BRAND).gte('shift_date',start).lte('shift_date',end),
   db().from('shift_templates').select('id,start_time,end_time').eq('brand_id',BRAND)
  ]);
- return summarizeWorkforce(attendance,scans.count||0,check(refs[0]),check(refs[1]),check(refs[2]));
+ return summarizeWorkforce(attendance,scans.length,check(refs[0]),check(refs[1]),check(refs[2]),scans);
 }
 async function load(){
  if(state.loading||!state.period||!owner()||!db())return;
@@ -304,5 +344,5 @@ function mount(period){
 function invalidate(){state.loaded='';state.refreshedAt=0;state.seq++;state.loading=false;if(state.period&&document.getElementById('hx7Cards'))load()}
 function maybeRefresh(){var root=document.getElementById('hx7Cards'),h=document.getElementById('dashboard');if(!root||!h||h.classList.contains('hidden')||!owner()||state.loading||!state.loaded)return; if(Date.now()-state.refreshedAt>=300000)load()}
 window.__HASNARIA_CEO_KPI_V1={mount:mount,invalidate:invalidate,maybeRefresh:maybeRefresh};
-window.__HASNARIA_CEO_KPI_MATH={summarizeFinance:summarizeFinance,summarizeStock:summarizeStock,summarizeLoyalty:summarizeLoyalty,summarizeWorkforce:summarizeWorkforce,businessPriorities:businessPriorities};
+window.__HASNARIA_CEO_KPI_MATH={summarizeFinance:summarizeFinance,summarizeStock:summarizeStock,summarizeLoyalty:summarizeLoyalty,summarizeWorkforce:summarizeWorkforce,summarizeDeviceScans:summarizeDeviceScans,businessPriorities:businessPriorities};
 })();
