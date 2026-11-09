@@ -28,7 +28,7 @@
       var x = minute(r.scan_time);
       if (x != null) map[key].times.push(x);
       if (r.conversion_mode === 'raw_only') map[key].raw = true;
-      if (!people[id]) people[id] = {name:String(r.employee_name || 'Tanpa nama'), days:0, paired:0, review:0};
+      if (!people[id]) people[id] = {name:String(r.employee_name || 'Tanpa nama'), days:0, paired:0, review:0, validDays:0, totalMinutes:0};
       dateSet[String(r.scan_date)] = true;
     });
     var groups = Object.keys(map).map(function (key) {
@@ -39,8 +39,13 @@
       g.single = t.length <= 1;
       g.rawOnly = g.raw && t.length > 1;
       people[g.id].days++;
-      if (g.paired) people[g.id].paired++;
-      else people[g.id].review++;
+      if (g.paired) {
+        people[g.id].paired++;
+        if (Number.isFinite(g.first) && Number.isFinite(g.last) && g.last>g.first) {
+          people[g.id].totalMinutes += g.last-g.first;
+          people[g.id].validDays++;
+        }
+      } else people[g.id].review++;
       return g;
     });
     var paired = groups.filter(function(g){return g.paired}).length;
@@ -104,16 +109,41 @@
     var legend=parts.map(function(p){return '<div class="at2-legend-item"><i class="at2-dot" data-tone="'+(p.c==='#176b55'?'green':p.c==='#e7ab45'?'amber':'gray')+'"></i><span>'+esc(p.t)+'</span><b>'+p.n+'</b></div>'}).join('');
     return '<div class="at2-donut-wrap"><svg viewBox="0 0 116 112" role="img" aria-label="Komposisi pasangan scan, scan tunggal, dan log mentah"><circle cx="58" cy="56" r="36" fill="none" stroke="#e9f0ec" stroke-width="15"/>'+rings+'<text x="58" y="53" text-anchor="middle" class="at2-donut-number">'+Math.round(m.paired/m.personDays*100)+'%</text><text x="58" y="66" text-anchor="middle" class="at2-donut-label">berpasangan</text></svg><div class="at2-legend">'+legend+'</div></div>';
   }
-  function distribution(m) {
-    if (!m.firsts.length) return noData();
-    var labels=['00–08','08–11','11–14','14–17','17–24'];
-    var boundaries=[0,480,660,840,1020,1440],values=[0,0,0,0,0];
-    m.firsts.forEach(function(v){for(var i=0;i<5;i++)if(v>=boundaries[i]&&v<boundaries[i+1]){values[i]++;break}});
-    var max=Math.max(1,Math.max.apply(null,values));
-    var bars=values.map(function(v,i){var x=44+i*103,ht=v/max*72,y=90-ht;
-      return '<rect x="'+x+'" y="'+y.toFixed(1)+'" width="56" height="'+ht.toFixed(1)+'" rx="5" fill="'+(i%2?'#55ab89':'#176b55')+'"/><text x="'+(x+28)+'" y="'+Math.max(12,y-5).toFixed(1)+'" text-anchor="middle" class="at2-bar-number">'+v+'</text><text x="'+(x+28)+'" y="108" text-anchor="middle" class="at2-axis">'+labels[i]+'</text>';
+  /* Estimated first/last same-day scan span, never confirmed payable working hours.
+   * Only first_last groups with >=2 distinct times are valid. Unpaired staff show —.
+   * List all staff; overflow stays within this one-view panel.
+   */
+  function durationText(v) {
+    if (!Number.isFinite(v) || v<0) return '—';
+    var minutes=Math.round(v);
+    return Math.floor(minutes/60)+'j '+String(minutes%60).padStart(2,'0')+'m';
+  }
+  function durationChart(m) {
+    if (!m.people.length) return noData();
+    var people=m.people.map(function(p){
+      var days=p.validDays||0,total=p.totalMinutes||0;
+      return {name:p.name,days:days,total:total,avg:days>0?total/days:null};
+    }).sort(function(a,b){
+      if (a.avg===null && b.avg!==null) return 1;
+      if (a.avg!==null && b.avg===null) return -1;
+      return (b.avg||0)-(a.avg||0)||b.days-a.days||a.name.localeCompare(b.name,'id');
+    });
+    var max=Math.max(1,Math.max.apply(null,people.map(function(p){return p.avg||0})));
+    var height=Math.max(112,people.length*27+6);
+    var rows=people.map(function(p,i){
+      var y=19+i*27,barWidth=p.avg===null?0:Math.max(2,p.avg/max*242);
+      var shortName=p.name.length>18?p.name.slice(0,17)+'…':p.name;
+      var description=p.avg===null?'Belum ada hari dengan pasangan scan valid':
+        'Rata-rata '+durationText(p.avg)+' per hari; total '+durationText(p.total)+' dalam '+p.days+' hari valid';
+      return '<g><title>'+esc(p.name)+' — '+esc(description)+'</title>'+
+        '<text x="8" y="'+y+'" class="at2-duration-name">'+esc(shortName)+'</text>'+
+        '<rect x="143" y="'+(y-12)+'" width="242" height="16" rx="5" fill="#edf5ef"/>'+
+        (p.avg===null?'':'<rect x="143" y="'+(y-12)+'" width="'+barWidth.toFixed(1)+'" height="16" rx="5" fill="'+(i%2===0?'#176b55':'#4daa87')+'"/>')+
+        '<text x="396" y="'+y+'" class="at2-duration-value">'+durationText(p.avg)+'</text>'+
+        '<text x="548" y="'+y+'" text-anchor="end" class="at2-duration-days">'+p.days+' hari</text></g>';
     }).join('');
-    return '<svg viewBox="0 0 560 118" preserveAspectRatio="none" role="img" aria-label="Distribusi jam scan pertama menurut rentang waktu"><line x1="24" x2="548" y1="90" y2="90" class="at2-gridline"/>'+bars+'</svg>';
+    return '<div class="at2-duration-scroll"><svg viewBox="0 0 560 '+height+'" width="560" height="'+height+'" preserveAspectRatio="xMinYMin meet" role="img" aria-label="Rata-rata estimasi durasi dari scan pertama hingga scan terakhir per pegawai per hari valid dalam bulan terpilih">'+
+      '<title>Rata-rata durasi scan bulanan per pegawai, diurutkan dari durasi terpanjang</title>'+rows+'</svg></div>';
   }
   function ranking(m) {
     if (!m.people.length) return noData();
@@ -132,7 +162,7 @@
     return '<div class="at2-dashboard" aria-label="Infografis Attendance">'+
       chartPanel('Tren Kehadiran Tercatat','Pegawai dengan scan per tanggal · nol = tidak ada log',trend(m))+
       chartPanel('Komposisi Status Scan','Klasifikasi hasil konversi, bukan kehadiran resmi',donut(m))+
-      chartPanel('Distribusi Jam Scan Pertama','Pola waktu scan · bukan klasifikasi terlambat',distribution(m))+
+      chartPanel('Rata-rata Durasi Kerja per Pegawai','Estimasi per hari valid · scan pertama hingga terakhir',durationChart(m))+
       chartPanel('Peringkat Kelengkapan Log','Berdasarkan pasangan scan, bukan disiplin jadwal',ranking(m))+
       '</div>';
   }
