@@ -3,7 +3,7 @@
 'use strict';
 if(window.__HASNARIA_ATTENDANCE_V1)return;
 window.__HASNARIA_ATTENDANCE_V1=true;
-var state={month:new Date().getFullYear()+'-'+String(new Date().getMonth()+1).padStart(2,'0'),rows:[],loading:false,loaded:false,busy:false,preview:null,file:null,error:'',notice:'',progress:'',search:'',conversionMode:'first_last',seq:0};
+var state={month:new Date().getFullYear()+'-'+String(new Date().getMonth()+1).padStart(2,'0'),rows:[],loading:false,loaded:false,busy:false,preview:null,file:null,error:'',notice:'',progress:'',search:'',historyOpen:false,historyStatus:'all',historyPage:1,conversionMode:'first_last',seq:0};
 var months=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
 function h(){return document.getElementById('opAttendanceHost')}
 function db(){return window.__HASNARIA_DB}
@@ -13,30 +13,133 @@ function esc(x){return String(x==null?'':x).replace(/[&<>"']/g,function(c){retur
 function label(m){return months[Number(m.slice(5,7))-1]+' '+m.slice(0,4)}
 function fmt(d){return String(d||'').slice(8,10)+'/'+String(d||'').slice(5,7)+'/'+String(d||'').slice(0,4)}
 function options(){var y=new Date().getFullYear(),current=state.month;var result=[];for(var year=y;year>=2025;year--)for(var m=12;m>=1;m--){var value=year+'-'+String(m).padStart(2,'0');if(value>y+'-'+String(new Date().getMonth()+1).padStart(2,'0')||value<='2025-01')continue;result.push('<option value="'+value+'"'+(current===value?' selected':'')+'>'+label(value)+'</option>')}if(result.every(function(o){return o.indexOf('value="'+current+'"')<0}))result.unshift('<option value="'+current+'" selected>'+label(current)+'</option>');return result.join('')}
-function css(){if(document.getElementById('attendance-v1-css'))return;var l=document.createElement('link');l.id='attendance-v1-css';l.rel='stylesheet';l.href='/attendance-v1.css?v=2';document.head.appendChild(l)}
+function css(){if(document.getElementById('attendance-v1-css'))return;var l=document.createElement('link');l.id='attendance-v1-css';l.rel='stylesheet';l.href='/attendance-v1.css?v=3';document.head.appendChild(l)}
 function conversionStats(a){var groups={};a.forEach(function(r){var key=r.cloud_id+'|'+r.device_person_id+'|'+r.scan_date;if(!groups[key])groups[key]=[];groups[key].push(r.scan_time)});var paired=0,single=0;Object.keys(groups).forEach(function(k){var times=Array.from(new Set(groups[k]));if(times.length>=2)paired++;else single++});return {paired:paired,single:single}}
 function distinctDays(a){var s={};a.forEach(function(r){s[r.device_person_id+'|'+r.scan_date]=1});return Object.keys(s).length}
 function summary(a){var people={},days={};a.forEach(function(r){people[r.cloud_id+'|'+r.device_person_id]=r.employee_name;days[r.scan_date]=1});return {people:Object.keys(people).length,days:Object.keys(days).length,personDays:distinctDays(a)}}
-function table(){
-var matches=state.rows.filter(function(r){var q=state.search.toLowerCase();return !q||r.employee_name.toLowerCase().includes(q)||r.device_person_id.toLowerCase().includes(q)||r.scan_date.includes(q)});
-if(!matches.length)return '<div class="at1-empty">Belum ada scan yang cocok pada bulan ini.</div>';
-var groups={},records=[];matches.forEach(function(r){var key=r.cloud_id+'|'+r.device_person_id+'|'+r.scan_date;if(!groups[key]){groups[key]={name:r.employee_name,id:r.device_person_id,date:r.scan_date,times:[],types:{},modes:{}};records.push(groups[key])}groups[key].times.push(String(r.scan_time).slice(0,5));groups[key].types[r.scan_type]=1;groups[key].modes[r.conversion_mode||'first_last']=1});
-records.sort(function(a,b){return b.date.localeCompare(a.date)||a.name.localeCompare(b.name)});
-return '<div class="at1-table-scroll"><table><thead><tr><th>Tanggal</th><th>Pegawai</th><th>ID Mesin</th><th>Jam Masuk</th><th>Jam Keluar</th><th>Jumlah Scan</th><th>Status Konversi</th></tr></thead><tbody>'+records.map(function(r){r.times.sort();var unique=Array.from(new Set(r.times));var convertible=!r.modes.raw_only&&unique.length>=2;var mode=r.modes.raw_only?'Log mentah':convertible?'Konversi otomatis · perlu validasi':'Scan tunggal · belum ada jam keluar';return '<tr><td>'+fmt(r.date)+'</td><td><strong>'+esc(r.name)+'</strong></td><td>'+esc(r.id)+'</td><td>'+esc(unique[0])+'</td><td>'+esc(convertible?unique[unique.length-1]:'—')+'</td><td>'+r.times.length+'</td><td><span class="at1-tag">'+esc(mode)+'</span></td></tr>'}).join('')+'</tbody></table></div><div class="at1-foot">'+records.length+' pegawai-hari ditampilkan · '+matches.length+' scan · Jam keluar otomatis berasal dari scan terakhir pada tanggal yang sama, bukan kepulangan terverifikasi.</div>';
+/* Riwayat exists only in an on-demand modal; the main viewport contains infographics only. */
+var HISTORY_PAGE_SIZE=10;
+function historyRecords(){
+  var groups=Object.create(null),records=[];
+  state.rows.forEach(function(r){
+    var id=String(r.device_person_id||''),date=String(r.scan_date||'');
+    var key=String(r.cloud_id||'')+'|'+id+'|'+date;
+    if(!groups[key]){
+      groups[key]={name:String(r.employee_name||'').trim(),id:id,date:date,times:[],rawOnly:false};
+      records.push(groups[key]);
+    }
+    groups[key].times.push(String(r.scan_time||'').slice(0,5));
+    if(r.conversion_mode==='raw_only')groups[key].rawOnly=true;
+  });
+  records.forEach(function(r){
+    var unique=Array.from(new Set(r.times)).sort();
+    r.first=unique[0]||'—';
+    r.paired=!r.rawOnly&&unique.length>=2;
+    r.last=r.paired?unique[unique.length-1]:'—';
+    r.status=r.rawOnly?'raw':r.paired?'paired':'single';
+    r.count=r.times.length;
+  });
+  records.sort(function(a,b){return b.date.localeCompare(a.date)||a.name.localeCompare(b.name,'id')});
+  return records;
+}
+function historyTable(){
+  var all=historyRecords(),query=String(state.search||'').trim().toLocaleLowerCase('id-ID');
+  var matches=all.filter(function(r){
+    if(query&&r.name.toLocaleLowerCase('id-ID').indexOf(query)<0&&r.id.toLowerCase().indexOf(query)<0)return false;
+    return state.historyStatus==='all'||(state.historyStatus==='paired'?r.paired:!r.paired);
+  });
+  var pages=Math.max(1,Math.ceil(matches.length/HISTORY_PAGE_SIZE));
+  state.historyPage=Math.min(Math.max(1,state.historyPage),pages);
+  var start=(state.historyPage-1)*HISTORY_PAGE_SIZE,visible=matches.slice(start,start+HISTORY_PAGE_SIZE);
+  var body=visible.length?'<div class="at1-history-table-scroll at1-table-scroll"><table><thead><tr><th>Tanggal</th><th>Pegawai</th><th>Scan pertama</th><th>Scan terakhir*</th><th>Jumlah</th><th>Status</th></tr></thead><tbody>'+
+    visible.map(function(r){
+      var text=r.status==='raw'?'Log mentah':r.paired?'Berpasangan · cek ulang':'Scan tunggal';
+      return '<tr><td>'+esc(fmt(r.date))+'</td><td><div class="at1-history-person"><b>'+esc(r.name)+'</b><small>ID '+esc(r.id)+'</small></div></td><td>'+esc(r.first)+'</td><td>'+esc(r.last)+'</td><td>'+r.count+'</td><td><span class="at1-history-status '+r.status+'">'+esc(text)+'</span></td></tr>';
+    }).join('')+'</tbody></table></div>':
+    '<div class="at1-history-empty">'+(all.length?'Tidak ada riwayat yang sesuai pencarian atau filter.':'Belum ada data scan pada bulan ini.')+'</div>';
+  return body+'<div class="at1-history-footer"><span>'+matches.length+' dari '+all.length+' pegawai-hari · '+state.historyPage+'/'+pages+' halaman</span>'+
+    '<div class="at1-history-pagination"><button type="button" data-at="history-page" data-page="'+(state.historyPage-1)+'"'+(state.historyPage===1?' disabled':'')+'>‹ Sebelumnya</button>'+
+    '<button type="button" data-at="history-page" data-page="'+(state.historyPage+1)+'"'+(state.historyPage===pages?' disabled':'')+'>Berikutnya ›</button></div></div>';
+}
+function historyModal(){
+  var all=historyRecords(),paired=all.filter(function(r){return r.paired}).length;
+  return '<div class="at1-history-backdrop"><section class="at1-history-dialog" role="dialog" aria-modal="true" aria-labelledby="at1HistoryTitle">'+
+    '<div class="at1-history-header"><div><span class="at1-history-eyebrow">OPERASIONAL · ATTENDANCE</span><h3 id="at1HistoryTitle">Riwayat Absensi</h3><p>'+esc(label(state.month))+' · '+all.length+' pegawai-hari · '+paired+' scan berpasangan · '+(all.length-paired)+' perlu review</p></div>'+
+    '<button type="button" class="at1-history-close" data-at="history-close" aria-label="Tutup riwayat absensi">×</button></div>'+
+    '<div class="at1-history-filters"><label for="at1HistorySearch">Cari pegawai<input id="at1HistorySearch" type="search" autocomplete="off" placeholder="Nama pegawai atau ID mesin" value="'+esc(state.search)+'"></label>'+
+    '<label for="at1HistoryStatus">Status scan<select id="at1HistoryStatus"><option value="all"'+(state.historyStatus==='all'?' selected':'')+'>Semua status</option><option value="paired"'+(state.historyStatus==='paired'?' selected':'')+'>Berpasangan</option><option value="review"'+(state.historyStatus==='review'?' selected':'')+'>Perlu review</option></select></label></div>'+
+    '<div id="at1HistoryResults">'+historyTable()+'</div>'+
+    '<p class="at1-history-note">* Scan terakhir adalah hasil konversi otomatis, bukan jam pulang terverifikasi. Scan tunggal tidak memiliki jam keluar.</p>'+
+    '</section></div>';
+}
+function updateHistoryResults(root){
+  var target=root&&root.querySelector('#at1HistoryResults');
+  if(target)target.innerHTML=historyTable();
+}
+function openHistory(){
+  if(!owner())return;
+  state.historyOpen=true;state.search='';state.historyStatus='all';state.historyPage=1;
+  render();
+  var input=h()&&h().querySelector('#at1HistorySearch');
+  if(input&&input.focus)input.focus();
+}
+function closeHistory(){
+  state.historyOpen=false;
+  render();
+  var trigger=h()&&h().querySelector('[data-at="history"]');
+  if(trigger&&trigger.focus)trigger.focus();
 }
 function render(){
 var root=h();if(!root)return;css();
 var analytics=window.__HASNARIA_ATTENDANCE_CHARTS_V2;var s=analytics?analytics.analyze(state.rows,state.month):summary(state.rows),p=state.preview,cs=p?conversionStats(p.rows):null;
-root.innerHTML='<div class="at1-shell"><div class="at1-heading"><div><div class="at1-eyebrow">OPERASIONAL · ATTENDANCE</div><h2>Rekap Kehadiran Pegawai</h2><p>Data log mesin absensi wajah · scan pertama dan terakhir per hari, tanpa asumsi jam pulang.</p></div><div class="at1-controls"><label>BULAN<select id="at1Month">'+options()+'</select></label><button type="button" data-at="refresh">↻ Refresh</button><label class="at1-upload">+ Upload Excel<input id="at1File" type="file" accept=".xlsx,.xls" hidden></label></div></div>'+
+root.innerHTML='<div class="at1-shell"><div class="at1-heading"><div><div class="at1-eyebrow">OPERASIONAL · ATTENDANCE</div><h2>Rekap Kehadiran Pegawai</h2><p>Data log mesin absensi wajah · scan pertama dan terakhir per hari, tanpa asumsi jam pulang.</p></div><div class="at1-controls"><label>BULAN<select id="at1Month">'+options()+'</select></label><button type="button" data-at="refresh">↻ Refresh</button><button type="button" class="at1-history-trigger" data-at="history" aria-haspopup="dialog">▤ Riwayat Absensi</button><label class="at1-upload">+ Upload Excel<input id="at1File" type="file" accept=".xlsx,.xls" hidden></label></div></div>'+
 '<div class="at1-kpis">'+(analytics?analytics.kpis(s):'<div class="at2-no-data">Infografis belum tersedia; refresh halaman.</div>')+'</div>'+
 (state.error?'<div class="at1-error" role="alert">'+esc(state.error)+'</div>':'')+(state.notice?'<div class="at1-success">'+esc(state.notice)+'</div>':'')+
 (state.loading?'<div class="at1-info">Memuat data attendance…</div>':'')+
 (p?'<div class="at1-preview"><div><b>Review unggahan: '+esc(state.file.name)+'</b><small>'+p.rows.length+' scan valid · '+p.people+' pegawai · '+p.days+' tanggal · rentang '+fmt(p.min)+'–'+fmt(p.max)+'</small><small>'+esc(p.warnings.join(' · ')||'Tidak ada duplikasi dalam file.')+'</small><label class="at1-conversion">Konversi scan saat upload<select id="at1Conversion"><option value="first_last"'+(state.conversionMode==='first_last'?' selected':'')+'>Otomatis: pertama = masuk, terakhir = keluar</option><option value="raw_only"'+(state.conversionMode==='raw_only'?' selected':'')+'>Log mentah saja (tanpa jam keluar)</option></select></label><small>'+cs.paired+' pegawai-hari dapat dikonversi · '+cs.single+' scan tunggal (tanpa jam keluar)</small></div><div><button type="button" data-at="cancel" '+(state.busy?'disabled':'')+'>Batal</button><button class="at1-primary" type="button" data-at="commit" '+(state.busy?'disabled':'')+'>Konfirmasi Impor</button></div></div>':'')+
 (state.progress?'<div class="at1-info" role="status">'+esc(state.progress)+'</div>':'')+
-(analytics?analytics.charts(s):'')+'<section class="at1-panel"><div class="at1-panel-head"><strong>Riwayat Scan Attendance</strong><input id="at1Search" placeholder="Cari pegawai / ID / tanggal" value="'+esc(state.search)+'"></div><div id="at1TableContainer">'+table()+'</div></section><div class="at1-caution">Catatan: scan pertama menjadi jam masuk; bila ada minimal dua waktu berbeda untuk ID dan tanggal sama, scan terakhir menjadi jam keluar hasil konversi. Jam keluar ini provisional, bukan bukti kepulangan, keterlambatan, atau lembur. Tidak mengubah tabel absensi internal dan penggajian.</div></div>';
-root.onchange=function(ev){var el=ev.target;if(el.id==='at1Month'){state.month=el.value;state.search='';state.preview=null;load()}if(el.id==='at1File')choose(el.files&&el.files[0]);if(el.id==='at1Conversion'){state.conversionMode=el.value==='raw_only'?'raw_only':'first_last';render()}};
-root.oninput=function(ev){if(ev.target.id==='at1Search'){state.search=ev.target.value;var t=root.querySelector('#at1TableContainer');if(t)t.innerHTML=table()}};
-root.onclick=function(ev){var b=ev.target.closest&&ev.target.closest('[data-at]');if(!b)return;var action=b.getAttribute('data-at');if(action==='refresh')load();if(action==='cancel'){state.preview=null;state.file=null;state.progress='';render()}if(action==='commit')commit()};
+(analytics?analytics.charts(s):'')+(state.historyOpen?historyModal():'')+'</div>';
+root.onchange=function(ev){
+  var el=ev.target;
+  if(el.id==='at1Month'){state.month=el.value;state.search='';state.historyOpen=false;state.historyPage=1;state.preview=null;load();return}
+  if(el.id==='at1File'){choose(el.files&&el.files[0]);return}
+  if(el.id==='at1Conversion'){state.conversionMode=el.value==='raw_only'?'raw_only':'first_last';render();return}
+  if(el.id==='at1HistoryStatus'){state.historyStatus=el.value==='paired'?'paired':el.value==='review'?'review':'all';state.historyPage=1;updateHistoryResults(root)}
+};
+root.oninput=function(ev){
+  if(ev.target.id==='at1HistorySearch'){
+    state.search=ev.target.value;state.historyPage=1;updateHistoryResults(root);
+  }
+};
+root.onclick=function(ev){
+  if(state.historyOpen&&ev.target&&ev.target.classList&&ev.target.classList.contains('at1-history-backdrop')){closeHistory();return}
+  var b=ev.target.closest&&ev.target.closest('[data-at]');
+  if(!b)return;
+  var action=b.getAttribute('data-at');
+  if(action==='history'){openHistory();return}
+  if(action==='history-close'){closeHistory();return}
+  if(action==='history-page'){
+    var n=Number(b.getAttribute('data-page'));
+    if(!b.disabled&&Number.isInteger(n)&&n>0){state.historyPage=n;updateHistoryResults(root)}
+    return;
+  }
+  if(action==='refresh'){load();return}
+  if(action==='cancel'){state.preview=null;state.file=null;state.progress='';render();return}
+  if(action==='commit'){commit();return}
+};
+root.onkeydown=function(ev){
+  if(!state.historyOpen)return;
+  if(ev.key==='Escape'){ev.preventDefault();closeHistory();return}
+  if(ev.key==='Tab'){
+    var dialog=root.querySelector('.at1-history-dialog');
+    if(!dialog)return;
+    var nodes=Array.from(dialog.querySelectorAll('button:not([disabled]),input:not([disabled]),select:not([disabled])'));
+    if(!nodes.length)return;
+    var first=nodes[0],last=nodes[nodes.length-1];
+    if(ev.shiftKey&&document.activeElement===first){ev.preventDefault();last.focus()}
+    else if(!ev.shiftKey&&document.activeElement===last){ev.preventDefault();first.focus()}
+  }
+};
 }
 async function load(){
 if(!owner()||!db())return;var seq=++state.seq;state.loading=true;state.error='';render();

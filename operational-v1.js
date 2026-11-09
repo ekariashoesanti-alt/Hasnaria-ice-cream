@@ -103,7 +103,7 @@
     if(!isOwner()||!active()||state.subtab!=='attendance')return;
     if(window.__HASNARIA_ATTENDANCE_MOUNT){window.__HASNARIA_ATTENDANCE_MOUNT();return}
     if(state.attendanceLoad)return;
-    state.attendanceLoad=Promise.all(['/attendance-charts-v2.js?v=1','/attendance-v1.js?v=2'].map(function(url){return new Promise(function(resolve){var sc=document.createElement('script');sc.src=url;sc.async=true;sc.onload=resolve;sc.onerror=function(){resolve()};document.head.appendChild(sc)})}));
+    state.attendanceLoad=Promise.all(['/attendance-charts-v2.js?v=1','/attendance-v1.js?v=3'].map(function(url){return new Promise(function(resolve){var sc=document.createElement('script');sc.src=url;sc.async=true;sc.onload=resolve;sc.onerror=function(){resolve()};document.head.appendChild(sc)})}));
     state.attendanceLoad.then(function(){if(active()&&state.subtab==='attendance'&&window.__HASNARIA_ATTENDANCE_MOUNT)window.__HASNARIA_ATTENDANCE_MOUNT()});
   }
   function subnav(tab){return '<nav class="op1-loyalty-nav" aria-label="Submenu Operasional"><button type="button" data-op-action="show-attendance"'+(tab==='attendance'?' class="on"':'')+'>Attendance</button><button type="button" data-op-action="show-loyalty"'+(tab==='loyalty'?' class="on"':'')+'>Loyalty</button><button type="button" data-op-action="show-work"'+(tab==='work'?' class="on"':'')+'>Stock Opname</button></nav>'}
