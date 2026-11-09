@@ -33,7 +33,7 @@ test('Loyalty switches to YTD labels, available coverage and five-row pages',()=
  assert.match(js,/LIMIT=5/);
  assert.match(js,/get_loyalty_ytd_dashboard_v1/);
  assert.doesNotMatch(js,/db\(\)\.rpc\('get_loyalty_dashboard_v1'/);
- for(const x of ['Pelanggan Unik YTD','Repeat Customer YTD','Kunjungan YTD','Frekuensi Kunjungan YTD','Kunjungan YTD</th>','coverageLine(cov)','YTD parsial','state.data=null;load(false)']) assert.ok(js.includes(x),x);
+ for(const x of ['Pelanggan Unik YTD','Repeat Customer YTD','Kunjungan YTD','Segmentasi Frekuensi YTD','Kunjungan YTD</th>','coverageLine(cov)','YTD parsial','state.data=null;state.infographic=null;load(false)']) assert.ok(js.includes(x),x);
  assert.match(js,/Data sampai/);
  assert.match(js,/years\.forEach\(function\(y\)/);
  assert.match(js,/tidak diestimasi/i);

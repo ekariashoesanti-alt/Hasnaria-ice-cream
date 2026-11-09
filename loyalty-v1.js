@@ -3,7 +3,7 @@
 'use strict';
 if(window.__HASNARIA_LOYALTY_V1)return;
 window.__HASNARIA_LOYALTY_V1=true;
-var state={loaded:false,loading:false,period:'',months:[],search:'',sort:'spend',page:0,data:null,preview:null,file:null,busy:false,error:'',notice:'',seq:0};
+var state={loaded:false,loading:false,period:'',months:[],search:'',sort:'spend',page:0,data:null,preview:null,file:null,busy:false,error:'',notice:'',seq:0,infographic:null};
 var LIMIT=5, MONTHS={'januari':'01','februari':'02','maret':'03','april':'04','mei':'05','juni':'06','juli':'07','agustus':'08','september':'09','oktober':'10','november':'11','desember':'12'};
 function host(){return document.getElementById('opLoyaltyHost')}
 function db(){return window.__HASNARIA_DB}
@@ -31,11 +31,25 @@ function css(){if(document.getElementById('loyalty-v1-css'))return;var l=documen
 function kpi(k,v,sub){return '<div class="lo1-kpi"><span>'+e(k)+'</span><strong>'+e(v)+'</strong><small>'+e(sub||'')+'</small></div>'}
 function chart(dist){var sum=dist.reduce(function(a,x){return a+Number(x.customers||0)},0);
  return '<div class="lo1-chart">'+dist.map(function(x){var width=sum?100*Number(x.customers)/sum:0;return '<div class="lo1-bar"><span>'+e(x.group)+' kali</span><progress max="100" value="'+width.toFixed(2)+'"></progress><b>'+num(x.customers)+'</b></div>'}).join('')+'</div>'}
+function trendVisual(months){
+ var data=Array.isArray(months)?months:[],observed=data.filter(function(m){return m.available}),max=Math.max(1,...observed.map(function(m){return Number(m.visits)||0}));
+ var width=390,slot=width/Math.max(1,data.length),bar=Math.min(22,slot*.55),height=72;
+ var items=data.map(function(m,i){var v=Math.max(0,Number(m.visits)||0),x=i*slot+(slot-bar)/2,y=height-height*v/max;
+  return m.available?'<rect x="'+x.toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+bar.toFixed(1)+'" height="'+Math.max(2,height-y).toFixed(1)+'" rx="3" fill="#168363"><title>'+e(shortMonth(m.month))+': '+num(v)+' kunjungan</title></rect>':
+   '<rect x="'+x.toFixed(1)+'" y="61" width="'+bar.toFixed(1)+'" height="11" rx="3" fill="#e4ebee" stroke="#bdd8c4" stroke-dasharray="2,2"><title>'+e(shortMonth(m.month))+': belum ada laporan</title></rect>';
+ }).join('');
+ var labels=data.map(function(m,i){return '<text x="'+(i*slot+slot/2).toFixed(1)+'" y="99" text-anchor="middle" fill="#70897c" font-size="10">'+e(shortMonth(m.month))+'</text>'}).join('');
+ return '<svg class="lo1-trend" viewBox="0 0 390 107" role="img" aria-label="Grafik batang tren kunjungan per bulan; bulan tanpa laporan ditandai abu-abu"><path d="M0 73H390" stroke="#dce8e3"/>'+items+labels+'</svg>'
+}
+function loyalVisual(items){
+ if(!Array.isArray(items)||!items.length)return '<div class="lo1-small-empty">Belum ada data pelanggan.</div>';
+ return '<div class="lo1-leaders">'+items.map(function(x,i){return '<div class="lo1-leader"><span class="lo1-rank">'+String(i+1).padStart(2,'0')+'</span><span class="lo1-leader-name" title="'+e(x.name)+'">'+e(x.name)+'</span><strong>'+num(x.visits)+'<small> kali</small></strong></div>'}).join('')+'</div>'
+}
 function table(a){if(!a.length)return '<div class="lo1-empty">Tidak ada pelanggan yang cocok dengan filter.</div>';
  return '<div class="lo1-tablewrap"><table><thead><tr><th>Pelanggan</th><th>Telepon</th><th>Kunjungan YTD</th><th>Belanja YTD</th><th>Terakhir</th><th>Segmen</th></tr></thead><tbody>'+a.map(function(r){return '<tr><td>'+e(r.name)+'</td><td>•••• '+e(r.phone_last4)+'</td><td>'+num(r.visits)+'</td><td>'+money(r.revenue)+'</td><td>'+date(r.last_visit_at)+'</td><td><span class="lo1-chip '+e(r.segment)+'">'+(r.segment==='high_frequency'?'High Frequency':r.segment==='repeat'?'Repeat':'Satu kali')+'</span></td></tr>'}).join('')+'</tbody></table></div>'}
 function render(){
  var h=host();if(!h)return;css();if(!owner()){h.innerHTML='<div class="lo1-alert">Halaman Loyalty khusus Owner.</div>';return}
- var d=state.data, sm=d&&d.summary, batch=d&&d.batch, cov=d&&d.coverage, dist=d&&d.distribution||[],rows=d&&d.customers||[];
+ var d=state.data, sm=d&&d.summary, batch=d&&d.batch, cov=d&&d.coverage, dist=d&&d.distribution||[],rows=d&&d.customers||[],info=state.infographic;
  var options=state.months.length?state.months:[state.period||new Date().toISOString().slice(0,7)+'-01'];
  h.innerHTML='<div class="lo1-shell"><div class="lo1-heading"><div><strong>Customer Loyalty <em>YTD</em></strong><small>Akumulasi Januari–'+e(monthName(state.period))+' · pelanggan teridentifikasi Majoo, bukan omzet toko keseluruhan.</small></div><div class="lo1-controls"><label>Bulan<select id="lo1Period">'+options.map(function(m){return '<option value="'+e(m)+'"'+(m===state.period?' selected':'')+'>'+e(monthName(m))+'</option>'}).join('')+'</select></label><button type="button" data-lo1="refresh">↻ Refresh</button><label class="lo1-upload">+ Upload Excel<input id="lo1File" type="file" accept=".xlsx,.xls" hidden></label></div></div>'+
  (state.error?'<div role="alert" class="lo1-alert">'+e(state.error)+'</div>':'')+
@@ -43,9 +57,9 @@ function render(){
  (state.loading&&!d?'<div class="lo1-empty">Memuat akumulasi pelanggan…</div>':'')+
  (cov?coverageLine(cov):'')+
  (sm?'<div class="lo1-kpis">'+kpi('Pelanggan Unik YTD',num(sm.customers),'Tidak dihitung ganda')+kpi('Repeat Customer YTD',pct(sm.repeat_customers,sm.customers),num(sm.repeat_customers)+' pelanggan')+kpi('Kunjungan YTD',num(sm.transactions),'Datang Jan–bulan terpilih')+kpi('Belanja Tercatat YTD',money(sm.revenue),'Pelanggan teridentifikasi')+kpi('Rata-rata / Kunjungan',money(sm.transactions?sm.revenue/sm.transactions:0),'Belanja ÷ kunjungan')+'</div>'+
- '<div class="lo1-graphs"><section><strong>Frekuensi Kunjungan YTD</strong>'+chart(dist)+'</section><section><strong>Kontribusi Pelanggan Berulang YTD</strong><div class="lo1-share">'+pct(sm.repeat_revenue,sm.revenue)+'</div><progress class="lo1-meter" max="100" value="'+(sm.revenue?Math.min(100,100*sm.repeat_revenue/sm.revenue):0).toFixed(2)+'"></progress><small>'+money(sm.repeat_revenue)+' dari '+money(sm.revenue)+'</small></section></div>':'')+
+ '<div class="lo1-graphs lo1-infographics"><section class="lo1-trend-card"><div class="lo1-panel-head"><strong>Tren Kunjungan Bulanan</strong><small>Data Majoo '+e(String(state.period).slice(0,4))+'</small></div>'+(info?trendVisual(info.months):'<div class="lo1-small-empty">Memuat tren…</div>')+'</section><section class="lo1-segments-card"><div class="lo1-panel-head"><strong>Segmentasi Frekuensi YTD</strong><small>Jumlah pelanggan</small></div>'+chart(dist)+'<div class="lo1-repeat"><span>Kontribusi belanja repeat</span><b>'+pct(sm.repeat_revenue,sm.revenue)+'</b><progress max="100" value="'+(sm.revenue?Math.min(100,100*sm.repeat_revenue/sm.revenue):0).toFixed(2)+'"></progress></div></section><section class="lo1-top-card"><div class="lo1-panel-head"><strong>Top 3 Pelanggan Loyal</strong><small>Ranking kunjungan YTD</small></div>'+(info?loyalVisual(info.top_loyal):'<div class="lo1-small-empty">Memuat ranking…</div>')+'</section></div>':'')+
  (state.preview?renderPreview():'')+
- '<div class="lo1-customers"><div class="lo1-search"><div><b>Customer Intelligence · YTD</b>'+(batch?'<small>Data sampai '+e(monthName(state.period))+' · sumber terbaru: '+e(batch.source_file)+' · '+num(d.matched_rows)+' hasil</small>':'<small>Belum ada laporan Majoo hingga bulan ini. Upload laporan per bulan.</small>')+'</div><div class="lo1-filterbar"><input id="lo1Search" placeholder="Cari nama / HP" value="'+e(state.search)+'"><select id="lo1Sort"><option value="spend"'+(state.sort==='spend'?' selected':'')+'>Belanja tertinggi</option><option value="visits"'+(state.sort==='visits'?' selected':'')+'>Paling sering</option><option value="recent"'+(state.sort==='recent'?' selected':'')+'>Kunjungan terbaru</option><option value="name"'+(state.sort==='name'?' selected':'')+'>Nama A–Z</option></select><button type="button" data-lo1="search">Cari</button></div></div>'+
+ '<div class="lo1-customers"><div class="lo1-search"><div><b>Detail Pelanggan · YTD</b>'+(batch?'<small>Data sampai '+e(monthName(state.period))+' · sumber terbaru: '+e(batch.source_file)+' · '+num(d.matched_rows)+' hasil</small>':'<small>Belum ada laporan Majoo hingga bulan ini. Upload laporan per bulan.</small>')+'</div><div class="lo1-filterbar"><input id="lo1Search" placeholder="Cari nama / HP" value="'+e(state.search)+'"><select id="lo1Sort"><option value="spend"'+(state.sort==='spend'?' selected':'')+'>Belanja tertinggi</option><option value="visits"'+(state.sort==='visits'?' selected':'')+'>Paling sering</option><option value="recent"'+(state.sort==='recent'?' selected':'')+'>Kunjungan terbaru</option><option value="name"'+(state.sort==='name'?' selected':'')+'>Nama A–Z</option></select><button type="button" data-lo1="search">Cari</button></div></div>'+
  table(rows)+(d&&d.matched_rows>LIMIT?'<div class="lo1-pager"><button data-lo1="prev" '+(!state.page?'disabled':'')+'>← Sebelumnya</button><span>Halaman '+(state.page+1)+' / '+Math.ceil(d.matched_rows/LIMIT)+'</span><button data-lo1="next" '+((state.page+1)*LIMIT>=d.matched_rows?'disabled':'')+'>Berikutnya →</button></div>':'')+'</div>'+
  '<p class="lo1-disclaimer">YTD dari snapshot Majoo bulanan terbaru; pelanggan unik per nomor dan kunjungan dijumlahkan. Bulan belum diunggah tidak diestimasi. Tidak mengubah Penjualan/Stok/BOM/Keuangan.</p></div>';
  bind(h);
@@ -65,8 +79,10 @@ async function loadMonths(){
 async function load(resetMonths){if(!owner()||!db())return;var seq=++state.seq;state.loading=true;state.error='';render();
  try{
   if(resetMonths)await loadMonths();
-  var q=await db().rpc('get_loyalty_ytd_dashboard_v1',{p_period_month:state.period||null,p_search:state.search,p_sort:state.sort,p_limit:LIMIT,p_offset:state.page*LIMIT});
-  if(q.error)throw q.error;if(seq!==state.seq)return;
+  var requests=[db().rpc('get_loyalty_ytd_dashboard_v1',{p_period_month:state.period||null,p_search:state.search,p_sort:state.sort,p_limit:LIMIT,p_offset:state.page*LIMIT})];
+  if(resetMonths||!state.infographic||state.infographic.period_month!==state.period)requests.push(db().rpc('get_loyalty_infographics_v1',{p_period_month:state.period||null}));
+  var results=await Promise.all(requests),q=results[0];if(q.error)throw q.error;if(seq!==state.seq)return;
+  if(results[1]){if(results[1].error)throw results[1].error;state.infographic=results[1].data}
   state.data=q.data;state.loaded=true;state.loading=false;render();
  }catch(err){if(seq!==state.seq)return;state.loading=false;state.loaded=true;state.error='Dashboard Loyalty belum tersedia: '+(err.message||String(err));render()}
 }
@@ -123,9 +139,9 @@ async function commit(){
  }catch(err){state.error=err.message||String(err)}finally{state.busy=false;render()}
 }
 function bind(h){
- h.onchange=function(ev){var t=ev.target;if(t.id==='lo1Period'){state.period=t.value;state.page=0;state.preview=null;state.data=null;load(false)}else if(t.id==='lo1Sort'){state.sort=t.value;state.page=0;load(false)}else if(t.id==='lo1File')chooseFile(t.files&&t.files[0])};
+ h.onchange=function(ev){var t=ev.target;if(t.id==='lo1Period'){state.period=t.value;state.page=0;state.preview=null;state.data=null;state.infographic=null;load(false)}else if(t.id==='lo1Sort'){state.sort=t.value;state.page=0;load(false)}else if(t.id==='lo1File')chooseFile(t.files&&t.files[0])};
  h.onclick=function(ev){var t=ev.target.closest&&ev.target.closest('[data-lo1]');if(!t)return;var k=t.getAttribute('data-lo1');
- if(k==='refresh')load(true);else if(k==='search'){state.search=(h.querySelector('#lo1Search')||{}).value||'';state.page=0;load(false)}
+ if(k==='refresh'){state.infographic=null;load(true)}else if(k==='search'){state.search=(h.querySelector('#lo1Search')||{}).value||'';state.page=0;load(false)}
  else if(k==='next'){state.page++;load(false)}else if(k==='prev'){state.page=Math.max(0,state.page-1);load(false)}
  else if(k==='cancel'){state.preview=null;state.file=null;render()}else if(k==='commit')commit();
  };
