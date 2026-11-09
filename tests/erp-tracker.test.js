@@ -113,7 +113,7 @@ assert(p1LazyBootstrap.includes('get_ui_monthly_trend_v1') && p1LazyBootstrap.in
 assert(ownerShellSource.includes('window.__HASNARIA_OWNER_SHELL_BOOTSTRAPPED'), 'Owner executive guard must remain idempotent');
 assert(ownerShellSource.includes("var EXEC_SRC='/owner-executive-v1.js?v=1'"), 'Owner shell must load the executive one-view runtime');
 assert(ownerShellSource.includes("var DASH_SRC='/owner-dashboard-one-view.js?v=9'"), 'Owner shell must load updated UI-6 dashboard');
-assert(ownerShellSource.includes("var KPI_SRC='/owner-ceo-kpi-v1.js?v=1'"), 'Owner KPI must lazy-load');
+assert(ownerShellSource.includes("var KPI_SRC='/owner-ceo-kpi-v1.js?v=2'"), 'Owner KPI must lazy-load');
 assert(dashboardSource.includes('__HASNARIA_DASHBOARD_UI6'), 'Dashboard UI-6 runtime marker must be present');
 assert(dashboardSource.includes('get_ui_dashboard_pack_v1') && dashboardSource.includes('p_months:18'), 'Dashboard UI-6 must use the bounded canonical dashboard RPC');
 assert(dashboardSource.includes('async function dashboardPack()') && dashboardSource.includes('statement timeout'), 'Dashboard UI-6 must retry one transient statement timeout without changing data semantics');
