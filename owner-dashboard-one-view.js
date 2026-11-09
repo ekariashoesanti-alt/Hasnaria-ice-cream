@@ -28,7 +28,7 @@ async function dashboardPack(){
 }
 function css(){if($('hx-exec-css')){var x=$('hx-exec-css');if(x.getAttribute('href')!=='/owner-executive-v1.css?v=5')x.href='/owner-executive-v1.css?v=5';return}var l=document.createElement('link');l.id='hx-exec-css';l.rel='stylesheet';l.href='/owner-executive-v1.css?v=5';document.head.appendChild(l)}
 function current(){return S.rows.find(function(x){return key(x.period_month)===S.period})||null}
-function periodOptions(){return S.periods.map(function(x){var k=key(x.period_start||x.period_key);return'<option value="'+esc(k)+'"'+(k===S.period?' selected':'')+'>'+esc(monthLabel(k))+'</option>'}).join('')}
+function periodOptions(){var periods=S.periods.map(function(x){return key(x.period_start||x.period_key)}).filter(Boolean),today=new Date(Date.now()+7*3600000).toISOString().slice(0,7);if(periods.indexOf(today)<0)periods.unshift(today);return periods.map(function(k){return'<option value="'+esc(k)+'"'+(k===S.period?' selected':'')+'>'+esc(monthLabel(k))+'</option>'}).join('')}
 function syncText(v){return v===true?'MATCH':v===false?'MISMATCH':'N/A'}
 function syncClass(v){return v===true?'ok':v===false?'bad':'na'}
 function purchaseText(v){return v&&v.purchase_sync_state==='POSTED_CANONICAL'?'POSTED':syncText(v&&v.purchase_sync_ok)}
@@ -84,7 +84,10 @@ function render(){
  h.innerHTML='<div class="hx-shell hx6-shell" data-ceo-one-view="1">'+
   '<div class="hx6-toolbar"><div><div class="hx6-eyebrow">RINGKASAN CEO · '+esc(cutLabel())+'</div><h1>Ringkasan CEO</h1><p>Visual singkat lintas Penjualan, Pembelian, Administrasi, Keuangan, dan Stok.</p></div><div class="hx6-tools"><label><span>Bulan</span><select id="hx6Period" data-month-filter="dashboard">'+periodOptions()+'</select></label><button type="button" data-hx6-detail="1">Lihat Detail</button></div></div>'+
   (S.error?'<div class="hx-error">'+esc(S.error)+'</div>':'')+
-  '<div class="hx6-kpis">'+
+  '<div id="hx7Cards" class="hx7-grid" aria-label="Empat kondisi utama bisnis"></div>'+
+  '<div id="hx7Insights" class="hx7-insights-host" aria-live="polite"></div>'+
+  '<div class="hx7-collapsible"><button type="button" data-hx7-expand="1">Tampilkan tren & status transaksi</button></div>'+
+  '<div id="hx7Secondary" class="hx7-secondary"><div class="hx6-kpis">'+
    kpi('Penjualan',S.loading&&!S.loaded?'…':money(v.sales_revenue),n(v.sales_rows).toLocaleString('id-ID')+' transaksi','sales')+
    kpi('Pembelian',S.loading&&!S.loaded?'…':money(v.purchase_amount),n(v.purchase_rows).toLocaleString('id-ID')+' jurnal canonical','purchase')+
    kpi('Administrasi',S.loading&&!S.loaded?'…':money(v.admin_amount),n(v.admin_rows).toLocaleString('id-ID')+' transaksi · subset Pembelian','admin')+
@@ -92,9 +95,10 @@ function render(){
   '</div>'+
   '<div class="hx6-main"><article class="hx6-panel"><div class="hx6-panel-head"><div><h2>Tren 6 Periode</h2><p>Penjualan dibanding Pembelian. Administrasi tetap bagian dari Pembelian.</p></div></div>'+trendMarkup()+'</article><article class="hx6-panel"><div class="hx6-panel-head"><div><h2>Status Sinkronisasi</h2><p>Hanya mismatch nyata yang ditandai.</p></div></div>'+statusPanel(v)+'</article></div>'+
   '<article class="hx6-panel hx6-flow-panel"><div class="hx6-panel-head"><div><h2>Alur Bisnis Otomatis</h2><p>Sumber transaksi menuju modul tujuan tanpa input nilai kedua.</p></div></div>'+flowMarkup(v)+'</article>'+
-  detailMarkup(v)+
+  '</div>'+detailMarkup(v)+
  '</div>';
  bind(h);
+ if(window.__HASNARIA_CEO_KPI_V1)window.__HASNARIA_CEO_KPI_V1.mount(S.period);
 }
 function sameView(ctx,h){return window.__HASNARIA_CONTEXT===ctx&&ctx&&ctx.role==='owner'&&h===$('dashboard')&&!h.classList.contains('hidden')}
 async function loadHpp(seq){
@@ -117,7 +121,8 @@ async function load(force){
     var pack=r.data||{};
     S.periods=Array.isArray(pack.periods)?pack.periods:[];
     S.rows=Array.isArray(pack.rows)?pack.rows:[];
-    if(!S.period||!S.periods.some(function(x){return key(x.period_start||x.period_key)===S.period}))S.period=S.periods.length?key(S.periods[0].period_start||S.periods[0].period_key):'';
+    if(!S.period){var today=new Date(Date.now()+7*3600000).toISOString().slice(0,7);S.period=today|| (S.periods.length?key(S.periods[0].period_start||S.periods[0].period_key):'')}
+    if(S.period&&!S.periods.some(function(x){return key(x.period_start||x.period_key)===S.period}))S.periods=[{period_start:S.period+'-01'}].concat(S.periods);
     S.loaded=true;S.stale=false;
   }catch(e){if(seq!==S.seq||!sameView(ctx,h))return;S.error='Gagal memuat Ringkasan CEO: '+(e&&e.message?e.message:String(e))}
   finally{if(seq===S.seq){S.loading=false;if(sameView(ctx,h)){render();if(S.loaded&&S.hpp==null)loadHpp(seq)}}}
@@ -134,21 +139,27 @@ async function syncRefresh(){
     if(seq!==S.seq||p!==S.period||!sameView(ctx,h)||root!==h.querySelector('[data-ceo-one-view="1"]')||!canSync())return false;
     all.forEach(function(q){if(q.error)throw q.error});
     var pack=all[0].data||{},periods=Array.isArray(pack.periods)?pack.periods:[],rows=Array.isArray(pack.rows)?pack.rows:[];
+    var today=new Date(Date.now()+7*3600000).toISOString().slice(0,7);
+    if(!periods.some(function(x){return key(x.period_start||x.period_key)===today}))periods=[{period_start:today+'-01'}].concat(periods);
     if(p&&!periods.some(function(x){return key(x.period_start||x.period_key)===p})){
       var selected=S.periods.find(function(x){return key(x.period_start||x.period_key)===p});
-      periods=periods.concat([selected||{period_start:p+'-01'}]);
+      periods=[selected||{period_start:p+'-01'}].concat(periods);
     }
     var hpp=all[1].data&&all[1].data[0]?n(all[1].data[0].sales_volume_modeled_pct):null;
     var changed=!!S.error||JSON.stringify([S.periods,S.rows,S.hpp])!==JSON.stringify([periods,rows,hpp]);
     S.periods=periods;S.rows=rows;S.hpp=hpp;S.error='';S.stale=false;
     if(changed)render();
+    if(window.__HASNARIA_CEO_KPI_V1&&window.__HASNARIA_CEO_KPI_V1.maybeRefresh)window.__HASNARIA_CEO_KPI_V1.maybeRefresh();
     return true;
   }catch(_){return false}
   finally{S.syncing=false}
 }
-function registerSync(){var sync=window.__HASNARIA_DATA_SYNC;if(sync)sync.register('owner-dashboard',function(reason){if(reason==='changed')window.__HASNARIA_DASHBOARD_ONE_VIEW.invalidate();return syncRefresh()})}
+function registerSync(){var sync=window.__HASNARIA_DATA_SYNC;if(sync)sync.register('owner-dashboard',function(reason){if(reason==='changed'){window.__HASNARIA_DASHBOARD_ONE_VIEW.invalidate();if(window.__HASNARIA_CEO_KPI_V1)window.__HASNARIA_CEO_KPI_V1.invalidate()}return syncRefresh()})}
 function bind(h){
  h.onclick=function(e){
+  var expand=e.target&&e.target.closest?e.target.closest('[data-hx7-expand]'):null;
+  if(expand){var secondary=h.querySelector('#hx7Secondary');if(secondary){var opened=secondary.classList.toggle('is-open');expand.textContent=opened?'Sembunyikan tren & status transaksi':'Tampilkan tren & status transaksi'}return}
+
   var close=e.target&&e.target.closest?e.target.closest('[data-hx6-close]'):null;
   if(close&&(e.target===close||close.classList.contains('hx6-close'))){S.detailOpen=false;render();return}
   var detail=e.target&&e.target.closest?e.target.closest('[data-hx6-detail]'):null;

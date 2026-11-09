@@ -2242,18 +2242,20 @@
       "notes": "Code and SQL complete in PR #196. Staging YTD cross-month fixture passed incl duplicate-safe replacement and missing month warning; Owner-only enforcement passed. GitHub Audit Gate run 3025 PASS. Additive production RPC migrated, read-only checked 2 active months (Oct-Nov), 243 distinct customers, 296 visits, Rp7,523,000 and 37 repeat; sales count unchanged 7612. Preview/production deploy BLOCKED by Vercel free daily API cap 100 (402), CLI fallback unavailable. UI one-view visual acceptance not possible yet; do NOT mark DONE or claim live."
     },
     {
-      "id": "HSN-715",
-      "milestone": "M7",
-      "priority": "P1",
-      "status": "REVIEW",
-      "title": "Loyalty infographic-first executive dashboard, YTD trends and loyalty leaderboards",
+      "id": "HSN-814",
+      "milestone": "M8",
+      "priority": "P0",
+      "status": "IN_PROGRESS",
+      "title": "Ringkasan CEO empat pilar data produksi: finance YTD, stok tervalidasi, loyalty, workforce",
       "dependencies": [
-        "HSN-713"
+        "HSN-800",
+        "HSN-801",
+        "HSN-712"
       ],
-      "acceptance": "Compact 100% zoom infographic layout with monthly trend from current snapshots, repeat purchase segmentation, contribution share, Top 3 most loyal by cumulative visits; customer table secondary; missing months visually differentiated; owner-only read API, staging tests and deploy gates.",
-      "owner": "ChatGPT",
+      "acceptance": "4 kolom desktop navy-teal green, finance Januari–periode dengan label provisional, stock ranking hanya baseline & perhitungan aman, 3 customer bulan berjalan + most loyal YTD dan coverage, jam kerja dari pasangan timestamp nyata & ranking berbasis roster, owner access, one-view desktop, tests+preview+authenticated smoke sebelum produksi",
+      "owner": "Codex/ChatGPT",
       "updated_at": "2026-11-09",
-      "notes": "PR #199 infographic-first Loyalty UI + owner-only production read API. GitHub Audit Gate #3043 PASS after test updates. Staging DB fixture Jan/Feb + gap Mar + leaderboard + rollback PASS. Tokyo production RPC live verified: Oct visits=210, Nov visits=86, Jan-Sep missing, leaderboard visit counts=10/3/3, full phone withheld, canonical sales still 7,612. Frontend production not live: Vercel build-rate-limit denies automatic new deploys; PR draft awaiting READY preview to avoid production untested UI. Do not declare live."
+      "notes": "Branch feature/hsn-814-ceo-four-pillar-kpis: implementasi frontend read-only terpisah + unit regression. Tokyo production diinspeksi read-only. Finance 10 bulan 2026 provisional, 19 dari 198 SKU memenuhi filter ranking ketat, loyalty 2/11 bulan, attendance 74 raw scans dan 0 pasangan absensi sah; indikator yang belum terverifikasi tidak ditebak. Menunggu CI Vercel preview dan Owner browser acceptance; produksi tidak diubah."
     }
   ]
 }
