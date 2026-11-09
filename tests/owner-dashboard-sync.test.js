@@ -82,6 +82,9 @@ function setup() {
 
 (async () => {
   const x = setup(); await x.start();
+  // CEO opens on current WIB month even if the fixture has no transactions for it.
+  // Select October explicitly to test legacy pack synchronization for October data.
+  x.changePeriod('2026-10');
   const initial = x.renders;
   let same = x.refresh(); x.requests[1].resolve({ data: pack() }); await same;
   assert.equal(x.renders, initial, 'unchanged pack and coverage preserve the existing DOM');
