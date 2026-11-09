@@ -149,11 +149,12 @@ async function syncRefresh(){
     var changed=!!S.error||JSON.stringify([S.periods,S.rows,S.hpp])!==JSON.stringify([periods,rows,hpp]);
     S.periods=periods;S.rows=rows;S.hpp=hpp;S.error='';S.stale=false;
     if(changed)render();
+    if(window.__HASNARIA_CEO_KPI_V1&&window.__HASNARIA_CEO_KPI_V1.maybeRefresh)window.__HASNARIA_CEO_KPI_V1.maybeRefresh();
     return true;
   }catch(_){return false}
   finally{S.syncing=false}
 }
-function registerSync(){var sync=window.__HASNARIA_DATA_SYNC;if(sync)sync.register('owner-dashboard',function(reason){if(reason==='changed')window.__HASNARIA_DASHBOARD_ONE_VIEW.invalidate();return syncRefresh()})}
+function registerSync(){var sync=window.__HASNARIA_DATA_SYNC;if(sync)sync.register('owner-dashboard',function(reason){if(reason==='changed'){window.__HASNARIA_DASHBOARD_ONE_VIEW.invalidate();if(window.__HASNARIA_CEO_KPI_V1)window.__HASNARIA_CEO_KPI_V1.invalidate()}return syncRefresh()})}
 function bind(h){
  h.onclick=function(e){
   var expand=e.target&&e.target.closest?e.target.closest('[data-hx7-expand]'):null;
