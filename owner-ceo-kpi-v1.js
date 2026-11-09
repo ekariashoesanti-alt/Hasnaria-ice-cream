@@ -51,7 +51,7 @@ function summarizeLoyalty(month,ytd){
   coverage:Number(cov.imported_months||0),expected:Number(cov.expected_months||0),
   missing:Array.isArray(cov.missing_months)?cov.missing_months:[]};
 }
-function summarizeWorkforce(rows,scans,employees,rosters,templates){
+function summarizeWorkforce(rows,scans,employees,rosters,templates,deviceRows){
  var valid=(rows||[]).filter(function(a){
   if(!a.check_in_at||!a.check_out_at)return false;
   var delta=Date.parse(a.check_out_at)-Date.parse(a.check_in_at);
@@ -79,7 +79,7 @@ function summarizeWorkforce(rows,scans,employees,rosters,templates){
   .filter(function(r){return r.scheduled>=3&&r.complete>=1})
   .sort(function(a,b){return b.score-a.score||b.complete-a.complete||a.name.localeCompare(b.name)}).slice(0,3);
  return {total:total,average:valid.length?total/valid.length:null,validShifts:valid.length,
-  rawScans:Number(scans||0),ranking:ranking,device:summarizeDeviceScans(arguments.length>5?arguments[5]:[])};
+  rawScans:Number(scans||0),ranking:ranking,device:summarizeDeviceScans(deviceRows||[])};
 }
 
 /* Scan-based durations are only an ESTIMATE of the within-day first-to-last scan span.
