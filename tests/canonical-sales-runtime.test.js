@@ -69,6 +69,35 @@ try {
     throw new Error('legacy revenue scaling heuristic survived compilation');
   }
 
+
+  // Exercise the actual compiled Sales bootstrap, not the legacy sales-board.js loader.
+  const vm = require('node:vm');
+  const waitMatch = runtime.match(/  var tries = 0;\n  \(function wait\(\) \{[\s\S]*?\n  \}\)\(\);/);
+  if (!waitMatch) throw new Error('canonical Sales bootstrap retry block missing');
+  function runBootstrap(state) {
+    let reads = 0;
+    const timers = [];
+    vm.runInNewContext(waitMatch[0], {
+      STATE: state, mount() {},
+      document: { getElementById(id) { return id === 'sales' ? {} : null; } },
+      pickTokenFromStorage() { return true; },
+      loadMetrics() { reads++; state.fetched = true; },
+      setTimeout(callback) { timers.push(callback); }
+    });
+    return { reads, timers };
+  }
+  const zeroSales = runBootstrap({ fetched: false, rows: [], loading: false, error: '' });
+  if (zeroSales.reads !== 1 || zeroSales.timers.length !== 0) {
+    throw new Error('empty but successfully loaded Sales must not queue repeated fetches');
+  }
+  const failedSales = runBootstrap({ fetched: false, rows: [], loading: false, error: 'network failure' });
+  if (failedSales.reads !== 0 || failedSales.timers.length !== 0) {
+    throw new Error('failed Sales must wait for explicit recovery, not an automatic fetch loop');
+  }
+  if (runtime.includes("(!STATE.fetched || !STATE.rows.length) && tries++ < 80")) {
+    throw new Error('legacy empty-result Sales retry loop survived compilation');
+  }
+
   const checked = spawnSync(process.execPath, ['--check', output], { encoding: 'utf8' });
   if (checked.status !== 0) throw new Error(checked.stderr || checked.stdout || 'node --check failed');
 

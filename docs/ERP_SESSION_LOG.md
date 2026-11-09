@@ -21,6 +21,40 @@
 
 Append-only working journal. Newest session goes at the top.
 
+## 2026-11-02 — HSN-008 compact Stock one-view desktop
+
+- CSS-only Owner Stock override scales head, toolbar, four KPI tiles and dual-chart panels to desktop viewport >=1101x720; preserves fallback scroll on smaller displays and stock modals.
+- Removes comparison SVG min-width overflow; does not hide chart data, captions or any existing buttons.
+- Stock stylesheet version v34; added static contract and Playwright geometry checks. No stock math or Supabase changes. User acceptance pending.
+
+
+## 2026-11-02 — Sales first-load fast path
+
+- Guard Sales initial fetch before awaiting auth to prevent duplicate calls on initial mount/navigation/auth-ready.
+- Use one `daily_metrics` read for initial KPI paint. Removed unused 50,000-row historical `sales` fetch from foreground loader. The visible hourly chart still uses independent month-scoped RPC `get_sales_hourly_month_v1`.
+- No changes to Supabase data, historical daily_metrics selection, import, or layout. Added simulated cold-fetch regression and cache version bump. CI and authenticated Owner acceptance pending.
+
+
+## 2026-11-02 — HSN-005 canonical runtime follow-up
+
+- Detected that the production `sales-board.js` is compiled from `sales-board.part0–4.js` and the earlier loader-only label patch was not present in that asset.
+- Added idempotent bootstrap to `sales-board.part4.js`: no repeated fetch for valid empty Sales data or automatic retry loop on errors.
+- Added a test against generated canonical runtime and updated Sales/app cache versions and their contract checks. No data, auth, or stylesheet mutation. CI and authenticated browser verification remain release gates.
+
+## 2026-11-02 — HSN-005 + HSN-006 integrated preview
+
+- Consolidate label-write idempotency with retryable module scripts in a separate test branch, leaving draft PRs #182 and #183 unchanged.
+- New navigation regression added to existing build gate. No production database or CSS changes.
+- Keep both tracker tasks IN_PROGRESS until CI, staging preview and authenticated visual checks pass.
+
+## 2026-11-02 — HSN-006 Script loader recovery (preview review)
+
+- Replaced false-success `loadOnce` behavior with shared in-flight load, true/false result, failed-tag cleanup, and retryable cache across Sales, Purchase, Stock.
+- Owner Sales shows a recoverable error rather than auto-looping when the script fails.
+- Bumped runtime cache versions, added eight headless regression scenarios, and registered them in the Vercel build gate.
+- No Supabase writes, changes to business logic, or CSS. Keep IN_PROGRESS until GitHub CI, preview, and authenticated browser visual acceptance.
+
+
 ## 2026-09-25 — HSN-300 Purchase canonical render cleanup
 
 **Scope**
