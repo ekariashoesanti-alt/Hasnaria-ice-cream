@@ -207,7 +207,7 @@ assert(canonicalPurchaseFinanceMigration.includes("'hpp','retired'"), 'managemen
 assert(operationalBridgeSource.includes("Object.defineProperty(window,'__HASNARIA_OPERATIONS_V1_MOUNT'"), 'Operasional bridge intercepts mount assignment for an idempotency guard');
 assert(operationalBridgeSource.includes("if(!force&&mounted())return"), 'observer-driven non-force Operasional mounts are skipped after the shell exists');
 assert(operationalBridgeSource.includes('__hasnariaOperationalMountGuard'), 'wrapped Operasional mount is marked to prevent duplicate wrapping');
-assert(operationalBridgeSource.includes("s.src='/operational-v1.js?v=5'"), 'Operasional runtime remains lazy-loaded only when needed');
+assert(operationalBridgeSource.includes("s.src='/operational-v1.js?v=6'"), 'Operasional runtime remains lazy-loaded only when needed');
 assert(operationalBridgeSource.includes("state.navObserver.observe(tabs,{childList:true})"), 'Operasional bridge observes only direct navigation child changes');
 assert(operationalBridgeSource.includes("state.mainObserver.observe(main,{childList:true})"), 'Operasional bridge observes only direct main-section child changes');
 assert(!operationalBridgeSource.includes("observe(document.body,{childList:true,subtree:true})"), 'Operasional bridge must not observe the entire document subtree');
