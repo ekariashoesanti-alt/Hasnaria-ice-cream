@@ -54,11 +54,46 @@ assert.equal(attendance.validShifts,1);
 assert.equal(attendance.rawScans,42);
 assert.equal(attendance.ranking.length,0);
 assert.equal(m.summarizeWorkforce([],74,[],[],[]).average,null);
+const deviceRows=[
+ {cloud_id:'device',device_person_id:'1',employee_name:'Dania',scan_date:'2026-11-01',scan_time:'08:00:00',conversion_mode:'first_last'},
+ {cloud_id:'device',device_person_id:'1',employee_name:'Dania',scan_date:'2026-11-01',scan_time:'16:00:00',conversion_mode:'first_last'},
+ {cloud_id:'device',device_person_id:'1',employee_name:'Dania',scan_date:'2026-11-02',scan_time:'09:00:00',conversion_mode:'first_last'},
+ {cloud_id:'device',device_person_id:'2',employee_name:'Tari',scan_date:'2026-11-01',scan_time:'12:00:00',conversion_mode:'first_last'},
+ {cloud_id:'device',device_person_id:'2',employee_name:'Tari',scan_date:'2026-11-01',scan_time:'18:00:00',conversion_mode:'first_last'},
+ {cloud_id:'device',device_person_id:'3',employee_name:'Karin',scan_date:'2026-11-01',scan_time:'11:00:00',conversion_mode:'raw_only'},
+ {cloud_id:'device',device_person_id:'3',employee_name:'Karin',scan_date:'2026-11-01',scan_time:'19:00:00',conversion_mode:'raw_only'},
+ {cloud_id:'device',device_person_id:'4',employee_name:'Ulya',scan_date:'2026-11-01',scan_time:'12:00:00',conversion_mode:'first_last'},
+ {cloud_id:'device',device_person_id:'4',employee_name:'Ulya',scan_date:'2026-11-01',scan_time:'12:00:00',conversion_mode:'first_last'}
+];
+const device=m.summarizeDeviceScans(deviceRows);
+assert.equal(device.rawScans,9);
+assert.equal(device.people,4);
+assert.equal(device.personDays,5);
+assert.equal(device.pairedDays,2);
+assert.equal(device.totalHours,14);
+assert.equal(device.averageHours,7);
+assert.equal(device.ranking[0].name,'Tari'); // 1/1 valid, 100% coverage
+assert.equal(device.ranking[1].name,'Dania'); // 1/2 valid
+assert.equal(device.ranking[2].validDays,0);
+const workforceWithScans=m.summarizeWorkforce([],deviceRows.length,[],[],[],deviceRows);
+assert.equal(workforceWithScans.validShifts,0,'raw device logs must NOT become verified shifts');
+assert.equal(workforceWithScans.total,0,'raw device logs must NOT become official paid hours');
+assert.equal(workforceWithScans.device.totalHours,14);
+const scanPriority=m.businessPriorities({workforce:workforceWithScans,loyalty:{expected:0,coverage:0}}, {}, '2026-11');
+assert.ok(scanPriority.some(p=>p.id==='workforce'&&p.evidence.includes('2/5 hari')));
+const ceoCss=fs.readFileSync(path.join(ROOT,'owner-ceo-kpi-v1.css'),'utf8');
+assert.ok(ceoCss.includes('grid-template-rows:auto minmax(0,1fr) minmax(155px,.43fr) auto'),'desktop 100% one-view must budget grid rows');
+assert.ok(ceoCss.includes('#hx7Insights')&&ceoCss.includes('.hx7-insight-item'),'CEO priority panels must remain visible');
+assert.ok(ceoCss.includes('overflow-y:auto'),'long detail must scroll INSIDE panels only');
+const ceoRuntime=fs.readFileSync(path.join(ROOT,'owner-ceo-kpi-v1.js'),'utf8');
+assert.ok(ceoRuntime.includes("Total durasi scan*")&&ceoRuntime.includes('Estimasi jarak scan pertama–terakhir'),'CEO must label raw scans as estimate');
+assert.ok(ceoRuntime.includes("select('cloud_id,device_person_id,employee_name,scan_date,scan_time,conversion_mode')"),'CEO must fetch actual scan times, not only row count');
+
 const dashboard=fs.readFileSync(path.join(ROOT,'owner-dashboard-one-view.js'),'utf8');
 const guard=fs.readFileSync(path.join(ROOT,'owner-shell-guard.js'),'utf8');
 assert.ok(dashboard.includes('id="hx7Cards"'));
 assert.ok(dashboard.includes('__HASNARIA_CEO_KPI_V1.mount'));
-assert.ok(guard.includes('/owner-ceo-kpi-v1.js?v=1'));
+assert.ok(guard.includes('/owner-ceo-kpi-v1.js?v=2'));
 const priorities=m.businessPriorities({
  stock:{eligible:19,total:198,critical:{name:'FISHROLL',qty:2,min:14,ratio:2/14,unit:'pcs'}},
  finance:{revenue:179397000,cost:59279465,profit:120117535,months:10,expected:11,provisional:10,reconciled:true,margin:67},
