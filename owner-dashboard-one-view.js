@@ -122,6 +122,7 @@ async function load(force){
     S.periods=Array.isArray(pack.periods)?pack.periods:[];
     S.rows=Array.isArray(pack.rows)?pack.rows:[];
     if(!S.period){var today=new Date(Date.now()+7*3600000).toISOString().slice(0,7);S.period=today|| (S.periods.length?key(S.periods[0].period_start||S.periods[0].period_key):'')}
+    if(S.period&&!S.periods.some(function(x){return key(x.period_start||x.period_key)===S.period}))S.periods=[{period_start:S.period+'-01'}].concat(S.periods);
     S.loaded=true;S.stale=false;
   }catch(e){if(seq!==S.seq||!sameView(ctx,h))return;S.error='Gagal memuat Ringkasan CEO: '+(e&&e.message?e.message:String(e))}
   finally{if(seq===S.seq){S.loading=false;if(sameView(ctx,h)){render();if(S.loaded&&S.hpp==null)loadHpp(seq)}}}
@@ -140,7 +141,7 @@ async function syncRefresh(){
     var pack=all[0].data||{},periods=Array.isArray(pack.periods)?pack.periods:[],rows=Array.isArray(pack.rows)?pack.rows:[];
     if(p&&!periods.some(function(x){return key(x.period_start||x.period_key)===p})){
       var selected=S.periods.find(function(x){return key(x.period_start||x.period_key)===p});
-      periods=periods.concat([selected||{period_start:p+'-01'}]);
+      periods=[selected||{period_start:p+'-01'}].concat(periods);
     }
     var hpp=all[1].data&&all[1].data[0]?n(all[1].data[0].sales_volume_modeled_pct):null;
     var changed=!!S.error||JSON.stringify([S.periods,S.rows,S.hpp])!==JSON.stringify([periods,rows,hpp]);
