@@ -37,13 +37,75 @@ test('repeated same-time scans do not become a verified exit', () => {
 test('charts contain four infographics but no false attendance-rate or late ranking', () => {
   const m=chart.analyze([log('1','Dania','2026-11-08','15:11:00'),log('1','Dania','2026-11-08','21:16:00')],'2026-11');
   const html=chart.charts(m);
-  for (const title of ['Tren Kehadiran Tercatat','Komposisi Status Scan','Distribusi Jam Scan Pertama','Peringkat Kelengkapan Log']) {
+  for (const title of ['Tren Kehadiran Tercatat','Komposisi Status Scan','Rata-rata Durasi Kerja per Pegawai','Peringkat Kelengkapan Log']) {
     assert.ok(html.includes(title));
   }
   assert.equal((html.match(/class="at2-panel"/g)||[]).length,4);
   assert.ok(!html.includes('Tepat Waktu'));
   assert.ok(!html.includes('Paling Telat'));
 });
+
+test('monthly per-person average uses valid first/last scan pairs, not all calendar days', () => {
+  const scans=[
+    log('1','Dania','2026-11-01','08:00:00'),log('1','Dania','2026-11-01','16:00:00'),
+    log('1','Dania','2026-11-02','08:00:00'),log('1','Dania','2026-11-02','14:00:00'),
+    log('1','Dania','2026-11-03','09:00:00'),
+    log('2','Tari','2026-11-01','12:00:00'),log('2','Tari','2026-11-01','21:00:00'),
+    log('3','Karin','2026-11-01','10:00:00')
+  ];
+  const m=chart.analyze(scans,'2026-11');
+  const dania=m.people.find(p=>p.name==='Dania');
+  const tari=m.people.find(p=>p.name==='Tari');
+  const karin=m.people.find(p=>p.name==='Karin');
+  assert.equal(dania.validDays,2);
+  assert.equal(dania.totalMinutes,840);
+  assert.equal(tari.validDays,1);
+  assert.equal(tari.totalMinutes,540);
+  assert.equal(karin.validDays,0);
+  assert.equal(karin.totalMinutes,0);
+  const html=chart.charts(m);
+  assert.ok(html.includes('7j 00m'));
+  assert.ok(html.includes('9j 00m'));
+  assert.ok(html.includes('14j 00m'));
+  assert.ok(html.includes('Belum ada hari dengan pasangan scan valid'));
+  assert.ok(html.indexOf('Tari')<html.indexOf('Dania'));
+  assert.ok(html.indexOf('Dania')<html.indexOf('Karin'));
+  assert.ok(!html.includes('Distribusi Jam Scan Pertama'));
+});
+test('exclude raw-only, repeated scans and invalid durations from monthly averages', () => {
+  const scans=[
+    log('1','Dania','2026-11-04','10:00:00','raw_only'),
+    log('1','Dania','2026-11-04','19:00:00','raw_only'),
+    log('1','Dania','2026-11-05','08:00:00'),
+    log('1','Dania','2026-11-05','08:00:00'),
+    log('2','Karin','2026-11-06','15:11:00'),
+    log('2','Karin','2026-11-06','21:16:00')
+  ];
+  const m=chart.analyze(scans,'2026-11');
+  const d=m.people.find(p=>p.name==='Dania');
+  const k=m.people.find(p=>p.name==='Karin');
+  assert.equal(d.validDays,0);
+  assert.equal(d.totalMinutes,0);
+  assert.equal(k.validDays,1);
+  assert.equal(k.totalMinutes,365);
+  const html=chart.charts(m);
+  assert.ok(html.includes('6j 05m'));
+  assert.ok(html.includes('0 hari'));
+  assert.ok(!html.includes('9j 00m'));
+});
+test('duration chart remains compact and scrollable for all employees', () => {
+  const scans=Array.from({length:14},(_,i)=>log(String(i),'Pegawai '+i,'2026-11-08','09:00:00'));
+  const m=chart.analyze(scans,'2026-11');
+  const html=chart.charts(m);
+  assert.equal((html.match(/class="at2-panel"/g)||[]).length,4);
+  assert.ok(html.includes('Pegawai 13'));
+  assert.ok(html.includes('class="at2-duration-scroll"'));
+  assert.ok(html.includes('height="384"'));
+  const css=fs.readFileSync('attendance-v1.css','utf8');
+  assert.match(css,/at2-duration-scroll/);
+  assert.match(css,/height:112px/);
+});
+
 test('user-provided employee names are escaped', () => {
   const rows=[log('1','<img src=x onerror=alert(1)>','2026-11-08','15:00:00')];
   const html=chart.charts(chart.analyze(rows,'2026-11'));
