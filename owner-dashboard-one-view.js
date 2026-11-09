@@ -139,6 +139,8 @@ async function syncRefresh(){
     if(seq!==S.seq||p!==S.period||!sameView(ctx,h)||root!==h.querySelector('[data-ceo-one-view="1"]')||!canSync())return false;
     all.forEach(function(q){if(q.error)throw q.error});
     var pack=all[0].data||{},periods=Array.isArray(pack.periods)?pack.periods:[],rows=Array.isArray(pack.rows)?pack.rows:[];
+    var today=new Date(Date.now()+7*3600000).toISOString().slice(0,7);
+    if(!periods.some(function(x){return key(x.period_start||x.period_key)===today}))periods=[{period_start:today+'-01'}].concat(periods);
     if(p&&!periods.some(function(x){return key(x.period_start||x.period_key)===p})){
       var selected=S.periods.find(function(x){return key(x.period_start||x.period_key)===p});
       periods=[selected||{period_start:p+'-01'}].concat(periods);
