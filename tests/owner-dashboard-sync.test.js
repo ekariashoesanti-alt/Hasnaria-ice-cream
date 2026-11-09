@@ -82,6 +82,9 @@ function setup() {
 
 (async () => {
   const x = setup(); await x.start();
+  // CEO opens on current WIB month even if the fixture has no transactions for it.
+  // Select October explicitly to test legacy pack synchronization for October data.
+  x.changePeriod('2026-10');
   const initial = x.renders;
   let same = x.refresh(); x.requests[1].resolve({ data: pack() }); await same;
   assert.equal(x.renders, initial, 'unchanged pack and coverage preserve the existing DOM');
@@ -136,7 +139,7 @@ function setup() {
   const coverageFailure = x.refresh(); x.requests.at(-1).resolve({ data: pack(999) }); await coverageFailure;
   assert.equal(x.renders, writes, 'a failed coverage read cannot partially overwrite a successful report');
   assert.ok(x.reads.every(read => read.brand_id === x.requests[0].args.p_brand && read.limit === 1), 'the coverage read stays scoped to the same brand');
-  const missing = setup(); await missing.start();
+  const missing = setup(); await missing.start(); missing.changePeriod('2026-10');
   const removedCatalog = missing.refresh(), remaining = pack(95);
   remaining.periods = remaining.periods.filter(period => period.period_start !== '2026-10-01');
   missing.requests.at(-1).resolve({ data: remaining }); await removedCatalog;
