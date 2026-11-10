@@ -17,7 +17,7 @@ function hours(x){return val(x).toLocaleString('id-ID',{maximumFractionDigits:1}
 function monthTitle(s){return new Intl.DateTimeFormat('id-ID',{month:'long',year:'numeric',timeZone:'UTC'}).format(new Date(s+'-01T00:00:00Z'))}
 function monthEnd(p){return p+'-'+String(new Date(Number(p.slice(0,4)),Number(p.slice(5,7)),0).getDate()).padStart(2,'0')}
 function check(r){if(r.error)throw r.error;return r.data}
-function css(){if(document.getElementById('hx7-css'))return;var l=document.createElement('link');l.id='hx7-css';l.rel='stylesheet';l.href='/owner-ceo-kpi-v1.css?v=3';document.head.appendChild(l)}
+function css(){if(document.getElementById('hx7-css'))return;var l=document.createElement('link');l.id='hx7-css';l.rel='stylesheet';l.href='/owner-ceo-kpi-v1.css?v=4';document.head.appendChild(l)}
 function summarizeFinance(rows,period){
  var y=Number(period.slice(0,4)),expected=Number(period.slice(5,7)),months=new Set(),revenue=0,cost=0,profit=0,provisional=0;
  (rows||[]).forEach(function(r){
@@ -212,23 +212,49 @@ function businessPriorities(data,errors,period){
 function insightsMarkup(items){
  return '<section class="hx7-insights" aria-labelledby="hx7InsightTitle">'+
   '<div class="hx7-insights-heading"><div><span class="hx7-overline">CEO DECISION INTELLIGENCE</span>'+
-  '<h2 id="hx7InsightTitle">Insight & Prioritas Bisnis</h2><p>Prioritas otomatis berdasarkan 4 KPI dan kualitas data yang tersedia; bukan prediksi atau laba audit.</p></div>'+
+  '<h2 id="hx7InsightTitle">Insight & Prioritas Bisnis</h2><p>Empat prioritas utama berdasarkan KPI dan kualitas sumber data.</p></div>'+
   '<span class="hx7-insight-count">'+num(items.length)+' tindakan</span></div>'+
   '<div class="hx7-insight-grid">'+items.map(function(p){
-    return '<article class="hx7-insight-item">'+
-     '<div class="hx7-insight-top"><span class="hx7-insight-priority '+(p.priority==='P1'?'urgent':'')+'">'+esc(p.priority)+'</span>'+
-     '<small>#'+p.rank+' · '+esc(p.area)+'</small></div>'+
-     '<h3>'+esc(p.title)+'</h3>'+
-     '<p class="hx7-insight-evidence">'+esc(p.evidence)+'</p>'+
-     '<p class="hx7-insight-action"><b>Aksi:</b> '+esc(p.action)+'</p>'+
-     '<details class="hx7-insight-more"><summary>Mitigasi & kualitas data</summary><p>'+esc(p.guard)+'</p><small>Keyakinan sumber: '+esc(p.confidence)+'</small></details>'+
-     '</article>';
+   return '<article class="hx7-insight-item">'+
+    '<div class="hx7-insight-top"><span class="hx7-insight-priority '+(p.priority==='P1'?'urgent':'')+'">'+esc(p.priority)+'</span>'+
+    '<small>#'+p.rank+' · '+esc(p.area)+'</small></div>'+
+    '<h3 title="'+esc(p.title)+'">'+esc(p.title)+'</h3>'+
+    '<p class="hx7-insight-evidence" title="'+esc(p.evidence)+'">'+esc(p.evidence)+'</p>'+
+    '<p class="hx7-insight-action" title="'+esc(p.action)+'"><b>Aksi:</b> '+esc(p.action)+'</p>'+
+    '<button type="button" class="hx7-insight-open" data-hx7-insight-id="'+esc(p.id)+'" aria-label="Lihat tindakan lengkap: '+esc(p.title)+'">Lihat tindakan lengkap</button>'+
+    '</article>';
   }).join('')+'</div></section>';
+}
+function showInsightDetail(p){
+ if(!p)return;
+ var old=document.getElementById('hx7InsightDialog');if(old&&old.close)old.close();if(old)old.remove();
+ var dialog=document.createElement('dialog');dialog.id='hx7InsightDialog';dialog.className='hx7-insight-dialog';
+ dialog.setAttribute('aria-labelledby','hx7DetailTitle');
+ dialog.innerHTML='<div class="hx7-dialog-head"><div><span class="hx7-insight-priority '+(p.priority==='P1'?'urgent':'')+'">'+esc(p.priority)+'</span>'+
+  '<span class="hx7-dialog-area">#'+num(p.rank)+' · '+esc(p.area)+'</span>'+
+  '<h2 id="hx7DetailTitle">'+esc(p.title)+'</h2></div>'+
+  '<button type="button" class="hx7-dialog-close" aria-label="Tutup rincian">×</button></div>'+
+  '<div class="hx7-dialog-section"><strong>Dasar penetapan prioritas</strong><p>'+esc(p.evidence)+'</p></div>'+
+  '<div class="hx7-dialog-section"><strong>Tindakan yang disarankan</strong><p>'+esc(p.action)+'</p></div>'+
+  '<div class="hx7-dialog-section"><strong>Mitigasi & jalur pemulihan</strong><p>'+esc(p.guard)+'</p></div>'+
+  '<p class="hx7-dialog-confidence">Keyakinan sumber: '+esc(p.confidence)+'</p>';
+ dialog.addEventListener('close',function(){dialog.remove()});
+ dialog.addEventListener('click',function(e){if(e.target===dialog||e.target.closest('.hx7-dialog-close'))dialog.close()});
+ document.body.appendChild(dialog);
+ if(typeof dialog.showModal==='function')dialog.showModal();else dialog.setAttribute('open','');
 }
 function renderInsights(){
  var root=document.getElementById('hx7Insights');if(!root||!owner())return;
  if(state.loading&&state.loaded!==state.period){root.textContent='Menyusun prioritas dari KPI Supabase…';return}
- root.innerHTML=insightsMarkup(businessPriorities(state.data,state.errors,state.period));
+ var items=businessPriorities(state.data,state.errors,state.period);
+ root.innerHTML=insightsMarkup(items);
+ root.onclick=function(e){
+  var trigger=e.target&&e.target.closest?e.target.closest('[data-hx7-insight-id]'):null;
+  if(!trigger||!root.contains(trigger))return;
+  var id=trigger.getAttribute('data-hx7-insight-id');
+  var p=items.find(function(x){return x.id===id});
+  showInsightDetail(p);
+ };
 }
 function pill(t,cls){return '<span class="hx7-pill '+esc(cls||'')+'">'+esc(t)+'</span>'}
 function metric(label,value,cls){return '<div class="hx7-metric"><span>'+esc(label)+'</span><strong class="'+esc(cls||'')+'" title="'+esc(value)+'">'+esc(value)+'</strong></div>'}
@@ -338,11 +364,11 @@ async function load(){
 }
 function mount(period){
  if(!owner()||!db()||!/^\d{4}-\d{2}$/.test(period||''))return;
- if(state.period!==period){state.period=period;state.data={};state.errors={};state.loaded='';state.refreshedAt=0;state.seq++;state.loading=false}
+ if(state.period!==period){var dlg=document.getElementById('hx7InsightDialog');if(dlg&&dlg.close)dlg.close();state.period=period;state.data={};state.errors={};state.loaded='';state.refreshedAt=0;state.seq++;state.loading=false}
  render();if(state.loaded!==period&&!state.loading)load();
 }
 function invalidate(){state.loaded='';state.refreshedAt=0;state.seq++;state.loading=false;if(state.period&&document.getElementById('hx7Cards'))load()}
 function maybeRefresh(){var root=document.getElementById('hx7Cards'),h=document.getElementById('dashboard');if(!root||!h||h.classList.contains('hidden')||!owner()||state.loading||!state.loaded)return; if(Date.now()-state.refreshedAt>=300000)load()}
 window.__HASNARIA_CEO_KPI_V1={mount:mount,invalidate:invalidate,maybeRefresh:maybeRefresh};
-window.__HASNARIA_CEO_KPI_MATH={summarizeFinance:summarizeFinance,summarizeStock:summarizeStock,summarizeLoyalty:summarizeLoyalty,summarizeWorkforce:summarizeWorkforce,summarizeDeviceScans:summarizeDeviceScans,businessPriorities:businessPriorities};
+window.__HASNARIA_CEO_KPI_MATH={summarizeFinance:summarizeFinance,summarizeStock:summarizeStock,summarizeLoyalty:summarizeLoyalty,summarizeWorkforce:summarizeWorkforce,summarizeDeviceScans:summarizeDeviceScans,businessPriorities:businessPriorities,insightsMarkup:insightsMarkup};
 })();
