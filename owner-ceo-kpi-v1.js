@@ -256,6 +256,86 @@ function renderInsights(){
   showInsightDetail(p);
  };
 }
+/* HSN-818 | Lightweight, verified YTD series from the existing sales_daily_kpis view.
+   The series is for visualization only; it is not added to posted Finance income. */
+function summarizeMonthlySales(rows,period){
+ var year=String(period||'').slice(0,4),expected=Number(String(period||'').slice(5,7));
+ var months=[],index=Object.create(null),revenue=0,transactions=0,actualMonths=0,lastMonth='';
+ if(!/^\d{4}$/.test(year)||expected<1||expected>12)return {months:[],revenue:0,transactions:0,actualMonths:0,expected:0,lastMonth:''};
+ for(var m=1;m<=expected;m++){
+  var key=year+'-'+String(m).padStart(2,'0');
+  var record={key:key,label:['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Ags','Sep','Okt','Nov','Des'][m-1],revenue:0,transactions:0,days:0,hasData:false};
+  months.push(record);index[key]=record;
+ }
+ (rows||[]).forEach(function(x){
+  var key=String(x.metric_date||'').slice(0,7),target=index[key];
+  if(!target)return;
+  target.revenue+=val(x.revenue);
+  target.transactions+=val(x.transactions);
+  target.days++;target.hasData=true;
+ });
+ months.forEach(function(x){if(!x.hasData)return;revenue+=x.revenue;transactions+=x.transactions;actualMonths++;lastMonth=x.key});
+ return {months:months,revenue:revenue,transactions:transactions,actualMonths:actualMonths,expected:expected,lastMonth:lastMonth};
+}
+function shortMoney(amount){
+ var a=Number(amount);
+ if(!Number.isFinite(a))return '—';
+ var abs=Math.abs(a),div=abs>=1000000000?1000000000:abs>=1000000?1000000:abs>=1000?1000:1;
+ var suffix=div===1000000000?' M':div===1000000?' jt':div===1000?' rb':'';
+ return 'Rp'+(a/div).toLocaleString('id-ID',{maximumFractionDigits:1})+suffix;
+}
+function sparkline(trend){
+ if(!trend||!trend.months)return '';
+ var values=trend.months.filter(function(x){return x.hasData}).map(function(x){return x.revenue});
+ if(!values.length)return '';
+ var max=Math.max.apply(null,values.concat([1])),min=Math.min.apply(null,values.concat([0]));
+ var range=Math.max(1,max-min),points=values.map(function(v,i){
+  var x=8+(values.length===1?102:i*204/(values.length-1)),y=31-(v-min)/range*23;
+  return x.toFixed(1)+','+y.toFixed(1);
+ }).join(' ');
+ var pts=points.split(' '),last=pts[pts.length-1].split(',');
+ return '<svg class="hx8-sparkline" viewBox="0 0 220 38" preserveAspectRatio="none" role="img" aria-label="Kurva penjualan bulanan YTD dari transaksi yang tersedia">'+
+  '<polygon points="8,36 '+points+' 212,36" fill="#e6f5ee"/>'+
+  '<polyline points="'+points+'" fill="none" stroke="#178466" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>'+
+  '<circle cx="'+last[0]+'" cy="'+last[1]+'" r="3" fill="#fff" stroke="#178466" stroke-width="2"/></svg>';
+}
+function salesTrendSvg(trend){
+ if(!trend||!trend.months||!trend.actualMonths)return '';
+ var list=trend.months,n=list.length,left=34,right=503,baseline=117,top=23,width=(right-left)/Math.max(n,1);
+ var maxRevenue=Math.max.apply(null,list.filter(function(x){return x.hasData}).map(function(x){return x.revenue}).concat([1]));
+ var maxTx=Math.max.apply(null,list.filter(function(x){return x.hasData}).map(function(x){return x.transactions}).concat([1]));
+ var svg='<svg viewBox="0 0 530 153" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Tren bulanan YTD: batang pendapatan rupiah, garis jumlah transaksi">';
+ for(var z=0;z<=3;z++){
+  var gy=baseline-z*29.5;
+  svg+='<line x1="'+left+'" x2="'+right+'" y1="'+gy+'" y2="'+gy+'" stroke="#e5efea" stroke-dasharray="3 4"/>';
+  svg+='<text x="27" y="'+(gy+3)+'" text-anchor="end" font-size="9" fill="#76918a">'+(maxRevenue*z/3/1000000).toLocaleString('id-ID',{maximumFractionDigits:1})+'</text>';
+ }
+ var lines=[];
+ list.forEach(function(x,i){
+  var cx=left+(i+.5)*width,barw=Math.min(24,width*.56);
+  svg+='<text x="'+cx.toFixed(1)+'" y="136" text-anchor="middle" font-size="9" fill="#688379">'+esc(x.label)+'</text>';
+  if(!x.hasData)return;
+  var h=x.revenue/maxRevenue*88.5;
+  svg+='<rect x="'+(cx-barw/2).toFixed(1)+'" y="'+(baseline-h).toFixed(1)+'" width="'+barw.toFixed(1)+'" height="'+Math.max(0,h).toFixed(1)+'" rx="3" fill="#198768"><title>'+esc(x.label)+': '+esc(money(x.revenue))+' · '+num(x.transactions)+' transaksi</title></rect>';
+  lines.push(cx.toFixed(1)+','+(baseline-x.transactions/maxTx*88.5).toFixed(1));
+ });
+ if(lines.length>1)svg+='<polyline points="'+lines.join(' ')+'" fill="none" stroke="#53a744" stroke-width="2.9" stroke-linecap="round" stroke-linejoin="round"/>';
+ lines.forEach(function(pt){var p=pt.split(',');svg+='<circle cx="'+p[0]+'" cy="'+p[1]+'" r="3" fill="#fff" stroke="#53a744" stroke-width="2"/>'});
+ return svg+'</svg>';
+}
+function renderTrend(){
+ var root=document.getElementById('hx8SalesTrend');if(!root||!owner())return;
+ var trend=state.data.trend,err=state.errors.trend;
+ var header='<div class="hx8-trend-head"><div><span class="hx7-overline">PERFORMANCE MONITOR</span><h2>Tren Penjualan YTD</h2></div>'+
+  '<div class="hx8-chart-legend"><span><i class="bars"></i> Penjualan (Rp jt)</span><span><i class="line"></i> Transaksi</span></div></div>';
+ if(err){root.innerHTML=header+'<p class="hx8-trend-empty">Tren tidak dapat dimuat dari penjualan. '+esc(err.message||err)+'</p>';return}
+ if(!trend){root.innerHTML=header+'<p class="hx8-trend-empty">'+(state.loading?'Mengambil tren penjualan…':'Data penjualan belum tersedia.')+'</p>';return}
+ if(!trend.actualMonths){root.innerHTML=header+'<p class="hx8-trend-empty">Tidak ada data transaksi pada periode yang dipilih.</p>';return}
+ var suffix=trend.actualMonths<trend.expected?' · '+(trend.expected-trend.actualMonths)+' bulan belum memiliki data':'';
+ root.innerHTML=header+'<div class="hx8-chart-wrap">'+salesTrendSvg(trend)+'</div>'+
+  '<div class="hx8-trend-foot"><span>'+esc(monthTitle(trend.lastMonth))+' terakhir tersedia'+esc(suffix)+'</span><strong>'+shortMoney(trend.revenue)+' · '+num(trend.transactions)+' transaksi</strong></div>';
+}
+
 function pill(t,cls){return '<span class="hx7-pill '+esc(cls||'')+'">'+esc(t)+'</span>'}
 function metric(label,value,cls){return '<div class="hx7-metric"><span>'+esc(label)+'</span><strong class="'+esc(cls||'')+'" title="'+esc(value)+'">'+esc(value)+'</strong></div>'}
 function stockRow(label,x,cls){
