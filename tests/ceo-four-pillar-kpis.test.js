@@ -87,6 +87,12 @@ assert.ok(ceoCss.includes('#hx7Insights')&&ceoCss.includes('.hx7-insight-item'),
 assert.ok(!ceoCss.includes('overflow-y:auto'),'CEO tiles must never have internal vertical scrollbars');
 assert.ok(ceoCss.includes('body.hasnaria-owner-erp #dashboard .hx6-shell .hx7-body') && ceoCss.includes('overflow:visible'),'CEO card and insight copy must remain completely visible');
 assert.ok(!ceoCss.includes('hx7-collapsible'),'obsolete expand button must have no CSS spacing');
+assert.ok(ceoCss.includes('.hx7-insight-open')&&ceoCss.includes('-webkit-line-clamp:2'),'CEO insight preview must be compact');
+assert.ok(ceoCss.includes('.hx7-insight-dialog'),'full insight dialog remains accessible');
+assert.ok(ceoCss.includes('@media(min-width:1101px)'),'desktop one-view compaction is responsive');
+const preview=m.insightsMarkup([{id:'finance',priority:'P1',rank:1,title:'Periksa laporan',area:'Keuangan',evidence:'Selisih laporan',action:'Rekonsiliasi HPP',guard:'Jangan ubah database',confidence:'Terbatas'}]);
+assert.ok(preview.includes('data-hx7-insight-id="finance"')&&preview.includes('Rekonsiliasi HPP'));
+assert.ok(!preview.includes('<details'),'overview must not expand and displace other CEO tiles');
 const ceoRuntime=fs.readFileSync(path.join(ROOT,'owner-ceo-kpi-v1.js'),'utf8');
 assert.ok(ceoRuntime.includes("Total durasi scan*")&&ceoRuntime.includes('Estimasi jarak scan pertama–terakhir'),'CEO must label raw scans as estimate');
 assert.ok(ceoRuntime.includes("select('cloud_id,device_person_id,employee_name,scan_date,scan_time,conversion_mode')"),'CEO must fetch actual scan times, not only row count');
@@ -95,7 +101,7 @@ const dashboard=fs.readFileSync(path.join(ROOT,'owner-dashboard-one-view.js'),'u
 const guard=fs.readFileSync(path.join(ROOT,'owner-shell-guard.js'),'utf8');
 assert.ok(dashboard.includes('id="hx7Cards"'));
 assert.ok(dashboard.includes('__HASNARIA_CEO_KPI_V1.mount'));
-assert.ok(guard.includes('/owner-ceo-kpi-v1.js?v=3'));
+assert.ok(guard.includes('/owner-ceo-kpi-v1.js?v=4'));
 assert.ok(!dashboard.includes('data-hx7-expand')&&!dashboard.includes('Tampilkan tren & status transaksi'),'retired trend/status button must not be rendered');
 assert.ok(dashboard.includes('data-hx6-detail'),'CEO detail modal remains accessible');
 const priorities=m.businessPriorities({
