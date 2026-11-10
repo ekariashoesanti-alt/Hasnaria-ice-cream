@@ -450,33 +450,46 @@ async function workforceData(period){
 }
 async function load(){
  if(state.loading||!state.period||!owner()||!db())return;
- var period=state.period,seq=++state.seq,y=period.slice(0,4),periodDate=period+'-01';
+ var period=state.period,seq=++state.seq,year=period.slice(0,4),periodDate=period+'-01';
  state.loading=true;state.errors={};render();
- var calls=[
-  db().from('finance_income_statement_provisional_v1').select('period_month,revenue_sales,other_income,cogs_display,operating_expense_adjusted,finance_expense,tax_expense,profit_after_tax_display,is_final_hpp').eq('brand_id',BRAND).gte('period_month',y+'-01-01').lte('period_month',periodDate).order('period_month'),
+ var keys=['finance','stock','loyalty','workforce','trend'];
+ var queries=[
+  db().from('finance_income_statement_provisional_v1')
+   .select('period_month,revenue_sales,other_income,cogs_display,operating_expense_adjusted,finance_expense,tax_expense,profit_after_tax_display,is_final_hpp')
+   .eq('brand_id',BRAND).gte('period_month',year+'-01-01').lte('period_month',periodDate).order('period_month'),
   Promise.all([
    db().from('inventory_items').select('id,item_name,unit,min_qty').eq('brand_id',BRAND),
-   db().from('ui_stock_formula_verification_v1').select('inventory_item_id,independently_calculated_qty,has_physical_baseline,same_day_ambiguous_rows,estimated_bom_usage_rows,arithmetic_difference').eq('brand_id',BRAND)
+   db().from('ui_stock_formula_verification_v1')
+    .select('inventory_item_id,independently_calculated_qty,has_physical_baseline,same_day_ambiguous_rows,estimated_bom_usage_rows,arithmetic_difference').eq('brand_id',BRAND)
   ]),
   Promise.all([
    db().rpc('get_loyalty_dashboard_v1',{p_period_month:periodDate,p_search:'',p_sort:'spend',p_limit:3,p_offset:0}),
    db().rpc('get_loyalty_ytd_dashboard_v1',{p_period_month:periodDate,p_search:'',p_sort:'visits',p_limit:1,p_offset:0})
   ]),
-  workforceData(period)
+  workforceData(period),
+  db().from('sales_daily_kpis').select('metric_date,revenue,transactions')
+   .eq('brand_id',BRAND).gte('metric_date',year+'-01-01').lte('metric_date',monthEnd(period)).order('metric_date').limit(400)
  ];
- var settled=await Promise.allSettled(calls);
+ // Progressive source resolution: slow Finance must not hide healthy Stock/CRM/Attendance/Sales.
+ await Promise.all(queries.map(function(p,i){
+  return Promise.resolve(p).then(function(v){
+   if(seq!==state.seq||period!==state.period||!owner())return;
+   var k=keys[i];
+   try{
+    state.data[k]=i===0?summarizeFinance(check(v),period):
+     i===1?summarizeStock(check(v[0]),check(v[1])):
+     i===2?summarizeLoyalty(check(v[0]),check(v[1])):
+     i===3?v:summarizeMonthlySales(check(v),period);
+    delete state.errors[k];
+   }catch(e){state.data[k]=null;state.errors[k]=(e&&e.message)||String(e)}
+   render();
+  },function(e){
+   if(seq!==state.seq||period!==state.period||!owner())return;
+   var k=keys[i];state.data[k]=null;state.errors[k]=(e&&e.message)||String(e);
+   render();
+  });
+ }));
  if(seq!==state.seq||period!==state.period||!owner())return;
- var keys=['finance','stock','loyalty','workforce'];
- settled.forEach(function(r,i){
-  var k=keys[i];
-  try{
-   if(r.status==='rejected')throw r.reason;
-   var v=r.value;
-   state.data[k]=i===0?summarizeFinance(check(v),period):
-    i===1?summarizeStock(check(v[0]),check(v[1])):
-    i===2?summarizeLoyalty(check(v[0]),check(v[1])):v;
-  }catch(e){state.data[k]=null;state.errors[k]=(e&&e.message)||String(e)}
- });
  state.loading=false;state.loaded=period;state.refreshedAt=Date.now();render();
 }
 function mount(period){
