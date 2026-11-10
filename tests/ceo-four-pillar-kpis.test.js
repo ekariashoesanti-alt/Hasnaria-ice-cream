@@ -82,9 +82,11 @@ assert.equal(workforceWithScans.device.totalHours,14);
 const scanPriority=m.businessPriorities({workforce:workforceWithScans,loyalty:{expected:0,coverage:0}}, {}, '2026-11');
 assert.ok(scanPriority.some(p=>p.id==='workforce'&&p.evidence.includes('2/5 hari')));
 const ceoCss=fs.readFileSync(path.join(ROOT,'owner-ceo-kpi-v1.css'),'utf8');
-assert.ok(ceoCss.includes('grid-template-rows:auto minmax(0,1fr) minmax(155px,.43fr) auto'),'desktop 100% one-view must budget grid rows');
+assert.ok(ceoCss.includes('grid-template-rows:auto auto auto'),'desktop one-view must use content-aware KPI and insight rows');
 assert.ok(ceoCss.includes('#hx7Insights')&&ceoCss.includes('.hx7-insight-item'),'CEO priority panels must remain visible');
-assert.ok(ceoCss.includes('overflow-y:auto'),'long detail must scroll INSIDE panels only');
+assert.ok(!ceoCss.includes('overflow-y:auto'),'CEO tiles must never have internal vertical scrollbars');
+assert.ok(ceoCss.includes('body.hasnaria-owner-erp #dashboard .hx6-shell .hx7-body') && ceoCss.includes('overflow:visible'),'CEO card and insight copy must remain completely visible');
+assert.ok(!ceoCss.includes('hx7-collapsible'),'obsolete expand button must have no CSS spacing');
 const ceoRuntime=fs.readFileSync(path.join(ROOT,'owner-ceo-kpi-v1.js'),'utf8');
 assert.ok(ceoRuntime.includes("Total durasi scan*")&&ceoRuntime.includes('Estimasi jarak scan pertama–terakhir'),'CEO must label raw scans as estimate');
 assert.ok(ceoRuntime.includes("select('cloud_id,device_person_id,employee_name,scan_date,scan_time,conversion_mode')"),'CEO must fetch actual scan times, not only row count');
@@ -93,7 +95,9 @@ const dashboard=fs.readFileSync(path.join(ROOT,'owner-dashboard-one-view.js'),'u
 const guard=fs.readFileSync(path.join(ROOT,'owner-shell-guard.js'),'utf8');
 assert.ok(dashboard.includes('id="hx7Cards"'));
 assert.ok(dashboard.includes('__HASNARIA_CEO_KPI_V1.mount'));
-assert.ok(guard.includes('/owner-ceo-kpi-v1.js?v=2'));
+assert.ok(guard.includes('/owner-ceo-kpi-v1.js?v=3'));
+assert.ok(!dashboard.includes('data-hx7-expand')&&!dashboard.includes('Tampilkan tren & status transaksi'),'retired trend/status button must not be rendered');
+assert.ok(dashboard.includes('data-hx6-detail'),'CEO detail modal remains accessible');
 const priorities=m.businessPriorities({
  stock:{eligible:19,total:198,critical:{name:'FISHROLL',qty:2,min:14,ratio:2/14,unit:'pcs'}},
  finance:{revenue:179397000,cost:59279465,profit:120117535,months:10,expected:11,provisional:10,reconciled:true,margin:67},
