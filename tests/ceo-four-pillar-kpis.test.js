@@ -101,7 +101,7 @@ const dashboard=fs.readFileSync(path.join(ROOT,'owner-dashboard-one-view.js'),'u
 const guard=fs.readFileSync(path.join(ROOT,'owner-shell-guard.js'),'utf8');
 assert.ok(dashboard.includes('id="hx7Cards"'));
 assert.ok(dashboard.includes('__HASNARIA_CEO_KPI_V1.mount'));
-assert.ok(guard.includes('/owner-ceo-kpi-v1.js?v=4'));
+assert.ok(guard.includes('/owner-ceo-kpi-v1.js?v=5'));
 assert.ok(!dashboard.includes('data-hx7-expand')&&!dashboard.includes('Tampilkan tren & status transaksi'),'retired trend/status button must not be rendered');
 assert.ok(dashboard.includes('data-hx6-detail'),'CEO detail modal remains accessible');
 const priorities=m.businessPriorities({
