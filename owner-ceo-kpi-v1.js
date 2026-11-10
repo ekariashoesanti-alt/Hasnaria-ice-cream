@@ -17,7 +17,7 @@ function hours(x){return val(x).toLocaleString('id-ID',{maximumFractionDigits:1}
 function monthTitle(s){return new Intl.DateTimeFormat('id-ID',{month:'long',year:'numeric',timeZone:'UTC'}).format(new Date(s+'-01T00:00:00Z'))}
 function monthEnd(p){return p+'-'+String(new Date(Number(p.slice(0,4)),Number(p.slice(5,7)),0).getDate()).padStart(2,'0')}
 function check(r){if(r.error)throw r.error;return r.data}
-function css(){if(document.getElementById('hx7-css'))return;var l=document.createElement('link');l.id='hx7-css';l.rel='stylesheet';l.href='/owner-ceo-kpi-v1.css?v=2';document.head.appendChild(l)}
+function css(){if(document.getElementById('hx7-css'))return;var l=document.createElement('link');l.id='hx7-css';l.rel='stylesheet';l.href='/owner-ceo-kpi-v1.css?v=3';document.head.appendChild(l)}
 function summarizeFinance(rows,period){
  var y=Number(period.slice(0,4)),expected=Number(period.slice(5,7)),months=new Set(),revenue=0,cost=0,profit=0,provisional=0;
  (rows||[]).forEach(function(r){
