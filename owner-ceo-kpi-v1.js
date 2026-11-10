@@ -17,7 +17,7 @@ function hours(x){return val(x).toLocaleString('id-ID',{maximumFractionDigits:1}
 function monthTitle(s){return new Intl.DateTimeFormat('id-ID',{month:'long',year:'numeric',timeZone:'UTC'}).format(new Date(s+'-01T00:00:00Z'))}
 function monthEnd(p){return p+'-'+String(new Date(Number(p.slice(0,4)),Number(p.slice(5,7)),0).getDate()).padStart(2,'0')}
 function check(r){if(r.error)throw r.error;return r.data}
-function css(){if(document.getElementById('hx7-css'))return;var l=document.createElement('link');l.id='hx7-css';l.rel='stylesheet';l.href='/owner-ceo-kpi-v1.css?v=4';document.head.appendChild(l)}
+function css(){if(document.getElementById('hx7-css'))return;var l=document.createElement('link');l.id='hx7-css';l.rel='stylesheet';l.href='/owner-ceo-kpi-v1.css?v=5';document.head.appendChild(l)}
 function summarizeFinance(rows,period){
  var y=Number(period.slice(0,4)),expected=Number(period.slice(5,7)),months=new Set(),revenue=0,cost=0,profit=0,provisional=0;
  (rows||[]).forEach(function(r){
@@ -256,6 +256,86 @@ function renderInsights(){
   showInsightDetail(p);
  };
 }
+/* HSN-818 | Lightweight, verified YTD series from the existing sales_daily_kpis view.
+   The series is for visualization only; it is not added to posted Finance income. */
+function summarizeMonthlySales(rows,period){
+ var year=String(period||'').slice(0,4),expected=Number(String(period||'').slice(5,7));
+ var months=[],index=Object.create(null),revenue=0,transactions=0,actualMonths=0,lastMonth='';
+ if(!/^\d{4}$/.test(year)||expected<1||expected>12)return {months:[],revenue:0,transactions:0,actualMonths:0,expected:0,lastMonth:''};
+ for(var m=1;m<=expected;m++){
+  var key=year+'-'+String(m).padStart(2,'0');
+  var record={key:key,label:['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Ags','Sep','Okt','Nov','Des'][m-1],revenue:0,transactions:0,days:0,hasData:false};
+  months.push(record);index[key]=record;
+ }
+ (rows||[]).forEach(function(x){
+  var key=String(x.metric_date||'').slice(0,7),target=index[key];
+  if(!target)return;
+  target.revenue+=val(x.revenue);
+  target.transactions+=val(x.transactions);
+  target.days++;target.hasData=true;
+ });
+ months.forEach(function(x){if(!x.hasData)return;revenue+=x.revenue;transactions+=x.transactions;actualMonths++;lastMonth=x.key});
+ return {months:months,revenue:revenue,transactions:transactions,actualMonths:actualMonths,expected:expected,lastMonth:lastMonth};
+}
+function shortMoney(amount){
+ var a=Number(amount);
+ if(!Number.isFinite(a))return '—';
+ var abs=Math.abs(a),div=abs>=1000000000?1000000000:abs>=1000000?1000000:abs>=1000?1000:1;
+ var suffix=div===1000000000?' M':div===1000000?' jt':div===1000?' rb':'';
+ return 'Rp'+(a/div).toLocaleString('id-ID',{maximumFractionDigits:1})+suffix;
+}
+function sparkline(trend){
+ if(!trend||!trend.months)return '';
+ var values=trend.months.filter(function(x){return x.hasData}).map(function(x){return x.revenue});
+ if(!values.length)return '';
+ var max=Math.max.apply(null,values.concat([1])),min=Math.min.apply(null,values.concat([0]));
+ var range=Math.max(1,max-min),points=values.map(function(v,i){
+  var x=8+(values.length===1?102:i*204/(values.length-1)),y=31-(v-min)/range*23;
+  return x.toFixed(1)+','+y.toFixed(1);
+ }).join(' ');
+ var pts=points.split(' '),last=pts[pts.length-1].split(',');
+ return '<svg class="hx8-sparkline" viewBox="0 0 220 38" preserveAspectRatio="none" role="img" aria-label="Kurva penjualan bulanan YTD dari transaksi yang tersedia">'+
+  '<polygon points="8,36 '+points+' 212,36" fill="#e6f5ee"/>'+
+  '<polyline points="'+points+'" fill="none" stroke="#178466" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>'+
+  '<circle cx="'+last[0]+'" cy="'+last[1]+'" r="3" fill="#fff" stroke="#178466" stroke-width="2"/></svg>';
+}
+function salesTrendSvg(trend){
+ if(!trend||!trend.months||!trend.actualMonths)return '';
+ var list=trend.months,n=list.length,left=34,right=503,baseline=117,top=23,width=(right-left)/Math.max(n,1);
+ var maxRevenue=Math.max.apply(null,list.filter(function(x){return x.hasData}).map(function(x){return x.revenue}).concat([1]));
+ var maxTx=Math.max.apply(null,list.filter(function(x){return x.hasData}).map(function(x){return x.transactions}).concat([1]));
+ var svg='<svg viewBox="0 0 530 153" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Tren bulanan YTD: batang pendapatan rupiah, garis jumlah transaksi">';
+ for(var z=0;z<=3;z++){
+  var gy=baseline-z*29.5;
+  svg+='<line x1="'+left+'" x2="'+right+'" y1="'+gy+'" y2="'+gy+'" stroke="#e5efea" stroke-dasharray="3 4"/>';
+  svg+='<text x="27" y="'+(gy+3)+'" text-anchor="end" font-size="9" fill="#76918a">'+(maxRevenue*z/3/1000000).toLocaleString('id-ID',{maximumFractionDigits:1})+'</text>';
+ }
+ var lines=[];
+ list.forEach(function(x,i){
+  var cx=left+(i+.5)*width,barw=Math.min(24,width*.56);
+  svg+='<text x="'+cx.toFixed(1)+'" y="136" text-anchor="middle" font-size="9" fill="#688379">'+esc(x.label)+'</text>';
+  if(!x.hasData)return;
+  var h=x.revenue/maxRevenue*88.5;
+  svg+='<rect x="'+(cx-barw/2).toFixed(1)+'" y="'+(baseline-h).toFixed(1)+'" width="'+barw.toFixed(1)+'" height="'+Math.max(0,h).toFixed(1)+'" rx="3" fill="#198768"><title>'+esc(x.label)+': '+esc(money(x.revenue))+' · '+num(x.transactions)+' transaksi</title></rect>';
+  lines.push(cx.toFixed(1)+','+(baseline-x.transactions/maxTx*88.5).toFixed(1));
+ });
+ if(lines.length>1)svg+='<polyline points="'+lines.join(' ')+'" fill="none" stroke="#53a744" stroke-width="2.9" stroke-linecap="round" stroke-linejoin="round"/>';
+ lines.forEach(function(pt){var p=pt.split(',');svg+='<circle cx="'+p[0]+'" cy="'+p[1]+'" r="3" fill="#fff" stroke="#53a744" stroke-width="2"/>'});
+ return svg+'</svg>';
+}
+function renderTrend(){
+ var root=document.getElementById('hx8SalesTrend');if(!root||!owner())return;
+ var trend=state.data.trend,err=state.errors.trend;
+ var header='<div class="hx8-trend-head"><div><span class="hx7-overline">PERFORMANCE MONITOR</span><h2>Tren Penjualan YTD</h2></div>'+
+  '<div class="hx8-chart-legend"><span><i class="bars"></i> Penjualan (Rp jt)</span><span><i class="line"></i> Transaksi</span></div></div>';
+ if(err){root.innerHTML=header+'<p class="hx8-trend-empty">Tren tidak dapat dimuat dari penjualan. '+esc(err.message||err)+'</p>';return}
+ if(!trend){root.innerHTML=header+'<p class="hx8-trend-empty">'+(state.loading?'Mengambil tren penjualan…':'Data penjualan belum tersedia.')+'</p>';return}
+ if(!trend.actualMonths){root.innerHTML=header+'<p class="hx8-trend-empty">Tidak ada data transaksi pada periode yang dipilih.</p>';return}
+ var suffix=trend.actualMonths<trend.expected?' · '+(trend.expected-trend.actualMonths)+' bulan belum memiliki data':'';
+ root.innerHTML=header+'<div class="hx8-chart-wrap">'+salesTrendSvg(trend)+'</div>'+
+  '<div class="hx8-trend-foot"><span>'+esc(monthTitle(trend.lastMonth))+' terakhir tersedia'+esc(suffix)+'</span><strong>'+shortMoney(trend.revenue)+' · '+num(trend.transactions)+' transaksi</strong></div>';
+}
+
 function pill(t,cls){return '<span class="hx7-pill '+esc(cls||'')+'">'+esc(t)+'</span>'}
 function metric(label,value,cls){return '<div class="hx7-metric"><span>'+esc(label)+'</span><strong class="'+esc(cls||'')+'" title="'+esc(value)+'">'+esc(value)+'</strong></div>'}
 function stockRow(label,x,cls){
@@ -266,55 +346,92 @@ function stockRow(label,x,cls){
 function rankRow(i,x,suffix){
  return '<li><span class="hx7-rank-number">'+(i+1)+'</span><b title="'+esc(x.name)+'">'+esc(x.name)+'</b><strong>'+esc(suffix(x))+'</strong></li>';
 }
+function cardIcon(i){
+ var strokes=[
+  '<rect x="3" y="6" width="18" height="14" rx="3"/><path d="M3 10h18M7 3h10"/>',
+  '<path d="m12 2 9 5v10l-9 5-9-5V7zM3 7l9 5 9-5M12 12v10"/>',
+  '<circle cx="9" cy="8" r="3"/><path d="M3 20v-2a6 6 0 0 1 12 0v2M17 5a3 3 0 0 1 0 6M18 14a5 5 0 0 1 3 5"/>',
+  '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'
+ ];
+ return '<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true">'+strokes[i]+'</svg>';
+}
+function cardStatus(i,d){
+ if(i===0)return state.errors.finance?['Laporan tertunda','caution']:d&&d.months?[(d.provisional?'HPP provisional':'HPP final'),d.provisional?'caution':'good']:['Data terbatas','caution'];
+ if(i===1)return d&&d.critical&&d.critical.ratio<1?['Stok kritis','danger']:['Perlu verifikasi','caution'];
+ if(i===2)return d&&d.expected&&d.coverage===d.expected?['Lengkap','good']:['Cakupan parsial','caution'];
+ return ['Estimasi scan','neutral'];
+}
 function cardBody(i,d){
- if(i===0){if(!d||!d.months)return'<div class="hx7-empty">Laporan keuangan periode ini belum tersedia. Angka tidak diisi dengan asumsi nol.</div>';
-  return '<div class="hx7-main-value"><small>Akumulasi Januari–'+esc(monthTitle(state.period))+'</small>'+metric('Pendapatan',money(d.revenue))+metric('Biaya',money(d.cost))+metric('Laba / Rugi',money(d.profit),d.profit<0?'negative':'positive')+'</div>'+
-   '<div class="hx7-detail">'+pill(d.provisional?'HPP provisional':'HPP final',d.provisional?'caution':'good')+
-   '<span>'+d.months+'/'+d.expected+' bulan · margin '+(d.margin==null?'—':dec(d.margin)+'%')+'</span></div>'+
-   (!d.reconciled?'<p class="hx7-warning">Selisih rekonsiliasi, periksa Finance.</p>':'');
+ if(i===0){
+  var trend=state.data.trend,hasFinance=!!(d&&d.months),salesRevenue=trend&&trend.actualMonths?trend.revenue:null;
+  var revenue=hasFinance?d.revenue:salesRevenue;
+  if(revenue===null)return '<div class="hx7-empty">'+(state.errors.finance?'Laporan keuangan gagal dimuat. Data penjualan juga belum tersedia.':'Belum ada data finansial untuk periode terpilih.')+'</div>';
+  return '<div class="hx8-metric-caption">PENDAPATAN AKUMULASI TAHUN BERJALAN</div>'+
+   '<div class="hx8-hero-number" title="'+esc(money(revenue))+'">'+shortMoney(revenue)+'</div>'+
+   '<div class="hx8-finance-spark">'+sparkline(trend)+'</div>'+
+   '<div class="hx8-finance-row"><div><small>Biaya'+(hasFinance?' · sementara':'')+'</small><strong>'+((hasFinance)?shortMoney(d.cost):'—')+'</strong></div>'+
+   '<div><small>Laba / Rugi</small><strong class="'+(hasFinance&&d.profit<0?'negative':'')+'">'+(hasFinance?shortMoney(d.profit):'—')+'</strong></div>'+
+   '<div><small>Margin</small><strong>'+((hasFinance&&d.margin!==null)?dec(d.margin)+'%':'—')+'</strong></div></div>'+
+   '<div class="hx8-card-caveat">'+(hasFinance?
+    (d.months+'/'+d.expected+' bulan · '+(d.provisional?'Laba belum final':'HPP final')+(d.reconciled?'':' · Perlu rekonsiliasi')):
+    'Pendapatan berasal dari penjualan aktual. Biaya dan laba belum tersedia dari laporan keuangan.')+'</div>';
  }
- if(i===1){if(!d)return'<div class="hx7-empty">Data stok belum tersedia.</div>';
-  return '<div class="hx7-stock-pair">'+stockRow('STOK PALING AMAN',d.safest,'positive')+
-    stockRow('STOK PALING KRITIS',d.critical,'negative')+'</div>'+
-   '<div class="hx7-detail">'+pill(d.eligible+'/'+d.total+' SKU layak diranking',d.eligible===d.total?'good':'caution')+'</div>'+
-   '<p class="hx7-foot">Menggunakan saldo hasil opname & pergerakan valid. Stok ditampilkan per kondisi terkini, bukan historis bulan yang dipilih.</p>';
+ if(i===1){
+  if(!d)return '<div class="hx7-empty">Data stok belum tersedia dari audit persediaan.</div>';
+  var critical=d.critical,ratio=critical?critical.ratio:0;
+  var percentage=Math.max(0,Math.min(100,ratio*100));
+  return '<div class="hx8-metric-caption">STOK PALING KRITIS</div>'+
+   '<div class="hx8-inventory-title" title="'+esc(critical?critical.name:'')+'">'+esc(critical?critical.name:'Belum dapat ditentukan')+'</div>'+
+   (critical?'<div class="hx8-inventory-big"><strong>'+dec(critical.qty)+' '+esc(critical.unit)+'</strong><span>/ batas '+dec(critical.min)+' · '+dec(ratio)+'×</span></div>'+
+    '<div class="hx8-progress"><i class="'+(ratio<1?'critical':'')+'" style="width:'+percentage.toFixed(2)+'%"></i></div>'+
+    '<div class="hx8-progress-caption">'+dec(percentage)+'% dari batas aman</div>':'')+
+   '<div class="hx8-safe-stock"><span>STOK PALING AMAN</span><strong title="'+esc(d.safest?d.safest.name:'')+'">'+esc(d.safest?d.safest.name:'Belum tersedia')+'</strong><b>'+esc(d.safest?dec(d.safest.ratio)+'× batas aman':'—')+'</b></div>'+
+   '<div class="hx8-card-caveat">'+num(d.eligible)+'/'+num(d.total)+' SKU layak diranking · berdasarkan stok terverifikasi</div>';
  }
- if(i===2){if(!d)return'<div class="hx7-empty">Data Loyalty belum tersedia.</div>';
-  return '<div class="hx7-subhead">CUSTOMER OF THE MONTH <small>Top 3 · nilai belanja '+esc(monthTitle(state.period))+'</small></div>'+
-   (d.top3.length?'<ol class="hx7-rankings">'+d.top3.map(function(x,j){return rankRow(j,x,function(y){return money(y.revenue)})}).join('')+'</ol>':
-    '<div class="hx7-empty small">Belum ada laporan pelanggan bulan ini.</div>')+
-   '<div class="hx7-subhead second">MOST LOYAL CUSTOMER TO DATE <small>Frekuensi transaksi YTD</small></div>'+
-   (d.mostLoyal?'<div class="hx7-loyal"><b>'+esc(d.mostLoyal.name)+'</b><strong>'+num(d.mostLoyal.visits)+'× kunjungan</strong><small>'+money(d.mostLoyal.revenue)+' total belanja teridentifikasi</small></div>':
-    '<div class="hx7-empty small">Belum ada riwayat pelanggan.</div>')+
-   '<div class="hx7-detail">'+pill('Cakupan '+d.coverage+'/'+d.expected+' bulan',d.coverage===d.expected?'good':'caution')+'</div>';
+ if(i===2){
+  if(!d)return '<div class="hx7-empty">Data Loyalty belum tersedia.</div>';
+  var loyal=d.mostLoyal;
+  return '<div class="hx8-metric-caption">MOST LOYAL CUSTOMER TO DATE</div>'+
+   '<div class="hx8-loyal-hero"><div><strong title="'+esc(loyal?loyal.name:'')+'">'+esc(loyal?loyal.name:'Belum teridentifikasi')+'</strong><span>'+(loyal?num(loyal.visits)+'× kunjungan':'Belum ada histori')+'</span></div><span class="hx8-loyal-star">★</span></div>'+
+   '<div class="hx8-metric-caption hx8-top-customer-label">CUSTOMER OF THE MONTH · TOP 3</div>'+
+   (d.top3.length?'<ol class="hx8-top-customers">'+d.top3.map(function(x,j){return '<li><span class="hx8-rank">'+(j+1)+'</span><b title="'+esc(x.name)+'">'+esc(x.name)+'</b><strong>'+shortMoney(x.revenue)+'</strong></li>'}).join('')+'</ol>':
+    '<div class="hx7-empty small">Belum ada transaksi pelanggan pada bulan terpilih.</div>')+
+   '<div class="hx8-card-caveat">Cakupan laporan pelanggan '+num(d.coverage)+'/'+num(d.expected)+' bulan · ranking hanya dari data tersedia</div>';
  }
- if(i===3){if(!d)return'<div class="hx7-empty">Data absensi belum tersedia.</div>';
-  var scanned=d.device||{},hasPair=scanned.pairedDays>0;
-  return '<div class="hx7-workforce-estimate">'+
-   metric('Total durasi scan*',hasPair?hours(scanned.totalHours):'—')+
-   metric('Rerata / hari berpasangan*',hasPair?hours(scanned.averageHours):'—')+'</div>'+
-   '<div class="hx7-subhead second">KELENGKAPAN SCAN KARYAWAN <small>Pasangan scan / hari tercatat · bukan ranking disiplin</small></div>'+
-   ((scanned.ranking||[]).length?'<ol class="hx7-rankings">'+scanned.ranking.map(function(x,j){return rankRow(j,x,function(y){return num(y.validDays)+'/'+num(y.days)+' hari'})}).join('')+'</ol>':
-    '<div class="hx7-empty small">Belum ada log scan pada bulan ini.</div>')+
-   '<div class="hx7-detail">'+pill(num(scanned.pairedDays||0)+'/'+num(scanned.personDays||0)+' hari berpasangan',hasPair?'good':'caution')+
-   '<span>'+num(d.validShifts)+' shift resmi · '+num(d.rawScans)+' scan</span></div>'+
-   '<p class="hx7-foot hx7-workforce-note">* Estimasi jarak scan pertama–terakhir, bukan jam kerja resmi atau dasar payroll.</p>';
+ if(i===3){
+  if(!d)return '<div class="hx7-empty">Data kehadiran belum tersedia.</div>';
+  var scanned=d.device||{},paired=Number(scanned.pairedDays||0);
+  return '<div class="hx8-attendance-head"><div><span>TOTAL DURASI ANTAR-SCAN*</span><strong>'+(paired?hours(scanned.totalHours):'—')+'</strong></div>'+
+   '<div><span>RERATA / HARI BERPASANGAN*</span><strong>'+(paired?hours(scanned.averageHours):'—')+'</strong></div></div>'+
+   '<div class="hx8-metric-caption hx8-attendance-label">KELENGKAPAN PASANGAN SCAN</div>'+
+   ((scanned.ranking||[]).length?'<div class="hx8-attendance-list">'+scanned.ranking.map(function(x){
+    var pct=x.days?Math.min(100,100*x.validDays/x.days):0;
+    return '<div class="hx8-attendance-person"><span class="hx8-employee-name" title="'+esc(x.name)+'">'+esc(x.name)+'</span>'+
+     '<div class="hx8-attendance-track"><i style="width:'+pct.toFixed(1)+'%"></i></div>'+
+     '<b>'+num(x.validDays)+'/'+num(x.days)+' hari</b></div>';
+   }).join('')+'</div>':'<div class="hx7-empty small">Belum ada pasangan scan yang dapat ditampilkan.</div>')+
+   '<div class="hx8-card-caveat">'+num(paired)+'/'+num(scanned.personDays||0)+' hari berpasangan · '+num(d.rawScans)+' scan · '+num(d.validShifts)+' shift resmi.<br>*Estimasi scan, bukan jam kerja resmi atau ranking disiplin.</div>';
  }
  return '';
 }
 function render(){
  var root=document.getElementById('hx7Cards');if(!root||!owner())return;css();
  root.innerHTML=TITLES.map(function(title,i){
-  var key=['finance','stock','loyalty','workforce'][i],err=state.errors[key];
-  var body=err?'<div class="hx7-empty" role="alert">Data belum dapat dimuat. '+esc(err)+'</div>':
-    state.loading&&!state.data[key]?'<div class="hx7-empty">Mengambil data Supabase…</div>':
-    cardBody(i,state.data[key]);
-  return '<article class="hx7-card hx7-card-'+key+'"><div class="hx7-header"><div><span class="hx7-overline">EXECUTIVE SIGNAL · 0'+(i+1)+'</span><h2>'+esc(title)+'</h2></div><span class="hx7-indicator" aria-hidden="true"></span></div>'+
-   '<div class="hx7-body">'+body+'</div>'+
-   '<div class="hx7-source">SUMBER · '+esc(['Finance provisional','Inventory + Audit','Majoo Loyalty','Attendance + Roster'][i])+'</div></article>';
+  var key=['finance','stock','loyalty','workforce'][i],d=state.data[key],err=state.errors[key];
+  var pending=state.loading&&!d&&!err,stat=cardStatus(i,d);
+  var body=pending?'<div class="hx7-empty">Mengambil data Supabase…</div>':
+   err&&i!==0?'<div class="hx7-empty" role="alert">Data belum tersedia. '+esc(String(err).slice(0,115))+'</div>':
+   cardBody(i,d);
+  return '<article class="hx7-card hx8-ceo-card hx7-card-'+key+'">'+
+   '<div class="hx7-header hx8-ceo-header"><div class="hx8-heading"><span class="hx8-card-icon">'+cardIcon(i)+'</span><h2>'+esc(title)+'</h2></div>'+
+   pill(stat[0],stat[1])+'</div>'+
+   '<div class="hx7-body hx8-ceo-body">'+body+'</div>'+
+   '<div class="hx7-source">SUMBER · '+esc(['Finance & Sales','Inventory + Audit','Majoo Loyalty','Attendance + Roster'][i])+'</div></article>';
  }).join('');
  renderInsights();
+ renderTrend();
 }
+
 async function workforceData(period){
  var start=period+'-01',end=monthEnd(period);
  var pair=await Promise.all([
@@ -333,33 +450,46 @@ async function workforceData(period){
 }
 async function load(){
  if(state.loading||!state.period||!owner()||!db())return;
- var period=state.period,seq=++state.seq,y=period.slice(0,4),periodDate=period+'-01';
+ var period=state.period,seq=++state.seq,year=period.slice(0,4),periodDate=period+'-01';
  state.loading=true;state.errors={};render();
- var calls=[
-  db().from('finance_income_statement_provisional_v1').select('period_month,revenue_sales,other_income,cogs_display,operating_expense_adjusted,finance_expense,tax_expense,profit_after_tax_display,is_final_hpp').eq('brand_id',BRAND).gte('period_month',y+'-01-01').lte('period_month',periodDate).order('period_month'),
+ var keys=['finance','stock','loyalty','workforce','trend'];
+ var queries=[
+  db().from('finance_income_statement_provisional_v1')
+   .select('period_month,revenue_sales,other_income,cogs_display,operating_expense_adjusted,finance_expense,tax_expense,profit_after_tax_display,is_final_hpp')
+   .eq('brand_id',BRAND).gte('period_month',year+'-01-01').lte('period_month',periodDate).order('period_month'),
   Promise.all([
    db().from('inventory_items').select('id,item_name,unit,min_qty').eq('brand_id',BRAND),
-   db().from('ui_stock_formula_verification_v1').select('inventory_item_id,independently_calculated_qty,has_physical_baseline,same_day_ambiguous_rows,estimated_bom_usage_rows,arithmetic_difference').eq('brand_id',BRAND)
+   db().from('ui_stock_formula_verification_v1')
+    .select('inventory_item_id,independently_calculated_qty,has_physical_baseline,same_day_ambiguous_rows,estimated_bom_usage_rows,arithmetic_difference').eq('brand_id',BRAND)
   ]),
   Promise.all([
    db().rpc('get_loyalty_dashboard_v1',{p_period_month:periodDate,p_search:'',p_sort:'spend',p_limit:3,p_offset:0}),
    db().rpc('get_loyalty_ytd_dashboard_v1',{p_period_month:periodDate,p_search:'',p_sort:'visits',p_limit:1,p_offset:0})
   ]),
-  workforceData(period)
+  workforceData(period),
+  db().from('sales_daily_kpis').select('metric_date,revenue,transactions')
+   .eq('brand_id',BRAND).gte('metric_date',year+'-01-01').lte('metric_date',monthEnd(period)).order('metric_date').limit(400)
  ];
- var settled=await Promise.allSettled(calls);
+ // Progressive source resolution: slow Finance must not hide healthy Stock/CRM/Attendance/Sales.
+ await Promise.all(queries.map(function(p,i){
+  return Promise.resolve(p).then(function(v){
+   if(seq!==state.seq||period!==state.period||!owner())return;
+   var k=keys[i];
+   try{
+    state.data[k]=i===0?summarizeFinance(check(v),period):
+     i===1?summarizeStock(check(v[0]),check(v[1])):
+     i===2?summarizeLoyalty(check(v[0]),check(v[1])):
+     i===3?v:summarizeMonthlySales(check(v),period);
+    delete state.errors[k];
+   }catch(e){state.data[k]=null;state.errors[k]=(e&&e.message)||String(e)}
+   render();
+  },function(e){
+   if(seq!==state.seq||period!==state.period||!owner())return;
+   var k=keys[i];state.data[k]=null;state.errors[k]=(e&&e.message)||String(e);
+   render();
+  });
+ }));
  if(seq!==state.seq||period!==state.period||!owner())return;
- var keys=['finance','stock','loyalty','workforce'];
- settled.forEach(function(r,i){
-  var k=keys[i];
-  try{
-   if(r.status==='rejected')throw r.reason;
-   var v=r.value;
-   state.data[k]=i===0?summarizeFinance(check(v),period):
-    i===1?summarizeStock(check(v[0]),check(v[1])):
-    i===2?summarizeLoyalty(check(v[0]),check(v[1])):v;
-  }catch(e){state.data[k]=null;state.errors[k]=(e&&e.message)||String(e)}
- });
  state.loading=false;state.loaded=period;state.refreshedAt=Date.now();render();
 }
 function mount(period){
@@ -370,5 +500,5 @@ function mount(period){
 function invalidate(){state.loaded='';state.refreshedAt=0;state.seq++;state.loading=false;if(state.period&&document.getElementById('hx7Cards'))load()}
 function maybeRefresh(){var root=document.getElementById('hx7Cards'),h=document.getElementById('dashboard');if(!root||!h||h.classList.contains('hidden')||!owner()||state.loading||!state.loaded)return; if(Date.now()-state.refreshedAt>=300000)load()}
 window.__HASNARIA_CEO_KPI_V1={mount:mount,invalidate:invalidate,maybeRefresh:maybeRefresh};
-window.__HASNARIA_CEO_KPI_MATH={summarizeFinance:summarizeFinance,summarizeStock:summarizeStock,summarizeLoyalty:summarizeLoyalty,summarizeWorkforce:summarizeWorkforce,summarizeDeviceScans:summarizeDeviceScans,businessPriorities:businessPriorities,insightsMarkup:insightsMarkup};
+window.__HASNARIA_CEO_KPI_MATH={summarizeFinance:summarizeFinance,summarizeStock:summarizeStock,summarizeLoyalty:summarizeLoyalty,summarizeWorkforce:summarizeWorkforce,summarizeDeviceScans:summarizeDeviceScans,businessPriorities:businessPriorities,insightsMarkup:insightsMarkup,summarizeMonthlySales:summarizeMonthlySales,salesTrendSvg:salesTrendSvg,sparkline:sparkline};
 })();

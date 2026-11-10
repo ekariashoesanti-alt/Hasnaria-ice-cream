@@ -84,8 +84,11 @@ function render(){
  h.innerHTML='<div class="hx-shell hx6-shell" data-ceo-one-view="1">'+
   '<div class="hx6-toolbar"><div><div class="hx6-eyebrow">RINGKASAN CEO · '+esc(cutLabel())+'</div><h1>Ringkasan CEO</h1><p>Visual singkat lintas Penjualan, Pembelian, Administrasi, Keuangan, dan Stok.</p></div><div class="hx6-tools"><label><span>Bulan</span><select id="hx6Period" data-month-filter="dashboard">'+periodOptions()+'</select></label><button type="button" data-hx6-detail="1">Lihat Detail</button></div></div>'+
   (S.error?'<div class="hx-error">'+esc(S.error)+'</div>':'')+
-  '<div id="hx7Cards" class="hx7-grid" aria-label="Empat kondisi utama bisnis"></div>'+
+  '<div id="hx7Cards" class="hx7-grid" aria-label="Empat kondisi utama bisnis"></div>'+ 
+  '<div class="hx8-bottom-grid">'+
   '<div id="hx7Insights" class="hx7-insights-host" aria-live="polite"></div>'+
+  '<div id="hx8SalesTrend" class="hx8-sales-trend" aria-live="polite"></div>'+
+  '</div>'+
   '<div id="hx7Secondary" class="hx7-secondary"><div class="hx6-kpis">'+
    kpi('Penjualan',S.loading&&!S.loaded?'…':money(v.sales_revenue),n(v.sales_rows).toLocaleString('id-ID')+' transaksi','sales')+
    kpi('Pembelian',S.loading&&!S.loaded?'…':money(v.purchase_amount),n(v.purchase_rows).toLocaleString('id-ID')+' jurnal canonical','purchase')+

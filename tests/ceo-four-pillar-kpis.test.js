@@ -81,6 +81,24 @@ assert.equal(workforceWithScans.total,0,'raw device logs must NOT become officia
 assert.equal(workforceWithScans.device.totalHours,14);
 const scanPriority=m.businessPriorities({workforce:workforceWithScans,loyalty:{expected:0,coverage:0}}, {}, '2026-11');
 assert.ok(scanPriority.some(p=>p.id==='workforce'&&p.evidence.includes('2/5 hari')));
+const monthly=m.summarizeMonthlySales([
+ {metric_date:'2026-01-01',revenue:1000,transactions:2},
+ {metric_date:'2026-01-02',revenue:2000,transactions:3},
+ {metric_date:'2026-02-01',revenue:4000,transactions:4},
+ {metric_date:'2026-12-01',revenue:999999,transactions:999}
+],'2026-03');
+assert.equal(monthly.months.length,3);
+assert.equal(monthly.revenue,7000);
+assert.equal(monthly.transactions,9);
+assert.equal(monthly.actualMonths,2);
+assert.equal(monthly.lastMonth,'2026-02');
+assert.equal(monthly.months[2].hasData,false,'missing months must not be fabricated as zero sales');
+assert.equal((m.salesTrendSvg(monthly).match(/<rect /g)||[]).length,2,'chart contains only real data bars');
+assert.equal(m.summarizeMonthlySales([],'2026-11').revenue,0);
+assert.equal(m.summarizeMonthlySales([],'2026-11').actualMonths,0);
+assert.ok(m.sparkline(monthly).includes('<svg'));
+assert.equal(m.summarizeMonthlySales([{metric_date:'2025-01-01',revenue:200,transactions:3}],'2026-11').actualMonths,0);
+
 const ceoCss=fs.readFileSync(path.join(ROOT,'owner-ceo-kpi-v1.css'),'utf8');
 assert.ok(ceoCss.includes('grid-template-rows:auto auto auto'),'desktop one-view must use content-aware KPI and insight rows');
 assert.ok(ceoCss.includes('#hx7Insights')&&ceoCss.includes('.hx7-insight-item'),'CEO priority panels must remain visible');
@@ -94,14 +112,17 @@ const preview=m.insightsMarkup([{id:'finance',priority:'P1',rank:1,title:'Periks
 assert.ok(preview.includes('data-hx7-insight-id="finance"')&&preview.includes('Rekonsiliasi HPP'));
 assert.ok(!preview.includes('<details'),'overview must not expand and displace other CEO tiles');
 const ceoRuntime=fs.readFileSync(path.join(ROOT,'owner-ceo-kpi-v1.js'),'utf8');
-assert.ok(ceoRuntime.includes("Total durasi scan*")&&ceoRuntime.includes('Estimasi jarak scan pertama–terakhir'),'CEO must label raw scans as estimate');
+assert.ok(ceoRuntime.includes('TOTAL DURASI ANTAR-SCAN*')&&ceoRuntime.includes('Estimasi scan, bukan jam kerja resmi'),'CEO must label raw scans as an estimate');
 assert.ok(ceoRuntime.includes("select('cloud_id,device_person_id,employee_name,scan_date,scan_time,conversion_mode')"),'CEO must fetch actual scan times, not only row count');
 
 const dashboard=fs.readFileSync(path.join(ROOT,'owner-dashboard-one-view.js'),'utf8');
 const guard=fs.readFileSync(path.join(ROOT,'owner-shell-guard.js'),'utf8');
+assert.ok(dashboard.includes('id="hx8SalesTrend"')&&dashboard.includes('hx8-bottom-grid'),'YTD sales visualization must be in current CEO page');
+assert.ok(ceoCss.includes('background:#fff')&&ceoCss.includes('HASNARIA'), 'existing green-white aesthetic must remain');
+assert.ok(ceoCss.includes('.hx8-attendance-track')&&ceoCss.includes('.hx8-progress'), 'inventory and attendance charts should be visible');
 assert.ok(dashboard.includes('id="hx7Cards"'));
 assert.ok(dashboard.includes('__HASNARIA_CEO_KPI_V1.mount'));
-assert.ok(guard.includes('/owner-ceo-kpi-v1.js?v=4'));
+assert.ok(guard.includes('/owner-ceo-kpi-v1.js?v=5'));
 assert.ok(!dashboard.includes('data-hx7-expand')&&!dashboard.includes('Tampilkan tren & status transaksi'),'retired trend/status button must not be rendered');
 assert.ok(dashboard.includes('data-hx6-detail'),'CEO detail modal remains accessible');
 const priorities=m.businessPriorities({
