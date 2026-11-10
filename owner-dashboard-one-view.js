@@ -86,7 +86,6 @@ function render(){
   (S.error?'<div class="hx-error">'+esc(S.error)+'</div>':'')+
   '<div id="hx7Cards" class="hx7-grid" aria-label="Empat kondisi utama bisnis"></div>'+
   '<div id="hx7Insights" class="hx7-insights-host" aria-live="polite"></div>'+
-  '<div class="hx7-collapsible"><button type="button" data-hx7-expand="1">Tampilkan tren & status transaksi</button></div>'+
   '<div id="hx7Secondary" class="hx7-secondary"><div class="hx6-kpis">'+
    kpi('Penjualan',S.loading&&!S.loaded?'…':money(v.sales_revenue),n(v.sales_rows).toLocaleString('id-ID')+' transaksi','sales')+
    kpi('Pembelian',S.loading&&!S.loaded?'…':money(v.purchase_amount),n(v.purchase_rows).toLocaleString('id-ID')+' jurnal canonical','purchase')+
@@ -157,9 +156,6 @@ async function syncRefresh(){
 function registerSync(){var sync=window.__HASNARIA_DATA_SYNC;if(sync)sync.register('owner-dashboard',function(reason){if(reason==='changed'){window.__HASNARIA_DASHBOARD_ONE_VIEW.invalidate();if(window.__HASNARIA_CEO_KPI_V1)window.__HASNARIA_CEO_KPI_V1.invalidate()}return syncRefresh()})}
 function bind(h){
  h.onclick=function(e){
-  var expand=e.target&&e.target.closest?e.target.closest('[data-hx7-expand]'):null;
-  if(expand){var secondary=h.querySelector('#hx7Secondary');if(secondary){var opened=secondary.classList.toggle('is-open');expand.textContent=opened?'Sembunyikan tren & status transaksi':'Tampilkan tren & status transaksi'}return}
-
   var close=e.target&&e.target.closest?e.target.closest('[data-hx6-close]'):null;
   if(close&&(e.target===close||close.classList.contains('hx6-close'))){S.detailOpen=false;render();return}
   var detail=e.target&&e.target.closest?e.target.closest('[data-hx6-detail]'):null;
