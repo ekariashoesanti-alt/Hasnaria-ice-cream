@@ -2,8 +2,13 @@ const fs = require('fs');
 const path = require('path');
 
 const GOOGLE_BINDING = `\n(function bindHasnariaGoogleButton() {\n  function bind() {\n    var btn = document.getElementById('googleBtn');\n    if (!btn || btn.__hasnariaGoogleBound) return;\n    btn.__hasnariaGoogleBound = true;\n    btn.addEventListener('click', function (event) {\n      if (typeof window.hasnariaGoogle === 'function') window.hasnariaGoogle(event);\n    });\n  }\n  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bind, { once: true });\n  else bind();\n})();\n`;
-const OWNER_SHELL_TAG = '<script src="/owner-shell-guard.js?v=17"></script>';
+const OWNER_SHELL_TAG = '<script src="/owner-shell-guard.js?v=18"></script>';
 const OWNER_PALETTE_TAG = '<link rel="stylesheet" href="/owner-green.css?v=13">';
+// First-paint styles must load before the Owner dashboard becomes visible.
+const OWNER_CEO_CSS_TAGS = [
+  '<link id="hx-exec-css" rel="stylesheet" href="/owner-executive-v1.css?v=5">',
+  '<link id="hx7-css" rel="stylesheet" href="/owner-ceo-kpi-v1.css?v=6">'
+];
 const PURCHASE_LOADER_TAG = '<script src="/purchase-lazy-loader.js?v=3"></script>';
 const ERP_LOADER_TAG = '<script src="/erp-lazy-loader.js?v=1"></script>';
 
@@ -46,6 +51,8 @@ function buildStrictIndexRuntime(sourceIndexPath, outputDir) {
   if (!html.includes(OWNER_PALETTE_TAG)) html = html.replace(erpCssTag[0], erpCssTag[0] + '\n' + OWNER_PALETTE_TAG);
   if (!html.includes(OWNER_PALETTE_TAG)) fail('Owner green palette reference missing');
   if (html.indexOf(OWNER_PALETTE_TAG) < html.indexOf(erpCssTag[0])) fail('Owner green palette must load after ERP stylesheet');
+  if (!html.includes(OWNER_CEO_CSS_TAGS[0])) html = html.replace(OWNER_PALETTE_TAG, OWNER_PALETTE_TAG + '\n' + OWNER_CEO_CSS_TAGS.join('\n'));
+  for (const tag of OWNER_CEO_CSS_TAGS) if (!html.includes(tag)) fail('Owner first-paint CSS missing: ' + tag);
 
   const erpTag = html.match(/<script src="\/erp\.js[^\"]*"><\/script>/i);
   if (!erpTag) fail('ERP runtime script reference missing');

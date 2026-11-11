@@ -14,7 +14,7 @@ function assertShellIntegration() {
     assert.match(indexSource, new RegExp(`id=["']${id}["']`), `index keeps legacy module host #${id}`);
   }
   const erpScript = indexSource.indexOf('<script src="/erp.js?v=ui2"></script>');
-  const appScript = indexSource.indexOf('<script src="/app.js?v=p074"></script>');
+  const appScript = indexSource.indexOf('<script src="/app.js?v=p075"></script>');
   assert.ok(erpScript >= 0, 'ERP runtime is loaded by index');
   assert.ok(appScript > erpScript, 'ERP runtime loads before app/core rendering begins');
   const sharedDb = appSource.indexOf('window.__HASNARIA_DB=sharedAuthClient');
@@ -26,7 +26,9 @@ function assertShellIntegration() {
   const mount = coreSource.indexOf('window.HasnariaERP.mount()', legacyDashboard);
   const salesRender = coreSource.indexOf('$("sales").innerHTML =', mount);
   assert.ok(context >= 0, 'core-app exports authenticated Hasnaria context');
-  assert.ok(legacyDashboard >= 0 && mount > legacyDashboard, 'ERP mount replaces the legacy dashboard after legacy render starts');
+  assert.ok(legacyDashboard >= 0 && mount > legacyDashboard, 'existing legacy ERP source remains callable for non-owner roles');
+  assert.match(coreSource,/if\(role!==\x27owner\x27\)\s*\$\("dashboard"\)\.innerHTML/,'Owner must never paint legacy dashboard');
+  assert.match(coreSource,/if\(window\.HasnariaERP&&role!==\x27owner\x27\)window\.HasnariaERP\.mount\(\)/,'Owner must not invoke legacy ERP renderer');
   assert.ok(context < mount, 'brand/user/role context exists before ERP mount');
   assert.ok(salesRender > mount, 'legacy Sales module still renders after ERP dashboard mount');
   for (const marker of ['$("pembelian").innerHTML =','$("ops").innerHTML =','$("stok").innerHTML =']) assert.ok(coreSource.includes(marker), `core-app still owns existing module: ${marker}`);

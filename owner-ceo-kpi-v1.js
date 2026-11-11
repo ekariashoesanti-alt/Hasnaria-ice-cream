@@ -245,9 +245,15 @@ function showInsightDetail(p){
 }
 function renderInsights(){
  var root=document.getElementById('hx7Insights');if(!root||!owner())return;
- if(state.loading&&state.loaded!==state.period){root.textContent='Menyusun prioritas dari KPI Supabase…';return}
- var items=businessPriorities(state.data,state.errors,state.period);
- root.innerHTML=insightsMarkup(items);
+ if(state.loading&&state.loaded!==state.period){
+  if(root.__hxInsightHTML!=='loading'){
+   root.textContent='Menyusun prioritas dari KPI Supabase…';
+   root.__hxInsightHTML='loading';
+  }
+  return;
+ }
+ var items=businessPriorities(state.data,state.errors,state.period),html=insightsMarkup(items);
+ if(root.__hxInsightHTML!==html){root.innerHTML=html;root.__hxInsightHTML=html}
  root.onclick=function(e){
   var trigger=e.target&&e.target.closest?e.target.closest('[data-hx7-insight-id]'):null;
   if(!trigger||!root.contains(trigger))return;
@@ -328,12 +334,16 @@ function renderTrend(){
  var trend=state.data.trend,err=state.errors.trend;
  var header='<div class="hx8-trend-head"><div><span class="hx7-overline">PERFORMANCE MONITOR</span><h2>Tren Penjualan YTD</h2></div>'+
   '<div class="hx8-chart-legend"><span><i class="bars"></i> Penjualan (Rp jt)</span><span><i class="line"></i> Transaksi</span></div></div>';
- if(err){root.innerHTML=header+'<p class="hx8-trend-empty">Tren tidak dapat dimuat dari penjualan. '+esc(err.message||err)+'</p>';return}
- if(!trend){root.innerHTML=header+'<p class="hx8-trend-empty">'+(state.loading?'Mengambil tren penjualan…':'Data penjualan belum tersedia.')+'</p>';return}
- if(!trend.actualMonths){root.innerHTML=header+'<p class="hx8-trend-empty">Tidak ada data transaksi pada periode yang dipilih.</p>';return}
- var suffix=trend.actualMonths<trend.expected?' · '+(trend.expected-trend.actualMonths)+' bulan belum memiliki data':'';
- root.innerHTML=header+'<div class="hx8-chart-wrap">'+salesTrendSvg(trend)+'</div>'+
-  '<div class="hx8-trend-foot"><span>'+esc(monthTitle(trend.lastMonth))+' terakhir tersedia'+esc(suffix)+'</span><strong>'+shortMoney(trend.revenue)+' · '+num(trend.transactions)+' transaksi</strong></div>';
+ var html;
+ if(err)html=header+'<p class="hx8-trend-empty">Tren tidak dapat dimuat dari penjualan. '+esc(err.message||err)+'</p>';
+ else if(!trend)html=header+'<p class="hx8-trend-empty">'+(state.loading?'Mengambil tren penjualan…':'Data penjualan belum tersedia.')+'</p>';
+ else if(!trend.actualMonths)html=header+'<p class="hx8-trend-empty">Tidak ada data transaksi pada periode yang dipilih.</p>';
+ else{
+  var suffix=trend.actualMonths<trend.expected?' · '+(trend.expected-trend.actualMonths)+' bulan belum memiliki data':'';
+  html=header+'<div class="hx8-chart-wrap">'+salesTrendSvg(trend)+'</div>'+
+   '<div class="hx8-trend-foot"><span>'+esc(monthTitle(trend.lastMonth))+' terakhir tersedia'+esc(suffix)+'</span><strong>'+shortMoney(trend.revenue)+' · '+num(trend.transactions)+' transaksi</strong></div>';
+ }
+ if(root.__hxTrendMarkup!==html){root.innerHTML=html;root.__hxTrendMarkup=html}
 }
 
 function pill(t,cls){return '<span class="hx7-pill '+esc(cls||'')+'">'+esc(t)+'</span>'}
@@ -427,7 +437,7 @@ function cardBody(i,d){
 }
 function render(){
  var root=document.getElementById('hx7Cards');if(!root||!owner())return;css();
- root.innerHTML=TITLES.map(function(title,i){
+ var nextCards=TITLES.map(function(title,i){
   var key=['finance','stock','loyalty','workforce'][i],d=state.data[key],err=state.errors[key];
   var pending=state.loading&&!d&&!err,stat=cardStatus(i,d);
   var body=pending?'<div class="hx7-empty">Mengambil data Supabase…</div>':
@@ -438,7 +448,18 @@ function render(){
    '<span class="hx8-status-dot hx8-status-'+esc(stat[1])+'" title="Status: '+esc(stat[0])+'" role="img" aria-label="Status: '+esc(stat[0])+'" tabindex="0"></span></div>'+
    '<div class="hx7-body hx8-ceo-body">'+body+'</div>'+
    '<div class="hx7-source">SUMBER · '+esc(['Finance & Sales','Inventory + Audit','Majoo Loyalty','Attendance + Roster'][i])+'</div></article>';
- }).join('');
+ });
+ // Incrementally replace only the card whose Supabase source has changed.
+ // Replacing all four cards on each of five asynchronous responses caused flicker.
+ var previous=root.__hxCardMarkup;
+ if(!previous||root.children.length!==nextCards.length){
+  root.innerHTML=nextCards.join('');
+ }else{
+  nextCards.forEach(function(markup,i){
+   if(previous[i]!==markup&&root.children[i])root.children[i].outerHTML=markup;
+  });
+ }
+ root.__hxCardMarkup=nextCards;
  renderInsights();
  renderTrend();
 }

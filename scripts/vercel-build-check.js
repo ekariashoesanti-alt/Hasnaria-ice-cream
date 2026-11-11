@@ -261,6 +261,7 @@ run(process.execPath, ['--test', 'tests/loyalty-majoo-v1.test.js']);
 run(process.execPath, ['--test', 'tests/attendance-dashboard-infographics.test.js']);
 run(process.execPath, ['--test', 'tests/loyalty-ytd-one-view.test.js']);
 run(process.execPath, ['tests/ceo-four-pillar-kpis.test.js']);
+run(process.execPath, ['tests/owner-first-paint-no-flicker-v2.test.js']);
 run(process.execPath, ['--test', 'tests/stock-recipe-review-v1.test.js']);
 run(process.execPath, ['--test', 'tests/stock-recipe-owner-evidence-v1.test.js']);
 run(process.execPath, ['--test', 'tests/stock-recipe-approval-guard-v1.test.js']);
