@@ -1733,26 +1733,31 @@
     var period=monthKey(S.period),seq=++S.integrationSeq;
     S.integrationPeriod=period;S.integrationAudit=null;S.integrationError='';S.integrationLoading=true;
     if(!period){S.integrationError='Pilih periode terlebih dahulu.';S.integrationLoading=false;return;}
-    var year=Number(period.slice(0,4)),month=Number(period.slice(5,7));
-    var next=new Date(Date.UTC(year,month,1)).toISOString().slice(0,10),from=period+'-01';
+    var from=period+'-01';
     var results=await Promise.allSettled([
       request('ui_stock_sales_link_audit_v1?'+qs({brand_id:'eq.'+BRAND,period_month:'eq.'+from,
         select:'period_month,sale_item_rows,linked_sale_item_rows,unlinked_sale_item_rows,no_recipe_rows,unverified_components_rows,eligible_verified_rows,awaiting_recipe_approval_rows,sale_consumption_movements',limit:'1'})),
-      request('purchase_inventory_bridge?'+qs({brand_id:'eq.'+BRAND,purchase_date:'gte.'+from,
-        select:'ready_for_inventory,inventory_item_id',limit:'2000'})+'&purchase_date=lt.'+next)
+      request('inventory_purchase_backfill_audit_p5_v1?'+qs({brand_id:'eq.'+BRAND,source_period:'eq.'+from,
+        select:'backfill_status,ready_for_inventory,inventory_item_id',limit:'2000'}))
     ]);
     if(seq!==S.integrationSeq||S.modal!=='formula-audit'||monthKey(S.period)!==period)return;
     var salesOk=results[0].status==='fulfilled',purchaseOk=results[1].status==='fulfilled';
     var sales=salesOk&&Array.isArray(results[0].value)?results[0].value[0]||null:null;
     var rows=purchaseOk&&Array.isArray(results[1].value)?results[1].value:null;
+    var countStatus=function(name){return rows?rows.filter(function(x){return x.backfill_status===name}).length:null;};
+    var valid={POSTED:true,POSTED_LEGACY_SOURCE:true,READY_NOT_POSTED:true,REVIEW:true,NON_STOCK:true};
+    var unknown=rows?rows.filter(function(x){return !valid[x.backfill_status]}).length:null;
     S.integrationAudit={
       sales:s,salesOk:salesOk,purchaseOk:purchaseOk,
       purchaseTotal:rows?rows.length:null,
       purchaseMapped:rows?rows.filter(function(x){return !!x.inventory_item_id}).length:null,
-      purchaseReady:rows?rows.filter(function(x){return x.ready_for_inventory===true}).length:null,
-      purchaseReview:rows?rows.filter(function(x){return x.ready_for_inventory!==true}).length:null
+      purchasePosted:rows?countStatus('POSTED')+countStatus('POSTED_LEGACY_SOURCE'):null,
+      purchasePending:countStatus('READY_NOT_POSTED'),
+      purchaseReview:rows?countStatus('REVIEW')+unknown:null,
+      purchaseNonStock:countStatus('NON_STOCK'),purchaseUnknown:unknown
     };
     if(!salesOk||!purchaseOk)S.integrationError='Sebagian sumber gagal dibaca; data lain tetap ditampilkan.';
+    else if(unknown>0)S.integrationError='Ada status pembelian yang belum dikenali; ditahan untuk review.';
     S.integrationLoading=false;render();
   }
 
@@ -1773,14 +1778,16 @@
       cell(a.salesOk?fmt(sale.unlinked_sale_item_rows||0):'—','Baris jual belum tertaut','Belum mengurangi saldo stok')+
       cell(a.salesOk?fmt(sale.awaiting_recipe_approval_rows||0):'—','Menunggu persetujuan resep','Jangan posting otomatis')+
       cell(a.purchaseOk?fmt(a.purchaseReview):'—','Pembelian perlu review','Mapping/satuan/penerimaan belum lengkap')+
-      cell(a.purchaseOk?fmt(a.purchaseReady):'—','Data pembelian terpetakan','Belum berarti barang diterima')+
+      cell(a.purchaseOk?fmt(a.purchasePending):'—','Siap teknis, belum posting','Belum berarti barang diterima')+
       '</div><div class="sc20-note">'+
       (a.salesOk?'<b>Penjualan:</b> '+fmt(sale.sale_item_rows||0)+' baris; '+
         fmt(sale.linked_sale_item_rows||0)+' tertaut; '+fmt(sale.sale_consumption_movements||0)+
         ' event pemakaian; '+fmt(sale.no_recipe_rows||0)+' tanpa resep; '+
         fmt(sale.unverified_components_rows||0)+' komponen belum terverifikasi. ':'')+
-      (a.purchaseOk?'<b>Pembelian:</b> '+fmt(a.purchaseTotal)+' baris; '+fmt(a.purchaseMapped)+
-        ' punya referensi SKU. ':'')+
+      (a.purchaseOk?'<b>Pembelian:</b> '+fmt(a.purchaseTotal)+' baris; '+fmt(a.purchasePosted)+
+        ' diposting; '+fmt(a.purchasePending)+' siap teknis belum diposting; '+fmt(a.purchaseReview)+
+        ' perlu review; '+fmt(a.purchaseNonStock)+' nonstok; '+fmt(a.purchaseMapped)+
+        ' memiliki referensi SKU. ':'')+
       'Kategori penyebab bisa tumpang-tindih. Tidak ada transaksi yang otomatis dibukukan.</div>'+
       '<div class="sc24-actions"><button type="button" data-sc24-review="recipes">Periksa Resep</button>'+
       '<button type="button" data-sc24-review="pembelian">Review Pembelian</button></div></div>';
