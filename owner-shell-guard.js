@@ -11,7 +11,7 @@
      deliberately NOT loaded because it used to take ownership of every tab. */
   var EXEC_SRC='/owner-executive-v1.js?v=1';
   var DASH_SRC='/owner-dashboard-one-view.js?v=11';
-  var KPI_SRC='/owner-ceo-kpi-v1.js?v=5';
+  var KPI_SRC='/owner-ceo-kpi-v1.js?v=6';
   var OWNER_TABS=['dashboard','sales','pembelian','stok','operasional','administrasi','ops','notifikasi'];
   var SECTION_IDS=['dashboard','sales','pembelian','operasional','administrasi','ops','stok','notifikasi','shift','social','approval','team','sistem','karyawan'];
   var state={active:'dashboard',initialized:false,scheduled:false,salesRetries:0,finStockLoad:null,operationalLoad:null,adminLoad:null,dashboardLoad:null,notificationsLoad:null,navEpoch:0};
