@@ -99,6 +99,18 @@ assert.equal(m.summarizeMonthlySales([],'2026-11').actualMonths,0);
 assert.ok(m.sparkline(monthly).includes('<svg'));
 assert.equal(m.summarizeMonthlySales([{metric_date:'2025-01-01',revenue:200,transactions:3}],'2026-11').actualMonths,0);
 
+
+assert.deepEqual(['Kondisi Finansial','Kondisi Persediaan','Kondisi Pelanggan','Kondisi Karyawan'],
+ ['Kondisi Finansial','Kondisi Persediaan','Kondisi Pelanggan','Kondisi Karyawan']);
+const healthyStock={critical:{ratio:1.5},eligible:198,total:198};
+assert.equal(m.cardStatus(1,{critical:{ratio:.25},eligible:19,total:198})[1],'danger','stock critical => red dot');
+assert.equal(m.cardStatus(1,healthyStock)[1],'good','fully verified safe stock => green dot');
+assert.equal(m.cardStatus(1,{critical:{ratio:2},eligible:19,total:198})[1],'caution','partial audit => amber dot');
+assert.equal(m.cardStatus(2,{coverage:2,expected:11})[1],'caution','partial loyalty => amber dot');
+assert.equal(m.cardStatus(2,{coverage:11,expected:11})[1],'good','complete loyalty => green dot');
+assert.equal(m.cardStatus(3,{device:{pairedDays:5}})[1],'neutral','attendance estimate => grey dot');
+assert.ok(m.cardStatus(0,null)[1]==='caution','unavailable finance should not have green status');
+
 const ceoCss=fs.readFileSync(path.join(ROOT,'owner-ceo-kpi-v1.css'),'utf8');
 assert.ok(ceoCss.includes('grid-template-rows:auto auto auto'),'desktop one-view must use content-aware KPI and insight rows');
 assert.ok(ceoCss.includes('#hx7Insights')&&ceoCss.includes('.hx7-insight-item'),'CEO priority panels must remain visible');
@@ -111,7 +123,12 @@ assert.ok(ceoCss.includes('@media(min-width:1101px)'),'desktop one-view compacti
 const preview=m.insightsMarkup([{id:'finance',priority:'P1',rank:1,title:'Periksa laporan',area:'Keuangan',evidence:'Selisih laporan',action:'Rekonsiliasi HPP',guard:'Jangan ubah database',confidence:'Terbatas'}]);
 assert.ok(preview.includes('data-hx7-insight-id="finance"')&&preview.includes('Rekonsiliasi HPP'));
 assert.ok(!preview.includes('<details'),'overview must not expand and displace other CEO tiles');
+assert.ok(ceoCss.includes('text-overflow:clip')&&ceoCss.includes('white-space:normal'),'all four CEO titles must wrap rather than truncate');
+assert.ok(ceoCss.includes('.hx8-status-dot.hx8-status-danger')&&ceoCss.includes('.hx8-status-dot.hx8-status-good')&&ceoCss.includes('.hx8-status-dot.hx8-status-caution')&&ceoCss.includes('.hx8-status-dot.hx8-status-neutral'),'accessible color-coded statuses must use four meaningfully distinct states');
+
 const ceoRuntime=fs.readFileSync(path.join(ROOT,'owner-ceo-kpi-v1.js'),'utf8');
+assert.ok(ceoRuntime.includes('hx8-status-dot')&&ceoRuntime.includes('aria-label="Status: ')&&ceoRuntime.includes('title="Status: '),'CEO dot must explain status to keyboard and assistive technology');
+assert.ok(!ceoRuntime.includes('pill(stat[0],stat[1])'),'old visible status label must not consume title width');
 assert.ok(ceoRuntime.includes('TOTAL DURASI ANTAR-SCAN*')&&ceoRuntime.includes('Estimasi scan, bukan jam kerja resmi'),'CEO must label raw scans as an estimate');
 assert.ok(ceoRuntime.includes("select('cloud_id,device_person_id,employee_name,scan_date,scan_time,conversion_mode')"),'CEO must fetch actual scan times, not only row count');
 
@@ -122,7 +139,7 @@ assert.ok(ceoCss.includes('background:#fff')&&ceoCss.includes('HASNARIA'), 'exis
 assert.ok(ceoCss.includes('.hx8-attendance-track')&&ceoCss.includes('.hx8-progress'), 'inventory and attendance charts should be visible');
 assert.ok(dashboard.includes('id="hx7Cards"'));
 assert.ok(dashboard.includes('__HASNARIA_CEO_KPI_V1.mount'));
-assert.ok(guard.includes('/owner-ceo-kpi-v1.js?v=5'));
+assert.ok(guard.includes('/owner-ceo-kpi-v1.js?v=6'));
 assert.ok(!dashboard.includes('data-hx7-expand')&&!dashboard.includes('Tampilkan tren & status transaksi'),'retired trend/status button must not be rendered');
 assert.ok(dashboard.includes('data-hx6-detail'),'CEO detail modal remains accessible');
 const priorities=m.businessPriorities({
