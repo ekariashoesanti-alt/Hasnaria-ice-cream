@@ -80,7 +80,10 @@ function detailMarkup(v){
 function render(){
  var h=$('dashboard');if(!h)return;css();
  var v=current()||{};
- if(S.loading&&!S.loaded){h.innerHTML='<div class="hx-shell"><div class="hx-loading">Memuat Ringkasan CEO…</div></div>';return}
+ if(S.loading&&!S.loaded){
+  if(!h.querySelector('[data-ceo-boot="1"]'))h.innerHTML='<div class="hx-shell hx6-shell" data-ceo-boot="1" role="status" aria-live="polite"><div class="hx-loading">Menyiapkan Ringkasan CEO…</div></div>';
+  return;
+ }
  h.innerHTML='<div class="hx-shell hx6-shell" data-ceo-one-view="1">'+
   '<div class="hx6-toolbar"><div><div class="hx6-eyebrow">RINGKASAN CEO · '+esc(cutLabel())+'</div><h1>Ringkasan CEO</h1><p>Visual singkat lintas Penjualan, Pembelian, Administrasi, Keuangan, dan Stok.</p></div><div class="hx6-tools"><label><span>Bulan</span><select id="hx6Period" data-month-filter="dashboard">'+periodOptions()+'</select></label><button type="button" data-hx6-detail="1">Lihat Detail</button></div></div>'+
   (S.error?'<div class="hx-error">'+esc(S.error)+'</div>':'')+
@@ -106,16 +109,18 @@ function sameView(ctx,h){return window.__HASNARIA_CONTEXT===ctx&&ctx&&ctx.role==
 async function loadHpp(seq){
   if(S.hppLoading)return;
   var ctx=window.__HASNARIA_CONTEXT,h=$('dashboard');
-  S.hppLoading=true;render();
+  S.hppLoading=true;var previous=S.hpp;
   try{
     var q=await client().from('hpp_sales_coverage_p11_v1').select('sales_volume_modeled_pct').eq('brand_id',BRAND).limit(1);
     if(seq!==S.seq||!sameView(ctx,h))return;
     if(!q.error&&q.data&&q.data[0])S.hpp=n(q.data[0].sales_volume_modeled_pct);
   }catch(_){}
-  finally{if(seq===S.seq){S.hppLoading=false;if(sameView(ctx,h))render()}}
+  finally{if(seq===S.seq){S.hppLoading=false;if(sameView(ctx,h)&&S.detailOpen&&S.hpp!==previous)render()}}
 }
 async function load(force){
-  if(S.loading&&!force)return;var seq=++S.seq,ctx=window.__HASNARIA_CONTEXT,h=$('dashboard');S.loading=true;S.error='';render();
+  if(S.loading&&!force)return;var seq=++S.seq,ctx=window.__HASNARIA_CONTEXT,h=$('dashboard');S.loading=true;S.error='';
+  // Keep already-mounted KPIs visible during a refresh; don't flash an empty shell.
+  if(!S.loaded||!h||!h.querySelector('[data-ceo-one-view="1"]'))render();
   try{
     var r=await dashboardPack();
     if(seq!==S.seq||!sameView(ctx,h))return;
@@ -172,7 +177,10 @@ async function mount(opts){
  if(!ctx||ctx.role!=='owner'||!client()||!h||h.classList.contains('hidden'))return false;
  if(opts&&opts.silent)return syncRefresh();
  css();
- if(S.loaded&&!S.stale&&!(opts&&opts.force)){render();return true}
+ if(S.loaded&&!S.stale&&!(opts&&opts.force)){
+  if(!h.querySelector('[data-ceo-one-view="1"]'))render();
+  return true;
+ }
  await load(!!(opts&&opts.force));return true;
 }
 window.__HASNARIA_DASHBOARD_ONE_VIEW={mount:mount,invalidate:function(){S.seq++;S.stale=true;S.loading=false;S.hppLoading=false}};
