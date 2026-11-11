@@ -14,7 +14,7 @@
   var KPI_SRC='/owner-ceo-kpi-v1.js?v=6';
   var OWNER_TABS=['dashboard','sales','pembelian','stok','operasional','administrasi','ops','notifikasi'];
   var SECTION_IDS=['dashboard','sales','pembelian','operasional','administrasi','ops','stok','notifikasi','shift','social','approval','team','sistem','karyawan'];
-  var state={active:'dashboard',initialized:false,scheduled:false,salesRetries:0,finStockLoad:null,operationalLoad:null,adminLoad:null,dashboardLoad:null,notificationsLoad:null,navEpoch:0};
+  var state={active:'dashboard',initialized:false,scheduled:false,salesRetries:0,finStockLoad:null,operationalLoad:null,adminLoad:null,dashboardLoad:null,dashboardFailed:false,notificationsLoad:null,navEpoch:0};
   var tries=0;
 
   function context(){return window.__HASNARIA_CONTEXT||null}
@@ -118,21 +118,50 @@
     document.head.appendChild(s);
   }
 
+  function claimDashboardHost(){
+    var h=section('dashboard');if(!h||h.classList.contains('hidden'))return;
+    // Keep the canonical dashboard and its form/graph nodes intact on navigation.
+    if(h.querySelector('[data-ceo-one-view="1"],[data-ceo-boot="1"]'))return;
+    h.innerHTML='<div class="hx-shell hx6-shell" data-ceo-boot="1" role="status" aria-live="polite"><div class="hx-loading">Menyiapkan Ringkasan CEO…</div></div>';
+  }
+  function dashboardLoadError(){
+    state.dashboardFailed=true;
+    var h=section('dashboard');if(!h||h.classList.contains('hidden')||state.active!=='dashboard')return;
+    h.innerHTML='<div class="hx-shell hx6-shell" data-ceo-boot="1" role="alert"><div class="hx-error">Ringkasan CEO belum dapat dimuat. Koneksi atau modul halaman mungkin terputus. <button type="button" data-ceo-boot-retry="1">Coba lagi</button></div></div>';
+  }
   function ensureDashboard(){
     var h=section('dashboard');if(!h||h.classList.contains('hidden'))return;
     setExecutiveFlag(true);
+    claimDashboardHost();
     ensureCeoKpis();
     if(window.__HASNARIA_DASHBOARD_ONE_VIEW&&typeof window.__HASNARIA_DASHBOARD_ONE_VIEW.mount==='function'){
+      state.dashboardFailed=false;
       window.__HASNARIA_DASHBOARD_ONE_VIEW.mount();return;
     }
-    if(state.dashboardLoad)return;
+    if(state.dashboardFailed||state.dashboardLoad)return;
     state.dashboardLoad=new Promise(function(resolve){
       var old=document.getElementById('hasnaria-owner-dashboard-one-view-js');
-      if(old){resolve();return}
-      var s=document.createElement('script');s.id='hasnaria-owner-dashboard-one-view-js';s.src=DASH_SRC;s.async=true;
-      s.onload=resolve;s.onerror=function(){state.dashboardLoad=null;resolve()};document.head.appendChild(s);
+      if(old){
+        if(window.__HASNARIA_DASHBOARD_ONE_VIEW)return resolve(true);
+        old.addEventListener('load',function(){resolve(true)},{once:true});
+        old.addEventListener('error',function(){old.remove();resolve(false)},{once:true});
+        return;
+      }
+      var script=document.createElement('script');
+      script.id='hasnaria-owner-dashboard-one-view-js';script.src=DASH_SRC;script.async=true;
+      script.onload=function(){resolve(true)};
+      script.onerror=function(){script.remove();resolve(false)};
+      document.head.appendChild(script);
     });
-    state.dashboardLoad.then(function(){if(isOwner()&&state.active==='dashboard'&&window.__HASNARIA_DASHBOARD_ONE_VIEW)window.__HASNARIA_DASHBOARD_ONE_VIEW.mount()});
+    state.dashboardLoad.then(function(loaded){
+      state.dashboardLoad=null;
+      if(!isOwner()||state.active!=='dashboard')return;
+      if(!loaded||!window.__HASNARIA_DASHBOARD_ONE_VIEW||typeof window.__HASNARIA_DASHBOARD_ONE_VIEW.mount!=='function'){
+        dashboardLoadError();return;
+      }
+      state.dashboardFailed=false;
+      Promise.resolve(window.__HASNARIA_DASHBOARD_ONE_VIEW.mount()).catch(dashboardLoadError);
+    }).catch(function(){state.dashboardLoad=null;dashboardLoadError()});
   }
 
   function ensureSales(){
@@ -287,22 +316,26 @@
 
   document.addEventListener('click',function(event){
     if(!isOwner())return;
+    var retry=event.target&&event.target.closest?event.target.closest('[data-ceo-boot-retry]'):null;
+    if(retry){event.preventDefault();event.stopPropagation();state.dashboardFailed=false;state.dashboardLoad=null;claimDashboardHost();ensureDashboard();return}
     var t=event.target&&event.target.closest?event.target.closest('#tabs .tab[data-tab]'):null;if(!t)return;
     var id=t.getAttribute('data-tab');if(OWNER_TABS.indexOf(id)<0)return;
     event.preventDefault();event.stopPropagation();safeNavigate(id);
   },true);
 
   function start(){
-    if(!document.body)return;
+    if(!document.body||window.__HASNARIA_OWNER_SHELL_STARTED)return;
+    window.__HASNARIA_OWNER_SHELL_STARTED=true;
     ensureOperationalSurface();ensureShellCss();
     if(!document.getElementById('hasnaria-owner-insight-css')){var ins=document.createElement('link');ins.id='hasnaria-owner-insight-css';ins.rel='stylesheet';ins.href='/owner-insight-v1.css?v=1';document.head.appendChild(ins)}
     var tabs=document.getElementById('tabs'),main=document.querySelector('#app main');
     if(tabs)new MutationObserver(scheduleReconcile).observe(tabs,{childList:true});
     if(main)new MutationObserver(scheduleReconcile).observe(main,{childList:true});
-    scheduleReconcile();
+    // Resolve the intended Owner surface synchronously before #app becomes visible.
+    reconcile();
   }
 
   function boot(){if(isOwner()){start();return}if(++tries<80)setTimeout(boot,100)}
-  window.__HASNARIA_OWNER_SHELL={navigate:safeNavigate,isOwner:isOwner,getActive:function(){return state.active},getEpoch:function(){return state.navEpoch},isCurrent:function(tab,epoch){return isOwner()&&state.active===tab&&(epoch==null||state.navEpoch===epoch)},reconcile:reconcile};
+  window.__HASNARIA_OWNER_SHELL={navigate:safeNavigate,isOwner:isOwner,activate:function(){if(isOwner())start()},getActive:function(){return state.active},getEpoch:function(){return state.navEpoch},isCurrent:function(tab,epoch){return isOwner()&&state.active===tab&&(epoch==null||state.navEpoch===epoch)},reconcile:reconcile};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
