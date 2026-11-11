@@ -34,7 +34,7 @@ test('outer scroll plus natural-height inner shell makes last chart captions rea
 });
 
 test('the corrected release is CSS-only: no stock math or backend changes',()=>{
- assert.match(js,/stock-control-v3\.css\?v=33/);
+ assert.match(js,/stock-control-v3\.css\?v=34/);
  for(const p of ['stock-monitor.js','stock-v3-runtime-fix.js']){
   assert.match(read(p),/stock-control-v3\.js\?v=39/);
  }
