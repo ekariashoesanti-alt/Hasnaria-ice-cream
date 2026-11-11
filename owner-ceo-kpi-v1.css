@@ -389,3 +389,79 @@
  .hx8-trend-head{flex-wrap:wrap}
  .hx8-finance-row strong{font-size:12px}
 }
+
+
+/* HSN-819 — Full CEO titles and semantically accessible dot-only statuses.
+   Applies only to the four executive KPI cards, not other HASNARIA pages. */
+body.hasnaria-owner-erp #dashboard .hx8-ceo-header{
+ display:flex;
+ align-items:center;
+ justify-content:space-between;
+ gap:7px;
+ padding:8px 10px;
+}
+body.hasnaria-owner-erp #dashboard .hx8-ceo-header .hx8-heading{
+ display:flex;
+ align-items:center;
+ flex:1 1 auto;
+ gap:8px;
+ min-width:0;
+}
+body.hasnaria-owner-erp #dashboard .hx8-ceo-header .hx8-heading h2{
+ display:block;
+ flex:1 1 auto;
+ min-width:0;
+ margin:0;
+ font-size:clamp(12px,0.95vw,14px);
+ font-weight:850;
+ line-height:1.25;
+ white-space:normal;
+ word-break:normal;
+ overflow-wrap:normal;
+ overflow:visible;
+ text-overflow:clip;
+ -webkit-line-clamp:unset;
+ line-clamp:unset;
+}
+body.hasnaria-owner-erp #dashboard .hx8-ceo-header .hx8-card-icon{
+ width:30px;
+ height:30px;
+ flex:0 0 30px;
+}
+body.hasnaria-owner-erp #dashboard .hx8-ceo-header .hx8-status-dot{
+ box-sizing:border-box;
+ display:block;
+ width:11px;
+ height:11px;
+ min-width:11px;
+ flex:0 0 11px;
+ padding:0;
+ border:0;
+ border-radius:50%;
+ background:#91a5a0;
+ box-shadow:0 0 0 4px rgba(145,165,160,.14);
+ cursor:help;
+}
+body.hasnaria-owner-erp #dashboard .hx8-ceo-header .hx8-status-dot.hx8-status-danger{
+ background:#d75a57;
+ box-shadow:0 0 0 4px rgba(215,90,87,.14);
+}
+body.hasnaria-owner-erp #dashboard .hx8-ceo-header .hx8-status-dot.hx8-status-caution{
+ background:#dda037;
+ box-shadow:0 0 0 4px rgba(221,160,55,.16);
+}
+body.hasnaria-owner-erp #dashboard .hx8-ceo-header .hx8-status-dot.hx8-status-good{
+ background:#20a274;
+ box-shadow:0 0 0 4px rgba(32,162,116,.14);
+}
+body.hasnaria-owner-erp #dashboard .hx8-ceo-header .hx8-status-dot.hx8-status-neutral{
+ background:#91a5a0;
+ box-shadow:0 0 0 4px rgba(145,165,160,.14);
+}
+body.hasnaria-owner-erp #dashboard .hx8-ceo-header .hx8-status-dot:focus-visible{
+ outline:2px solid #166d58;
+ outline-offset:6px;
+}
+@media(max-width:620px){
+ body.hasnaria-owner-erp #dashboard .hx8-ceo-header .hx8-heading h2{font-size:14px}
+}
