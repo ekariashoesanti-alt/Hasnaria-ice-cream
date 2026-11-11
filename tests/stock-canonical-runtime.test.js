@@ -33,10 +33,15 @@ assert(greenCss.includes('#stok .sc6-grid') && greenCss.includes('#stok .sc10-ca
 assert(greenCss.includes('#125644'),'Stock palette must match the Hasnaria sidebar');
 
 assert(ui4.includes('sc5-head sc7-head'),'Stage-1 Stock header must be compact');
-assert(ui4.includes('sc7-actions')&&ui4.includes('sc7-tools'),'Stock action and period controls must share header');
-assert(ui4.includes('data-sc4-action="upload-opname"')&&ui4.includes('data-sc4-action="opname"'),'Stock upload and manual opname must remain accessible');
+assert(ui4.includes('sc7-actions')&&ui4.includes('sc7-tools')&&ui4.includes('sc28-simple-head'),
+  'Stock toolbar retains a single compact horizontal group');
+assert(ui4.includes('data-sc4-action="upload-opname"')&&ui4.includes('data-sc4-action="import-recipe"')&&ui4.includes('data-sc4-action="opname"'),
+  'Stock and recipe upload remain accessible from Owner menu; manual opname via detail');
 assert(ui4.includes('data-sc4-modal="position"')&&ui4.includes('data-sc4-modal="ledger"'),'Stock detail and ledger must remain accessible');
-assert(ui4.includes('data-sc4-action="upload-purchase"'),'Existing purchase upload route must remain');
+const header=ui4.slice(ui4.indexOf('function renderHeader() {'),ui4.indexOf('function renderUploadChoices()'));
+assert(header.includes('data-sc4-modal="upload-data"'),'One Owner upload menu must replace the old toolbar actions');
+assert(!header.includes('upload-purchase')&&!header.includes('sku-sim')&&!header.includes('formula-audit'),'No technical, purchase, or simulation buttons in Stock header');
+assert(ui4.includes("stockNavigate('pembelian')"),'Purchase navigation remains available in the system, not main Stok toolbar');
 assert(!ui4.includes('sc5-footer-actions'),'Floating footer button bar should be absent');
 assert(ui4.includes('sc22-dashboard')&&!ui4.includes('<article class="sc5-panel sc6-top-panel"'),'Removed panels must stay hidden');
 
@@ -79,7 +84,7 @@ assert(!currentAndSafe.includes('event tercatat')&&!currentAndSafe.includes('akt
   'Event activity must not be mistaken for stock quantity');
 assert(greenCss.includes('.sc21-comparison-svg')&&greenCss.includes('.sc21-safe-bar')&&greenCss.includes('.sc21-current-bar'),
   'Comparison chart has scoped visual styles');
-assert(ui4.includes('/stock-control-v3.css?v=33'),'New stock chart stylesheet cache version is fresh');
+assert(ui4.includes('/stock-control-v3.css?v=34'),'New stock chart stylesheet cache version is fresh');
 assert(!ui4.includes('<div class="sc12-status-strip">')&&greenCss.includes('.sc12-status-strip'),
   'Crossed operational warning cards are not rendered on dashboard');
 
