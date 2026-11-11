@@ -138,7 +138,7 @@ assert.ok(ceoCss.includes('background:#fff')&&ceoCss.includes('HASNARIA'), 'exis
 assert.ok(ceoCss.includes('.hx8-attendance-track')&&ceoCss.includes('.hx8-progress'), 'inventory and attendance charts should be visible');
 assert.ok(dashboard.includes('id="hx7Cards"'));
 assert.ok(dashboard.includes('__HASNARIA_CEO_KPI_V1.mount'));
-assert.ok(guard.includes('/owner-ceo-kpi-v1.js?v=6'));
+assert.ok(guard.includes('/owner-ceo-kpi-v1.js?v=7'));
 assert.ok(!dashboard.includes('data-hx7-expand')&&!dashboard.includes('Tampilkan tren & status transaksi'),'retired trend/status button must not be rendered');
 assert.ok(dashboard.includes('data-hx6-detail'),'CEO detail modal remains accessible');
 const priorities=m.businessPriorities({
