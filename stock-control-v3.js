@@ -1728,6 +1728,7 @@
 
 
   // Read-only; no inventory movement or opening stock is ever created here.
+  // Owner-only, lazy stage 2 triage. GET queries and simple UI; no posting, BOM approval or stock write.
   async function loadIntegrationAudit(){
     if(!isOwner()||S.modal!=='formula-audit')return;
     var period=monthKey(S.period),seq=++S.integrationSeq;
@@ -1738,25 +1739,40 @@
       request('ui_stock_sales_link_audit_v1?'+qs({brand_id:'eq.'+BRAND,period_month:'eq.'+from,
         select:'period_month,sale_item_rows,linked_sale_item_rows,unlinked_sale_item_rows,no_recipe_rows,unverified_components_rows,eligible_verified_rows,awaiting_recipe_approval_rows,sale_consumption_movements',limit:'1'})),
       request('inventory_purchase_backfill_audit_p5_v1?'+qs({brand_id:'eq.'+BRAND,source_period:'eq.'+from,
-        select:'backfill_status,ready_for_inventory,inventory_item_id',limit:'2000'}))
+        select:'purchase_date,item_name,quantity_text,unit_text,inventory_qty,mapping_status,backfill_status,ready_for_inventory,inventory_item_id',limit:'2000'})),
+      request('ui_stock_recipe_review_v1?'+qs({brand_id:'eq.'+BRAND,period_month:'eq.'+from,
+        select:'product_name,sale_item_rows,sold_units,active_components,verified_components,pending_components,recipe_status,review_state',
+        order:'sale_item_rows.desc,product_name.asc',limit:'200'}))
     ]);
     if(seq!==S.integrationSeq||S.modal!=='formula-audit'||monthKey(S.period)!==period)return;
     var salesOk=results[0].status==='fulfilled',purchaseOk=results[1].status==='fulfilled';
+    var recipesOk=results[2].status==='fulfilled';
     var sales=salesOk&&Array.isArray(results[0].value)?results[0].value[0]||null:null;
     var rows=purchaseOk&&Array.isArray(results[1].value)?results[1].value:null;
+    var recipeRows=recipesOk&&Array.isArray(results[2].value)?results[2].value:null;
     var countStatus=function(name){return rows?rows.filter(function(x){return x.backfill_status===name}).length:null;};
     var valid={POSTED:true,POSTED_LEGACY_SOURCE:true,READY_NOT_POSTED:true,REVIEW:true,NON_STOCK:true};
     var unknown=rows?rows.filter(function(x){return !valid[x.backfill_status]}).length:null;
+    var openRows=rows?rows.filter(function(x){
+      return x.backfill_status==='READY_NOT_POSTED'||x.backfill_status==='REVIEW'||!valid[x.backfill_status];
+    }):null;
+    var sourceUnitsMissing=rows?rows.filter(function(x){return !String(x.unit_text||'').trim()}).length:null;
+    var missingBOM=recipeRows?recipeRows.filter(function(x){return x.review_state==='missing_bom'}).length:null;
+    var pendingComponents=recipeRows?recipeRows.filter(function(x){return x.review_state==='component_pending'}).length:null;
+    var pendingApproval=recipeRows?recipeRows.filter(function(x){return x.review_state==='product_approval_pending'}).length:null;
     S.integrationAudit={
-      sales:s,salesOk:salesOk,purchaseOk:purchaseOk,
-      purchaseTotal:rows?rows.length:null,
+      sales:s,salesOk:salesOk,purchaseOk:purchaseOk,recipesOk:recipesOk,
+      purchaseTotal:rows?rows.length:null,purchaseRows:openRows,
       purchaseMapped:rows?rows.filter(function(x){return !!x.inventory_item_id}).length:null,
       purchasePosted:rows?countStatus('POSTED')+countStatus('POSTED_LEGACY_SOURCE'):null,
       purchasePending:countStatus('READY_NOT_POSTED'),
       purchaseReview:rows?countStatus('REVIEW')+unknown:null,
-      purchaseNonStock:countStatus('NON_STOCK'),purchaseUnknown:unknown
+      purchaseNonStock:countStatus('NON_STOCK'),purchaseUnknown:unknown,
+      purchaseSourceUnitMissing:sourceUnitsMissing,
+      recipeRows:recipeRows,recipeMissingBOM:missingBOM,
+      recipePendingComponents:pendingComponents,recipePendingApproval:pendingApproval
     };
-    if(!salesOk||!purchaseOk)S.integrationError='Sebagian sumber gagal dibaca; data lain tetap ditampilkan.';
+    if(!salesOk||!purchaseOk||!recipesOk)S.integrationError='Sebagian sumber gagal dibaca; data lain tetap ditampilkan.';
     else if(unknown>0)S.integrationError='Ada status pembelian yang belum dikenali; ditahan untuk review.';
     S.integrationLoading=false;render();
   }
@@ -1770,7 +1786,7 @@
     if(S.integrationLoading||S.integrationPeriod!==monthKey(S.period))return out+
       '<p class="sc20-note">Memeriksa kaitan penjualan, resep dan pembelian periode terpilih…</p></div>';
     if(S.integrationError)out+='<div class="sc20-note">'+esc(S.integrationError)+'</div>';
-    if(!a.salesOk&&!a.purchaseOk)return out+
+    if(!a.salesOk&&!a.purchaseOk&&!a.recipesOk)return out+
       '<div class="sc20-note">Belum dapat memverifikasi integrasi; saldo tidak diubah.</div></div>';
     var cell=function(v,name,note){return '<div><b>'+esc(v)+'</b><span>'+esc(name)+
       '</span><small>'+esc(note)+'</small></div>'};
@@ -1788,13 +1804,65 @@
         ' diposting; '+fmt(a.purchasePending)+' siap teknis belum diposting; '+fmt(a.purchaseReview)+
         ' perlu review; '+fmt(a.purchaseNonStock)+' nonstok; '+fmt(a.purchaseMapped)+
         ' memiliki referensi SKU. ':'')+
-      'Kategori penyebab bisa tumpang-tindih. Tidak ada transaksi yang otomatis dibukukan.</div>'+
-      '<div class="sc24-actions"><button type="button" data-sc24-review="recipes">Periksa Resep</button>'+
+      'Kategori penyebab bisa tumpang-tindih. Tidak ada transaksi yang otomatis dibukukan.</div>';
+
+    // Triage details live inside the already scrollable audit modal, never the 100% zoom dashboard.
+    if(a.purchaseOk){
+      out+='<details class="sc24-queue"><summary><b>Prioritas Pembelian</b> · '+fmt(a.purchasePending+a.purchaseReview)+
+        ' baris menunggu tindakan</summary>'+
+        '<p class="sc20-note">'+fmt(a.purchaseSourceUnitMissing)+' dari '+fmt(a.purchaseTotal)+
+        ' baris tanpa satuan sumber eksplisit. Status siap teknis BUKAN bukti barang diterima. Validasi unit kemasan, SKU dan penerimaan sebelum posting.</p>';
+      var purchase=(a.purchaseRows||[]).slice().sort(function(x,y){
+        var xp=x.backfill_status==='READY_NOT_POSTED'?0:1,yp=y.backfill_status==='READY_NOT_POSTED'?0:1;
+        return xp-yp||String(x.purchase_date||'').localeCompare(String(y.purchase_date||''))||
+          String(x.item_name||'').localeCompare(String(y.item_name||''));
+      });
+      var purchaseBody=purchase.slice(0,12).map(function(x){
+        var status=x.backfill_status==='READY_NOT_POSTED'?'Siap teknis · belum diterima':'Perlu review';
+        var reason=!String(x.unit_text||'').trim()?'Satuan asal kosong':'Cek konversi/penerimaan';
+        if(!x.inventory_item_id)reason+=' · SKU belum cocok';
+        return '<tr><td>'+esc(dateLabel(x.purchase_date))+'</td><td>'+esc(x.item_name||'—')+
+          '</td><td>'+esc(x.quantity_text||'—')+'</td><td>'+esc(status)+'</td><td>'+esc(reason)+'</td></tr>';
+      }).join('');
+      out+='<div class="sc20-table-wrap"><table class="sc20-table"><thead><tr><th>Tanggal</th><th>Barang</th>'+
+        '<th>Qty sumber</th><th>Status</th><th>Pengaman</th></tr></thead><tbody>'+
+        (purchaseBody||'<tr><td colspan="5">Tidak ada pembelian yang menunggu review pada periode ini.</td></tr>')+
+        '</tbody></table></div><p class="sc20-note">Menampilkan '+fmt(Math.min(12,purchase.length))+
+        ' dari '+fmt(purchase.length)+' baris prioritas. Lengkapi bukti di tab Pembelian; tidak ada posting dari daftar ini.</p></details>';
+    }else out+='<div class="sc20-note">Antrian Pembelian belum dapat dibaca.</div>';
+
+    if(a.recipesOk){
+      var recipeRows=(a.recipeRows||[]).filter(function(x){return x.review_state!=='eligible';});
+      out+='<details class="sc24-queue"><summary><b>Prioritas Resep/BOM</b> · '+fmt(recipeRows.length)+
+        ' produk belum siap untuk konsumsi stok</summary>'+
+        '<p class="sc20-note">'+fmt(a.recipePendingComponents)+' produk butuh cek bahan; '+
+        fmt(a.recipeMissingBOM)+' belum ada BOM; '+fmt(a.recipePendingApproval)+
+        ' menunggu persetujuan. Penjualan historis dapat terdampak saat tanggal efektif disetujui.</p>';
+      var recipeBody=recipeRows.slice(0,12).map(function(x){
+        var state=x.review_state==='missing_bom'?'Resep belum tersedia':
+          x.review_state==='component_pending'?'Bahan belum lengkap':
+          x.review_state==='product_approval_pending'?'Siap ditinjau Owner':
+          x.review_state==='effective_date_partial'?'Periode efektif parsial':'Perlu verifikasi';
+        return '<tr><td>'+esc(x.product_name||'—')+'</td><td>'+esc(fmt(x.sale_item_rows||0))+
+          '</td><td>'+esc(fmt(x.verified_components||0))+' / '+esc(fmt(x.active_components||0))+
+          '</td><td>'+esc(state)+'</td></tr>';
+      }).join('');
+      out+='<div class="sc20-table-wrap"><table class="sc20-table"><thead><tr>'+
+        '<th>Produk</th><th>Baris jual</th><th>Bahan terverifikasi</th><th>Status</th>'+
+        '</tr></thead><tbody>'+(recipeBody||'<tr><td colspan="4">Tidak ada produk yang menunggu review pada periode ini.</td></tr>')+
+        '</tbody></table></div><p class="sc20-note">Menampilkan '+fmt(Math.min(12,recipeRows.length))+
+        ' dari '+fmt(recipeRows.length)+' produk, diurutkan menurut baris jual periode terpilih. Tidak menyetujui resep otomatis.</p></details>';
+    }else out+='<div class="sc20-note">Antrian Resep belum dapat dibaca.</div>';
+
+    if(a.salesOk&&num(sale.sale_item_rows||0)===0&&a.purchaseOk&&a.purchaseTotal===0){
+      out+='<p class="sc20-note">Belum ada transaksi sumber pada bulan terpilih. Pilih periode historis yang sudah memiliki impor; angka nol bukan bukti sinkronisasi.</p>';
+    }
+    out+='<div class="sc24-actions"><button type="button" data-sc24-review="recipes">Periksa Resep</button>'+
       '<button type="button" data-sc24-review="pembelian">Review Pembelian</button></div></div>';
     return out;
   }
 
-  // Independent virtual view: every row is calculated from existing opname + ledger,
+    // Independent virtual view: every row is calculated from existing opname + ledger,
   // not inserted as a new physical stock or movement.
   async function loadFormulaAudit(){
     if(!isOwner())return;

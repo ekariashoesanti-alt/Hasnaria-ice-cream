@@ -70,7 +70,7 @@ test('responsive panels keep charts and data visible at narrower widths',()=>{
  assert.match(stockStyle,/\.sc22-dual>.sc5-panel\{[\s\S]*?max-height:none!important/);
  assert.match(stockJS,/stock-control-v3\.css\?v=34/);
  for(const f of ['stock-monitor.js','stock-v3-runtime-fix.js']){
-  assert.match(read(f),/stock-control-v3\.js\?v=39/);
+  assert.match(read(f),/stock-control-v3\.js\?v=40/);
  }
 });
 

@@ -35,7 +35,7 @@ test('prevents fixed-height clipping and keeps SVG labels/legend/rows visible',(
   assert.match(overrides,/@media\(max-width:700px\)/);
   assert.match(overrides,/@media\(max-width:440px\)/);
   assert.match(js,/stock-control-v3\.css\?v=34/);
-  for(const p of ['stock-monitor.js','stock-v3-runtime-fix.js'])assert.match(read(p),/stock-control-v3\.js\?v=39/);
+  for(const p of ['stock-monitor.js','stock-v3-runtime-fix.js'])assert.match(read(p),/stock-control-v3\.js\?v=40/);
 });
 
 test('verified valuation never falsely claims total stock; denominator consistent with backend',()=>{

@@ -91,7 +91,7 @@ test('monthly activity chart removed from main dashboard and warning kept in Own
  assert.match(js,/Saldo stok belum terverifikasi penuh/);
  assert.match(js,/stock-control-v3\.css\?v=34/);
  for(const f of ['stock-monitor.js','stock-v3-runtime-fix.js']){
-  assert.match(fs.readFileSync(f,'utf8'),/stock-control-v3\.js\?v=39/);
+  assert.match(fs.readFileSync(f,'utf8'),/stock-control-v3\.js\?v=40/);
  }
  assert.match(css,/#stok \.sc21-comparison-svg/);
  assert.match(css,/#stok \.sc21-safe-bar/);
