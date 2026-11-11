@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 
 const GOOGLE_BINDING = `\n(function bindHasnariaGoogleButton() {\n  function bind() {\n    var btn = document.getElementById('googleBtn');\n    if (!btn || btn.__hasnariaGoogleBound) return;\n    btn.__hasnariaGoogleBound = true;\n    btn.addEventListener('click', function (event) {\n      if (typeof window.hasnariaGoogle === 'function') window.hasnariaGoogle(event);\n    });\n  }\n  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bind, { once: true });\n  else bind();\n})();\n`;
-const OWNER_SHELL_TAG = '<script src="/owner-shell-guard.js?v=17"></script>';
+const OWNER_SHELL_TAG = '<script src="/owner-shell-guard.js?v=18"></script>';
 const OWNER_PALETTE_TAG = '<link rel="stylesheet" href="/owner-green.css?v=13">';
 // First-paint styles must load before the Owner dashboard becomes visible.
 const OWNER_CEO_CSS_TAGS = [
