@@ -71,3 +71,13 @@ test('Recovery read-only audit distinguishes posted, pending, review and non-sto
  assert.match(integ,/Ada status pembelian yang belum dikenali/);
  assert.doesNotMatch(integ,/request\('inventory_movements\?/);
 });
+
+test('Owner can open the read-only integration audit from Detail Stok, without adding a dashboard toolbar button',()=>{
+ const modal=section('function renderModal() {','function render() {');
+ const header=section('function renderHeader() {','function renderUploadChoices()');
+ assert.match(modal,/data-sc4-modal="formula-audit">Audit Integrasi/);
+ assert.match(modal,/sc28-detail-quick/);
+ assert.doesNotMatch(header,/data-sc4-modal="formula-audit"/);
+ const actions=section('function bind(host) {','function mount(force) {');
+ assert.match(actions,/S\.modal === 'formula-audit'\) loadFormulaAudit\(\)/);
+});

@@ -2046,7 +2046,8 @@
       S.modal === 'formula-audit' ? renderFormulaAudit() :
       renderFormula() +
       (isOwner()?'<div class="sc28-detail-quick"><button type="button" data-sc4-action="opname">＋ Input Opname</button>'+
-        '<button type="button" data-sc4-modal="ledger">Riwayat Mutasi</button></div>':'')+
+        '<button type="button" data-sc4-modal="ledger">Riwayat Mutasi</button>'+
+        '<button type="button" data-sc4-modal="formula-audit">Audit Integrasi</button></div>':'')+
       renderAuxState() + renderFilters() + renderTable();
     return '<div class="sc4-modal-backdrop" data-sc4-close="1"><section class="sc4-modal'+(S.modal==='upload-data'?' sc28-upload-modal':'')+'" role="dialog" aria-modal="true" aria-labelledby="sc4ModalTitle" tabindex="-1"><div class="sc4-modal-head"><div><div class="sc3-eyebrow">DETAIL STOK</div><h3 id="sc4ModalTitle">' + esc(title) + '</h3><p>' + (S.modal === 'upload-data' ? 'Satu tempat untuk kebutuhan upload; tidak perlu mengulang file yang sudah tersimpan.' :
         S.modal === 'sku-sim' ? 'Simulasi teoretis dari rekap Majoo, tidak mengurangi saldo atau menyetujui BOM.' : S.modal === 'ledger' ? 'Movement periode terpilih; quantity tetap dalam satuan masing-masing SKU.' : S.modal === 'recipes' ? 'Penjualan berdasarkan bulan; resep berlaku terus sejak disetujui sampai diubah.' :
