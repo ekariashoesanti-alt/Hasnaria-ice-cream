@@ -56,6 +56,6 @@ test('new layout is compact and both bridge loads are cache-busted',()=>{
   assert.match(css,/\.sc17-impact-negative\{/);
   assert.match(js,/stock-control-v3\.css\?v=34/);
   for(const p of ['stock-monitor.js','stock-v3-runtime-fix.js'])
-    assert.match(read(p),/stock-control-v3\.js\?v=39/,p);
+    assert.match(read(p),/stock-control-v3\.js\?v=40/,p);
   assert.match(read('scripts/vercel-build-check.js'),/stock-recipe-owner-evidence-v1\.test\.js/);
 });
