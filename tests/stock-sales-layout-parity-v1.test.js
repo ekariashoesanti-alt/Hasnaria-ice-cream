@@ -77,12 +77,24 @@ test('responsive panels keep charts and data visible at narrower widths',()=>{
 
 test('HSN-821: tested Stock one-view geometry is linked without mutating existing calculations',()=>{
  const index=read('index.html'),oneView=read('stock-oneview-hsn821.css');
- assert.match(index,/stock-oneview-hsn821\.css\?v=1/);
- assert.match(oneView,/@media \(min-width:1101px\) and \(min-height:720px\)/);
+ assert.match(index,/stock-oneview-hsn821\.css\?v=2/);
+ assert.match(oneView,/@media \(min-width:901px\) and \(min-height:520px\)/);
  assert.match(oneView,/sc22-dual>.sc5-panel/);
  assert.match(oneView,/sc21-comparison-svg/);
  assert.match(oneView,/sc28-simple-head/);
  assert.match(oneView,/sc28-upload-btn/);
  assert.match(oneView,/:not\(:has\(\.sc4-modal\)\)/);
  assert.doesNotMatch(oneView,/#sales\b|#pembelian\b|#operasional\b|#dashboard\b/);
+});
+
+test('HSN-822: 100% browser zoom with 125-150% OS scaling keeps Stock compact',()=>{
+ const css=read('stock-oneview-hsn821.css');
+ const media='@media (min-width:901px) and (min-height:520px)';
+ assert.equal(css.split(media).length-1,3,'base compact, toolbar, and short-laptop override must use realistic CSS viewport');
+ assert.match(css,/@media \(min-width:901px\) and \(min-height:520px\) and \(max-height:660px\)/);
+ assert.match(css,/sc22-plot-svg\{[^}]*max-height:100%!important/);
+ assert.match(css,/sc21-comparison-svg\{[^}]*min-width:0!important/);
+ assert.match(css,/sc22-chart-note\{[^}]*flex:0 0 auto!important/);
+ assert.match(css,/sc21-foot\{[^}]*flex:0 0 auto!important/);
+ assert.match(css,/sc3-shell>.sc7-head.sc28-simple-head/);
 });
