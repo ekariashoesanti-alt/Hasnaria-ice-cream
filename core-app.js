@@ -260,6 +260,8 @@
   }
   function tabs() {
     if (role === "owner") {
+      // Avoid tearing down modern Owner navigation every time legacy state updates.
+      if(window.__HASNARIA_OWNER_SHELL_STARTED&&$("tabs").querySelector('.tab[data-tab="operasional"]'))return;
       var ownerItems = [["dashboard","Ringkasan CEO"],["sales","Penjualan"],["pembelian","Pembelian"],["ops","Keuangan"],["stok","Stok"]];
       $("tabs").innerHTML = ownerItems.map(function(pair){return '<button class="tab' + (tab===pair[0] ? " on" : "") + '" data-tab="' + pair[0] + '" type="button">' + pair[1] + "</button>";}).join("");
       document.querySelectorAll(".tab").forEach(function(b){b.addEventListener("click",function(){setTab(b.getAttribute("data-tab"));});});
@@ -327,7 +329,9 @@
     var hr = social.filter(function (x) { return x.platform === "HASNARIA_HR"; });
     var absen = hr.filter(function (x) { return (x.content_title || "").indexOf("|" + today() + "|") >= 0; });
 
-    $("dashboard").innerHTML =
+    // Owner dashboard is exclusively owned by the CEO renderer. Never paint the legacy
+    // daily report, even for a single frame while canonical scripts or data load.
+    if(role!=='owner') $("dashboard").innerHTML =
       '<div class="card"><h2>Laporan harian · ' + today() + '</h2><p class="small">15 menit. Bukan WhatsApp.</p>' +
       '<div class="grid" style="margin-top:12px"><div><div class="label">Omzet hari ini</div><div class="metric">' + rp(omzetH) + '</div></div>' +
       '<div><div class="label">Target</div><div class="metric">' + rp(TARGET) + '</div></div>' +
@@ -344,7 +348,12 @@
       '<div class="card"><div class="label">Stok kritis / izin hari ini</div><div class="metric">' + crit.length + " · " + absen.length + "</div></div></div>" +
       '<div class="card"><div class="label">Jalur komando</div><p style="margin-top:6px"><b>Owner → Head / PIC → Pelaksana</b>. Bukan Owner → semua orang.</p></div>';
 
-    if (window.HasnariaERP) window.HasnariaERP.mount();
+    if(role==='owner'){
+      var bootHost=$("dashboard");
+      if(bootHost&&!bootHost.firstElementChild)bootHost.innerHTML='<div class="hx-shell hx6-shell" data-ceo-boot="1" role="status" aria-live="polite"><div class="hx-loading">Menyiapkan Ringkasan CEO…</div></div>';
+    }
+    // ERP overview predates the canonical CEO dashboard; never let it paint as Owner.
+    if(window.HasnariaERP&&role!=='owner')window.HasnariaERP.mount();
 
     // Owner Sales is exclusively rendered by the canonical Sales board.
     // Never build the legacy daily-entry DOM even for one frame on login/tab load.
@@ -640,8 +649,11 @@
         show("pending");
         return;
       }
-      show("app");
       render();
+      if(role==='owner'&&window.__HASNARIA_OWNER_SHELL&&typeof window.__HASNARIA_OWNER_SHELL.activate==='function'){
+        window.__HASNARIA_OWNER_SHELL.activate();
+      }
+      show("app");
       scheduleLegacyTabData(tab);
     } catch (e) {
       setAuthMessage("Gagal memuat: " + (e && e.message ? e.message : e));
