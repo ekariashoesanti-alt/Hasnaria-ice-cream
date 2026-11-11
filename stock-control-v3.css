@@ -2478,3 +2478,115 @@
 #stok .sc24-actions button{font:inherit;font-size:11px;font-weight:800;border:1px solid #c5dbc9;
   background:#fff;color:#186346;border-radius:8px;min-height:34px;padding:7px 11px;cursor:pointer}
 #stok .sc24-actions button:hover{background:#eaf6ee}
+
+
+/* HASNARIA Stock: simple one-view header + one Owner Upload Data menu (2026-11-11).
+   Intentional override of older two-row sc7/sc23 toolbar, restricted to Stok only. */
+#stok .sc3-shell:has(.sc6-dashboard)>.sc7-head.sc28-simple-head{
+  display:flex!important;align-items:center!important;justify-content:space-between!important;
+  flex-wrap:nowrap!important;gap:14px!important;min-height:68px!important;
+  height:auto!important;max-height:none!important;padding:10px 14px!important;
+  background:#fff!important;border:1px solid #dbeae1!important;border-radius:14px!important;
+}
+#stok .sc28-simple-head .sc5-head-copy{min-width:160px!important;flex:1 1 auto!important}
+#stok .sc28-simple-head .sc28-simple-tools,
+#stok .sc3-shell:has(.sc6-dashboard)>.sc28-simple-head .sc28-simple-tools{
+  display:flex!important;flex-direction:row!important;align-items:center!important;
+  justify-content:flex-end!important;flex:0 1 auto!important;flex-wrap:nowrap!important;
+  gap:10px!important;width:auto!important;max-width:none!important;margin:0!important;
+  min-width:0!important;
+}
+#stok .sc28-simple-tools .sc28-period{
+  display:flex!important;flex-direction:row!important;align-items:center!important;
+  gap:8px!important;color:#426958!important;font-size:11px!important;font-weight:700!important;
+  margin:0!important;white-space:nowrap!important;
+}
+#stok .sc28-simple-tools .sc28-period select{
+  display:block!important;min-height:36px!important;height:36px!important;
+  min-width:150px!important;max-width:205px!important;width:auto!important;
+  font-size:12px!important;font-weight:650!important;color:#153f32!important;
+  background:#fff!important;border:1px solid #cfe0d6!important;
+  border-radius:9px!important;padding:5px 11px!important;margin:0!important;
+}
+#stok .sc28-simple-tools .sc28-upload-btn{
+  display:inline-flex!important;align-items:center!important;justify-content:center!important;
+  width:auto!important;min-width:128px!important;min-height:36px!important;height:36px!important;
+  padding:0 14px!important;white-space:nowrap!important;font-size:12px!important;
+  color:#fff!important;background:#125644!important;border:1px solid #125644!important;
+  border-radius:9px!important;font-weight:800!important;cursor:pointer!important;
+}
+#stok .sc28-simple-tools .sc28-refresh{
+  display:inline-grid!important;place-items:center!important;min-width:36px!important;
+  width:36px!important;height:36px!important;min-height:36px!important;padding:0!important;
+  border:1px solid #cfe0d6!important;border-radius:9px!important;
+  background:#f4faf6!important;color:#166047!important;font-size:21px!important;
+}
+#stok .sc28-clickable-kpi{cursor:pointer!important;outline-offset:2px!important}
+#stok .sc28-clickable-kpi:focus-visible{outline:3px solid #2b9471!important}
+#stok .sc28-clickable-kpi:hover{border-color:#96c6ac!important}
+#stok .sc4-modal.sc28-upload-modal{
+  width:min(640px,calc(100vw - 24px))!important;max-width:640px!important;
+  max-height:85vh!important;overflow:hidden!important;
+}
+#stok .sc28-upload-modal .sc4-modal-head{
+  background:#fff!important;color:#143c30!important;
+  padding:18px 20px!important;
+}
+#stok .sc28-upload-modal .sc4-modal-head h3{font-size:19px!important}
+#stok .sc28-upload-modal .sc4-modal-head p{font-size:11px!important;line-height:1.45!important}
+#stok .sc28-upload-modal .sc4-modal-body{padding:20px!important}
+#stok .sc28-upload-intro{color:#60786a;font-size:12px;line-height:1.5;margin-bottom:14px}
+#stok .sc28-upload-choices{display:grid;grid-template-columns:1fr;gap:11px}
+#stok .sc28-upload-choice{
+  display:flex!important;align-items:center!important;text-align:left!important;gap:14px!important;
+  width:100%!important;min-height:86px!important;height:auto!important;
+  border:1px solid #d7e7dd!important;border-radius:12px!important;
+  background:#f8fcfa!important;color:#204638!important;padding:14px 16px!important;
+  cursor:pointer!important;box-shadow:none!important;
+}
+#stok .sc28-upload-choice:hover,#stok .sc28-upload-choice:focus-visible{
+  background:#eff8f2!important;border-color:#86bda0!important;outline-color:#176b55!important;
+}
+#stok .sc28-choice-icon{
+  display:grid;place-items:center;flex:0 0 40px;width:40px;height:40px;
+  border-radius:11px;background:#e0f1e7;color:#126044;font-size:24px;font-weight:700;
+}
+#stok .sc28-choice-copy{display:flex;flex:1;min-width:0;flex-direction:column;gap:5px}
+#stok .sc28-choice-copy strong{color:#17432f;font-size:14px;font-weight:800}
+#stok .sc28-choice-copy small{color:#5f7668;font-size:11px;font-weight:500;line-height:1.45}
+#stok .sc28-choice-next{color:#45936a;font-size:27px;font-weight:500}
+#stok .sc28-upload-foot{
+  display:flex;align-items:center;justify-content:space-between;gap:15px;
+  flex-wrap:wrap;margin-top:16px;padding-top:13px;border-top:1px solid #e5eee9;
+  color:#678074;font-size:11px;line-height:1.4;
+}
+#stok .sc28-review-link{
+  display:inline-flex!important;min-height:29px!important;align-items:center!important;
+  padding:5px 9px!important;color:#176b55!important;background:transparent!important;
+  border:0!important;text-decoration:underline!important;font-size:11px!important;cursor:pointer!important;
+}
+#stok .sc28-detail-quick{display:flex;justify-content:flex-end;gap:8px;margin:8px 0 12px}
+#stok .sc28-detail-quick button{
+  padding:7px 11px;min-height:32px;color:#176b55;background:#f3faf6;
+  border:1px solid #d5e5dc;border-radius:8px;font-size:11px;font-weight:750;cursor:pointer;
+}
+@media(max-width:780px){
+  #stok .sc3-shell:has(.sc6-dashboard)>.sc7-head.sc28-simple-head{
+    flex-wrap:wrap!important;padding:10px!important;gap:9px!important;
+  }
+  #stok .sc28-simple-head .sc5-head-copy{flex:1 1 100%!important}
+  #stok .sc28-simple-head .sc28-simple-tools{
+    width:100%!important;flex:1 1 100%!important;justify-content:space-between!important;
+  }
+  #stok .sc28-simple-tools .sc28-period{min-width:0!important}
+  #stok .sc28-simple-tools .sc28-period select{min-width:110px!important;max-width:145px!important}
+  #stok .sc28-simple-tools .sc28-upload-btn{min-width:110px!important}
+}
+@media(max-width:420px){
+  #stok .sc28-simple-tools{gap:5px!important}
+  #stok .sc28-simple-tools .sc28-period{gap:4px!important;font-size:10px!important}
+  #stok .sc28-simple-tools .sc28-period select{min-width:98px!important;max-width:114px!important;padding:4px 6px!important;font-size:10px!important}
+  #stok .sc28-simple-tools .sc28-upload-btn{min-width:98px!important;padding:0 7px!important;font-size:10px!important}
+  #stok .sc28-upload-modal .sc4-modal-body{padding:12px!important}
+  #stok .sc28-upload-choice{padding:12px!important;gap:9px!important}
+}
