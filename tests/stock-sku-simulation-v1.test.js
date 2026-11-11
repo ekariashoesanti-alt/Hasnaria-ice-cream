@@ -110,7 +110,9 @@ test('never count inactive recipe components, all draft verification requires Ow
 test('UI is lazy Owner-only, GET-only and not allowed to mutate ledger',()=>{
   const stock=fs.readFileSync(path.join(__dirname,'..','stock-control-v3.js'),'utf8');
   const pure=fs.readFileSync(path.join(__dirname,'..','stock-sku-simulation-v1.js'),'utf8');
-  assert.match(stock,/data-sc4-modal="sku-sim"/);
+  const header=stock.slice(stock.indexOf('function renderHeader() {'),stock.indexOf('function renderUploadChoices() {'));
+  assert.doesNotMatch(header,/sku-sim/,'Technical simulation must not clutter the Stock toolbar');
+  assert.match(stock,/S\.modal === 'sku-sim'/,'Read-only simulation route stays available internally');
   assert.match(stock,/isOwner\(\).*S\.skuSimLoading/);
   assert.match(stock,/S\.modal === 'sku-sim' \? renderSkuSimulation\(\)/);
   assert.match(stock,/S\.modal === 'sku-sim'\) loadSkuSimulation\(\)/);
