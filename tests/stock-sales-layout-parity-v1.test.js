@@ -90,7 +90,7 @@ test('HSN-821: tested Stock one-view geometry is linked without mutating existin
 test('HSN-822: 100% browser zoom with 125-150% OS scaling keeps Stock compact',()=>{
  const css=read('stock-oneview-hsn821.css');
  const media='@media (min-width:901px) and (min-height:520px)';
- assert.equal(css.split(media).length-1,2,'base compact and header toolbar must share realistic breakpoint');
+ assert.equal(css.split(media).length-1,3,'base compact, toolbar, and short-laptop override must use realistic CSS viewport');
  assert.match(css,/@media \(min-width:901px\) and \(min-height:520px\) and \(max-height:660px\)/);
  assert.match(css,/sc22-plot-svg\{[^}]*max-height:100%!important/);
  assert.match(css,/sc21-comparison-svg\{[^}]*min-width:0!important/);
