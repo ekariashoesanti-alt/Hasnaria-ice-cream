@@ -245,9 +245,15 @@ function showInsightDetail(p){
 }
 function renderInsights(){
  var root=document.getElementById('hx7Insights');if(!root||!owner())return;
- if(state.loading&&state.loaded!==state.period){root.textContent='Menyusun prioritas dari KPI Supabase…';return}
- var items=businessPriorities(state.data,state.errors,state.period);
- root.innerHTML=insightsMarkup(items);
+ if(state.loading&&state.loaded!==state.period){
+  if(root.__hxInsightHTML!=='loading'){
+   root.textContent='Menyusun prioritas dari KPI Supabase…';
+   root.__hxInsightHTML='loading';
+  }
+  return;
+ }
+ var items=businessPriorities(state.data,state.errors,state.period),html=insightsMarkup(items);
+ if(root.__hxInsightHTML!==html){root.innerHTML=html;root.__hxInsightHTML=html}
  root.onclick=function(e){
   var trigger=e.target&&e.target.closest?e.target.closest('[data-hx7-insight-id]'):null;
   if(!trigger||!root.contains(trigger))return;
@@ -427,7 +433,7 @@ function cardBody(i,d){
 }
 function render(){
  var root=document.getElementById('hx7Cards');if(!root||!owner())return;css();
- root.innerHTML=TITLES.map(function(title,i){
+ var nextCards=TITLES.map(function(title,i){
   var key=['finance','stock','loyalty','workforce'][i],d=state.data[key],err=state.errors[key];
   var pending=state.loading&&!d&&!err,stat=cardStatus(i,d);
   var body=pending?'<div class="hx7-empty">Mengambil data Supabase…</div>':
@@ -438,7 +444,18 @@ function render(){
    '<span class="hx8-status-dot hx8-status-'+esc(stat[1])+'" title="Status: '+esc(stat[0])+'" role="img" aria-label="Status: '+esc(stat[0])+'" tabindex="0"></span></div>'+
    '<div class="hx7-body hx8-ceo-body">'+body+'</div>'+
    '<div class="hx7-source">SUMBER · '+esc(['Finance & Sales','Inventory + Audit','Majoo Loyalty','Attendance + Roster'][i])+'</div></article>';
- }).join('');
+ });
+ // Incrementally replace only the card whose Supabase source has changed.
+ // Replacing all four cards on each of five asynchronous responses caused flicker.
+ var previous=root.__hxCardMarkup;
+ if(!previous||root.children.length!==nextCards.length){
+  root.innerHTML=nextCards.join('');
+ }else{
+  nextCards.forEach(function(markup,i){
+   if(previous[i]!==markup&&root.children[i])root.children[i].outerHTML=markup;
+  });
+ }
+ root.__hxCardMarkup=nextCards;
  renderInsights();
  renderTrend();
 }
