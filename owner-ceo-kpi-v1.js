@@ -17,7 +17,7 @@ function hours(x){return val(x).toLocaleString('id-ID',{maximumFractionDigits:1}
 function monthTitle(s){return new Intl.DateTimeFormat('id-ID',{month:'long',year:'numeric',timeZone:'UTC'}).format(new Date(s+'-01T00:00:00Z'))}
 function monthEnd(p){return p+'-'+String(new Date(Number(p.slice(0,4)),Number(p.slice(5,7)),0).getDate()).padStart(2,'0')}
 function check(r){if(r.error)throw r.error;return r.data}
-function css(){if(document.getElementById('hx7-css'))return;var l=document.createElement('link');l.id='hx7-css';l.rel='stylesheet';l.href='/owner-ceo-kpi-v1.css?v=5';document.head.appendChild(l)}
+function css(){if(document.getElementById('hx7-css'))return;var l=document.createElement('link');l.id='hx7-css';l.rel='stylesheet';l.href='/owner-ceo-kpi-v1.css?v=6';document.head.appendChild(l)}
 function summarizeFinance(rows,period){
  var y=Number(period.slice(0,4)),expected=Number(period.slice(5,7)),months=new Set(),revenue=0,cost=0,profit=0,provisional=0;
  (rows||[]).forEach(function(r){
@@ -356,10 +356,21 @@ function cardIcon(i){
  return '<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true">'+strokes[i]+'</svg>';
 }
 function cardStatus(i,d){
- if(i===0)return state.errors.finance?['Laporan tertunda','caution']:d&&d.months?[(d.provisional?'HPP provisional':'HPP final'),d.provisional?'caution':'good']:['Data terbatas','caution'];
- if(i===1)return d&&d.critical&&d.critical.ratio<1?['Stok kritis','danger']:['Perlu verifikasi','caution'];
- if(i===2)return d&&d.expected&&d.coverage===d.expected?['Lengkap','good']:['Cakupan parsial','caution'];
- return ['Estimasi scan','neutral'];
+ // Status is visualized by a small colored dot; the full meaning stays
+ // accessible through the dot's title and aria-label.
+ var key=['finance','stock','loyalty','workforce'][i];
+ if(state.loading&&!d&&!state.errors[key])return ['Sedang memuat data','neutral'];
+ if(i===0)return state.errors.finance?['Laporan keuangan tertunda','caution']:
+  d&&d.months?[(d.provisional?'HPP provisional · laba belum final':'HPP final'),d.provisional?'caution':'good']:
+  ['Laporan keuangan belum lengkap','caution'];
+ if(i===1){
+  if(!d)return ['Data stok belum tersedia','neutral'];
+  if(d.critical&&d.critical.ratio<1)return ['Stok kritis','danger'];
+  return d.total&&d.eligible===d.total?['Stok tervalidasi','good']:['Cakupan audit stok belum lengkap','caution'];
+ }
+ if(i===2)return !d?['Data pelanggan belum tersedia','neutral']:
+  d.expected&&d.coverage===d.expected?['Riwayat pelanggan lengkap','good']:['Riwayat pelanggan belum lengkap','caution'];
+ return !d?['Data scan belum tersedia','neutral']:['Estimasi scan · bukan jam kerja resmi','neutral'];
 }
 function cardBody(i,d){
  if(i===0){
@@ -424,7 +435,7 @@ function render(){
    cardBody(i,d);
   return '<article class="hx7-card hx8-ceo-card hx7-card-'+key+'">'+
    '<div class="hx7-header hx8-ceo-header"><div class="hx8-heading"><span class="hx8-card-icon">'+cardIcon(i)+'</span><h2>'+esc(title)+'</h2></div>'+
-   pill(stat[0],stat[1])+'</div>'+
+   '<span class="hx8-status-dot hx8-status-'+esc(stat[1])+'" title="Status: '+esc(stat[0])+'" role="img" aria-label="Status: '+esc(stat[0])+'" tabindex="0"></span></div>'+
    '<div class="hx7-body hx8-ceo-body">'+body+'</div>'+
    '<div class="hx7-source">SUMBER · '+esc(['Finance & Sales','Inventory + Audit','Majoo Loyalty','Attendance + Roster'][i])+'</div></article>';
  }).join('');
@@ -500,5 +511,5 @@ function mount(period){
 function invalidate(){state.loaded='';state.refreshedAt=0;state.seq++;state.loading=false;if(state.period&&document.getElementById('hx7Cards'))load()}
 function maybeRefresh(){var root=document.getElementById('hx7Cards'),h=document.getElementById('dashboard');if(!root||!h||h.classList.contains('hidden')||!owner()||state.loading||!state.loaded)return; if(Date.now()-state.refreshedAt>=300000)load()}
 window.__HASNARIA_CEO_KPI_V1={mount:mount,invalidate:invalidate,maybeRefresh:maybeRefresh};
-window.__HASNARIA_CEO_KPI_MATH={summarizeFinance:summarizeFinance,summarizeStock:summarizeStock,summarizeLoyalty:summarizeLoyalty,summarizeWorkforce:summarizeWorkforce,summarizeDeviceScans:summarizeDeviceScans,businessPriorities:businessPriorities,insightsMarkup:insightsMarkup,summarizeMonthlySales:summarizeMonthlySales,salesTrendSvg:salesTrendSvg,sparkline:sparkline};
+window.__HASNARIA_CEO_KPI_MATH={titles:TITLES,summarizeFinance:summarizeFinance,summarizeStock:summarizeStock,summarizeLoyalty:summarizeLoyalty,summarizeWorkforce:summarizeWorkforce,summarizeDeviceScans:summarizeDeviceScans,businessPriorities:businessPriorities,cardStatus:cardStatus,insightsMarkup:insightsMarkup,summarizeMonthlySales:summarizeMonthlySales,salesTrendSvg:salesTrendSvg,sparkline:sparkline};
 })();
