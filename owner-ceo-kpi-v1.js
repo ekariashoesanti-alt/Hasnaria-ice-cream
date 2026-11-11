@@ -334,12 +334,16 @@ function renderTrend(){
  var trend=state.data.trend,err=state.errors.trend;
  var header='<div class="hx8-trend-head"><div><span class="hx7-overline">PERFORMANCE MONITOR</span><h2>Tren Penjualan YTD</h2></div>'+
   '<div class="hx8-chart-legend"><span><i class="bars"></i> Penjualan (Rp jt)</span><span><i class="line"></i> Transaksi</span></div></div>';
- if(err){root.innerHTML=header+'<p class="hx8-trend-empty">Tren tidak dapat dimuat dari penjualan. '+esc(err.message||err)+'</p>';return}
- if(!trend){root.innerHTML=header+'<p class="hx8-trend-empty">'+(state.loading?'Mengambil tren penjualan…':'Data penjualan belum tersedia.')+'</p>';return}
- if(!trend.actualMonths){root.innerHTML=header+'<p class="hx8-trend-empty">Tidak ada data transaksi pada periode yang dipilih.</p>';return}
- var suffix=trend.actualMonths<trend.expected?' · '+(trend.expected-trend.actualMonths)+' bulan belum memiliki data':'';
- root.innerHTML=header+'<div class="hx8-chart-wrap">'+salesTrendSvg(trend)+'</div>'+
-  '<div class="hx8-trend-foot"><span>'+esc(monthTitle(trend.lastMonth))+' terakhir tersedia'+esc(suffix)+'</span><strong>'+shortMoney(trend.revenue)+' · '+num(trend.transactions)+' transaksi</strong></div>';
+ var html;
+ if(err)html=header+'<p class="hx8-trend-empty">Tren tidak dapat dimuat dari penjualan. '+esc(err.message||err)+'</p>';
+ else if(!trend)html=header+'<p class="hx8-trend-empty">'+(state.loading?'Mengambil tren penjualan…':'Data penjualan belum tersedia.')+'</p>';
+ else if(!trend.actualMonths)html=header+'<p class="hx8-trend-empty">Tidak ada data transaksi pada periode yang dipilih.</p>';
+ else{
+  var suffix=trend.actualMonths<trend.expected?' · '+(trend.expected-trend.actualMonths)+' bulan belum memiliki data':'';
+  html=header+'<div class="hx8-chart-wrap">'+salesTrendSvg(trend)+'</div>'+
+   '<div class="hx8-trend-foot"><span>'+esc(monthTitle(trend.lastMonth))+' terakhir tersedia'+esc(suffix)+'</span><strong>'+shortMoney(trend.revenue)+' · '+num(trend.transactions)+' transaksi</strong></div>';
+ }
+ if(root.__hxTrendMarkup!==html){root.innerHTML=html;root.__hxTrendMarkup=html}
 }
 
 function pill(t,cls){return '<span class="hx7-pill '+esc(cls||'')+'">'+esc(t)+'</span>'}
