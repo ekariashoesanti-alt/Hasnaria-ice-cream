@@ -54,6 +54,6 @@ test('Owner-only frontend reads combined scenario on demand and does not post',(
   assert.match(css,/\.sc18-summary/);
   assert.match(js,/stock-control-v3\.css\?v=34/);
   for(const p of ['stock-monitor.js','stock-v3-runtime-fix.js'])
-    assert.match(read(p),/stock-control-v3\.js\?v=39/);
+    assert.match(read(p),/stock-control-v3\.js\?v=40/);
   assert.match(read('scripts/vercel-build-check.js'),/stock-recipe-approval-guard-v1\.test\.js/);
 });
