@@ -1,0 +1,77 @@
+/* Owner Stock one-view overlay adapted from approved HSN-008 preview (PR #184).
+   Scoped to #stok and desktop. Safe rollback: remove this stylesheet link. */
+/* 2026-11-02 HSN-008 Stock compact one-view, closed-modal Owner only.
+   Keep natural scrolling on <=1100px width or <720px viewport height. */
+@media (min-width:1101px) and (min-height:720px){
+html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard):not(:has(.sc4-modal)){height:100%!important;max-height:100%!important;min-height:0!important;overflow:hidden!important;padding:0!important;scrollbar-gutter:auto!important}
+html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard):not(:has(.sc4-modal))>.sc3-shell{height:100%!important;min-height:0!important;max-height:100%!important;display:flex!important;flex-direction:column!important;overflow:hidden!important;box-sizing:border-box!important;margin:0!important;padding:10px 13px 8px!important;border-radius:13px!important}
+html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard):not(:has(.sc4-modal))>.sc3-shell>.sc7-head{flex:0 0 auto!important;flex-wrap:nowrap!important;align-items:center!important;gap:8px!important;min-height:0!important;margin:0!important}
+html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard):not(:has(.sc4-modal))>.sc3-shell .sc7-head .sc5-head-copy{flex:1 1 auto!important;min-width:0!important}
+html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard):not(:has(.sc4-modal))>.sc3-shell .sc7-head .sc5-eyebrow{font-size:9px!important;letter-spacing:.1em!important}
+html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard):not(:has(.sc4-modal))>.sc3-shell .sc7-head h2{font-size:18px!important;line-height:1.12!important;margin:1px 0!important}
+html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard):not(:has(.sc4-modal))>.sc3-shell .sc7-head p{font-size:10px!important;line-height:1.15!important}
+html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard):not(:has(.sc4-modal))>.sc3-shell .sc7-head-right{flex:0 0 auto!important;max-width:66%!important}
+html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard):not(:has(.sc4-modal))>.sc3-shell .sc7-actions{flex-wrap:nowrap!important;gap:5px!important}
+html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard):not(:has(.sc4-modal))>.sc3-shell .sc7-actions button{box-sizing:border-box!important;min-height:30px!important;height:30px!important;max-height:30px!important;padding:5px 9px!important;border-radius:8px!important;font-size:10px!important;line-height:1!important;white-space:nowrap!important}
+html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard):not(:has(.sc4-modal))>.sc3-shell>.sc23-period-row{flex:0 0 auto!important;flex-wrap:nowrap!important;gap:5px!important;min-height:29px!important;margin:7px 0 0!important;align-items:center!important}
+html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard):not(:has(.sc4-modal))>.sc3-shell>.sc23-period-row>label{font-size:10px!important;gap:5px!important;min-width:0!important}
+html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard):not(:has(.sc4-modal))>.sc3-shell>.sc23-period-row select{height:29px!important;min-height:29px!important;min-width:125px!important;max-width:174px!important;font-size:10px!important;padding:3px 22px 3px 7px!important}
+html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard):not(:has(.sc4-modal))>.sc3-shell>.sc23-period-row button{height:29px!important;min-height:29px!important;max-height:29px!important;padding:4px 8px!important;border-radius:7px!important;font-size:9.5px!important;line-height:1!important;white-space:nowrap!important}
+html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard):not(:has(.sc4-modal))>.sc3-shell>.sc23-period-row .sc5-refresh{height:29px!important;min-height:29px!important;min-width:29px!important;width:29px!important;padding:2px!important;font-size:15px!important}
+html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard):not(:has(.sc4-modal))>.sc3-shell>.sc8-kpis{flex:0 0 auto!important;gap:7px!important;margin:8px 0 0!important;min-height:0!important}
+html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard):not(:has(.sc4-modal))>.sc3-shell .sc8-kpi{height:62px!important;min-height:62px!important;max-height:62px!important;padding:7px 10px!important;border-radius:10px!important;overflow:hidden!important}
+html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard):not(:has(.sc4-modal))>.sc3-shell .sc8-kpi .sc8-kpi-label{font-size:10px!important;line-height:1.1!important}
+html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard):not(:has(.sc4-modal))>.sc3-shell .sc8-kpi .sc8-kpi-value{font-size:18px!important;line-height:1.04!important;margin:2px 0 0!important;white-space:nowrap!important}
+html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard):not(:has(.sc4-modal))>.sc3-shell .sc8-kpi .sc8-kpi-note{font-size:9px!important;line-height:1.13!important;margin-top:2px!important}
+html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard):not(:has(.sc4-modal))>.sc3-shell>.sc22-dashboard{flex:1 1 auto!important;display:flex!important;flex-direction:column!important;height:auto!important;min-height:0!important;margin:8px 0 0!important;overflow:hidden!important}
+html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard):not(:has(.sc4-modal))>.sc3-shell .sc22-dual{flex:1 1 auto!important;display:grid!important;grid-template-columns:minmax(0,1.14fr) minmax(0,1fr)!important;align-items:stretch!important;gap:9px!important;height:100%!important;min-height:0!important;max-height:100%!important;overflow:hidden!important}
+html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard):not(:has(.sc4-modal))>.sc3-shell .sc22-dual>.sc5-panel{box-sizing:border-box!important;display:flex!important;flex-direction:column!important;height:100%!important;min-height:0!important;max-height:100%!important;overflow:hidden!important;padding:9px 10px!important;gap:4px!important;border-radius:11px!important}
+html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard):not(:has(.sc4-modal))>.sc3-shell .sc22-dual>.sc5-panel>h3{flex:0 0 auto!important;min-height:0!important;font-size:12.5px!important;line-height:1.15!important;margin:0 0 3px!important;padding:0!important}
+html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard):not(:has(.sc4-modal))>.sc3-shell .sc22-month-end{flex:1 1 auto!important;min-height:0!important;height:100%!important;gap:4px!important;overflow:hidden!important}
+html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard):not(:has(.sc4-modal))>.sc3-shell .sc22-summary{flex:0 0 auto!important;font-size:9.5px!important;gap:4px!important}
+html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard):not(:has(.sc4-modal))>.sc3-shell .sc22-summary>strong{font-size:17px!important;line-height:1.15!important}
+html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard):not(:has(.sc4-modal))>.sc3-shell .sc22-summary-note{flex:0 0 auto!important;font-size:9px!important;line-height:1.15!important}
+html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard):not(:has(.sc4-modal))>.sc3-shell .sc22-plot{flex:1 1 auto!important;min-height:0!important;height:auto!important;max-height:100%!important;align-items:center!important;overflow:hidden!important}
+html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard):not(:has(.sc4-modal))>.sc3-shell .sc22-plot-svg{width:100%!important;max-width:100%!important;min-width:0!important;height:auto!important;max-height:100%!important;overflow:visible!important}
+html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard):not(:has(.sc4-modal))>.sc3-shell .sc22-chart-note{flex:0 0 auto!important;font-size:8.6px!important;line-height:1.2!important;margin:0!important}
+html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard):not(:has(.sc4-modal))>.sc3-shell .sc21-comparison{flex:1 1 auto!important;min-width:0!important;min-height:0!important;gap:5px!important;overflow:hidden!important}
+html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard):not(:has(.sc4-modal))>.sc3-shell .sc21-controls{flex:0 0 auto!important;flex-wrap:nowrap!important;gap:5px!important}
+html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard):not(:has(.sc4-modal))>.sc3-shell .sc21-legend{gap:9px!important;font-size:9px!important;flex-wrap:nowrap!important}
+html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard):not(:has(.sc4-modal))>.sc3-shell .sc21-legend>span{gap:4px!important;white-space:nowrap!important}
+html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard):not(:has(.sc4-modal))>.sc3-shell .sc21-controls label{gap:4px!important;flex-shrink:0!important;font-size:9px!important}
+html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard):not(:has(.sc4-modal))>.sc3-shell .sc21-controls select{min-width:102px!important;max-width:152px!important;width:auto!important;height:28px!important;padding:3px 6px!important;font-size:9px!important}
+html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard):not(:has(.sc4-modal))>.sc3-shell .sc21-stat{flex:0 0 auto!important;gap:4px!important;font-size:9px!important;line-height:1.15!important}
+html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard):not(:has(.sc4-modal))>.sc3-shell .sc21-page button{min-width:24px!important;width:24px!important;height:24px!important;min-height:24px!important;padding:2px!important;font-size:12px!important}
+html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard):not(:has(.sc4-modal))>.sc3-shell .sc22-compare-panel .sc21-chart-frame{flex:1 1 auto!important;display:flex!important;align-items:center!important;min-height:0!important;height:auto!important;max-height:100%!important;overflow:hidden!important}
+html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard):not(:has(.sc4-modal))>.sc3-shell .sc22-compare-panel .sc21-comparison-svg{width:100%!important;max-width:100%!important;min-width:0!important;height:auto!important;max-height:100%!important;overflow:visible!important}
+html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard):not(:has(.sc4-modal))>.sc3-shell .sc21-foot{flex:0 0 auto!important;margin:0!important;font-size:8.5px!important;line-height:1.18!important;white-space:normal!important}
+}
+
+
+/* HASNARIA HSN-821: same tested compact geometry, adapted to PR #212 simple toolbar.
+   Only closed-modal Owner desktop; short/narrow viewports keep scrolling.
+   Never change quantities, charts, units, ledgers, or other ERP tabs. */
+@media (min-width:1101px) and (min-height:720px){
+html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard):not(:has(.sc4-modal))>.sc3-shell>.sc7-head.sc28-simple-head{
+  display:flex!important;flex:0 0 auto!important;align-items:center!important;
+  justify-content:space-between!important;flex-wrap:nowrap!important;
+  min-height:52px!important;height:auto!important;max-height:68px!important;
+  padding:6px 10px!important;gap:10px!important;border-radius:11px!important
+}
+html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard):not(:has(.sc4-modal))>.sc3-shell .sc28-simple-tools{
+ display:flex!important;flex:0 1 auto!important;flex-wrap:nowrap!important;gap:7px!important;
+ align-items:center!important;justify-content:flex-end!important;min-width:0!important
+}
+html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard):not(:has(.sc4-modal))>.sc3-shell .sc28-simple-tools .sc28-period select{
+ min-width:128px!important;max-width:174px!important;height:32px!important;min-height:32px!important;
+ font-size:11px!important
+}
+html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard):not(:has(.sc4-modal))>.sc3-shell .sc28-simple-tools .sc28-upload-btn{
+ min-width:112px!important;height:32px!important;min-height:32px!important;max-height:32px!important;
+ font-size:11px!important;padding:0 11px!important
+}
+html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard):not(:has(.sc4-modal))>.sc3-shell .sc28-simple-tools .sc28-refresh{
+ height:32px!important;min-height:32px!important;max-height:32px!important;
+ width:32px!important;min-width:32px!important;font-size:17px!important
+}
+}
