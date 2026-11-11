@@ -60,7 +60,7 @@ test('only 4 KPI and 2 charts render; selected unit shared across left/right',()
  assert.match(css,/#stok \.sc22-dual/);
  assert.match(css,/#stok \.sc22-plot-svg/);
  assert.match(css, /@media\(max-width:700px\)/);
- assert.match(js,/stock-control-v3\.css\?v=33/);
+ assert.match(js,/stock-control-v3\.css\?v=34/);
  for(const f of ['stock-monitor.js','stock-v3-runtime-fix.js'])assert.match(fs.readFileSync(f,'utf8'),/stock-control-v3\.js\?v=39/);
 });
 test('historical view uses physical checkpoint, cutoff and account RLS; no writes',()=>{

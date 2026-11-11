@@ -23,18 +23,26 @@ test('matches Sales page visual system without changing other tabs',()=>{
  assert.doesNotMatch(stockStyle,/^#sales\b/m);
 });
 
-test('header has same two-row hierarchy as Sales: heading/actions then month/filters',()=>{
- const header=stockJS.slice(stockJS.indexOf('function renderHeader() {'),stockJS.indexOf('function renderFormula() {'));
- assert.match(header,/sc5-head sc7-head/);
- assert.match(header,/sc7-actions/);
- assert.match(header,/'<\/div><\/div><\/header><div class="sc5-head-filters sc7-tools sc23-period-row">'\+/);
+test('single-row Stock toolbar shows only period, Upload Data and refresh',()=>{
+ const header=stockJS.slice(stockJS.indexOf('function renderHeader() {'),stockJS.indexOf('function renderUploadChoices()'));
+ assert.match(header,/sc5-head sc7-head sc28-simple-head/);
+ assert.match(header,/sc28-simple-tools/);
  assert.match(header,/id="sc4Period"/);
- for(const action of ['upload-opname','position','opname','ledger','recipes','formula-audit','upload-purchase','refresh']){
-  assert.ok(header.includes(action),'existing action kept: '+action);
+ assert.match(header,/data-sc4-modal="upload-data"/);
+ assert.match(header,/data-sc3-action="refresh"/);
+ for(const excluded of ['upload-opname','import-recipe','position','opname','ledger','recipes','formula-audit','sku-sim','upload-purchase']){
+  assert.ok(!header.includes('data-sc4-action="'+excluded+'"')&&!header.includes('data-sc4-modal="'+excluded+'"'),
+   'No extra Stock toolbar action: '+excluded);
  }
- assert.match(stockStyle,/>.sc23-period-row/);
- assert.match(stockStyle,/margin-right:auto!important/);
+ const menu=stockJS.slice(stockJS.indexOf('function renderUploadChoices() {'),stockJS.indexOf('function renderFormula() {'));
+ for(const upload of ['data-sc4-action="upload-opname"','data-sc4-action="import-recipe"']){
+  assert.ok(menu.includes(upload),'Both upload routes present: '+upload);
+ }
+ assert.match(menu,/data-sc4-modal="recipes"/);
+ assert.match(stockStyle,/\.sc28-simple-head/);
+ assert.match(stockStyle,/\.sc28-upload-modal/);
 });
+
 
 test('four existing KPI values and chart computations are unchanged; KPI CSS is only compacted',()=>{
  const kpi=stockJS.slice(stockJS.indexOf('function overviewKpis() {'),stockJS.indexOf('function activityName(type)'));
@@ -60,7 +68,7 @@ test('responsive panels keep charts and data visible at narrower widths',()=>{
  assert.match(stockStyle,/@media\(max-width:640px\)/);
  assert.match(stockStyle,/\.sc21-chart-frame\{[\s\S]*?overflow-x:auto!important/);
  assert.match(stockStyle,/\.sc22-dual>.sc5-panel\{[\s\S]*?max-height:none!important/);
- assert.match(stockJS,/stock-control-v3\.css\?v=33/);
+ assert.match(stockJS,/stock-control-v3\.css\?v=34/);
  for(const f of ['stock-monitor.js','stock-v3-runtime-fix.js']){
   assert.match(read(f),/stock-control-v3\.js\?v=39/);
  }

@@ -253,7 +253,7 @@
     var l = document.createElement('link');
     l.id = 'stock-control-v3-css';
     l.rel = 'stylesheet';
-    l.href = '/stock-control-v3.css?v=33';
+    l.href = '/stock-control-v3.css?v=34';
     document.head.appendChild(l);
   }
 
@@ -1245,30 +1245,38 @@
     }
   }
 
+  // The Stock page presents outcomes, not accounting/debug actions.
+  // Only uploads are in the Owner dialog; existing routes remain lazy and guarded.
   function renderHeader() {
     var options=(S.periods||[]).map(function(x){
       var k=monthKey(x.period_start||x.period_key);
       return '<option value="'+esc(k)+'"'+(k===S.period?' selected':'')+'>'+esc(monthLabel(k))+'</option>';
     }).join('');
-    // Tahap 1: one compact toolbar. Existing actions keep their
-    // original identifiers to preserve upload, ledger and opname routing.
-    return '<header class="sc5-head sc7-head"><div class="sc5-head-copy"><span class="sc5-eyebrow">STOK</span>'+
+    return '<header class="sc5-head sc7-head sc28-simple-head">'+
+      '<div class="sc5-head-copy"><span class="sc5-eyebrow">STOK</span>'+
       '<h2>Dashboard Stok</h2><p>Persediaan &amp; aktivitas terkini</p></div>'+
-      '<div class="sc5-head-right sc7-head-right">'+
-      '<div class="sc5-head-buttons sc7-actions">'+
-        (isOwner()?'<button type="button" class="sc5-primary" data-sc4-action="upload-opname">⇧ Upload Excel Stok</button>':'')+
-        '<button type="button" class="sc5-secondary" data-sc4-modal="position" aria-haspopup="dialog">▣ Detail Stok</button>'+
-        (isOwner()?'<button type="button" class="sc5-secondary" data-sc4-action="opname">＋ Input Opname</button>':'')+
-      '</div></div></header><div class="sc5-head-filters sc7-tools sc23-period-row">'+
-        '<label><span>Bulan</span><select id="sc4Period" data-month-filter="stok">'+options+'</select></label>'+
-        '<button type="button" class="sc5-text-btn" data-sc4-modal="ledger" aria-haspopup="dialog">Ledger Periode</button>'+ 
-        (isOwner()?'<button type="button" class="sc5-text-btn" data-sc4-modal="recipes" aria-haspopup="dialog">Cek Resep Produk</button>':'')+
-        (isOwner()?'<button type="button" class="sc5-text-btn" data-sc4-action="import-recipe" aria-haspopup="dialog">Impor & Review Resep</button>':'')+
-        (isOwner()?'<button type="button" class="sc5-text-btn" data-sc4-modal="sku-sim" aria-haspopup="dialog">Simulasi Qty × BOM</button>':'')+
-        (isOwner()?'<button type="button" class="sc5-text-btn" data-sc4-modal="formula-audit" aria-haspopup="dialog">Periksa Hitungan</button>':'')+
-        (isOwner()?'<button type="button" class="sc5-text-btn" data-sc4-action="upload-purchase">Upload Pembelian</button>':'')+
-        '<button type="button" class="sc5-refresh" data-sc3-action="refresh" aria-label="Refresh data Stok">↻</button>'+
-      '</div>';
+      '<div class="sc5-head-right sc7-head-right sc7-actions sc7-tools sc28-simple-tools">'+
+        '<label class="sc28-period" for="sc4Period"><span>Bulan</span><select id="sc4Period" data-month-filter="stok" aria-label="Periode stok">'+options+'</select></label>'+
+        (isOwner()?'<button type="button" class="sc5-primary sc28-upload-btn" data-sc4-modal="upload-data" aria-haspopup="dialog">⇧ Upload Data</button>':'')+
+        '<button type="button" class="sc5-refresh sc28-refresh" data-sc3-action="refresh" aria-label="Refresh data Stok">↻</button>'+
+      '</div></header>';
+  }
+
+  function renderUploadChoices() {
+    if(!isOwner())return '<p class="sc4-empty">Impor data hanya tersedia untuk Owner.</p>';
+    return '<div class="sc28-upload-intro">Pilih jenis file yang perlu diperbarui. Data yang sudah tersimpan tidak perlu diunggah ulang.</div>'+
+      '<div class="sc28-upload-choices">'+
+        '<button type="button" class="sc28-upload-choice" data-sc4-action="upload-opname">'+
+          '<span class="sc28-choice-icon" aria-hidden="true">⇧</span><span class="sc28-choice-copy"><strong>Excel Stok / Opname</strong>'+
+          '<small>Impor data persediaan dan checkpoint stok. Pemeriksaan dilakukan sebelum penyimpanan.</small></span>'+
+          '<span class="sc28-choice-next" aria-hidden="true">›</span></button>'+
+        '<button type="button" class="sc28-upload-choice" data-sc4-action="import-recipe">'+
+          '<span class="sc28-choice-icon" aria-hidden="true">▤</span><span class="sc28-choice-copy"><strong>Resep Produk Majoo</strong>'+
+          '<small>Hanya jika resep berubah. Riwayat dan status file sebelumnya tetap tersedia.</small></span>'+
+          '<span class="sc28-choice-next" aria-hidden="true">›</span></button>'+
+      '</div>'+
+      '<div class="sc28-upload-foot"><span>Resep dan pemakaian bahan tidak otomatis mengubah saldo stok.</span>'+
+        '<button type="button" class="sc28-review-link" data-sc4-modal="recipes">Lihat review resep</button></div>';
   }
 
   function renderFormula() {
@@ -1654,7 +1662,7 @@
        note:loading?'Memuat status opname…':'Belum ada checkpoint awal'}
     ];
     return '<div class="sc5-kpis sc6-kpis sc8-kpis" aria-label="Ringkasan empat KPI stok">'+cards.map(function(c){
-      return '<article class="sc5-kpi sc8-kpi sc8-kpi-'+c.kind+'">'+
+      return '<article class="sc5-kpi sc8-kpi sc8-kpi-'+c.kind+' sc28-clickable-kpi" role="button" tabindex="0" data-sc4-modal="position" aria-label="Lihat detail stok: '+esc(c.label)+'">'+
         '<span class="sc5-kpi-icon sc8-kpi-icon">'+stockKpiIcon(c.kind)+'</span>'+
         '<div class="sc8-kpi-copy"><span class="sc8-kpi-label" title="'+esc(c.label)+'">'+esc(c.label)+'</span>'+
         '<strong class="sc8-kpi-value" title="'+esc(c.value)+'">'+esc(c.value)+'</strong>'+
@@ -2020,15 +2028,21 @@
   function renderModal() {
     if (!S.modal) return '';
     var title = S.modal === 'ledger' ? 'Ledger · ' + monthLabel(S.period) :
+      S.modal === 'upload-data' ? 'Upload Data' :
       S.modal === 'recipes' ? 'Cek Resep Produk · ' + monthLabel(S.period) :
       S.modal === 'sku-sim' ? 'Simulasi Penjualan Produk → BOM' :
       S.modal === 'formula-audit' ? 'Periksa Hitungan Stok' : 'Posisi SKU Saat Ini';
     var body = S.modal === 'ledger' ? renderLedgerTable() :
+      S.modal === 'upload-data' ? renderUploadChoices() :
       S.modal === 'recipes' ? renderRecipeReview() :
       S.modal === 'sku-sim' ? renderSkuSimulation() :
       S.modal === 'formula-audit' ? renderFormulaAudit() :
-      renderFormula() + renderAuxState() + renderFilters() + renderTable();
-    return '<div class="sc4-modal-backdrop" data-sc4-close="1"><section class="sc4-modal" role="dialog" aria-modal="true" aria-labelledby="sc4ModalTitle" tabindex="-1"><div class="sc4-modal-head"><div><div class="sc3-eyebrow">DETAIL STOK</div><h3 id="sc4ModalTitle">' + esc(title) + '</h3><p>' + (S.modal === 'sku-sim' ? 'Simulasi teoretis dari rekap Majoo, tidak mengurangi saldo atau menyetujui BOM.' : S.modal === 'ledger' ? 'Movement periode terpilih; quantity tetap dalam satuan masing-masing SKU.' : S.modal === 'recipes' ? 'Penjualan berdasarkan bulan; resep berlaku terus sejak disetujui sampai diubah.' :
+      renderFormula() +
+      (isOwner()?'<div class="sc28-detail-quick"><button type="button" data-sc4-action="opname">＋ Input Opname</button>'+
+        '<button type="button" data-sc4-modal="ledger">Riwayat Mutasi</button></div>':'')+
+      renderAuxState() + renderFilters() + renderTable();
+    return '<div class="sc4-modal-backdrop" data-sc4-close="1"><section class="sc4-modal'+(S.modal==='upload-data'?' sc28-upload-modal':'')+'" role="dialog" aria-modal="true" aria-labelledby="sc4ModalTitle" tabindex="-1"><div class="sc4-modal-head"><div><div class="sc3-eyebrow">DETAIL STOK</div><h3 id="sc4ModalTitle">' + esc(title) + '</h3><p>' + (S.modal === 'upload-data' ? 'Satu tempat untuk kebutuhan upload; tidak perlu mengulang file yang sudah tersimpan.' :
+        S.modal === 'sku-sim' ? 'Simulasi teoretis dari rekap Majoo, tidak mengurangi saldo atau menyetujui BOM.' : S.modal === 'ledger' ? 'Movement periode terpilih; quantity tetap dalam satuan masing-masing SKU.' : S.modal === 'recipes' ? 'Penjualan berdasarkan bulan; resep berlaku terus sejak disetujui sampai diubah.' :
         S.modal === 'formula-audit' ? 'Audit hitung ulang semua SKU berdasarkan data yang sudah tercatat, bukan stok fisik baru.' :
         'Saldo terkini, opname, incoming, kebutuhan dan days cover.') + '</p></div><button type="button" data-sc4-close="1" class="sc4-close" aria-label="Tutup">×</button></div><div class="sc4-modal-body">' + body + '</div></section></div>';
   }
@@ -2482,6 +2496,7 @@
       }
       if (ui4 && ui4.getAttribute('data-sc4-action') === 'import-recipe') {
         if(!isOwner())return;
+        if(S.modal==='upload-data'){S.modal='';render();}
         if(window.__HASNARIA_RECIPE_IMPORT_V1) {
           window.__HASNARIA_RECIPE_IMPORT_V1.open();
         } else {
@@ -2498,6 +2513,7 @@
         return;
       }
       if (ui4 && ui4.getAttribute('data-sc4-action') === 'upload-opname') {
+        if(S.modal==='upload-data'){S.modal='';render();}
         if(window.__HASNARIA_STOCK_UPLOAD_V1)window.__HASNARIA_STOCK_UPLOAD_V1.open();
         else window.alert('Form upload sedang dimuat. Coba sekali lagi setelah halaman siap.');
         return;
@@ -2628,6 +2644,10 @@
       if (el.id === 'sc3Status') { S.status = el.value || ''; S.page = 1; render(); }
     };
     host.onkeydown = function (e) {
+      if ((e.key === 'Enter' || e.key === ' ') && e.target &&
+          e.target.matches && e.target.matches('[data-sc4-modal].sc28-clickable-kpi')) {
+        e.preventDefault(); e.target.click(); return;
+      }
       if (e.key === 'Escape' && S.modal) { stockCloseDialog(host); }
     };
   }
