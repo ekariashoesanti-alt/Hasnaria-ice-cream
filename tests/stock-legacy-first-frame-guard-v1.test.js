@@ -58,5 +58,5 @@ test('old renderer block is presentation-only; stock calculation paths remain un
  for(const s of ['inventory_stock_reconciliation','ui_stock_month_end_trend_v1','Stok Saat Ini vs Batas Aman','Tren Stok Akhir Bulanan']){
   assert.ok(main.includes(s),s);
  }
- assert.match(main,/stock-control-v3\.css\?v=33/);
+ assert.match(main,/stock-control-v3\.css\?v=34/);
 });
