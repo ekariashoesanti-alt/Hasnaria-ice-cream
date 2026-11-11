@@ -18,25 +18,25 @@ test('Owner-only integration audit is lazy and cannot delay first dashboard pain
  for(const body of [mount,period,base]){
    assert.doesNotMatch(body,/loadIntegrationAudit\(/);
    assert.doesNotMatch(body,/ui_stock_sales_link_audit_v1/);
-   assert.doesNotMatch(body,/purchase_inventory_bridge\?/);
+   assert.doesNotMatch(body,/inventory_purchase_backfill_audit_p5_v1\?/);
  }
  const formula=section('async function loadFormulaAudit()', 'function renderFormulaAudit()');
  assert.match(formula,/loadIntegrationAudit\(\)/);
 });
 test('Sales and purchase reconciliation is period and brand scoped, reads are GET only',()=>{
  assert.match(integ,/request\('ui_stock_sales_link_audit_v1\?'/);
- assert.match(integ,/request\('purchase_inventory_bridge\?'/);
+ assert.match(integ,/request\('inventory_purchase_backfill_audit_p5_v1\?'/);
  assert.match(integ,/brand_id:'eq\.'\+BRAND/);
  assert.match(integ,/period_month:'eq\.'\+from/);
- assert.match(integ,/purchase_date:'gte\.'\+from/);
- assert.match(integ,/'&purchase_date=lt\.'\+next/);
+ assert.match(integ,/source_period:'eq\.'\+from/);
+ assert.match(integ,/backfill_status,ready_for_inventory,inventory_item_id/);
  assert.match(integ,/seq!==S\.integrationSeq/);
  assert.match(integ,/monthKey\(S\.period\)!==period/);
  assert.doesNotMatch(integ,/\b(method:|POST|PATCH|DELETE|INSERT|UPDATE|UPSERT)\b/);
 });
 test('No fake stock posting when source incomplete and counters are non-additive',()=>{
- assert.match(integ,/purchaseReady:rows\?rows\.filter\(function\(x\)\{return x\.ready_for_inventory===true/);
- assert.match(integ,/purchaseReview:rows\?rows\.filter\(function\(x\)\{return x\.ready_for_inventory!==true/);
+ assert.match(integ,/purchasePending:countStatus\('READY_NOT_POSTED'\)/);
+ assert.match(integ,/purchaseReview:rows\?countStatus\('REVIEW'\)\+unknown:null/);
  assert.match(integ,/Tidak ada transaksi yang otomatis dibukukan/);
  assert.match(integ,/Kategori penyebab bisa tumpang-tindih/);
  assert.match(integ,/Belum berarti barang diterima/);
@@ -59,4 +59,15 @@ test('Audit stays inside existing scrollable Formula modal and Stock dashboard k
  assert.match(dashboard,/monthlyStockEndInfographic\(\)/);
  assert.match(dashboard,/stockSafetyInfographic\(\)/);
  assert.doesNotMatch(dashboard,/loadIntegrationAudit\(/);
+});
+
+test('Recovery read-only audit distinguishes posted, pending, review and non-stock',()=>{
+ assert.match(integ,/countStatus\('POSTED'\)/);
+ assert.match(integ,/countStatus\('POSTED_LEGACY_SOURCE'\)/);
+ assert.match(integ,/purchasePending:countStatus\('READY_NOT_POSTED'\)/);
+ assert.match(integ,/purchaseNonStock:countStatus\('NON_STOCK'\)/);
+ assert.match(integ,/purchaseReview:rows\?countStatus\('REVIEW'\)\+unknown:null/);
+ assert.match(integ,/source_period:'eq\.'\+from/);
+ assert.match(integ,/Ada status pembelian yang belum dikenali/);
+ assert.doesNotMatch(integ,/request\('inventory_movements\?/);
 });
