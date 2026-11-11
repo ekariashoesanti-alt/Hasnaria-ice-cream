@@ -356,10 +356,21 @@ function cardIcon(i){
  return '<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true">'+strokes[i]+'</svg>';
 }
 function cardStatus(i,d){
- if(i===0)return state.errors.finance?['Laporan tertunda','caution']:d&&d.months?[(d.provisional?'HPP provisional':'HPP final'),d.provisional?'caution':'good']:['Data terbatas','caution'];
- if(i===1)return d&&d.critical&&d.critical.ratio<1?['Stok kritis','danger']:['Perlu verifikasi','caution'];
- if(i===2)return d&&d.expected&&d.coverage===d.expected?['Lengkap','good']:['Cakupan parsial','caution'];
- return ['Estimasi scan','neutral'];
+ // Status is visualized by a small colored dot; the full meaning stays
+ // accessible through the dot's title and aria-label.
+ var key=['finance','stock','loyalty','workforce'][i];
+ if(state.loading&&!d&&!state.errors[key])return ['Sedang memuat data','neutral'];
+ if(i===0)return state.errors.finance?['Laporan keuangan tertunda','caution']:
+  d&&d.months?[(d.provisional?'HPP provisional · laba belum final':'HPP final'),d.provisional?'caution':'good']:
+  ['Laporan keuangan belum lengkap','caution'];
+ if(i===1){
+  if(!d)return ['Data stok belum tersedia','neutral'];
+  if(d.critical&&d.critical.ratio<1)return ['Stok kritis','danger'];
+  return d.total&&d.eligible===d.total?['Stok tervalidasi','good']:['Cakupan audit stok belum lengkap','caution'];
+ }
+ if(i===2)return !d?['Data pelanggan belum tersedia','neutral']:
+  d.expected&&d.coverage===d.expected?['Riwayat pelanggan lengkap','good']:['Riwayat pelanggan belum lengkap','caution'];
+ return !d?['Data scan belum tersedia','neutral']:['Estimasi scan · bukan jam kerja resmi','neutral'];
 }
 function cardBody(i,d){
  if(i===0){
@@ -424,7 +435,7 @@ function render(){
    cardBody(i,d);
   return '<article class="hx7-card hx8-ceo-card hx7-card-'+key+'">'+
    '<div class="hx7-header hx8-ceo-header"><div class="hx8-heading"><span class="hx8-card-icon">'+cardIcon(i)+'</span><h2>'+esc(title)+'</h2></div>'+
-   pill(stat[0],stat[1])+'</div>'+
+   '<span class="hx8-status-dot hx8-status-'+esc(stat[1])+'" title="Status: '+esc(stat[0])+'" role="img" aria-label="Status: '+esc(stat[0])+'" tabindex="0"></span></div>'+
    '<div class="hx7-body hx8-ceo-body">'+body+'</div>'+
    '<div class="hx7-source">SUMBER · '+esc(['Finance & Sales','Inventory + Audit','Majoo Loyalty','Attendance + Roster'][i])+'</div></article>';
  }).join('');
