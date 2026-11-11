@@ -100,8 +100,7 @@ assert.ok(m.sparkline(monthly).includes('<svg'));
 assert.equal(m.summarizeMonthlySales([{metric_date:'2025-01-01',revenue:200,transactions:3}],'2026-11').actualMonths,0);
 
 
-assert.deepEqual(['Kondisi Finansial','Kondisi Persediaan','Kondisi Pelanggan','Kondisi Karyawan'],
- ['Kondisi Finansial','Kondisi Persediaan','Kondisi Pelanggan','Kondisi Karyawan']);
+assert.deepEqual(Array.from(m.titles),['Kondisi Finansial','Kondisi Persediaan','Kondisi Pelanggan','Kondisi Karyawan'],'all executive card headings must remain complete');
 const healthyStock={critical:{ratio:1.5},eligible:198,total:198};
 assert.equal(m.cardStatus(1,{critical:{ratio:.25},eligible:19,total:198})[1],'danger','stock critical => red dot');
 assert.equal(m.cardStatus(1,healthyStock)[1],'good','fully verified safe stock => green dot');
