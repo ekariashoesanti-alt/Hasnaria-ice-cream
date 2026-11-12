@@ -44,7 +44,7 @@ test('HSN-417 detail reads only existing scoped sources, never posts, and fails 
  const loader=section('async function loadStockItemDetail(id){','function renderStockItemDetail(){');
  const hist=section('async function readAllItemMovements(id){','async function loadStockItemDetail(id){');
  assert.match(loader,/if\(!isOwner\(\)/);
- assert.match(loader,/S\.items\.some\(function\(x\)\{return x\.inventory_item_id===id;\}\)/);
+ assert.match(loader,/S\.items\.some\(function\(x\)\{return x\.inventory_item_id===id\}\)/);
  for(const p of ['inventory_sku_registry?','inventory_stock_opname?','inventory_recipe_components?','inventory_purchase_log?','goods_receipt_items?'])assert.ok(loader.includes(p),p);
  assert.match(loader,/brand_id:'eq\.'\+BRAND/);
  assert.match(loader,/goods_receipts\.brand_id/);
