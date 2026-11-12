@@ -1121,7 +1121,7 @@
       "id": "HSN-416",
       "milestone": "M4",
       "priority": "P0",
-      "status": "IN_PROGRESS",
+      "status": "REVIEW",
       "title": "Stok Tahap 1: transparansi posisi/arus, ketuntasan sumber dan KPI drilldown tepat",
       "dependencies": [
         "HSN-400",
@@ -1132,7 +1132,7 @@
       "acceptance": "Empat KPI dan dua grafik tetap one-view; klik setiap KPI membuka filter dengan jumlah baris sesuai sumber; posisi kini dibedakan dari arus periode; tanggal ledger terakhir, kelengkapan, saldo bawaan dan gap sinkron terlihat; data unknown tidak dibuat nol; unit teknis diberi keterangan; loading/error/empty dan mobile terjaga; branch/preview diuji tanpa merge dan tanpa perubahan ledger.",
       "owner": "ChatGPT",
       "updated_at": "2026-11-12",
-      "notes": "Tahap persiapan; pengguna melarang merge/deploy produksi. Tahap 2 identitas/SKU & Tahap 3 ekspor ditunda sesuai gate bukti sumber."
+      "notes": "Preview-only implementation and test evidence pending. KPI filters, current-position vs period-flow provenance, last ledger date and partial carry-forward; no DB writes. Owner desktop/mobile acceptance, stage 2 mapping, stage 3 export remain outstanding."
     },
     {
       "id": "HSN-500",

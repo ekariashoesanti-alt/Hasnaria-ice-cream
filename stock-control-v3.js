@@ -1406,7 +1406,7 @@
     return '<div class="sc3-table-card"><div class="sc3-table-head"><div><strong>Posisi Persediaan Terkini</strong><span>Masuk/keluar: mutasi sejak opname, bukan arus bulan pilihan. Tidak diketahui ≠ nol.</span></div><span>' + rows.length + ' item hasil filter</span></div>' +
       '<div class="sc3-table-wrap"><table class="sc3-table"><thead><tr>' +
         '<th>Material</th><th>+ Masuk sejak opname</th><th>− Keluar sejak opname</th><th>Stok Opname</th><th>Selisih</th><th>Incoming</th><th>Min/Par</th><th>Kebutuhan</th><th>Days Cover</th><th>Status</th><th class="sc3-balance-head">Saldo</th>' +
-      '</tr></thead><tbody>' + (body || '<tr><td colspan="11" class="sc3-empty">Tidak ada item sesuai filter.</td></tr>') + '</tbody></table></div>' + renderPager(rows.length, pages) + '</div>';
+      '</tr></thead><tbody>' + (body || '<tr><td colspan="11" class="sc3-empty">' + (S.status==='valued'&&!S.valuationLoaded ? (S.valuationError?'Data biaya gagal dimuat.':'Sedang memuat biaya terverifikasi…') : 'Tidak ada item sesuai filter.') + '</td></tr>') + '</tbody></table></div>' + renderPager(rows.length, pages) + '</div>';
   }
 
   function renderNotes() {
@@ -2528,6 +2528,7 @@
     var currentParts={header:headerHtml,kpis:kpiHtml,left:trendHtml,right:comparisonHtml};
     var previous=shell.__sc3Parts;
     var stable=previous&&previous.header===headerHtml&&!S.modal&&!S.correction&&
+      !shell.querySelector('.sc4-modal')&&
       !pAlert&&!alert&&!loading&&
       shell.querySelector('.sc8-kpis')&&shell.querySelector('.sc22-trend-panel')&&
       shell.querySelector('.sc22-compare-panel');
