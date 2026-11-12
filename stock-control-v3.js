@@ -1474,38 +1474,74 @@
       controls+'</section>';
   }
 
-  function renderTable() {
-    var rows = filteredItems();
-    var pages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
-    if (S.page > pages) S.page = pages;
-    var start = (S.page - 1) * PAGE_SIZE;
-    var pageRows = rows.slice(start, start + PAGE_SIZE);
-    var body = pageRows.map(function (x) {
-      var balance = x.tracking_active ? '<strong>' + fmt(x.balance_qty) + '</strong><small>' + esc(readableStockUnit(x.unit)) + '</small>' : '<span class="sc3-muted">-</span>';
-      var need = !S.auxLoaded ? '<span class="sc3-muted">…</span>' : (x.suggested_order_qty === null ? '<span class="sc3-muted">-</span>' : (x.suggested_order_qty > 0 ? '<strong class="sc3-need">' + fmt(x.suggested_order_qty) + '</strong>' : '<span>0</span>'));
-      var incoming = !S.auxLoaded ? '<span class="sc3-muted">…</span>' : (x.incoming_qty > 0 ? '<strong class="sc3-incoming">+' + fmt(x.incoming_qty) + '</strong>' : '<span class="sc3-muted">0</span>');
-      return '<tr>' +
-        '<td class="sc3-item">'+(isOwner()?'<button type="button" class="sc417-item-link" data-sc417-item="'+esc(x.inventory_item_id)+'">'+esc(x.item_name)+'</button>':'<strong>'+esc(x.item_name)+'</strong>')+'<small>' + esc(x.category || 'Lainnya') + ' · ' + esc(readableStockUnit(x.unit)) + '</small></td>' +
-        '<td class="sc3-num sc3-plus">+' + fmt(x.purchase_qty) + '</td>' +
-        '<td class="sc3-num sc3-minus">-' + fmt(x.sales_usage_qty) + '</td>' +
-        '<td class="sc3-num sc3-opname">' + opnameHtml(x) + '</td>' +
-        '<td class="sc3-num">' + varianceHtml(x.last_variance) + '</td>' +
-        '<td class="sc3-num">' + incoming + '</td>' +
-        '<td class="sc3-num">' + fmt(x.min_qty) + '</td>' +
-        '<td class="sc3-num">' + need + '</td>' +
-        '<td class="sc3-num sc3-cover">' + coverHtml(x) + '</td>' +
-        '<td>' + chip(x.ui_status) + '</td>' +
-        '<td class="sc3-num sc3-balance">' + balance + '</td>' +
-      '</tr>';
-    }).join('');
-
-    return '<div class="sc3-table-card"><div class="sc3-table-head"><div><strong>Posisi Persediaan Terkini</strong><span>Masuk/keluar: mutasi sejak opname, bukan arus bulan pilihan. Tidak diketahui ≠ nol.</span></div><span>' + rows.length + ' item hasil filter</span></div>' +
-      '<div class="sc3-table-wrap"><table class="sc3-table"><thead><tr>' +
-        '<th>Material</th><th>+ Masuk sejak opname</th><th>− Keluar sejak opname</th><th>Stok Opname</th><th>Selisih</th><th>Incoming</th><th>Min/Par</th><th>Kebutuhan</th><th>Days Cover</th><th>Status</th><th class="sc3-balance-head">Saldo</th>' +
-      '</tr></thead><tbody>' + (body || '<tr><td colspan="11" class="sc3-empty">' + (S.status==='valued'&&!S.valuationLoaded ? (S.valuationError?'Data biaya gagal dimuat.':'Sedang memuat biaya terverifikasi…') : 'Tidak ada item sesuai filter.') + '</td></tr>') + '</tbody></table></div>' + renderPager(rows.length, pages) + '</div>';
+  // One keyed schema drives visible Stock modal cells; CSV uses matching keys.
+  // The default is the pre-existing 11-column layout, not a wider first paint.
+  function stockTableColumnDefinitions(){
+    var dash='<span class="sc3-muted">—</span>',loading='<span class="sc3-muted">…</span>';
+    return [
+      {key:'name',heading:'Material',cls:'sc3-item',cell:function(x){
+        return (isOwner()?'<button type="button" class="sc417-item-link" data-sc417-item="'+
+          esc(x.inventory_item_id)+'">'+esc(x.item_name)+'</button>':
+          '<strong>'+esc(x.item_name)+'</strong>')+
+          '<small>'+esc(x.category||'Lainnya')+' · '+esc(readableStockUnit(x.unit))+'</small>';
+      }},
+      {key:'category',heading:'Kategori',cell:function(x){return esc(x.category||'Lainnya');}},
+      {key:'unit',heading:'Satuan dasar',cell:function(x){return esc(readableStockUnit(x.unit));}},
+      {key:'purchase',heading:'+ Masuk sejak opname',cls:'sc3-num sc3-plus',
+        cell:function(x){return x.tracking_active?'+'+esc(fmt(x.purchase_qty)):dash;}},
+      {key:'usage',heading:'− Keluar sejak opname',cls:'sc3-num sc3-minus',
+        cell:function(x){return x.tracking_active?'−'+esc(fmt(x.sales_usage_qty)):dash;}},
+      {key:'opname',heading:'Stok Opname',cls:'sc3-num sc3-opname',cell:opnameHtml},
+      {key:'date',heading:'Tanggal opname',cell:function(x){return x.tracking_active&&x.last_opname_date?
+        esc(dateLabel(x.last_opname_date)):dash;}},
+      {key:'variance',heading:'Selisih',cls:'sc3-num',cell:function(x){return varianceHtml(x.last_variance);}},
+      {key:'incoming',heading:'Incoming',cls:'sc3-num',cell:function(x){return !S.auxLoaded?loading:
+        x.incoming_qty>0?'<strong class="sc3-incoming">+'+esc(fmt(x.incoming_qty))+'</strong>':
+        '<span class="sc3-muted">0</span>';}},
+      {key:'min',heading:'Min/Par',cls:'sc3-num',cell:function(x){return esc(fmt(x.min_qty));}},
+      {key:'needs',heading:'Kebutuhan',cls:'sc3-num',cell:function(x){return !S.auxLoaded?loading:
+        x.suggested_order_qty===null?dash:
+        x.suggested_order_qty>0?'<strong class="sc3-need">'+esc(fmt(x.suggested_order_qty))+'</strong>':'0';}},
+      {key:'avg',heading:'Rata-rata pemakaian',cls:'sc3-num',cell:function(x){return !S.auxLoaded?loading:
+        x.avg_usage===null||x.avg_usage===undefined?dash:esc(fmt(x.avg_usage));}},
+      {key:'cover',heading:'Days Cover',cls:'sc3-num sc3-cover',cell:coverHtml},
+      {key:'status',heading:'Status',cell:function(x){return chip(x.ui_status);}},
+      {key:'balance',heading:'Saldo',cls:'sc3-num sc3-balance',
+        cell:function(x){return x.tracking_active&&x.balance_qty!==null&&x.balance_qty!==undefined?
+          '<strong>'+esc(fmt(x.balance_qty))+'</strong><small>'+esc(readableStockUnit(x.unit))+'</small>':dash;}}
+    ];
   }
 
-  function renderNotes() {
+  function renderTable() {
+    var rows=filteredItems(),pages=Math.max(1,Math.ceil(rows.length/PAGE_SIZE));
+    if(S.page>pages)S.page=pages;
+    var start=(S.page-1)*PAGE_SIZE,pageRows=rows.slice(start,start+PAGE_SIZE);
+    var selected=stockChosenColumnKeys();
+    var cols=stockTableColumnDefinitions().filter(function(x){return selected.indexOf(x.key)>=0;});
+    var body=pageRows.map(function(x){
+      return '<tr>'+cols.map(function(col){return '<td'+(col.cls?' class="'+col.cls+'"':'')+'>'+
+        col.cell(x)+'</td>'}).join('')+'</tr>';
+    }).join('');
+    var wide=cols.length>11?' sc420-table-wide':'';
+    var style=cols.length>11?' style="--sc420-min-width:'+Math.max(1100,cols.length*106)+'px"':'';
+    var headings=cols.map(function(col){
+      return '<th'+(col.key==='balance'?' class="sc3-balance-head"':'')+'>'+
+        esc(col.heading)+'</th>';
+    }).join('');
+    var empty='Tidak ada item sesuai filter.';
+    if(S.status==='valued'&&!S.valuationLoaded)empty=S.valuationError?
+      'Data biaya gagal dimuat.':'Sedang memuat biaya terverifikasi…';
+    return '<div class="sc3-table-card"><div class="sc3-table-head"><div>'+
+      '<strong>Posisi Persediaan Terkini</strong>'+
+      '<span>Masuk/keluar: mutasi sejak opname, bukan arus bulan pilihan. Tidak diketahui ≠ nol.</span>'+
+      '</div><span>'+rows.length+' item hasil filter · '+cols.length+' kolom</span></div>'+
+      '<div class="sc3-table-wrap"><table class="sc3-table sc420-column-table'+wide+'"'+style+'>'+
+      '<thead><tr>'+headings+'</tr></thead><tbody>'+
+      (body||'<tr><td colspan="'+cols.length+'" class="sc3-empty">'+esc(empty)+'</td></tr>')+
+      '</tbody></table></div>'+renderPager(rows.length,pages)+'</div>';
+  }
+
+    function renderNotes() {
     return '<div class="sc3-notes">' +
       '<article><span>AKURASI</span><strong>Saldo hanya aktif setelah opname awal</strong><p>Item tanpa opname awal tidak diberi saldo aktual agar angka opening lama tidak dianggap posisi fisik terkini.</p></article>' +
       '<article><span>KEBUTUHAN</span><strong>Incoming mengurangi kebutuhan beli</strong><p>PO issued dipantau sebagai incoming, tetapi baru menambah saldo setelah penerimaan barang.</p></article>' +
