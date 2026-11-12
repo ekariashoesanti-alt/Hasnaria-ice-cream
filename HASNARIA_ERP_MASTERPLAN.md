@@ -228,6 +228,7 @@ Rule-driven approvals, immutable audit, self-approval prevention, exception mode
 | HSN-413 | M4 | P1 | TODO | Inventory variance dashboard | HSN-408 |
 | HSN-414 | M4 | P0 | REVIEW | Negative stock prevention policy | HSN-403 |
 | HSN-415 | M4 | P0 | DONE | Inventory reconciliation test pack | HSN-403, HSN-408 |
+| HSN-416 | M4 | P0 | REVIEW | Transparansi posisi dan arus Stok, KPI drilldown Tahap 1 | HSN-400, HSN-402, HSN-403, HSN-409 |
 | HSN-500 | M5 | P0 | DONE | Chart of accounts minimal | HSN-100 |
 | HSN-501 | M5 | P0 | DONE | Cash session opening/closing | HSN-105 |
 | HSN-502 | M5 | P0 | DONE | Cash/QRIS/transfer settlement model | HSN-204 |

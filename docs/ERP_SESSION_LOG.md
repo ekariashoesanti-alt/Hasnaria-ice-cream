@@ -324,3 +324,11 @@ Validasi:30 kasus GPS (9 tambahan),25 berkas tes/full build, review independen d
 - Added deterministic `businessPriorities` engine using the four live KPI aggregates, producing conditional ranked P1/P2/P3 actions with evidence, mitigation, data-confidence labels and source module hints. Implemented `hx7Insights` panel beneath four condition cards; expandable original executive trends remain intact.
 - Production evidence (read-only) supports inventory risk (FISHROLL 2/14 pcs in restricted rankable set), 2026 finance Jan–Oct provisional / November missing, Loyalty coverage Oct–Nov only, and no valid check-in/out pairs despite 74 raw scans.
 - Validation so far: V8 JavaScript parse of executive module, owner shell, dashboard renderer and new test PASS; direct function-level JS checks YTD aggregation, restricted inventory ranking, absence filtering and cross-KPI priorities PASS. Full Node CI not yet evidenced. GitHub head PR #198 remains draft; Vercel status failure due build-rate-limit and no branch CI run returned. No merge or production DB writes.
+
+## 2026-11-12 — HSN-416 Stock Tahap 1 (branch/preview only)
+- Source aktif `stock-control-v3.js`, loaded via `stock-monitor.js`/runtime fix, tidak mengubah empat KPI/dua grafik secara struktural, bukan auth/finance.
+- KPI clicks now apply source-consistent filters and reset search/category/page, with modal close/return retaining filter state.
+- Owner detail contains current-position vs selected-month-flow source/cost/opname coverage, a lazy 1-row brand-scoped ledger date, partial carry-forward warnings and unit-mapping links; the dashboard remains compact.
+- Monthly porsi chart keeps partial 155.5 observed but breaks trend line over missing October sales consumption; no fabricated zero or combined units.
+- Production READ-ONLY baseline: 198 SKU, 41 checkpoints, 157 provisional, verified cost 1/198; last ledger movement 2026-09-30. Month November: 0 movement, carry-forward after October NO_POSTED_SALES.
+- SQL/data unchanged; no posting, backfill, schema, merged release or production verification. HSN-416 remains REVIEW pending tests, preview and authenticated Owner acceptance.
