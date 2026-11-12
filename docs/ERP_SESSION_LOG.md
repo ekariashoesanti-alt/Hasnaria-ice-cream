@@ -332,3 +332,13 @@ Validasi:30 kasus GPS (9 tambahan),25 berkas tes/full build, review independen d
 - Monthly porsi chart keeps partial 155.5 observed but breaks trend line over missing October sales consumption; no fabricated zero or combined units.
 - Production READ-ONLY baseline: 198 SKU, 41 checkpoints, 157 provisional, verified cost 1/198; last ledger movement 2026-09-30. Month November: 0 movement, carry-forward after October NO_POSTED_SALES.
 - SQL/data unchanged; no posting, backfill, schema, merged release or production verification. HSN-416 remains REVIEW pending tests, preview and authenticated Owner acceptance.
+
+## 2026-11-12 — HSN-417 Stok Tahap 2A (preview only)
+- Melanjutkan HSN-416 pada branch terpisah tanpa merge atau deploy production.
+- Master inventory 198 SKU. Registri ERP berisi 194 kode INV-*; source `inventory_existing`, tidak satu pun terbukti SKU asli Majoo. Nomor SKU Majoo dan satuan aslinya tetap belum terverifikasi; workbook SKU/BOM adalah kandidat pemetaan saja.
+- Detail Barang Owner dibuka dari daftar filter: query id+brand hanya saat diklik, berisi registri ERP, ledger, opname, resep, log pembelian dan dokumen penerimaan bila tersedia.
+- Saldo berjalan dihitung dari checkpoint opname fisik terakhir, mutasi disortir movement_date/created_at/id sebelum pagination; mutasi tanggal sama dengan opname tidak dijumlah dua kali. Tanpa checkpoint atau input mutasi tidak valid, saldo tidak diketahui.
+- Ref opname dan inventory_purchase_log hanya ditautkan jika dokumen cocok dalam detail, referensi sale_item tetap teks tanpa tautan yang tidak tersedia.
+- Barang tetap bisa kembali ke daftar dengan filter/pagination semula. Tampilan detail responsif pada modal, 4 KPI dan 2 grafik utama tidak berubah.
+- Data purchase goods_receipts 0. Seluruh kode bersifat GET/read-only; tidak ada penerimaan fiktif, posting, BOM approval, migrasi, perubahan role, parser atau rilis production.
+- Status REVIEW sampai tes, preview, dan Owner acceptance; prasyarat Tahap 2B: file ekspor Majoo identitas produk/bahan dan mutasi asli berikut outlet/format unit dan timestamp.
