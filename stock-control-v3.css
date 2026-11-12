@@ -2590,3 +2590,38 @@
   #stok .sc28-upload-modal .sc4-modal-body{padding:12px!important}
   #stok .sc28-upload-choice{padding:12px!important;gap:9px!important}
 }
+
+/* HSN-417: Compact Owner item detail within existing Stock dialog. */
+#stok .sc417-item-link{border:0;background:none;padding:0;color:#175e45;font:inherit;font-weight:700;text-align:left;cursor:pointer;white-space:normal;text-decoration:underline;text-underline-offset:2px;overflow-wrap:anywhere}
+#stok .sc417-item-link:focus-visible,#stok .sc417-back:focus-visible,#stok .sc417-pager button:focus-visible{outline:2px solid #176b55;outline-offset:2px}
+#stok .sc417-item-top{display:flex;flex-wrap:wrap;align-items:center;gap:9px 12px;margin-bottom:9px}
+#stok .sc417-item-top h4{margin:0;font-size:15px;color:#143a2c}
+#stok .sc417-item-top small{color:#658276}
+#stok .sc417-back,#stok .sc417-pager button{padding:7px 11px;border:1px solid #c9dfd4;border-radius:8px;background:#f1faf5;color:#185a43;cursor:pointer;font:inherit;font-weight:600}
+#stok .sc417-pager button:disabled{opacity:.44;cursor:default}
+#stok .sc417-section{background:#fff;border:1px solid #dbeae2;border-radius:10px;padding:12px;margin:9px 0;overflow:hidden;min-width:0}
+#stok .sc417-section h4{font-size:13px;color:#125c42;margin:0 0 8px}
+#stok .sc417-section h5{font-size:12px;margin:11px 0 6px;color:#375e4c}
+#stok .sc417-section p{margin:5px 0 8px;line-height:1.35}
+#stok .sc417-identity{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+#stok .sc417-identity>div{border:1px solid #e2efe8;border-radius:7px;padding:7px 9px;min-width:0}
+#stok .sc417-identity small,#stok .sc417-identity b{display:block;overflow-wrap:anywhere}
+#stok .sc417-identity small{font-size:10px;color:#618173;margin-bottom:3px}
+#stok .sc417-identity b{font-size:12px;color:#153e2e}
+#stok .sc417-identity code{font-size:11px;white-space:normal;overflow-wrap:anywhere}
+#stok .sc417-ledger{width:100%;min-width:600px}
+#stok .sc417-ledger td{vertical-align:top;overflow-wrap:anywhere}
+#stok .sc417-ledger td small{display:block;color:#8a6258;font-size:10px}
+#stok .sc417-ledger td a{color:#106b51;text-decoration:underline}
+#stok .sc417-document{padding:7px 9px;border-bottom:1px solid #ebf1ed;scroll-margin-top:18px}
+#stok .sc417-document b,#stok .sc417-document small{display:block;overflow-wrap:anywhere}
+#stok .sc417-document small{font-size:11px;color:#688175;margin-top:2px}
+#stok .sc417-pager{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin:9px 0}
+#stok .sc417-pager span{margin-right:auto;font-size:11px;color:#527563}
+@media(max-width:700px){
+ #stok .sc417-identity{grid-template-columns:1fr}
+ #stok .sc417-section{padding:9px}
+ #stok .sc417-item-top{align-items:flex-start}
+ #stok .sc417-item-top h4{flex-basis:100%}
+ #stok .sc417-ledger{min-width:560px}
+}
