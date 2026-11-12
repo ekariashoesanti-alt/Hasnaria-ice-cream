@@ -2278,7 +2278,10 @@
 
   // HSN-417: Running balance must be computed before pagination, within ONE SKU,
   // after a physical checkpoint; same-day movements are intentionally ambiguous.
-  function itemLedgerRunningRows(movements,checkpoint){
+  // HSN-421: Checkpoint and movement identity must both be reliable before
+  // presenting a numeric running balance; NEVER resolve an intraday ordering
+  // by making up a time or assuming a sale happened before physical opname.
+  function itemLedgerRunningRows(movements,checkpoint,inventoryId){
     var rows=(movements||[]).slice().sort(function(a,b){
       var ak=String(a.movement_date||'')+'|'+String(a.created_at||'')+'|'+String(a.id||'');
       var bk=String(b.movement_date||'')+'|'+String(b.created_at||'')+'|'+String(b.id||'');
@@ -2286,32 +2289,60 @@
     });
     var valid=!!(checkpoint&&checkpoint.opname_date&&checkpoint.physical_qty!==null&&
       checkpoint.physical_qty!==''&&Number.isFinite(Number(checkpoint.physical_qty)));
-    var running=valid?Number(checkpoint.physical_qty):null,complete=valid,sameDay=0,invalid=0;
+    var cut=valid?String(checkpoint.opname_date).slice(0,10):'';
+    var operational=function(type){
+      return type==='SALE_CONSUMPTION'||type==='PURCHASE_RECEIPT';
+    };
+    var sameDay=valid?rows.filter(function(x){
+      return String(x.movement_date||'').slice(0,10)===cut&&operational(x.movement_type);
+    }).length:0;
+    var wrongItem=!!(inventoryId&&rows.some(function(x){
+      return x.inventory_item_id&&x.inventory_item_id!==inventoryId;
+    }));
+    var reason=sameDay?'Mutasi Penjualan/Penerimaan pada tanggal opname: urutan fisik belum diketahui':
+      wrongItem?'Ledger memuat mutasi dari SKU lain':'';
+    var running=valid?Number(checkpoint.physical_qty):null;
+    var complete=valid&&!reason,invalid=0,seenId=Object.create(null),seenSource=Object.create(null);
     var result=rows.map(function(x){
       var event=Object.assign({},x,{running_balance:null,balance_reason:''});
       if(!valid){event.balance_reason='Belum ada checkpoint fisik';return event;}
       var date=String(x.movement_date||'').slice(0,10);
-      var cut=String(checkpoint.opname_date).slice(0,10);
       if(date<=cut){
-        if(date===cut)sameDay++;
-        event.balance_reason=date===cut?'Tanggal opname sama: urutan tidak pasti':'Sebelum checkpoint terakhir';
+        event.balance_reason=date===cut&&operational(x.movement_type)?
+          'Hari yang sama dengan opname: saldo tidak dapat diurutkan':
+          date===cut?'Checkpoint dicatat pada tanggal opname':'Sebelum checkpoint terakhir';
         return event;
       }
-      if(x.movement_type==='BASELINE'||x.movement_type==='OPNAME_CORRECTION'){
-        event.balance_reason='Checkpoint/koreksi tidak dijumlahkan ulang';
+      if(!complete){
+        event.balance_reason=reason||'Saldo lanjutan tertahan karena mutasi sebelumnya tidak valid';
         return event;
       }
-      if(x.qty_delta===null||x.qty_delta===''||!Number.isFinite(Number(x.qty_delta))){
-        complete=false;invalid++;event.balance_reason='Kuantitas mutasi belum valid';return event;
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||!x.id||seenId[x.id]){
+        reason='Tanggal/ID mutasi tidak valid atau berulang';
+      }else if(!operational(x.movement_type)){
+        reason='Terdapat penyesuaian/baseline setelah opname; saldo perlu direkonsiliasi';
+      }else if(x.qty_delta===null||x.qty_delta===''||!Number.isFinite(Number(x.qty_delta))){
+        reason='Kuantitas mutasi tidak valid';
+      }else if((x.movement_type==='PURCHASE_RECEIPT'&&Number(x.qty_delta)<0)||
+               (x.movement_type==='SALE_CONSUMPTION'&&Number(x.qty_delta)>0)){
+        reason='Arah kuantitas tidak sesuai jenis mutasi';
+      }else if(x.source_key&&seenSource[String(x.source_key)]){
+        reason='Kunci sumber mutasi berulang: potensi posting ganda';
       }
-      if(!complete){event.balance_reason='Saldo lanjutan tertahan karena mutasi sebelumnya tidak valid';return event;}
-      running+=Number(x.qty_delta);event.running_balance=running;return event;
+      if(reason){
+        complete=false;invalid++;event.balance_reason=reason;return event;
+      }
+      seenId[x.id]=true;
+      if(x.source_key)seenSource[String(x.source_key)]=true;
+      running+=Number(x.qty_delta);event.running_balance=running;
+      return event;
     });
     return {rows:result,checkpoint_valid:valid,opening:valid?Number(checkpoint.physical_qty):null,
-      closing:valid&&complete?running:null,valid:valid&&complete,same_day:sameDay,invalid:invalid};
+      closing:valid&&complete?running:null,valid:valid&&complete,same_day:sameDay,invalid:invalid,
+      reason:valid&&!complete?reason:!valid?'Belum ada checkpoint fisik':''};
   }
 
-  // HSN-419: Ledger-only monthly flow for ONE SKU/base unit. Never infer missing
+    // HSN-419: Ledger-only monthly flow for ONE SKU/base unit. Never infer missing
   // physical checkpoints, inventory adjustments, or unposted source movements.
   function itemLedgerPeriodFlow(movements,checkpoint,period,inventoryId){
     var month=monthKey(period),match=/^(\d{4})-(\d{2})$/.exec(month);
@@ -2477,7 +2508,7 @@
     var registry=(d.registry||[])[0]||null;
     var checkpoint=(d.opnames||[])[0]||null;
     var hasLedger=Array.isArray(d.movements),hasOpname=Array.isArray(d.opnames);
-    var calc=hasLedger&&hasOpname?itemLedgerRunningRows(d.movements,checkpoint):null;
+    var calc=hasLedger&&hasOpname?itemLedgerRunningRows(d.movements,checkpoint,item.inventory_item_id):null;
     var status=!registry?'Belum ada di registri SKU ERP':
       String(registry.source||'').toLowerCase().indexOf('majoo')>=0?
         'Sumber Majoo tercatat; perlu pemeriksaan bukti pemetaan':'SKU internal ERP — Majoo belum dipetakan';
@@ -2505,8 +2536,9 @@
       Math.abs(Number(item.system_qty)-calc.closing)>0.000001;
     var flow='<section class="sc417-section"><h4>Saldo berjalan per barang</h4>'+
       '<p>Saldo akhir hitungan: <b>'+quantity+'</b> · '+checkpointMessage+'.</p>'+
-      (calc&&calc.same_day?'<p class="sc20-note">'+fmt(calc.same_day)+
-        ' mutasi bertanggal sama dengan opname. Urutan intrahari tidak diketahui, sehingga tidak dijumlahkan dua kali.</p>':'')+
+      (calc&&calc.same_day?'<p class="sc3-alert">'+fmt(calc.same_day)+
+        ' transaksi Penjualan/Penerimaan terjadi pada tanggal opname. Urutan intrahari tidak diketahui; saldo berjalan ditahan, bukan dianggap nol.</p>':'')+
+      (calc&&calc.reason&&!calc.same_day?'<p class="sc3-alert">Saldo belum dapat diverifikasi: '+esc(calc.reason)+'</p>':'')+
       (disagrees?'<p class="sc3-alert">Saldo hitung berbeda dari rekonsiliasi sistem; perlu pemeriksaan, bukan otomatis dikoreksi.</p>':'')+
       '<p class="sc20-note">Per barang, diurutkan tanggal transaksi → waktu pencatatan → ID mutasi. '+
       'Saldo dihitung dari checkpoint fisik terbaru; tanggal sama/lebih lama tidak dimasukkan. '+
