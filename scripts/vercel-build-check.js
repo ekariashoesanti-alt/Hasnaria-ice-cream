@@ -283,6 +283,7 @@ run(process.execPath, ['--test', 'tests/stock-hsn419-period-export-v1.test.js'])
 run(process.execPath, ['--test', 'tests/stock-hsn420-visible-columns-v1.test.js']);
 run(process.execPath, ['--test', 'tests/stock-hsn421-checkpoint-sameday-v1.test.js']);
 run(process.execPath, ['--test', 'tests/stock-hsn422-failed-source-v1.test.js']);
+run(process.execPath, ['--test', 'tests/stock-hsn423-preview-prod-write-guard-v1.test.js']);
 run(process.execPath, ['--test', 'tests/stock-recovery-stage0-readonly-v1.test.js']);
 
 const dist = path.join(ROOT, 'dist');
