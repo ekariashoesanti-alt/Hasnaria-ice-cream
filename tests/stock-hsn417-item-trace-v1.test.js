@@ -6,7 +6,7 @@ const vm=require('node:vm');
 const js=fs.readFileSync('stock-control-v3.js','utf8');
 const css=fs.readFileSync('stock-control-v3.css','utf8');
 function section(a,b){const i=js.indexOf(a),j=js.indexOf(b,i+a.length);assert.ok(i>=0&&j>i,'section '+a);return js.slice(i,j).trim();}
-function fn(a,b){return vm.runInNewContext('('+section(a,b)+')',{}, {timeout:1200});}
+function fn(a,b){return vm.runInNewContext('('+section(a,b)+'\n)',{}, {timeout:1200});}
 test('HSN-417 checkpoint balance is deterministic across all pages',()=>{
  const calc=fn('function itemLedgerRunningRows(movements,checkpoint){','function itemLedgerPeriodFlow(movements,checkpoint,period,inventoryId){');
  const rows=[
