@@ -1410,8 +1410,20 @@
     ];
   }
 
+  // Compact table uses its existing 11 columns; all 15 are an explicit option.
+  function stockDefaultVisibleKeys(){
+    return ['name','purchase','usage','opname','variance','incoming','min','needs','cover','status','balance'];
+  }
+  function stockChosenColumnKeys(){
+    var available=stockExportColumnDefinitions().map(function(x){return x.key});
+    var selected=S.exportColumns||stockDefaultVisibleKeys();
+    var cols=available.filter(function(x){return selected.indexOf(x)>=0});
+    if(cols.indexOf('name')<0)cols.unshift('name');
+    return cols;
+  }
+
   function stockExportRows(){
-    var defs=stockExportColumnDefinitions(),chosen=S.exportColumns||defs.map(function(x){return x.key});
+    var defs=stockExportColumnDefinitions(),chosen=stockChosenColumnKeys();
     var columns=defs.filter(function(x){return chosen.indexOf(x.key)>=0;});
     if(!columns.length)columns=[defs[0]];
     var filtered=filteredItems(),pageRows=filtered;
@@ -1436,25 +1448,27 @@
 
   function renderStockExportOptions(){
     if(!isOwner())return '';
-    var defs=stockExportColumnDefinitions(),chosen=S.exportColumns||defs.map(function(x){return x.key});
+    var defs=stockExportColumnDefinitions(),chosen=stockChosenColumnKeys();
     var total=filteredItems().length,pages=Math.max(1,Math.ceil(total/PAGE_SIZE));
     var current=Math.max(1,Math.min(pages,S.page));
     var included=S.exportPageOnly?Math.max(0,Math.min(PAGE_SIZE,total-(current-1)*PAGE_SIZE)):total;
-    var controls=S.exportColumnsOpen?'<div class="sc419-export-columns" aria-label="Kolom CSV">'+
+    var controls=S.exportColumnsOpen?'<div class="sc419-export-columns" aria-label="Kolom tabel dan CSV">'+
+      '<div class="sc420-column-presets"><button type="button" data-sc420-preset="compact">Ringkas 11 kolom</button>'+
+      '<button type="button" data-sc420-preset="all">Semua 15 kolom</button></div>'+
       defs.map(function(x){
         return '<button type="button" data-sc419-column="'+esc(x.key)+'" aria-pressed="'+
           (chosen.indexOf(x.key)>=0?'true':'false')+'" class="'+
-          (chosen.indexOf(x.key)>=0?'on':'')+'">'+esc(x.label)+'</button>';
+          (chosen.indexOf(x.key)>=0?'on':'')+'"'+(x.key==='name'?' disabled title="Material wajib tampil"':'')+'>'+esc(x.label)+'</button>';
       }).join('')+'</div>':'';
-    return '<section class="sc419-export-panel" aria-label="Pengaturan ekspor stok">'+
+    return '<section class="sc419-export-panel" aria-label="Pengaturan kolom tabel dan ekspor stok">'+
       '<div class="sc419-export-toolbar"><b>Ekspor posisi stok (bukan arus periode)</b>'+
       '<button type="button" data-sc419-export-columns="1" aria-expanded="'+
-        (S.exportColumnsOpen?'true':'false')+'">Atur Kolom CSV</button>'+
+        (S.exportColumnsOpen?'true':'false')+'">Atur Kolom Tabel + CSV</button>'+
       '<button type="button" data-sc419-export-scope="1">'+
         (S.exportPageOnly?'Cakupan: halaman aktif':'Cakupan: semua hasil filter')+'</button>'+
       '<button type="button" data-sc419-export="1">Ekspor CSV</button></div>'+
       '<small>'+esc(fmt(included))+' dari '+esc(fmt(total))+
-      ' SKU sesuai filter · '+esc(fmt(chosen.length))+' kolom · tanpa penjumlahan antar-satuan. '+
+      ' SKU sesuai filter · '+esc(fmt(chosen.length))+' kolom pada tabel dan CSV · tanpa penjumlahan antar-satuan. '+
       (S.exportPageOnly?'Hanya baris halaman '+esc(fmt(current))+' yang diekspor.':
        'Seluruh hasil filter diekspor, bukan hanya halaman yang terlihat.')+'</small>'+
       controls+'</section>';
@@ -3029,6 +3043,14 @@
 
   function bind(host) {
     host.onclick = function (e) {
+      var preset=e.target&&e.target.closest?e.target.closest('[data-sc420-preset]'):null;
+      if(preset&&S.modal==='position'&&!S.selectedItemId&&isOwner()){
+        var kind=preset.getAttribute('data-sc420-preset');
+        if(kind==='compact')S.exportColumns=stockDefaultVisibleKeys();
+        else if(kind==='all')S.exportColumns=stockExportColumnDefinitions().map(function(x){return x.key});
+        else return;
+        render();return;
+      }
       var showColumns=e.target&&e.target.closest?e.target.closest('[data-sc419-export-columns]'):null;
       if(showColumns&&S.modal==='position'&&!S.selectedItemId&&isOwner()){
         S.exportColumnsOpen=!S.exportColumnsOpen;render();return;
@@ -3042,7 +3064,8 @@
         var valid=stockExportColumnDefinitions().map(function(c){return c.key});
         var key=toggleColumn.getAttribute('data-sc419-column');
         if(valid.indexOf(key)<0)return;
-        var chosen=S.exportColumns||valid.slice(),present=chosen.indexOf(key)>=0;
+        var chosen=S.exportColumns||stockDefaultVisibleKeys(),present=chosen.indexOf(key)>=0;
+        if(key==='name'&&present)return;
         if(present&&chosen.length<=1)return;
         S.exportColumns=present?chosen.filter(function(x){return x!==key}):chosen.concat([key]);
         render();return;
