@@ -1167,6 +1167,22 @@
       "notes": "Stacked draft PR, source-to-sale ID lookup tested read-only. 7565/7565 historical SALE_CONSUMPTION rows match sale_item and same-brand sales; 0 known outlet mismatches. No Majoo source mapping approved. CI/preview + Owner visual acceptance required. No business writes or production."
     },
     {
+      "id": "HSN-419",
+      "milestone": "M4",
+      "priority": "P0",
+      "status": "IN_PROGRESS",
+      "title": "Stok Tahap 3A: arus periode per SKU + Atur Kolom dan CSV mengikuti filter",
+      "dependencies": [
+        "HSN-418",
+        "HSN-417",
+        "HSN-416"
+      ],
+      "owner": "ChatGPT",
+      "updated_at": "2026-11-12",
+      "acceptance": "Arus periode hanya menghitung saldo awal/masuk/keluar/akhir SKU dengan checkpoint fisik yang sah sebelum periode, tanpa menjumlah beda satuan; tidak diketahui tetap unknown. Atur Kolom & ekspor CSV menggunakan filter, scope semua/halaman aktif, aman CSV formula, tanpa parser Majoo atau perubahan ledger. Semua build+CI preview lulus; belum production.",
+      "notes": "Preview-only stacked PR di atas HSN-418. Stage 3B perbandingan Majoo menunggu ekspor sumber asli dan verifikasi SKU/Outlet/unit."
+    },
+    {
       "id": "HSN-500",
       "milestone": "M5",
       "priority": "P0",
