@@ -2656,3 +2656,15 @@
  #stok .sc419-export-toolbar b{flex-basis:100%}
  #stok .sc419-export-toolbar button{flex:1 1 auto}
 }
+
+/* HSN-420: Column chooser affects the existing Owner Position Stock table and CSV.
+   Keep compact default; widen only when >11 columns are explicitly selected. */
+#stok .sc4-modal-body .sc420-column-table.sc420-table-wide{table-layout:auto!important;min-width:var(--sc420-min-width,1250px)!important}
+#stok .sc4-modal-body .sc420-column-table.sc420-table-wide th,
+#stok .sc4-modal-body .sc420-column-table.sc420-table-wide td{min-width:74px;white-space:normal;overflow-wrap:anywhere;text-overflow:clip}
+#stok .sc4-modal-body .sc420-column-table.sc420-table-wide th:first-child,
+#stok .sc4-modal-body .sc420-column-table.sc420-table-wide td:first-child{min-width:145px}
+#stok .sc420-column-presets{display:flex;flex-wrap:wrap;gap:6px;width:100%;padding:0 0 5px}
+#stok .sc419-export-columns button:disabled{opacity:.55;cursor:not-allowed}
+#stok .sc420-column-presets button{background:#e6f3eb;border-color:#9cc8ad;font-weight:650}
+@media(max-width:700px){#stok .sc420-column-presets button{flex:1 1 125px}}
