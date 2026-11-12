@@ -32,7 +32,7 @@ function harness(override={}){
   chip:x=>x,renderPager:()=>'<span class="pager"></span>'};
  const exports=slice('function stockExportColumnDefinitions(){','function renderStockExportOptions(){');
  const table=slice('function stockTableColumnDefinitions(){','function renderNotes()');
- const run=vm.runInNewContext(exports+'\n'+table+'\n({stockChosenColumnKeys,stockDefaultVisibleKeys,stockExportColumnDefinitions,stockExportRows,renderTable})',
+ const run=vm.runInNewContext(exports+'\n'+table+'\n({stockChosenColumnKeys,stockDefaultVisibleKeys,stockExportColumnDefinitions,stockExportRows,stockCsvCell,renderTable})',
   ctx,{timeout:2000});
  return {S,items,run};
 }
@@ -112,7 +112,7 @@ test('HSN-420 missing numeric facts are not silently rendered as zeros',()=>{
  assert.doesNotMatch(html,/\+\-/);
  assert.match(html,/class="sc3-muted">—<\/span>/);
  const csv=run.stockExportRows();
- assert.equal(csv.rows[1][1],'');
- assert.equal(csv.rows[1][2],'');
- assert.equal(csv.rows[1][6],'');
+ assert.equal(run.stockCsvCell(csv.rows[1][1]),'');
+ assert.equal(run.stockCsvCell(csv.rows[1][2]),'');
+ assert.equal(run.stockCsvCell(csv.rows[1][6]),'');
 });
