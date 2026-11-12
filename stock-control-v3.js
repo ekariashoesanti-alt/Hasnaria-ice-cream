@@ -1377,6 +1377,7 @@
 
   function opnameHtml(x) {
     if (!x.tracking_active) return '<span class="sc3-muted">Belum ada</span>';
+    if (x.last_physical_qty===null || x.last_physical_qty===undefined) return '<span class="sc3-muted">Belum tersedia</span>';
     return '<strong>' + fmt(x.last_physical_qty) + '</strong><small>' + dateLabel(x.last_opname_date) + '</small>';
   }
 
@@ -1410,8 +1411,20 @@
     ];
   }
 
+  // Compact table uses its existing 11 columns; all 15 are an explicit option.
+  function stockDefaultVisibleKeys(){
+    return ['name','purchase','usage','opname','variance','incoming','min','needs','cover','status','balance'];
+  }
+  function stockChosenColumnKeys(){
+    var available=stockExportColumnDefinitions().map(function(x){return x.key});
+    var selected=S.exportColumns||stockDefaultVisibleKeys();
+    var cols=available.filter(function(x){return selected.indexOf(x)>=0});
+    if(cols.indexOf('name')<0)cols.unshift('name');
+    return cols;
+  }
+
   function stockExportRows(){
-    var defs=stockExportColumnDefinitions(),chosen=S.exportColumns||defs.map(function(x){return x.key});
+    var defs=stockExportColumnDefinitions(),chosen=stockChosenColumnKeys();
     var columns=defs.filter(function(x){return chosen.indexOf(x.key)>=0;});
     if(!columns.length)columns=[defs[0]];
     var filtered=filteredItems(),pageRows=filtered;
@@ -1436,62 +1449,100 @@
 
   function renderStockExportOptions(){
     if(!isOwner())return '';
-    var defs=stockExportColumnDefinitions(),chosen=S.exportColumns||defs.map(function(x){return x.key});
+    var defs=stockExportColumnDefinitions(),chosen=stockChosenColumnKeys();
     var total=filteredItems().length,pages=Math.max(1,Math.ceil(total/PAGE_SIZE));
     var current=Math.max(1,Math.min(pages,S.page));
     var included=S.exportPageOnly?Math.max(0,Math.min(PAGE_SIZE,total-(current-1)*PAGE_SIZE)):total;
-    var controls=S.exportColumnsOpen?'<div class="sc419-export-columns" aria-label="Kolom CSV">'+
+    var controls=S.exportColumnsOpen?'<div class="sc419-export-columns" aria-label="Kolom tabel dan CSV">'+
+      '<div class="sc420-column-presets"><button type="button" data-sc420-preset="compact">Ringkas 11 kolom</button>'+
+      '<button type="button" data-sc420-preset="all">Semua 15 kolom</button></div>'+
       defs.map(function(x){
         return '<button type="button" data-sc419-column="'+esc(x.key)+'" aria-pressed="'+
           (chosen.indexOf(x.key)>=0?'true':'false')+'" class="'+
-          (chosen.indexOf(x.key)>=0?'on':'')+'">'+esc(x.label)+'</button>';
+          (chosen.indexOf(x.key)>=0?'on':'')+'"'+(x.key==='name'?' disabled title="Material wajib tampil"':'')+'>'+esc(x.label)+'</button>';
       }).join('')+'</div>':'';
-    return '<section class="sc419-export-panel" aria-label="Pengaturan ekspor stok">'+
+    return '<section class="sc419-export-panel" aria-label="Pengaturan kolom tabel dan ekspor stok">'+
       '<div class="sc419-export-toolbar"><b>Ekspor posisi stok (bukan arus periode)</b>'+
       '<button type="button" data-sc419-export-columns="1" aria-expanded="'+
-        (S.exportColumnsOpen?'true':'false')+'">Atur Kolom CSV</button>'+
+        (S.exportColumnsOpen?'true':'false')+'">Atur Kolom Tabel + CSV</button>'+
       '<button type="button" data-sc419-export-scope="1">'+
         (S.exportPageOnly?'Cakupan: halaman aktif':'Cakupan: semua hasil filter')+'</button>'+
       '<button type="button" data-sc419-export="1">Ekspor CSV</button></div>'+
       '<small>'+esc(fmt(included))+' dari '+esc(fmt(total))+
-      ' SKU sesuai filter · '+esc(fmt(chosen.length))+' kolom · tanpa penjumlahan antar-satuan. '+
+      ' SKU sesuai filter · '+esc(fmt(chosen.length))+' kolom pada tabel dan CSV · tanpa penjumlahan antar-satuan. '+
       (S.exportPageOnly?'Hanya baris halaman '+esc(fmt(current))+' yang diekspor.':
        'Seluruh hasil filter diekspor, bukan hanya halaman yang terlihat.')+'</small>'+
       controls+'</section>';
   }
 
-  function renderTable() {
-    var rows = filteredItems();
-    var pages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
-    if (S.page > pages) S.page = pages;
-    var start = (S.page - 1) * PAGE_SIZE;
-    var pageRows = rows.slice(start, start + PAGE_SIZE);
-    var body = pageRows.map(function (x) {
-      var balance = x.tracking_active ? '<strong>' + fmt(x.balance_qty) + '</strong><small>' + esc(readableStockUnit(x.unit)) + '</small>' : '<span class="sc3-muted">-</span>';
-      var need = !S.auxLoaded ? '<span class="sc3-muted">…</span>' : (x.suggested_order_qty === null ? '<span class="sc3-muted">-</span>' : (x.suggested_order_qty > 0 ? '<strong class="sc3-need">' + fmt(x.suggested_order_qty) + '</strong>' : '<span>0</span>'));
-      var incoming = !S.auxLoaded ? '<span class="sc3-muted">…</span>' : (x.incoming_qty > 0 ? '<strong class="sc3-incoming">+' + fmt(x.incoming_qty) + '</strong>' : '<span class="sc3-muted">0</span>');
-      return '<tr>' +
-        '<td class="sc3-item">'+(isOwner()?'<button type="button" class="sc417-item-link" data-sc417-item="'+esc(x.inventory_item_id)+'">'+esc(x.item_name)+'</button>':'<strong>'+esc(x.item_name)+'</strong>')+'<small>' + esc(x.category || 'Lainnya') + ' · ' + esc(readableStockUnit(x.unit)) + '</small></td>' +
-        '<td class="sc3-num sc3-plus">+' + fmt(x.purchase_qty) + '</td>' +
-        '<td class="sc3-num sc3-minus">-' + fmt(x.sales_usage_qty) + '</td>' +
-        '<td class="sc3-num sc3-opname">' + opnameHtml(x) + '</td>' +
-        '<td class="sc3-num">' + varianceHtml(x.last_variance) + '</td>' +
-        '<td class="sc3-num">' + incoming + '</td>' +
-        '<td class="sc3-num">' + fmt(x.min_qty) + '</td>' +
-        '<td class="sc3-num">' + need + '</td>' +
-        '<td class="sc3-num sc3-cover">' + coverHtml(x) + '</td>' +
-        '<td>' + chip(x.ui_status) + '</td>' +
-        '<td class="sc3-num sc3-balance">' + balance + '</td>' +
-      '</tr>';
-    }).join('');
-
-    return '<div class="sc3-table-card"><div class="sc3-table-head"><div><strong>Posisi Persediaan Terkini</strong><span>Masuk/keluar: mutasi sejak opname, bukan arus bulan pilihan. Tidak diketahui ≠ nol.</span></div><span>' + rows.length + ' item hasil filter</span></div>' +
-      '<div class="sc3-table-wrap"><table class="sc3-table"><thead><tr>' +
-        '<th>Material</th><th>+ Masuk sejak opname</th><th>− Keluar sejak opname</th><th>Stok Opname</th><th>Selisih</th><th>Incoming</th><th>Min/Par</th><th>Kebutuhan</th><th>Days Cover</th><th>Status</th><th class="sc3-balance-head">Saldo</th>' +
-      '</tr></thead><tbody>' + (body || '<tr><td colspan="11" class="sc3-empty">' + (S.status==='valued'&&!S.valuationLoaded ? (S.valuationError?'Data biaya gagal dimuat.':'Sedang memuat biaya terverifikasi…') : 'Tidak ada item sesuai filter.') + '</td></tr>') + '</tbody></table></div>' + renderPager(rows.length, pages) + '</div>';
+  // One keyed schema drives visible Stock modal cells; CSV uses matching keys.
+  // The default is the pre-existing 11-column layout, not a wider first paint.
+  function stockTableColumnDefinitions(){
+    var dash='<span class="sc3-muted">—</span>',loading='<span class="sc3-muted">…</span>';
+    return [
+      {key:'name',heading:'Material',cls:'sc3-item',cell:function(x){
+        return (isOwner()?'<button type="button" class="sc417-item-link" data-sc417-item="'+
+          esc(x.inventory_item_id)+'">'+esc(x.item_name)+'</button>':
+          '<strong>'+esc(x.item_name)+'</strong>')+
+          '<small>'+esc(x.category||'Lainnya')+' · '+esc(readableStockUnit(x.unit))+'</small>';
+      }},
+      {key:'category',heading:'Kategori',cell:function(x){return esc(x.category||'Lainnya');}},
+      {key:'unit',heading:'Satuan dasar',cell:function(x){return esc(readableStockUnit(x.unit));}},
+      {key:'purchase',heading:'+ Masuk sejak opname',cls:'sc3-num sc3-plus',
+        cell:function(x){return x.tracking_active&&x.purchase_qty!==null&&x.purchase_qty!==undefined?'+'+esc(fmt(x.purchase_qty)):dash;}},
+      {key:'usage',heading:'− Keluar sejak opname',cls:'sc3-num sc3-minus',
+        cell:function(x){return x.tracking_active&&x.sales_usage_qty!==null&&x.sales_usage_qty!==undefined?'−'+esc(fmt(x.sales_usage_qty)):dash;}},
+      {key:'opname',heading:'Stok Opname',cls:'sc3-num sc3-opname',cell:opnameHtml},
+      {key:'date',heading:'Tanggal opname',cell:function(x){return x.tracking_active&&x.last_opname_date?
+        esc(dateLabel(x.last_opname_date)):dash;}},
+      {key:'variance',heading:'Selisih',cls:'sc3-num',cell:function(x){return varianceHtml(x.last_variance);}},
+      {key:'incoming',heading:'Incoming',cls:'sc3-num',cell:function(x){return !S.auxLoaded?loading:
+        x.incoming_qty===null||x.incoming_qty===undefined?dash:x.incoming_qty>0?'<strong class="sc3-incoming">+'+esc(fmt(x.incoming_qty))+'</strong>':
+        '<span class="sc3-muted">0</span>';}},
+      {key:'min',heading:'Min/Par',cls:'sc3-num',cell:function(x){return x.min_qty===null||x.min_qty===undefined?dash:esc(fmt(x.min_qty));}},
+      {key:'needs',heading:'Kebutuhan',cls:'sc3-num',cell:function(x){return !S.auxLoaded?loading:
+        x.suggested_order_qty===null||x.suggested_order_qty===undefined?dash:
+        x.suggested_order_qty>0?'<strong class="sc3-need">'+esc(fmt(x.suggested_order_qty))+'</strong>':'0';}},
+      {key:'avg',heading:'Rata-rata pemakaian',cls:'sc3-num',cell:function(x){return !S.auxLoaded?loading:
+        x.avg_usage===null||x.avg_usage===undefined?dash:esc(fmt(x.avg_usage));}},
+      {key:'cover',heading:'Days Cover',cls:'sc3-num sc3-cover',cell:coverHtml},
+      {key:'status',heading:'Status',cell:function(x){return chip(x.ui_status);}},
+      {key:'balance',heading:'Saldo',cls:'sc3-num sc3-balance',
+        cell:function(x){return x.tracking_active&&x.balance_qty!==null&&x.balance_qty!==undefined?
+          '<strong>'+esc(fmt(x.balance_qty))+'</strong><small>'+esc(readableStockUnit(x.unit))+'</small>':dash;}}
+    ];
   }
 
-  function renderNotes() {
+  function renderTable() {
+    var rows=filteredItems(),pages=Math.max(1,Math.ceil(rows.length/PAGE_SIZE));
+    if(S.page>pages)S.page=pages;
+    var start=(S.page-1)*PAGE_SIZE,pageRows=rows.slice(start,start+PAGE_SIZE);
+    var selected=stockChosenColumnKeys();
+    var cols=stockTableColumnDefinitions().filter(function(x){return selected.indexOf(x.key)>=0;});
+    var body=pageRows.map(function(x){
+      return '<tr>'+cols.map(function(col){return '<td'+(col.cls?' class="'+col.cls+'"':'')+'>'+
+        col.cell(x)+'</td>'}).join('')+'</tr>';
+    }).join('');
+    var wide=cols.length>11?' sc420-table-wide':'';
+    var style=cols.length>11?' style="--sc420-min-width:'+Math.max(1100,cols.length*106)+'px"':'';
+    var headings=cols.map(function(col){
+      return '<th'+(col.key==='balance'?' class="sc3-balance-head"':'')+'>'+
+        esc(col.heading)+'</th>';
+    }).join('');
+    var empty='Tidak ada item sesuai filter.';
+    if(S.status==='valued'&&!S.valuationLoaded)empty=S.valuationError?
+      'Data biaya gagal dimuat.':'Sedang memuat biaya terverifikasi…';
+    return '<div class="sc3-table-card"><div class="sc3-table-head"><div>'+
+      '<strong>Posisi Persediaan Terkini</strong>'+
+      '<span>Masuk/keluar: mutasi sejak opname, bukan arus bulan pilihan. Tidak diketahui ≠ nol.</span>'+
+      '</div><span>'+rows.length+' item hasil filter · '+cols.length+' kolom</span></div>'+
+      '<div class="sc3-table-wrap"><table class="sc3-table sc420-column-table'+wide+'"'+style+'>'+
+      '<thead><tr>'+headings+'</tr></thead><tbody>'+
+      (body||'<tr><td colspan="'+cols.length+'" class="sc3-empty">'+esc(empty)+'</td></tr>')+
+      '</tbody></table></div>'+renderPager(rows.length,pages)+'</div>';
+  }
+
+    function renderNotes() {
     return '<div class="sc3-notes">' +
       '<article><span>AKURASI</span><strong>Saldo hanya aktif setelah opname awal</strong><p>Item tanpa opname awal tidak diberi saldo aktual agar angka opening lama tidak dianggap posisi fisik terkini.</p></article>' +
       '<article><span>KEBUTUHAN</span><strong>Incoming mengurangi kebutuhan beli</strong><p>PO issued dipantau sebagai incoming, tetapi baru menambah saldo setelah penerimaan barang.</p></article>' +
@@ -3029,6 +3080,14 @@
 
   function bind(host) {
     host.onclick = function (e) {
+      var preset=e.target&&e.target.closest?e.target.closest('[data-sc420-preset]'):null;
+      if(preset&&S.modal==='position'&&!S.selectedItemId&&isOwner()){
+        var kind=preset.getAttribute('data-sc420-preset');
+        if(kind==='compact')S.exportColumns=stockDefaultVisibleKeys();
+        else if(kind==='all')S.exportColumns=stockExportColumnDefinitions().map(function(x){return x.key});
+        else return;
+        render();return;
+      }
       var showColumns=e.target&&e.target.closest?e.target.closest('[data-sc419-export-columns]'):null;
       if(showColumns&&S.modal==='position'&&!S.selectedItemId&&isOwner()){
         S.exportColumnsOpen=!S.exportColumnsOpen;render();return;
@@ -3042,7 +3101,8 @@
         var valid=stockExportColumnDefinitions().map(function(c){return c.key});
         var key=toggleColumn.getAttribute('data-sc419-column');
         if(valid.indexOf(key)<0)return;
-        var chosen=S.exportColumns||valid.slice(),present=chosen.indexOf(key)>=0;
+        var chosen=S.exportColumns||stockDefaultVisibleKeys(),present=chosen.indexOf(key)>=0;
+        if(key==='name'&&present)return;
         if(present&&chosen.length<=1)return;
         S.exportColumns=present?chosen.filter(function(x){return x!==key}):chosen.concat([key]);
         render();return;
