@@ -61,7 +61,7 @@ test('HSN-420 arbitrary selected columns apply in identical order to table and C
  assert.equal(exp.count,1);
  assert.equal(exp.rows[1][0],'SKU C');
  assert.equal(bodyRowCount(html),1);
- assert.match(html,/colspan="3"/s.test('')?'nevergohere':/sc420-column-table/);
+ assert.match(html,/sc420-column-table/);
 });
 test('HSN-420 extra sources are opt-in; full 15 columns use scoped horizontal scroll',()=>{
  const {S,run}=harness();
@@ -100,4 +100,19 @@ test('HSN-420 configuration affects only modal; filters and pagination stay shar
  assert.match(exp,/var filtered=filteredItems\(\),pageRows=filtered/);
  assert.match(exp,/S\.exportPageOnly/);
  assert.doesNotMatch(exp,/\b(?:POST|PATCH|DELETE|UPSERT)\b/);
+});
+
+test('HSN-420 missing numeric facts are not silently rendered as zeros',()=>{
+ const {S,items,run}=harness();
+ items[0].min_qty=null;items[0].purchase_qty=null;items[0].sales_usage_qty=undefined;
+ items[0].incoming_qty=null;items[0].suggested_order_qty=undefined;
+ items[0].last_physical_qty=null;
+ const html=run.renderTable();
+ assert.match(html,/Tidak diketahui ≠ nol/);
+ assert.doesNotMatch(html,/\+\-/);
+ assert.match(html,/class="sc3-muted">—<\/span>/);
+ const csv=run.stockExportRows();
+ assert.equal(csv.rows[1][1],'');
+ assert.equal(csv.rows[1][2],'');
+ assert.equal(csv.rows[1][6],'');
 });
