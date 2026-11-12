@@ -234,6 +234,7 @@ Rule-driven approvals, immutable audit, self-approval prevention, exception mode
 | HSN-419 | M4 | P0 | REVIEW | Stok Tahap 3A: arus ledger per SKU & kolom CSV mengikuti filter | HSN-418, HSN-417, HSN-416 |
 | HSN-420 | M4 | P0 | REVIEW | Stok Tahap 3A: satu Atur Kolom untuk tabel modal dan CSV | HSN-419, HSN-418, HSN-417 |
 | HSN-421 | M4 | P0 | REVIEW | Stok QA: fail-closed running balance saat tanggal opname beririsan mutasi | HSN-417, HSN-419, HSN-420 |
+| HSN-422 | M4 | P0 | REVIEW | Stok QA: bedakan gagal baca identitas/opname dari sumber benar-benar kosong | HSN-421, HSN-417 |
 | HSN-500 | M5 | P0 | DONE | Chart of accounts minimal | HSN-100 |
 | HSN-501 | M5 | P0 | DONE | Cash session opening/closing | HSN-105 |
 | HSN-502 | M5 | P0 | DONE | Cash/QRIS/transfer settlement model | HSN-204 |

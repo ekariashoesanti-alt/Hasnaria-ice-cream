@@ -1215,6 +1215,21 @@
       "notes": "Preview-only HSN-421. Prod read-only query: 24 SALE_CONSUMPTION movements on same day as latest physical opname across 9 of 41 checkpointed SKUs, zero same-day purchases, zero post-checkpoint duplicate source_key, no bad signs/deltas. Blocking potentially misleading running balances only in Owner Detail Barang, no DB write. Tests/CI and Owner visual validation remain release gates."
     },
     {
+      "id": "HSN-422",
+      "milestone": "M4",
+      "priority": "P0",
+      "status": "REVIEW",
+      "title": "Stok QA: detail barang membedakan gagal muat opname/registri dari sumber kosong",
+      "dependencies": [
+        "HSN-421",
+        "HSN-417"
+      ],
+      "owner": "ChatGPT",
+      "updated_at": "2026-11-13",
+      "acceptance": "Gagal baca opname atau registri tidak mengklaim belum ada; riwayat mutasi bisa dibaca dengan saldo unknown; ringkasan periode tanpa checkpoint yang termuat tidak menghasilkan angka; tidak ada crash dan tidak ada perubahan bisnis; build+preview hijau.",
+      "notes": "Preview-only stacked on HSN-421 PR #224. Stock Owner item detail differentiates failed registry/opname GET from valid empty source and keeps ledger visible with unknown running/period balances; no Supabase writes. Regression and build status require final CI review; Owner authenticated visual check remains blocked by missing originating browser connection. Main production untouched."
+    },
+    {
       "id": "HSN-500",
       "milestone": "M5",
       "priority": "P0",

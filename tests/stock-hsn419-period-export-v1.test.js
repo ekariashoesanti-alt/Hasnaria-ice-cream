@@ -80,7 +80,7 @@ test('HSN-419 changes are confined to existing Stok modal, no extra dashboard bo
  const item=part('function renderStockItemDetail(){','function renderPositionCoverage(){');
  const click=part('function bind(host) {','host.oninput = function');
  assert.match(modal,/renderStockExportOptions\(\)/);
- assert.match(item,/itemLedgerPeriodFlow\(hasLedger\?d\.movements:null,checkpoint,S\.period,item\.inventory_item_id\)/);
+ assert.match(item,/itemLedgerPeriodFlow\(hasLedger\?d\.movements:null,hasOpname\?checkpoint:null,S\.period,item\.inventory_item_id\)/);
  assert.match(item,/Saldo awal/);assert.match(item,/Saldo akhir ledger/);
  assert.match(click,/data-sc419-column/);assert.match(click,/data-sc419-export-scope/);
  assert.match(click,/data-sc419-export/);assert.match(js,/function exportCsv\(\)/);

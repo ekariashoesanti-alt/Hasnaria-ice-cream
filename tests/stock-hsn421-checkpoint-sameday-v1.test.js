@@ -68,7 +68,7 @@ test('HSN-421 absence of physical checkpoint remains unknown',()=>{
  assert.equal(r.closing,null);assert.equal(r.rows[0].running_balance,null);
 });
 test('HSN-421 only item detail changes; alerts are explicit and no business writes',()=>{
- assert.match(js,/itemLedgerRunningRows\(d\.movements,checkpoint,item\.inventory_item_id\)/);
+ assert.match(js,/itemLedgerRunningRows\(d\.movements,hasOpname\?checkpoint:null,item\.inventory_item_id\)/);
  assert.match(js,/saldo berjalan ditahan, bukan dianggap nol/);
  assert.match(js,/Saldo belum dapat diverifikasi:/);
  assert.match(js,/S\.itemDetailPage/);
