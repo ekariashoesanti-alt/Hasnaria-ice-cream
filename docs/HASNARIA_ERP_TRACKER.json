@@ -1233,7 +1233,7 @@
       "id": "HSN-423",
       "milestone": "M4",
       "priority": "P0",
-      "status": "IN_PROGRESS",
+      "status": "REVIEW",
       "title": "Stok QA: blok RPC tulis pada preview yang memakai database produksi",
       "dependencies": [
         "HSN-422",
@@ -1242,7 +1242,7 @@
       "owner": "ChatGPT",
       "updated_at": "2026-11-13",
       "acceptance": "Saat preview memakai URL Supabase produksi, semua RPC non-allowlist baca ditolak sebelum request/token, termasuk review resep dan koreksi opname; katalog periode & moving FIFO tetap dapat dibaca, production asli tidak berubah. Modal review menjelaskan write-block. Build, CI dan preview hijau; no merge, no production writes.",
-      "notes": "Owner visual acceptance blocked pending originating browser connection. Preserve the current two read-only RPCs. No auth/schema/ledger changes."
+      "notes": "Preview-only guard implemented; production Supabase mutations blocked centrally in rpc() before auth/fetch for any RPC other than documented read-only get_ui_period_catalog_fast_v1/get_stock_moving_fifo_v1. Review form disabled on preview and save guard added. Tests and Vercel Preview/CI must pass; Owner desktop/mobile acceptance remains missing. No business write or production deploy. Raw Majoo item/mutation export not attached."
     },
     {
       "id": "HSN-500",
