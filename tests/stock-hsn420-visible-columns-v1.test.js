@@ -36,7 +36,7 @@ function harness(override={}){
   ctx,{timeout:2000});
  return {S,items,run};
 }
-function headings(html){return [...html.matchAll(/<th(?:[^>]*)>(.*?)<\/th>/g)].map(m=>m[1])}
+function headings(html){return [...html.matchAll(/<th(?:\s[^>]*)?>(.*?)<\/th>/g)].map(m=>m[1])}
 function bodyRowCount(html){const tbody=html.match(/<tbody>([\s\S]*?)<\/tbody>/);return tbody?(tbody[1].match(/<tr>/g)||[]).length:0}
 test('HSN-420 default Stock table stays 11 columns and CSV uses exact same selection',()=>{
  const {S,run}=harness();
