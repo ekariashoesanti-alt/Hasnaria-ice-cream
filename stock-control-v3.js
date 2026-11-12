@@ -2394,7 +2394,7 @@
     var previousGap=false;
     months.forEach(function(x){
       x.carriedGap=previousGap;
-      if(x.noSync||(x.row&&num(x.row.unlinked_sale_rows)>0))previousGap=true;
+      if(x.noSync||(x.row&&Number(x.row.unlinked_sale_rows||0)>0))previousGap=true;
     });
     var existing=months.filter(function(x){return x.n!==null;});
     if(!existing.length)return '<div class="sc22-empty"><b>Belum tersedia saldo akhir bulanan yang dapat digrafikkan</b>'+
@@ -2425,7 +2425,7 @@
         (x.noSync?'penjualan belum disinkronkan':'belum ada data opname'))+
         '</title><text class="sc22-missing-point" x="'+xx.toFixed(1)+'" y="'+(bottom-10)+
         '" text-anchor="middle">—</text>'+axis+'</g>';
-      var yy=yc(x.n),partial=x.carriedGap||x.row.data_status!=='LEDGER_RECORDED'||num(x.row.period_movement_rows)===0;
+      var yy=yc(x.n),partial=x.carriedGap||x.row.data_status!=='LEDGER_RECORDED'||Number(x.row.period_movement_rows||0)===0;
       var title=x.label+' '+x.year+': '+fmt(x.n)+' '+unit+
         '; '+x.row.checkpoint_skus+'/'+x.row.total_unit_skus+' SKU ber-opname'+
         (partial?'; parsial atau saldo bawaan, kesinambungan belum terverifikasi':'');
