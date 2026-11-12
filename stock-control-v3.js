@@ -2262,7 +2262,7 @@
 
   // HSN-419: Ledger-only monthly flow for ONE SKU/base unit. Never infer missing
   // physical checkpoints, inventory adjustments, or unposted source movements.
-  function itemLedgerPeriodFlow(movements,checkpoint,period){
+  function itemLedgerPeriodFlow(movements,checkpoint,period,inventoryId){
     var month=monthKey(period),match=/^(\d{4})-(\d{2})$/.exec(month);
     var fail=function(reason){return {available:false,reason:reason,
       opening:null,incoming:null,outgoing:null,closing:null,events:null}};
@@ -2283,6 +2283,7 @@
     });
     for(var i=0;i<events.length;i++){
       var e=events[i],date=String(e.movement_date||'').slice(0,10),ty=String(e.movement_type||'');
+      if(inventoryId&&e.inventory_item_id!==inventoryId)return fail('Mutasi berbeda SKU tidak boleh dicampur');
       if(!/^\d{4}-\d{2}-\d{2}$/.test(date))return fail('Ada tanggal mutasi yang tidak dapat diverifikasi');
       if(date===cut&&(ty==='PURCHASE_RECEIPT'||ty==='SALE_CONSUMPTION'))
         return fail('Mutasi pada hari opname tidak memiliki urutan fisik yang pasti');
@@ -2495,7 +2496,7 @@
         (S.itemDetailPage>=pages?' disabled':'')+'>Berikutnya</button></div>';
     }
     flow+='</section>';
-    var periodFlow=itemLedgerPeriodFlow(hasLedger?d.movements:null,checkpoint,S.period);
+    var periodFlow=itemLedgerPeriodFlow(hasLedger?d.movements:null,checkpoint,S.period,item.inventory_item_id);
     var ledgerPeriodRows=(S.monthEndRows||[]).filter(function(x){
       return String(x.period_month||'').slice(0,7)===S.period&&String(x.unit||'')===String(item.unit||'');
     });
