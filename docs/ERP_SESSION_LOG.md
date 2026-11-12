@@ -360,3 +360,12 @@ Validasi:30 kasus GPS (9 tambahan),25 berkas tes/full build, review independen d
 - Four KPI and two graphs untouched; desktop/modal unchanged except small scoped responsive controls.
 - Vercel preview READY at HSN-419 test commit 5b68c913; HSN-417 legacy extraction test fixed to isolate old helper. Status REVIEW until CI PR, authenticated Owner desktop/mobile, role/outlet checks.
 - Stage 3B full document-backed Majoo comparison and importer still requires original product/material master and movement/card-stock export including intact SKU (#), outlet, original unit, effective timestamps and source references. Column chooser currently for export CSV only, not on-screen table display.
+
+## 2026-11-12 — HSN-420 Stock Table + CSV Column Parity (preview-only)
+- Stacked branch on HSN-419 PR #222, HSN-418 #221, HSN-417 #220, HSN-416 #219. No main merge or production deploy.
+- Reuses existing modal Atur Kolom. Shared column keys now determine both on-screen table columns and exported CSV headers/values in deterministic order; default matches previous 11-column Stock table. Preset "Semua 15 kolom" exposes extra fields, with horizontal scrolling confined to modal.
+- Material column is required so Owner item drilldown remains available. Filter/category/search/page unchanged after toggling columns. CSV scope remains all filtered rows by default, optionally active page; no separate new exporter or Majoo parser.
+- Unknown/untracked receipts, usage, opname, incoming, min/par and demand quantities render as unavailable instead of 0 if missing. Text CSV continues spreadsheet formula-injection protection.
+- Four dashboard KPI cards/two main charts unchanged. No business-data write/DDL, no BOM or cost status approvals, no stock posting.
+- Regression tests `tests/stock-hsn420-visible-columns-v1.test.js` added to build gate for default 11/full 15, column parity, paging, unknown values, Owner drilldown, mobile-scoped styling, no mutations.
+- Browser connector could not access Owner session (requires originating connected browser context); no authenticated visual verification claimed. Status REVIEW until CI, preview and Owner desktop/mobile acceptance.

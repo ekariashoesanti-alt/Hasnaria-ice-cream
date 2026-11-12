@@ -1186,7 +1186,7 @@
       "id": "HSN-420",
       "milestone": "M4",
       "priority": "P0",
-      "status": "IN_PROGRESS",
+      "status": "REVIEW",
       "title": "Stok Tahap 3A — Atur Kolom tabel dan CSV memakai pilihan bersama",
       "dependencies": [
         "HSN-419",
@@ -1196,7 +1196,7 @@
       "owner": "ChatGPT",
       "updated_at": "2026-11-12",
       "acceptance": "Pilihan kolom mengubah tabel di modal Posisi SKU dan CSV dengan urutan identik, filter/page tetap, default 11 kolom compact, opsi semua 15, Material tidak disembunyikan, unknown tidak dipalsukan nol; desktop/mobile, build+PR preview sukses; no merge or business data writes.",
-      "notes": "Staged branch on HSN-419 PR #222; preserve 4 KPI + 2 charts. Authenticated Owner visual test pending; source Majoo export still unavailable."
+      "notes": "HSN-420 is stacked on HSN-419 branch only. Shared Stock table+CSV schema 11-column compact default, optional 15 columns, preserved filter/scope and mandatory Material ID drilldown. Unknown numeric data remains unknown, no data writes. Vercel build/CI check on final PR required; authenticated Owner desktop/mobile and CSV verification pending. Original Majoo exports missing; production unchanged."
     },
     {
       "id": "HSN-500",
