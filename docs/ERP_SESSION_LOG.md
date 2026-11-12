@@ -350,3 +350,13 @@ Validasi:30 kasus GPS (9 tambahan),25 berkas tes/full build, review independen d
 - In the detail: POS/Majoo external transaction ID where present, date, product, sold units, source sale-line ID, internal sale ID, import batch ID and outlet-completeness warning. Unit sold is never treated as component consumption; product SKU not mistaken for ingredient SKU.
 - Loader uses request sequence invalidation on item change/back/close. Failed or unmatched source explicitly marked unavailable, not linked to a fake destination. Existing checkpoint/running balance unchanged.
 - UI CSS is scoped to Stok modal; four KPI and two charts remain untouched. Regression tests and Vercel preview required. Raw Majoo product/material + stock mutation files remain prerequisites for identity/quantity mapping.
+
+## 2026-11-12 — HSN-419 Stok Tahap 3A (preview only)
+- Branch stacked HSN-418/417/416. No merge/main deploy, no Supabase writes, no parser/Majoo source assumptions.
+- On-demand Detail Barang displays monthly per-SKU ledger flow: saldo awal from a physical checkpoint before month start + PURCHASE_RECEIPT − SALE_CONSUMPTION = saldo akhir. Uses same SKU/base unit and month [start, next month); no summing across gram/pcs/pack/porsi.
+- If missing/late checkpoint, operational movement on checkpoint day, unknown movement type/adjustment, damaged qty, repeated source key, other-SKU row or incomplete ledger: block all saldo figures (unknown, never zero). No automatic reconciliation/negative resetting. Existing HSN-417 ledger cap remains 2,500 events.
+- Numeric equality proves ledger arithmetic only, never completeness of original purchases, BOM or sales. Selected-month unlinked sales status stays a visible warning.
+- Existing exportCsv() reused, now uses filteredItems() and configurable export columns and scope all matching results vs active page. CSV prepends BOM and protects source text against spreadsheet formulas. Header export uses the same selection; feature UI is in Stock Position modal, not dashboard.
+- Four KPI and two graphs untouched; desktop/modal unchanged except small scoped responsive controls.
+- Vercel preview READY at HSN-419 test commit 5b68c913; HSN-417 legacy extraction test fixed to isolate old helper. Status REVIEW until CI PR, authenticated Owner desktop/mobile, role/outlet checks.
+- Stage 3B full document-backed Majoo comparison and importer still requires original product/material master and movement/card-stock export including intact SKU (#), outlet, original unit, effective timestamps and source references. Column chooser currently for export CSV only, not on-screen table display.

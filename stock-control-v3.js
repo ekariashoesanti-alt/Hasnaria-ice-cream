@@ -70,6 +70,9 @@
     itemDetail: null,
     itemDetailSeq: 0,
     itemDetailPage: 1,
+    exportColumns: null,
+    exportColumnsOpen: false,
+    exportPageOnly: false,
     itemSourceDoc: null,
     itemSourceSeq: 0,
     pendingStockRefresh: false,
@@ -1384,6 +1387,79 @@
     return '<strong>' + fmt(x.days_cover) + ' hari</strong><small>avg ' + fmt(x.avg_usage) + '/hari</small>';
   }
 
+
+  // HSN-419: Reuse the existing CSV exporter. Scope is the *current* Stock
+  // filter; display pagination is independent unless the user selects page-only.
+  function stockExportColumnDefinitions(){
+    return [
+      {key:'name',label:'Material',get:function(x){return x.item_name;}},
+      {key:'category',label:'Kategori',get:function(x){return x.category;}},
+      {key:'unit',label:'Satuan dasar',get:function(x){return x.unit;}},
+      {key:'purchase',label:'Masuk sejak opname (ledger)',get:function(x){return x.tracking_active?x.purchase_qty:'';}},
+      {key:'usage',label:'Keluar sejak opname (ledger)',get:function(x){return x.tracking_active?x.sales_usage_qty:'';}},
+      {key:'opname',label:'Opname fisik terakhir',get:function(x){return x.tracking_active?x.last_physical_qty:'';}},
+      {key:'date',label:'Tanggal opname',get:function(x){return x.tracking_active?x.last_opname_date:'';}},
+      {key:'variance',label:'Selisih opname',get:function(x){return x.last_variance==null?'':x.last_variance;}},
+      {key:'incoming',label:'Dalam pesanan (bukan barang diterima)',get:function(x){return S.auxLoaded?x.incoming_qty:'';}},
+      {key:'min',label:'Min/Par',get:function(x){return x.min_qty;}},
+      {key:'needs',label:'Kebutuhan (simulasi)',get:function(x){return S.auxLoaded&&x.suggested_order_qty!=null?x.suggested_order_qty:'';}},
+      {key:'avg',label:'Rata-rata pemakaian (estimasi)',get:function(x){return S.auxLoaded&&x.avg_usage!=null?x.avg_usage:'';}},
+      {key:'cover',label:'Days cover (estimasi)',get:function(x){return S.auxLoaded&&x.days_cover!=null?x.days_cover:'';}},
+      {key:'status',label:'Status stok',get:function(x){return statusLabel(x.ui_status);}},
+      {key:'balance',label:'Saldo sistem (parsial)',get:function(x){return x.balance_qty==null?'':x.balance_qty;}}
+    ];
+  }
+
+  function stockExportRows(){
+    var defs=stockExportColumnDefinitions(),chosen=S.exportColumns||defs.map(function(x){return x.key});
+    var columns=defs.filter(function(x){return chosen.indexOf(x.key)>=0;});
+    if(!columns.length)columns=[defs[0]];
+    var filtered=filteredItems(),pageRows=filtered;
+    if(S.exportPageOnly){
+      var pages=Math.max(1,Math.ceil(filtered.length/PAGE_SIZE));
+      var page=Math.max(1,Math.min(pages,S.page));
+      pageRows=filtered.slice((page-1)*PAGE_SIZE,page*PAGE_SIZE);
+    }
+    var rows=[columns.map(function(x){return x.label})];
+    pageRows.forEach(function(item){rows.push(columns.map(function(x){return x.get(item)}))});
+    return {rows:rows,count:pageRows.length,filteredCount:filtered.length,
+      scope:S.exportPageOnly?'halaman-aktif':'semua-hasil-filter',columns:columns.map(function(x){return x.key})};
+  }
+
+  function stockCsvCell(v){
+    var str=String(v===undefined||v===null?'':v);
+    // Protect spreadsheets from formulas hidden in product names/categories.
+    if(typeof v!=='number'&&/^\s*[=+@]/.test(str))str="'"+str;
+    if(typeof v!=='number'&&/^\s*-(?!\d+(?:[.,]\d+)?$)/.test(str))str="'"+str;
+    return /[",\r\n]/.test(str)?'"'+str.replace(/"/g,'""')+'"':str;
+  }
+
+  function renderStockExportOptions(){
+    if(!isOwner())return '';
+    var defs=stockExportColumnDefinitions(),chosen=S.exportColumns||defs.map(function(x){return x.key});
+    var total=filteredItems().length,pages=Math.max(1,Math.ceil(total/PAGE_SIZE));
+    var current=Math.max(1,Math.min(pages,S.page));
+    var included=S.exportPageOnly?Math.max(0,Math.min(PAGE_SIZE,total-(current-1)*PAGE_SIZE)):total;
+    var controls=S.exportColumnsOpen?'<div class="sc419-export-columns" aria-label="Kolom CSV">'+
+      defs.map(function(x){
+        return '<button type="button" data-sc419-column="'+esc(x.key)+'" aria-pressed="'+
+          (chosen.indexOf(x.key)>=0?'true':'false')+'" class="'+
+          (chosen.indexOf(x.key)>=0?'on':'')+'">'+esc(x.label)+'</button>';
+      }).join('')+'</div>':'';
+    return '<section class="sc419-export-panel" aria-label="Pengaturan ekspor stok">'+
+      '<div class="sc419-export-toolbar"><b>Ekspor posisi stok (bukan arus periode)</b>'+
+      '<button type="button" data-sc419-export-columns="1" aria-expanded="'+
+        (S.exportColumnsOpen?'true':'false')+'">Atur Kolom CSV</button>'+
+      '<button type="button" data-sc419-export-scope="1">'+
+        (S.exportPageOnly?'Cakupan: halaman aktif':'Cakupan: semua hasil filter')+'</button>'+
+      '<button type="button" data-sc419-export="1">Ekspor CSV</button></div>'+
+      '<small>'+esc(fmt(included))+' dari '+esc(fmt(total))+
+      ' SKU sesuai filter · '+esc(fmt(chosen.length))+' kolom · tanpa penjumlahan antar-satuan. '+
+      (S.exportPageOnly?'Hanya baris halaman '+esc(fmt(current))+' yang diekspor.':
+       'Seluruh hasil filter diekspor, bukan hanya halaman yang terlihat.')+'</small>'+
+      controls+'</section>';
+  }
+
   function renderTable() {
     var rows = filteredItems();
     var pages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
@@ -2184,6 +2260,57 @@
       closing:valid&&complete?running:null,valid:valid&&complete,same_day:sameDay,invalid:invalid};
   }
 
+  // HSN-419: Ledger-only monthly flow for ONE SKU/base unit. Never infer missing
+  // physical checkpoints, inventory adjustments, or unposted source movements.
+  function itemLedgerPeriodFlow(movements,checkpoint,period,inventoryId){
+    var month=monthKey(period),match=/^(\d{4})-(\d{2})$/.exec(month);
+    var fail=function(reason){return {available:false,reason:reason,
+      opening:null,incoming:null,outgoing:null,closing:null,events:null}};
+    if(!match||Number(match[2])<1||Number(match[2])>12)return fail('Periode tidak valid');
+    if(!Array.isArray(movements))return fail('Ledger belum lengkap');
+    if(!checkpoint||!checkpoint.opname_date||checkpoint.physical_qty===null||
+       checkpoint.physical_qty===''||!Number.isFinite(Number(checkpoint.physical_qty)))
+      return fail('Belum ada opname fisik yang dapat dijadikan saldo awal');
+    var from=month+'-01',to=new Date(Date.UTC(Number(match[1]),Number(match[2]),1))
+      .toISOString().slice(0,10);
+    var cut=String(checkpoint.opname_date).slice(0,10);
+    if(cut>=from)return fail('Opname terakhir terjadi di dalam/setelah periode; saldo awal belum dapat ditentukan');
+    var opening=Number(checkpoint.physical_qty),incoming=0,outgoing=0,n=0,seen={};
+    var events=movements.slice().sort(function(a,b){
+      var ka=String(a.movement_date||'')+'|'+String(a.created_at||'')+'|'+String(a.id||'');
+      var kb=String(b.movement_date||'')+'|'+String(b.created_at||'')+'|'+String(b.id||'');
+      return ka<kb?-1:ka>kb?1:0;
+    });
+    for(var i=0;i<events.length;i++){
+      var e=events[i],date=String(e.movement_date||'').slice(0,10),ty=String(e.movement_type||'');
+      if(inventoryId&&e.inventory_item_id!==inventoryId)return fail('Mutasi berbeda SKU tidak boleh dicampur');
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(date))return fail('Ada tanggal mutasi yang tidak dapat diverifikasi');
+      if(date===cut&&(ty==='PURCHASE_RECEIPT'||ty==='SALE_CONSUMPTION'))
+        return fail('Mutasi pada hari opname tidak memiliki urutan fisik yang pasti');
+      if(date<=cut||date>=to)continue;
+      if(!e.id||seen['id:'+e.id])return fail('Duplikasi atau identitas mutasi tidak lengkap');
+      seen['id:'+e.id]=true;
+      if(e.source_key){
+        var sk='source:'+String(e.source_key);
+        if(seen[sk])return fail('Kunci sumber mutasi ganda; tidak dihitung dua kali');
+        seen[sk]=true;
+      }
+      if(ty!=='PURCHASE_RECEIPT'&&ty!=='SALE_CONSUMPTION')
+        return fail('Ada penyesuaian/baseline setelah opname; perlu rekonsiliasi sebelum menghitung');
+      if(e.qty_delta===null||e.qty_delta===''||!Number.isFinite(Number(e.qty_delta)))
+        return fail('Kuantitas mutasi belum valid');
+      var delta=Number(e.qty_delta);
+      if((ty==='PURCHASE_RECEIPT'&&delta<0)||(ty==='SALE_CONSUMPTION'&&delta>0))
+        return fail('Arah mutasi tidak sesuai jenis transaksi');
+      if(date<from)opening+=delta;
+      else if(ty==='PURCHASE_RECEIPT'){incoming+=delta;n++;}
+      else{outgoing-=delta;n++;}
+    }
+    return {available:true,reason:'',opening:opening,incoming:incoming,
+      outgoing:outgoing,closing:opening+incoming-outgoing,events:n,
+      from:from,to:to,checkpoint_date:cut};
+  }
+
   async function readAllItemMovements(id){
     var output=[],limit=500,max=2500,offset=0;
     while(offset<max){
@@ -2369,6 +2496,34 @@
         (S.itemDetailPage>=pages?' disabled':'')+'>Berikutnya</button></div>';
     }
     flow+='</section>';
+    var periodFlow=itemLedgerPeriodFlow(hasLedger?d.movements:null,checkpoint,S.period,item.inventory_item_id);
+    var ledgerPeriodRows=(S.monthEndRows||[]).filter(function(x){
+      return String(x.period_month||'').slice(0,7)===S.period&&String(x.unit||'')===String(item.unit||'');
+    });
+    var periodUnsynced=ledgerPeriodRows.some(function(x){
+      return x.data_status==='NO_POSTED_SALES'||Number(x.unlinked_sale_rows||0)>0;
+    });
+    var flowNote='Angka per barang dalam satuan dasar ERP, hanya dari mutasi ledger yang tercatat. '+
+      'Pembelian yang belum diterima dan penjualan yang belum disinkron tidak termasuk. '+
+      'Laporan ini bukan opname fisik baru atau perbandingan final Majoo.';
+    if(periodUnsynced)flowNote+=' Ada penjualan bulan pilihan yang belum tertaut ke ledger.';
+    var flowCards=periodFlow.available?
+      '<div class="sc419-flow-grid">'+
+        '<div><small>Saldo awal</small><b>'+esc(fmt(periodFlow.opening))+'</b></div>'+
+        '<div><small>Masuk · penerimaan</small><b>'+esc(fmt(periodFlow.incoming))+'</b></div>'+
+        '<div><small>Keluar · pemakaian</small><b>'+esc(fmt(periodFlow.outgoing))+'</b></div>'+
+        '<div><small>Saldo akhir ledger</small><b>'+esc(fmt(periodFlow.closing))+'</b></div>'+
+      '</div><p class="sc20-note">'+esc(fmt(periodFlow.opening))+' + '+esc(fmt(periodFlow.incoming))+
+      ' − '+esc(fmt(periodFlow.outgoing))+' = '+esc(fmt(periodFlow.closing))+
+      ' '+esc(readableStockUnit(item.unit))+' · '+esc(fmt(periodFlow.events))+' mutasi bulan pilihan.</p>':
+      '<p class="sc3-alert">Belum dapat dihitung: '+esc(periodFlow.reason)+
+      '. Saldo awal/akhir tidak diganti dengan nol.</p>';
+    var periodSection='<section class="sc417-section sc419-period-flow" aria-label="Arus stok bulan pilihan">'+
+      '<h4>Arus periode · '+esc(monthLabel(S.period))+'</h4>'+
+      '<p class="sc20-note">Berbeda dari posisi stok terkini. Checkpoint terakhir: '+
+      esc(checkpoint?dateLabel(checkpoint.opname_date):'belum tersedia')+'.</p>'+
+      flowCards+'<p class="sc20-note">'+esc(flowNote)+'</p></section>';
+
     var sourceDoc=S.itemSourceDoc,sourcePanel='';
     if(sourceDoc){
       if(sourceDoc.loading)sourcePanel='<p class="sc3-loading" role="status">Memeriksa dokumen transaksi Penjualan…</p>';
@@ -2428,7 +2583,7 @@
     }).join('');
     return head+errors+'<section class="sc417-section"><h4>Identitas & pemetaan</h4>'+info+
       '<p class="sc20-note">Kode INV- adalah SKU internal ERP, bukan SKU asli Majoo. Identitas tidak dicocokkan otomatis berdasarkan nama atau menghapus tanda #.</p></section>'+
-      flow+sourcePanel+'<section class="sc417-section"><h4>Opname fisik</h4>'+
+      flow+periodSection+sourcePanel+'<section class="sc417-section"><h4>Opname fisik</h4>'+
       opHtml+'</section><section class="sc417-section"><h4>Pembelian dan penerimaan</h4>'+
       (d.parts&&d.parts.indexOf('purchaseLogs')>=0?'<p class="sc3-alert">Log pembelian gagal dimuat; tidak boleh dianggap tidak ada.</p>':logs||'<p class="sc20-note">Belum ada log pembelian untuk barang ini.</p>')+
       '<h5>Dokumen penerimaan terpisah</h5>'+
@@ -2489,7 +2644,7 @@
       (isOwner()?'<div class="sc28-detail-quick"><button type="button" data-sc4-action="opname">＋ Input Opname</button>'+
         '<button type="button" data-sc4-modal="ledger">Riwayat Mutasi</button>'+
         '<button type="button" data-sc4-modal="formula-audit">Audit Integrasi</button></div>':'')+
-      renderAuxState() + renderFilters() + renderTable());
+      renderAuxState() + renderFilters() + renderStockExportOptions() + renderTable());
     return '<div class="sc4-modal-backdrop" data-sc4-close="1"><section class="sc4-modal'+(S.modal==='upload-data'?' sc28-upload-modal':'')+'" role="dialog" aria-modal="true" aria-labelledby="sc4ModalTitle" tabindex="-1"><div class="sc4-modal-head"><div><div class="sc3-eyebrow">DETAIL STOK</div><h3 id="sc4ModalTitle">' + esc(title) + '</h3><p>' + (S.modal === 'upload-data' ? 'Satu tempat untuk kebutuhan upload; tidak perlu mengulang file yang sudah tersimpan.' :
         S.modal === 'sku-sim' ? 'Simulasi teoretis dari rekap Majoo, tidak mengurangi saldo atau menyetujui BOM.' : S.modal === 'ledger' ? 'Movement periode terpilih; quantity tetap dalam satuan masing-masing SKU.' : S.modal === 'recipes' ? 'Penjualan berdasarkan bulan; resep berlaku terus sejak disetujui sampai diubah.' :
         S.modal === 'formula-audit' ? 'Audit hitung ulang semua SKU berdasarkan data yang sudah tercatat, bukan stok fisik baru.' :
@@ -2874,6 +3029,28 @@
 
   function bind(host) {
     host.onclick = function (e) {
+      var showColumns=e.target&&e.target.closest?e.target.closest('[data-sc419-export-columns]'):null;
+      if(showColumns&&S.modal==='position'&&!S.selectedItemId&&isOwner()){
+        S.exportColumnsOpen=!S.exportColumnsOpen;render();return;
+      }
+      var scope=e.target&&e.target.closest?e.target.closest('[data-sc419-export-scope]'):null;
+      if(scope&&S.modal==='position'&&!S.selectedItemId&&isOwner()){
+        S.exportPageOnly=!S.exportPageOnly;render();return;
+      }
+      var toggleColumn=e.target&&e.target.closest?e.target.closest('[data-sc419-column]'):null;
+      if(toggleColumn&&S.modal==='position'&&!S.selectedItemId&&isOwner()){
+        var valid=stockExportColumnDefinitions().map(function(c){return c.key});
+        var key=toggleColumn.getAttribute('data-sc419-column');
+        if(valid.indexOf(key)<0)return;
+        var chosen=S.exportColumns||valid.slice(),present=chosen.indexOf(key)>=0;
+        if(present&&chosen.length<=1)return;
+        S.exportColumns=present?chosen.filter(function(x){return x!==key}):chosen.concat([key]);
+        render();return;
+      }
+      var exportNow=e.target&&e.target.closest?e.target.closest('[data-sc419-export]'):null;
+      if(exportNow&&S.modal==='position'&&!S.selectedItemId&&isOwner()&&S.baseLoaded){
+        exportCsv();return;
+      }
       var closeSource=e.target&&e.target.closest?e.target.closest('[data-sc418-close-source]'):null;
       if(closeSource&&S.modal==='position'&&S.selectedItemId){
         S.itemSourceDoc=null;++S.itemSourceSeq;render();return;
@@ -3145,34 +3322,18 @@
   }
 
   function exportCsv() {
-    var rows = [['Material','Kategori','Satuan','Pembelian Setelah Opname','Pemakaian Setelah Opname','Stok Opname','Tanggal Opname','Selisih Opname','Incoming','Min/Par','Kebutuhan','Avg Pemakaian','Days Cover','Status','Saldo']];
-    filteredItems().forEach(function (x) {
-      rows.push([
-        x.item_name, x.category, x.unit, x.purchase_qty, x.sales_usage_qty,
-        x.tracking_active ? x.last_physical_qty : '', x.last_opname_date || '', x.last_variance == null ? '' : x.last_variance,
-        S.auxLoaded ? x.incoming_qty : '', x.min_qty, S.auxLoaded && x.suggested_order_qty != null ? x.suggested_order_qty : '',
-        S.auxLoaded && x.avg_usage != null ? x.avg_usage : '', S.auxLoaded && x.days_cover != null ? x.days_cover : '',
-        statusLabel(x.ui_status), x.balance_qty == null ? '' : x.balance_qty
-      ]);
-    });
-    var csv = rows.map(function (r) {
-      return r.map(function (v) {
-        var s = String(v == null ? '' : v);
-        return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
-      }).join(',');
-    }).join('\n');
-    var blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
-    var a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'hasnaria-kontrol-stok-' + today() + '.csv';
-    document.body.appendChild(a);
-    a.click();
-    var href = a.href;
-    a.remove();
-    setTimeout(function () { try { URL.revokeObjectURL(href); } catch (_) {} }, 0);
+    var report=stockExportRows();
+    var csv=report.rows.map(function(row){return row.map(stockCsvCell).join(',')}).join('\r\n');
+    var blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'});
+    var a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download='hasnaria-stok-posisi-'+report.scope+'-'+today()+'.csv';
+    document.body.appendChild(a);a.click();
+    var href=a.href;a.remove();
+    setTimeout(function(){try{URL.revokeObjectURL(href)}catch(_){}},0);
   }
 
-  function active() {
+    function active() {
     var host = document.getElementById('stok');
     return !!(host && !host.classList.contains('hidden'));
   }
