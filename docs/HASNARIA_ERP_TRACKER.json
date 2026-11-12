@@ -1230,6 +1230,21 @@
       "notes": "Preview-only stacked on HSN-421 PR #224. Stock Owner item detail differentiates failed registry/opname GET from valid empty source and keeps ledger visible with unknown running/period balances; no Supabase writes. Regression and build status require final CI review; Owner authenticated visual check remains blocked by missing originating browser connection. Main production untouched."
     },
     {
+      "id": "HSN-423",
+      "milestone": "M4",
+      "priority": "P0",
+      "status": "IN_PROGRESS",
+      "title": "Stok QA: blok RPC tulis pada preview yang memakai database produksi",
+      "dependencies": [
+        "HSN-422",
+        "HSN-421"
+      ],
+      "owner": "ChatGPT",
+      "updated_at": "2026-11-13",
+      "acceptance": "Saat preview memakai URL Supabase produksi, semua RPC non-allowlist baca ditolak sebelum request/token, termasuk review resep dan koreksi opname; katalog periode & moving FIFO tetap dapat dibaca, production asli tidak berubah. Modal review menjelaskan write-block. Build, CI dan preview hijau; no merge, no production writes.",
+      "notes": "Owner visual acceptance blocked pending originating browser connection. Preserve the current two read-only RPCs. No auth/schema/ledger changes."
+    },
+    {
       "id": "HSN-500",
       "milestone": "M5",
       "priority": "P0",
