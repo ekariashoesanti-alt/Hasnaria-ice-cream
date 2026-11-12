@@ -66,6 +66,10 @@
     latestMovementLoading: false,
     latestMovementError: '',
     latestMovementSeq: 0,
+    selectedItemId: '',
+    itemDetail: null,
+    itemDetailSeq: 0,
+    itemDetailPage: 1,
     pendingStockRefresh: false,
     verifiedRefreshing: false,
     pendingUploadRuns: null,
@@ -1389,7 +1393,7 @@
       var need = !S.auxLoaded ? '<span class="sc3-muted">…</span>' : (x.suggested_order_qty === null ? '<span class="sc3-muted">-</span>' : (x.suggested_order_qty > 0 ? '<strong class="sc3-need">' + fmt(x.suggested_order_qty) + '</strong>' : '<span>0</span>'));
       var incoming = !S.auxLoaded ? '<span class="sc3-muted">…</span>' : (x.incoming_qty > 0 ? '<strong class="sc3-incoming">+' + fmt(x.incoming_qty) + '</strong>' : '<span class="sc3-muted">0</span>');
       return '<tr>' +
-        '<td class="sc3-item"><strong>' + esc(x.item_name) + '</strong><small>' + esc(x.category || 'Lainnya') + ' · ' + esc(readableStockUnit(x.unit)) + '</small></td>' +
+        '<td class="sc3-item"><button type="button" class="sc417-item-link" data-sc417-item="'+esc(x.inventory_item_id)+'">'+esc(x.item_name)+'</button><small>' + esc(x.category || 'Lainnya') + ' · ' + esc(readableStockUnit(x.unit)) + '</small></td>' +
         '<td class="sc3-num sc3-plus">+' + fmt(x.purchase_qty) + '</td>' +
         '<td class="sc3-num sc3-minus">-' + fmt(x.sales_usage_qty) + '</td>' +
         '<td class="sc3-num sc3-opname">' + opnameHtml(x) + '</td>' +
@@ -2142,6 +2146,224 @@
       '<p class="sc5-caption">*Refund tidak selalu mengembalikan bahan yang telah diracik. Tidak tersedia tombol posting saldo di halaman simulasi.</p>';
   }
 
+
+  // HSN-417: Running balance must be computed before pagination, within ONE SKU,
+  // after a physical checkpoint; same-day movements are intentionally ambiguous.
+  function itemLedgerRunningRows(movements,checkpoint){
+    var rows=(movements||[]).slice().sort(function(a,b){
+      var ak=String(a.movement_date||'')+'|'+String(a.created_at||'')+'|'+String(a.id||'');
+      var bk=String(b.movement_date||'')+'|'+String(b.created_at||'')+'|'+String(b.id||'');
+      return ak<bk?-1:ak>bk?1:0;
+    });
+    var valid=!!(checkpoint&&checkpoint.opname_date&&checkpoint.physical_qty!==null&&
+      checkpoint.physical_qty!==''&&Number.isFinite(Number(checkpoint.physical_qty)));
+    var running=valid?Number(checkpoint.physical_qty):null,complete=valid,sameDay=0,invalid=0;
+    var result=rows.map(function(x){
+      var event=Object.assign({},x,{running_balance:null,balance_reason:''});
+      if(!valid){event.balance_reason='Belum ada checkpoint fisik';return event;}
+      var date=String(x.movement_date||'').slice(0,10);
+      var cut=String(checkpoint.opname_date).slice(0,10);
+      if(date<=cut){
+        if(date===cut)sameDay++;
+        event.balance_reason=date===cut?'Tanggal opname sama: urutan tidak pasti':'Sebelum checkpoint terakhir';
+        return event;
+      }
+      if(x.movement_type==='BASELINE'||x.movement_type==='OPNAME_CORRECTION'){
+        event.balance_reason='Checkpoint/koreksi tidak dijumlahkan ulang';
+        return event;
+      }
+      if(x.qty_delta===null||x.qty_delta===''||!Number.isFinite(Number(x.qty_delta))){
+        complete=false;invalid++;event.balance_reason='Kuantitas mutasi belum valid';return event;
+      }
+      if(!complete){event.balance_reason='Saldo lanjutan tertahan karena mutasi sebelumnya tidak valid';return event;}
+      running+=Number(x.qty_delta);event.running_balance=running;return event;
+    });
+    return {rows:result,checkpoint_valid:valid,opening:valid?Number(checkpoint.physical_qty):null,
+      closing:valid&&complete?running:null,valid:valid&&complete,same_day:sameDay,invalid:invalid};
+  }
+
+  async function readAllItemMovements(id){
+    var output=[],limit=500,max=2500,offset=0;
+    while(offset<max){
+      var chunk=await request('inventory_movements?'+qs({
+        brand_id:'eq.'+BRAND,inventory_item_id:'eq.'+id,
+        select:'id,inventory_item_id,movement_date,created_at,movement_type,qty_delta,reference_type,reference_id,source_key,notes,outlet_id',
+        order:'movement_date.asc,created_at.asc,id.asc',
+        limit:String(limit),offset:String(offset)
+      }));
+      if(!Array.isArray(chunk))throw Error('Format ledger barang tidak dapat diperiksa');
+      output=output.concat(chunk);
+      if(chunk.length<limit)return output;
+      offset+=limit;
+    }
+    // Fail closed: never calculate a running balance from a truncated event history.
+    throw Error('Riwayat melebihi batas pemeriksaan (2.500 mutasi). Saldo berjalan tidak dihitung.');
+  }
+
+  async function loadStockItemDetail(id){
+    if(!isOwner()||S.modal!=='position'||!S.items.some(function(x){return x.inventory_item_id===id})||
+      !/^[0-9a-f-]{36}$/i.test(String(id||'')))return;
+    var seq=++S.itemDetailSeq;
+    S.selectedItemId=id;S.itemDetailPage=1;
+    S.itemDetail={id:id,loading:true,error:'',parts:[],registry:[],opnames:[],
+      movements:null,recipes:[],purchaseLogs:[],goodsReceipts:[],products:[]};
+    render();
+    var reqs=[
+      request('inventory_sku_registry?'+qs({brand_id:'eq.'+BRAND,inventory_item_id:'eq.'+id,
+        select:'sku_code,sku_name,base_unit,sku_type,status,source',limit:'10'})),
+      request('inventory_stock_opname?'+qs({brand_id:'eq.'+BRAND,inventory_item_id:'eq.'+id,
+        select:'id,opname_date,physical_qty,system_qty,variance,created_at,notes',
+        order:'opname_date.desc,created_at.desc,id.desc',limit:'100'})),
+      readAllItemMovements(id),
+      request('inventory_recipe_components?'+qs({brand_id:'eq.'+BRAND,inventory_item_id:'eq.'+id,active:'eq.true',
+        select:'product_id,qty_per_sale,bom_status',limit:'150'})),
+      request('inventory_purchase_log?'+qs({brand_id:'eq.'+BRAND,inventory_item_id:'eq.'+id,
+        select:'id,purchase_date,qty,unit,source_file,source_row_no,source_history_id',
+        order:'purchase_date.desc,id.desc',limit:'300'})),
+      request('goods_receipt_items?'+qs({inventory_item_id:'eq.'+id,
+        select:'id,qty_received,unit,goods_receipt_id,goods_receipts!inner(receipt_no,receipt_date,status,brand_id,outlet_id)',
+        'goods_receipts.brand_id':'eq.'+BRAND,limit:'100'}))
+    ];
+    var outcomes=await Promise.allSettled(reqs);
+    if(seq!==S.itemDetailSeq||S.selectedItemId!==id||S.modal!=='position')return;
+    var field=['registry','opnames','movements','recipes','purchaseLogs','goodsReceipts'];
+    var result=S.itemDetail;
+    outcomes.forEach(function(x,i){
+      if(x.status==='fulfilled'&&Array.isArray(x.value))result[field[i]]=x.value;
+      else result.parts.push(field[i]);
+    });
+    var productsIds=(result.recipes||[]).map(function(x){return x.product_id})
+      .filter(function(x){return /^[0-9a-f-]{36}$/i.test(String(x||''))});
+    if(productsIds.length){
+      try{
+        var pr=await request('products?'+qs({brand_id:'eq.'+BRAND,
+          id:'in.('+Array.from(new Set(productsIds)).join(',')+')',select:'id,name,sku',limit:'150'}));
+        if(seq!==S.itemDetailSeq||S.selectedItemId!==id||S.modal!=='position')return;
+        result.products=Array.isArray(pr)?pr:[];
+      }catch(e){result.parts.push('products');}
+    }
+    if(seq!==S.itemDetailSeq||S.selectedItemId!==id||S.modal!=='position')return;
+    result.loading=false;
+    if(result.parts.indexOf('movements')>=0||result.parts.indexOf('opnames')>=0)
+      result.error='Ledger atau opname gagal dimuat; saldo berjalan tidak dapat diverifikasi.';
+    render();
+  }
+
+  function renderStockItemDetail(){
+    if(!isOwner())return '<p class="sc20-note">Detail penelusuran hanya tersedia untuk Owner.</p>';
+    var item=S.items.find(function(x){return x.inventory_item_id===S.selectedItemId});
+    if(!item)return '<p class="sc3-alert">Barang tidak ditemukan di data yang berhak Anda akses.</p>';
+    var d=S.itemDetail||{},back='<button type="button" class="sc417-back" data-sc417-back="1">← Kembali ke daftar</button>';
+    if(d.loading)return back+'<div class="sc3-loading" role="status">Memuat identitas dan dokumen '+esc(item.item_name)+'…</div>';
+    var registry=(d.registry||[])[0]||null;
+    var checkpoint=(d.opnames||[])[0]||null;
+    var hasLedger=Array.isArray(d.movements),hasOpname=Array.isArray(d.opnames);
+    var calc=hasLedger&&hasOpname?itemLedgerRunningRows(d.movements,checkpoint):null;
+    var status=!registry?'Belum ada di registri SKU ERP':
+      String(registry.source||'').toLowerCase().indexOf('majoo')>=0?
+        'Sumber Majoo tercatat; perlu pemeriksaan bukti pemetaan':'SKU internal ERP — Majoo belum dipetakan';
+    var type=registry&&registry.sku_type==='packaging'?'Kemasan':
+      registry&&registry.sku_type==='ingredient'?'Bahan':'Belum diketahui';
+    var value=function(x){return x===null||x===undefined||x===''?'Belum tersedia':String(x);};
+    var info='<div class="sc417-identity">'+
+      '<div><small>SKU ERP</small><b>'+esc(registry?registry.sku_code:'Belum ada')+'</b></div>'+
+      '<div><small>SKU asli Majoo</small><b>Belum terverifikasi</b></div>'+
+      '<div><small>Jenis barang ERP</small><b>'+esc(type)+'</b></div>'+
+      '<div><small>Satuan dasar ERP</small><b>'+esc(readableStockUnit(registry?registry.base_unit:item.unit))+'</b></div>'+
+      '<div><small>Satuan asli Majoo</small><b>Belum tersedia</b></div>'+
+      '<div><small>Status pemetaan</small><b>'+esc(status)+'</b></div>'+
+      '<div><small>ID barang ERP</small><code>'+esc(item.inventory_item_id)+'</code></div>'+
+      '<div><small>Asal registri</small><b>'+esc(value(registry&&registry.source))+'</b></div>'+
+    '</div>';
+    var errors=(d.parts||[]).length?'<p class="sc3-alert">Sebagian sumber tidak tersedia: '+
+      esc(d.parts.join(', '))+'. Bagian yang gagal tidak dianggap kosong.</p>':'';
+    var head='<div class="sc417-item-top">'+back+'<h4>'+esc(item.item_name)+
+      '</h4><small>'+esc(item.category||'Lainnya')+' · '+esc(readableStockUnit(item.unit))+'</small></div>';
+    var quantity=calc&&calc.valid?fmt(calc.closing)+' '+esc(readableStockUnit(item.unit)):'Belum bisa dihitung';
+    var checkpointMessage=!hasOpname?'Data opname gagal dimuat':!checkpoint?'Belum ada checkpoint fisik; saldo berjalan tidak ditampilkan':
+      'Opname '+dateLabel(checkpoint.opname_date)+' · '+fmt(checkpoint.physical_qty)+' '+esc(readableStockUnit(item.unit));
+    var disagrees=calc&&calc.valid&&item.tracking_active&&
+      Math.abs(Number(item.system_qty)-calc.closing)>0.000001;
+    var flow='<section class="sc417-section"><h4>Saldo berjalan per barang</h4>'+
+      '<p>Saldo akhir hitungan: <b>'+quantity+'</b> · '+checkpointMessage+'.</p>'+
+      (calc&&calc.same_day?'<p class="sc20-note">'+fmt(calc.same_day)+
+        ' mutasi bertanggal sama dengan opname. Urutan intrahari tidak diketahui, sehingga tidak dijumlahkan dua kali.</p>':'')+
+      (disagrees?'<p class="sc3-alert">Saldo hitung berbeda dari rekonsiliasi sistem; perlu pemeriksaan, bukan otomatis dikoreksi.</p>':'')+
+      '<p class="sc20-note">Per barang, diurutkan tanggal transaksi → waktu pencatatan → ID mutasi. '+
+      'Saldo dihitung dari checkpoint fisik terbaru; tanggal sama/lebih lama tidak dimasukkan. '+
+      'Bulan yang belum tersinkron tetap membuat saldo parsial, bukan verified.</p>';
+    if(!hasLedger)flow+='<div class="sc3-alert">Ledger barang gagal dimuat. Saldo tidak dianggap nol.</div>';
+    else {
+      var reversed=calc.rows.slice().reverse(),size=25,pages=Math.max(1,Math.ceil(reversed.length/size));
+      S.itemDetailPage=Math.max(1,Math.min(S.itemDetailPage,pages));
+      var start=(S.itemDetailPage-1)*size;
+      var source=function(x){
+        var ty=String(x.reference_type||''),rid=String(x.reference_id||'');
+        var refs='';
+        if(ty==='inventory_stock_opname'&&(d.opnames||[]).some(function(o){return o.id===rid}))
+          refs='<a href="#sc417-opname-'+esc(rid)+'">Lihat checkpoint opname</a>';
+        else if(ty==='inventory_purchase_log'&&(d.purchaseLogs||[]).some(function(o){return o.id===rid}))
+          refs='<a href="#sc417-purchase-'+esc(rid)+'">Lihat sumber pembelian</a>';
+        else refs=ty?esc(ty)+(rid?' · '+esc(rid.slice(0,8)):''):'Tidak ada referensi';
+        return refs;
+      };
+      var body=reversed.slice(start,start+size).map(function(x){
+        return '<tr><td>'+esc(dateLabel(x.movement_date))+'</td><td>'+esc(x.movement_type||'—')+
+          '</td><td class="sc3-num">'+esc(signed(x.qty_delta))+'</td>'+
+          '<td class="sc3-num">'+(x.running_balance===null?'—':esc(fmt(x.running_balance)))+'</td>'+
+          '<td>'+source(x)+(x.balance_reason?'<small>'+esc(x.balance_reason)+'</small>':'')+'</td></tr>';
+      }).join('');
+      flow+='<div class="sc3-table-wrap"><table class="sc3-table sc417-ledger"><thead><tr>'+
+        '<th>Tanggal</th><th>Jenis mutasi</th><th>Perubahan</th><th>Saldo</th><th>Referensi sumber</th>'+
+        '</tr></thead><tbody>'+ (body||'<tr><td colspan="5">Belum ada mutasi tercatat untuk barang ini.</td></tr>')+
+        '</tbody></table></div><div class="sc417-pager"><span>'+fmt(reversed.length)+
+        ' mutasi · halaman '+fmt(S.itemDetailPage)+' / '+fmt(pages)+'</span>'+
+        '<button type="button" data-sc417-page="'+(S.itemDetailPage-1)+'"'+
+        (S.itemDetailPage<=1?' disabled':'')+'>Sebelumnya</button>'+
+        '<button type="button" data-sc417-page="'+(S.itemDetailPage+1)+'"'+
+        (S.itemDetailPage>=pages?' disabled':'')+'>Berikutnya</button></div>';
+    }
+    flow+='</section>';
+    var opHtml=!hasOpname?'Riwayat opname gagal dimuat.':
+      !(d.opnames||[]).length?'Belum ada bukti opname fisik.':
+      (d.opnames||[]).slice(0,20).map(function(x){
+        return '<div class="sc417-document" id="sc417-opname-'+esc(x.id)+'"><b>'+
+          esc(dateLabel(x.opname_date))+' · '+esc(fmt(x.physical_qty))+' '+esc(readableStockUnit(item.unit))+
+          '</b><small>Checkpoint fisik · '+esc(x.id)+'</small></div>';
+      }).join('');
+    var logs=(d.purchaseLogs||[]).slice(0,25).map(function(x){
+      return '<div class="sc417-document" id="sc417-purchase-'+esc(x.id)+'"><b>'+
+        esc(dateLabel(x.purchase_date))+' · '+esc(fmt(x.qty))+' '+esc(value(x.unit))+
+        '</b><small>Log pembelian · '+esc(value(x.source_file))+
+        (x.source_row_no!==null&&x.source_row_no!==undefined?' · baris '+esc(x.source_row_no):'')+
+        ' · bukti penerimaan fisik harus diperiksa</small></div>';
+    }).join('');
+    var receipt=(d.goodsReceipts||[]).map(function(x){
+      var gr=x.goods_receipts||{};
+      return '<div class="sc417-document"><b>'+esc(value(gr.receipt_no))+
+        ' · '+esc(dateLabel(gr.receipt_date))+'</b><small>'+
+        esc(value(gr.status))+' · '+esc(fmt(x.qty_received))+' '+esc(value(x.unit))+'</small></div>';
+    }).join('');
+    var productById={};(d.products||[]).forEach(function(x){productById[x.id]=x;});
+    var recipe=(d.recipes||[]).slice(0,30).map(function(x){
+      var p=productById[x.product_id];
+      return '<div class="sc417-document"><b>'+esc(p?p.name:'Produk belum dapat ditautkan')+
+        '</b><small>'+esc(value(x.bom_status))+' · '+esc(fmt(x.qty_per_sale))+
+        ' per penjualan (satuan ERP; verifikasi dosis diperlukan)'+
+        (p&&p.sku?' · SKU produk ERP: '+esc(p.sku):'')+'</small></div>';
+    }).join('');
+    return head+errors+'<section class="sc417-section"><h4>Identitas & pemetaan</h4>'+info+
+      '<p class="sc20-note">Kode INV- adalah SKU internal ERP, bukan SKU asli Majoo. Identitas tidak dicocokkan otomatis berdasarkan nama atau menghapus tanda #.</p></section>'+
+      flow+'<section class="sc417-section"><h4>Opname fisik</h4>'+
+      opHtml+'</section><section class="sc417-section"><h4>Pembelian dan penerimaan</h4>'+
+      (logs||'<p class="sc20-note">Belum ada log pembelian untuk barang ini.</p>')+
+      '<h5>Dokumen penerimaan terpisah</h5>'+
+      (receipt||'<p class="sc20-note">Dokumen goods_receipts belum tersedia untuk barang ini. Faktur atau pembayaran bukan bukti penerimaan.</p>')+
+      '</section><section class="sc417-section"><h4>Resep yang memakai bahan ini</h4>'+
+      (recipe||'<p class="sc20-note">Belum ada komponen resep aktif yang tertaut.</p>')+
+      '</section><p class="sc20-note">Tautan hanya muncul ketika referensi ledger cocok dengan dokumen yang ada. Referensi sale_item tanpa hubungan dokumen tidak dibuat tautan palsu.</p>';
+  }
+
   function renderPositionCoverage(){
     if(!S.baseLoaded)return '<div class="sc20-note" role="status">'+
       (S.error?'Posisi stok gagal dimuat: '+esc(S.error):'Memuat posisi stok terkini…')+'</div>';
@@ -2189,11 +2411,11 @@
       S.modal === 'recipes' ? renderRecipeReview() :
       S.modal === 'sku-sim' ? renderSkuSimulation() :
       S.modal === 'formula-audit' ? renderFormulaAudit() :
-      renderPositionCoverage() + renderFormula() +
+      (S.selectedItemId?renderStockItemDetail():renderPositionCoverage() + renderFormula() +
       (isOwner()?'<div class="sc28-detail-quick"><button type="button" data-sc4-action="opname">＋ Input Opname</button>'+
         '<button type="button" data-sc4-modal="ledger">Riwayat Mutasi</button>'+
         '<button type="button" data-sc4-modal="formula-audit">Audit Integrasi</button></div>':'')+
-      renderAuxState() + renderFilters() + renderTable();
+      renderAuxState() + renderFilters() + renderTable());
     return '<div class="sc4-modal-backdrop" data-sc4-close="1"><section class="sc4-modal'+(S.modal==='upload-data'?' sc28-upload-modal':'')+'" role="dialog" aria-modal="true" aria-labelledby="sc4ModalTitle" tabindex="-1"><div class="sc4-modal-head"><div><div class="sc3-eyebrow">DETAIL STOK</div><h3 id="sc4ModalTitle">' + esc(title) + '</h3><p>' + (S.modal === 'upload-data' ? 'Satu tempat untuk kebutuhan upload; tidak perlu mengulang file yang sudah tersimpan.' :
         S.modal === 'sku-sim' ? 'Simulasi teoretis dari rekap Majoo, tidak mengurangi saldo atau menyetujui BOM.' : S.modal === 'ledger' ? 'Movement periode terpilih; quantity tetap dalam satuan masing-masing SKU.' : S.modal === 'recipes' ? 'Penjualan berdasarkan bulan; resep berlaku terus sejak disetujui sampai diubah.' :
         S.modal === 'formula-audit' ? 'Audit hitung ulang semua SKU berdasarkan data yang sudah tercatat, bukan stok fisik baru.' :
@@ -2561,7 +2783,7 @@
   }
   function stockCloseDialog(host) {
     var previous=S.modal;
-    S.modal='';
+    S.modal='';S.selectedItemId='';S.itemDetail=null;++S.itemDetailSeq;
     render();
     var source=host.querySelector('[data-sc4-modal="'+previous+'"]');
     if(source&&source.focus)source.focus({preventScroll:true});
@@ -2578,15 +2800,29 @@
 
   function bind(host) {
     host.onclick = function (e) {
+      var itemBack=e.target&&e.target.closest?e.target.closest('[data-sc417-back]'):null;
+      if(itemBack&&S.modal==='position'){
+        S.selectedItemId='';S.itemDetail=null;++S.itemDetailSeq;
+        render();return;
+      }
+      var itemPage=e.target&&e.target.closest?e.target.closest('[data-sc417-page]'):null;
+      if(itemPage&&S.modal==='position'&&S.selectedItemId&&!itemPage.disabled){
+        S.itemDetailPage=Number(itemPage.getAttribute('data-sc417-page'))||1;
+        render();return;
+      }
+      var itemOpen=e.target&&e.target.closest?e.target.closest('[data-sc417-item]'):null;
+      if(itemOpen&&S.modal==='position'&&isOwner()){
+        loadStockItemDetail(itemOpen.getAttribute('data-sc417-item'));return;
+      }
       var kpi=e.target&&e.target.closest?e.target.closest('[data-sc4-kpi]'):null;
       if(kpi){
         S.search='';S.category='';S.status=kpi.getAttribute('data-sc4-kpi')||'';
-        S.page=1;S.modal='position';render();stockDialogFocus(host);return;
+        S.page=1;S.modal='position';S.selectedItemId='';S.itemDetail=null;++S.itemDetailSeq;render();stockDialogFocus(host);return;
       }
       var review=e.target&&e.target.closest?e.target.closest('[data-sc4-filter]'):null;
       if(review&&S.modal==='position'){
         S.search='';S.category='';S.status=review.getAttribute('data-sc4-filter')||'';
-        S.page=1;render();return;
+        S.page=1;S.selectedItemId='';S.itemDetail=null;++S.itemDetailSeq;render();return;
       }
       var skuSimRefresh=e.target&&e.target.closest?e.target.closest('[data-sc25-refresh]'):null;
       if(skuSimRefresh&&isOwner()&&S.modal==='sku-sim'){loadSkuSimulation();return;}
@@ -2642,6 +2878,7 @@
       var modal = e.target && e.target.closest ? e.target.closest('[data-sc4-modal]') : null;
       if (modal) {
         S.modal = modal.getAttribute('data-sc4-modal') || '';
+        if(S.modal==='position'){S.selectedItemId='';S.itemDetail=null;++S.itemDetailSeq;}
         if (S.modal === 'ledger' && !S.ledgerLoading) loadLedger();
         else if (S.modal === 'recipes') loadRecipeReview();
         else if (S.modal === 'sku-sim') loadSkuSimulation();
