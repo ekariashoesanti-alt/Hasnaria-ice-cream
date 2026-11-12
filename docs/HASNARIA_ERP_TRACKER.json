@@ -1199,6 +1199,22 @@
       "notes": "HSN-420 is stacked on HSN-419 branch only. Shared Stock table+CSV schema 11-column compact default, optional 15 columns, preserved filter/scope and mandatory Material ID drilldown. Unknown numeric data remains unknown, no data writes. Vercel build/CI check on final PR required; authenticated Owner desktop/mobile and CSV verification pending. Original Majoo exports missing; production unchanged."
     },
     {
+      "id": "HSN-421",
+      "milestone": "M4",
+      "priority": "P0",
+      "status": "IN_PROGRESS",
+      "title": "Stok QA: blok saldo berjalan ambigu ketika mutasi Penjualan terjadi pada tanggal opname",
+      "dependencies": [
+        "HSN-417",
+        "HSN-419",
+        "HSN-420"
+      ],
+      "owner": "ChatGPT",
+      "updated_at": "2026-11-12",
+      "acceptance": "Owner Detail Barang tidak menampilkan saldo berjalan numerik jika tanggal opname bertabrakan dengan SALE_CONSUMPTION/PURCHASE_RECEIPT atau ledger rusak. Koreksi/baseline dan duplikasi setelah opname tidak boleh diam-diam dilewati; error state eksplisit; regresi valid tidak berubah; CI Preview pass, tanpa posting/merge.",
+      "notes": "Read-only query production menemukan 24 same-day SALE_CONSUMPTION pada 9 SKU dari 41 SKU beropname. Data berisiko tampak verified pada HSN-417; patch pada branch preview stacked #223."
+    },
+    {
       "id": "HSN-500",
       "milestone": "M5",
       "priority": "P0",
