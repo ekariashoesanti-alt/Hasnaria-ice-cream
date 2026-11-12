@@ -1155,7 +1155,7 @@
       "id": "HSN-418",
       "milestone": "M4",
       "priority": "P0",
-      "status": "IN_PROGRESS",
+      "status": "REVIEW",
       "title": "Stok Tahap 2A: penelusuran sale_item ke transaksi Penjualan berdasarkan ID+brand",
       "dependencies": [
         "HSN-417",
@@ -1164,7 +1164,7 @@
       "owner": "ChatGPT",
       "updated_at": "2026-11-12",
       "acceptance": "Di Detail Barang, sale_item valid dapat dibuka pada panel transaksi penjualan beridentitas ID, brand dan outlet yang cocok; request hanya saat klik; loading/error/unknown tidak dianggap tidak ada; tidak memodifikasi ledger atau model stok; seluruh tes/build preview lulus; production tetap tidak berubah.",
-      "notes": "Read-only HSN-418 stacked on HSN-417. Verified SQL: 7565/7565 SALE_CONSUMPTION reference sale_items -> sales matching same brand; 0 mismatched known outlet. 1025 ledger movements outlet_id null; never infer outlet. Historical raw Majoo file and mapping still pending."
+      "notes": "Stacked draft PR, source-to-sale ID lookup tested read-only. 7565/7565 historical SALE_CONSUMPTION rows match sale_item and same-brand sales; 0 known outlet mismatches. No Majoo source mapping approved. CI/preview + Owner visual acceptance required. No business writes or production."
     },
     {
       "id": "HSN-500",

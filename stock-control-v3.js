@@ -2345,8 +2345,8 @@
           refs='<a href="#sc417-opname-'+esc(rid)+'">Lihat checkpoint opname</a>';
         else if(ty==='inventory_purchase_log'&&(d.purchaseLogs||[]).some(function(o){return o.id===rid}))
           refs='<a href="#sc417-purchase-'+esc(rid)+'">Lihat sumber pembelian</a>';
-        else if(ty==='sale_item'&&/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(rid)&&
-                /^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(String(x.id||'')))
+        else if(ty==='sale_item'&&/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(rid)&&
+                /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(x.id||'')))
           refs='<button type="button" class="sc418-source-open" data-sc418-sale="'+esc(x.id)+
             '">Lihat transaksi Penjualan</button>';
         else refs=ty?esc(ty)+(rid?' · '+esc(rid.slice(0,8)):''):'Tidak ada referensi';
@@ -2384,6 +2384,7 @@
           '<div><small>SKU pada baris penjualan</small><b>'+esc(line.external_sku||'Belum tersedia')+'</b></div>'+
           '<div><small>ID baris Penjualan</small><code>'+esc(line.id)+'</code></div>'+
           '<div><small>ID transaksi internal</small><code>'+esc(src.id)+'</code></div>'+
+          '<div><small>Batch sumber Penjualan</small><code>'+esc(src.source_batch_id||'Belum tersedia')+'</code></div>'+
           '<div><small>Status outlet</small><b>'+(sourceDoc.outletChecked?'Outlet sama':'Outlet tidak tercantum lengkap')+'</b></div>'+
         '</div><p class="sc20-note">Transaksi sumber memiliki relasi ID dan brand yang cocok. '+
           'SKU produk pada transaksi tidak otomatis menjadi SKU bahan Majoo. '+
@@ -2434,7 +2435,7 @@
       (d.parts&&d.parts.indexOf('goodsReceipts')>=0?'<p class="sc3-alert">Data dokumen penerimaan gagal dibaca; status penerimaan belum diketahui.</p>':receipt||'<p class="sc20-note">Dokumen goods_receipts belum tersedia untuk barang ini. Faktur atau pembayaran bukan bukti penerimaan.</p>')+
       '</section><section class="sc417-section"><h4>Resep yang memakai bahan ini</h4>'+
       (d.parts&&d.parts.indexOf('recipes')>=0?'<p class="sc3-alert">Data resep gagal dimuat.</p>':recipe||'<p class="sc20-note">Belum ada komponen resep aktif yang tertaut.</p>')+
-      '</section><p class="sc20-note">Tautan hanya muncul ketika referensi ledger cocok dengan dokumen yang ada. Referensi sale_item tanpa hubungan dokumen tidak dibuat tautan palsu.</p>';
+      '</section><p class="sc20-note">Tautan hanya muncul ketika referensi ledger memiliki relasi dokumen yang bisa diverifikasi. Referensi sale_item dibuka melalui ID baris, brand, dan outlet yang tersedia; tanpa hubungan yang sah tidak dibuat tautan palsu.</p>';
   }
 
   function renderPositionCoverage(){
