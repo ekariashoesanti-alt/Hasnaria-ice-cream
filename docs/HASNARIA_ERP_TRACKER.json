@@ -1183,6 +1183,22 @@
       "notes": "Implemented on stacked preview branch. Production unchanged. Per-SKU month flow from physical checkpoint prior to period, only ledger SALE_CONSUMPTION/PURCHASE_RECEIPT; same-day operational movements, nonstandard adjustments, duplicate source, wrong SKU, invalid qty all fail closed. Existing filtered CSV now supports scope ALL/page and selectable export columns; Atur Kolom only changes CSV, not on-screen table yet. Vercel preview build READY on 5b68c913; Owner visual/role acceptance still needed. Original Majoo master & mutation export not available."
     },
     {
+      "id": "HSN-420",
+      "milestone": "M4",
+      "priority": "P0",
+      "status": "IN_PROGRESS",
+      "title": "Stok Tahap 3A — Atur Kolom tabel dan CSV memakai pilihan bersama",
+      "dependencies": [
+        "HSN-419",
+        "HSN-418",
+        "HSN-417"
+      ],
+      "owner": "ChatGPT",
+      "updated_at": "2026-11-12",
+      "acceptance": "Pilihan kolom mengubah tabel di modal Posisi SKU dan CSV dengan urutan identik, filter/page tetap, default 11 kolom compact, opsi semua 15, Material tidak disembunyikan, unknown tidak dipalsukan nol; desktop/mobile, build+PR preview sukses; no merge or business data writes.",
+      "notes": "Staged branch on HSN-419 PR #222; preserve 4 KPI + 2 charts. Authenticated Owner visual test pending; source Majoo export still unavailable."
+    },
+    {
       "id": "HSN-500",
       "milestone": "M5",
       "priority": "P0",
