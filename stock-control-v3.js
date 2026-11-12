@@ -1377,6 +1377,7 @@
 
   function opnameHtml(x) {
     if (!x.tracking_active) return '<span class="sc3-muted">Belum ada</span>';
+    if (x.last_physical_qty===null || x.last_physical_qty===undefined) return '<span class="sc3-muted">Belum tersedia</span>';
     return '<strong>' + fmt(x.last_physical_qty) + '</strong><small>' + dateLabel(x.last_opname_date) + '</small>';
   }
 
@@ -1488,19 +1489,19 @@
       {key:'category',heading:'Kategori',cell:function(x){return esc(x.category||'Lainnya');}},
       {key:'unit',heading:'Satuan dasar',cell:function(x){return esc(readableStockUnit(x.unit));}},
       {key:'purchase',heading:'+ Masuk sejak opname',cls:'sc3-num sc3-plus',
-        cell:function(x){return x.tracking_active?'+'+esc(fmt(x.purchase_qty)):dash;}},
+        cell:function(x){return x.tracking_active&&x.purchase_qty!==null&&x.purchase_qty!==undefined?'+'+esc(fmt(x.purchase_qty)):dash;}},
       {key:'usage',heading:'− Keluar sejak opname',cls:'sc3-num sc3-minus',
-        cell:function(x){return x.tracking_active?'−'+esc(fmt(x.sales_usage_qty)):dash;}},
+        cell:function(x){return x.tracking_active&&x.sales_usage_qty!==null&&x.sales_usage_qty!==undefined?'−'+esc(fmt(x.sales_usage_qty)):dash;}},
       {key:'opname',heading:'Stok Opname',cls:'sc3-num sc3-opname',cell:opnameHtml},
       {key:'date',heading:'Tanggal opname',cell:function(x){return x.tracking_active&&x.last_opname_date?
         esc(dateLabel(x.last_opname_date)):dash;}},
       {key:'variance',heading:'Selisih',cls:'sc3-num',cell:function(x){return varianceHtml(x.last_variance);}},
       {key:'incoming',heading:'Incoming',cls:'sc3-num',cell:function(x){return !S.auxLoaded?loading:
-        x.incoming_qty>0?'<strong class="sc3-incoming">+'+esc(fmt(x.incoming_qty))+'</strong>':
+        x.incoming_qty===null||x.incoming_qty===undefined?dash:x.incoming_qty>0?'<strong class="sc3-incoming">+'+esc(fmt(x.incoming_qty))+'</strong>':
         '<span class="sc3-muted">0</span>';}},
-      {key:'min',heading:'Min/Par',cls:'sc3-num',cell:function(x){return esc(fmt(x.min_qty));}},
+      {key:'min',heading:'Min/Par',cls:'sc3-num',cell:function(x){return x.min_qty===null||x.min_qty===undefined?dash:esc(fmt(x.min_qty));}},
       {key:'needs',heading:'Kebutuhan',cls:'sc3-num',cell:function(x){return !S.auxLoaded?loading:
-        x.suggested_order_qty===null?dash:
+        x.suggested_order_qty===null||x.suggested_order_qty===undefined?dash:
         x.suggested_order_qty>0?'<strong class="sc3-need">'+esc(fmt(x.suggested_order_qty))+'</strong>':'0';}},
       {key:'avg',heading:'Rata-rata pemakaian',cls:'sc3-num',cell:function(x){return !S.auxLoaded?loading:
         x.avg_usage===null||x.avg_usage===undefined?dash:esc(fmt(x.avg_usage));}},
