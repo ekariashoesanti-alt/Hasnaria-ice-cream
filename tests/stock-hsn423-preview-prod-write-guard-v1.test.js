@@ -78,7 +78,7 @@ test('HSN-423 review UI and handler visibly block preview writes',async()=>{
   assert.match(form,/d\.saving\|\|previewUsesProductionDatabase\(\)/);
   assert.match(form,/Simpan nonaktif pada preview/);
   assert.match(form,/Mode baca: preview memakai database produksi/);
-  const corr=section('async function saveCorrection() {','function renderSalesStockAudit()');
+  const corr=section('async function saveCorrection() {','// The Stock page presents outcomes.');
   assert.match(corr,/previewUsesProductionDatabase\(\)/);
 });
 test('HSN-423 no preview exception for unrecognized RPC; request GET unchanged',()=>{
