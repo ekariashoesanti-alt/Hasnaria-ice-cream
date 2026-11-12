@@ -2505,18 +2505,23 @@
     if(!item)return '<p class="sc3-alert">Barang tidak ditemukan di data yang berhak Anda akses.</p>';
     var d=S.itemDetail||{},back='<button type="button" class="sc417-back" data-sc417-back="1">← Kembali ke daftar</button>';
     if(d.loading)return back+'<div class="sc3-loading" role="status">Memuat identitas dan dokumen '+esc(item.item_name)+'…</div>';
+    var failed=(d.parts||[]);
+    var registryFailed=failed.indexOf('registry')>=0;
     var registry=(d.registry||[])[0]||null;
     var checkpoint=(d.opnames||[])[0]||null;
-    var hasLedger=Array.isArray(d.movements),hasOpname=Array.isArray(d.opnames);
-    var calc=hasLedger&&hasOpname?itemLedgerRunningRows(d.movements,checkpoint,item.inventory_item_id):null;
-    var status=!registry?'Belum ada di registri SKU ERP':
+    var hasLedger=Array.isArray(d.movements)&&failed.indexOf('movements')<0;
+    var hasOpname=Array.isArray(d.opnames)&&failed.indexOf('opnames')<0;
+    // A failed opname request is NOT an empty opname history. Show source ledger
+    // if available, but compute every running balance as unknown.
+    var calc=hasLedger?itemLedgerRunningRows(d.movements,hasOpname?checkpoint:null,item.inventory_item_id):null;
+    var status=registryFailed?'Registri SKU ERP gagal dimuat':!registry?'Belum ada di registri SKU ERP':
       String(registry.source||'').toLowerCase().indexOf('majoo')>=0?
         'Sumber Majoo tercatat; perlu pemeriksaan bukti pemetaan':'SKU internal ERP — Majoo belum dipetakan';
     var type=registry&&registry.sku_type==='packaging'?'Kemasan':
       registry&&registry.sku_type==='ingredient'?'Bahan':'Belum diketahui';
     var value=function(x){return x===null||x===undefined||x===''?'Belum tersedia':String(x);};
     var info='<div class="sc417-identity">'+
-      '<div><small>SKU ERP</small><b>'+esc(registry?registry.sku_code:'Belum ada')+'</b></div>'+
+      '<div><small>SKU ERP</small><b>'+esc(registry?registry.sku_code:registryFailed?'Belum dapat dimuat':'Belum ada')+'</b></div>'+
       '<div><small>SKU asli Majoo</small><b>Belum terverifikasi</b></div>'+
       '<div><small>Jenis barang ERP</small><b>'+esc(type)+'</b></div>'+
       '<div><small>Satuan dasar ERP</small><b>'+esc(readableStockUnit(registry?registry.base_unit:item.unit))+'</b></div>'+
@@ -2530,7 +2535,7 @@
     var head='<div class="sc417-item-top">'+back+'<h4>'+esc(item.item_name)+
       '</h4><small>'+esc(item.category||'Lainnya')+' · '+esc(readableStockUnit(item.unit))+'</small></div>';
     var quantity=calc&&calc.valid?fmt(calc.closing)+' '+esc(readableStockUnit(item.unit)):'Belum bisa dihitung';
-    var checkpointMessage=!hasOpname?'Data opname gagal dimuat':!checkpoint?'Belum ada checkpoint fisik; saldo berjalan tidak ditampilkan':
+    var checkpointMessage=!hasOpname?'Riwayat opname gagal dimuat; checkpoint belum diketahui':!checkpoint?'Belum ada checkpoint fisik; saldo berjalan tidak ditampilkan':
       'Opname '+dateLabel(checkpoint.opname_date)+' · '+fmt(checkpoint.physical_qty)+' '+esc(readableStockUnit(item.unit));
     var disagrees=calc&&calc.valid&&item.tracking_active&&
       Math.abs(Number(item.system_qty)-calc.closing)>0.000001;
@@ -2579,7 +2584,7 @@
         (S.itemDetailPage>=pages?' disabled':'')+'>Berikutnya</button></div>';
     }
     flow+='</section>';
-    var periodFlow=itemLedgerPeriodFlow(hasLedger?d.movements:null,checkpoint,S.period,item.inventory_item_id);
+    var periodFlow=itemLedgerPeriodFlow(hasLedger?d.movements:null,hasOpname?checkpoint:null,S.period,item.inventory_item_id);
     var ledgerPeriodRows=(S.monthEndRows||[]).filter(function(x){
       return String(x.period_month||'').slice(0,7)===S.period&&String(x.unit||'')===String(item.unit||'');
     });
@@ -2636,7 +2641,7 @@
         sourcePanel+'</section>';
     }
 
-    var opHtml=!hasOpname?'Riwayat opname gagal dimuat.':
+    var opHtml=!hasOpname?'<p class="sc3-alert">Riwayat opname gagal dimuat; belum dapat memastikan ada atau tidaknya checkpoint fisik.</p>':
       !(d.opnames||[]).length?'Belum ada bukti opname fisik.':
       (d.opnames||[]).slice(0,20).map(function(x){
         return '<div class="sc417-document" id="sc417-opname-'+esc(x.id)+'"><b>'+
