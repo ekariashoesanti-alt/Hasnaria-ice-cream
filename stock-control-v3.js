@@ -1393,7 +1393,7 @@
       var need = !S.auxLoaded ? '<span class="sc3-muted">…</span>' : (x.suggested_order_qty === null ? '<span class="sc3-muted">-</span>' : (x.suggested_order_qty > 0 ? '<strong class="sc3-need">' + fmt(x.suggested_order_qty) + '</strong>' : '<span>0</span>'));
       var incoming = !S.auxLoaded ? '<span class="sc3-muted">…</span>' : (x.incoming_qty > 0 ? '<strong class="sc3-incoming">+' + fmt(x.incoming_qty) + '</strong>' : '<span class="sc3-muted">0</span>');
       return '<tr>' +
-        '<td class="sc3-item"><button type="button" class="sc417-item-link" data-sc417-item="'+esc(x.inventory_item_id)+'">'+esc(x.item_name)+'</button><small>' + esc(x.category || 'Lainnya') + ' · ' + esc(readableStockUnit(x.unit)) + '</small></td>' +
+        '<td class="sc3-item">'+(isOwner()?'<button type="button" class="sc417-item-link" data-sc417-item="'+esc(x.inventory_item_id)+'">'+esc(x.item_name)+'</button>':'<strong>'+esc(x.item_name)+'</strong>')+'<small>' + esc(x.category || 'Lainnya') + ' · ' + esc(readableStockUnit(x.unit)) + '</small></td>' +
         '<td class="sc3-num sc3-plus">+' + fmt(x.purchase_qty) + '</td>' +
         '<td class="sc3-num sc3-minus">-' + fmt(x.sales_usage_qty) + '</td>' +
         '<td class="sc3-num sc3-opname">' + opnameHtml(x) + '</td>' +
@@ -2356,11 +2356,11 @@
       '<p class="sc20-note">Kode INV- adalah SKU internal ERP, bukan SKU asli Majoo. Identitas tidak dicocokkan otomatis berdasarkan nama atau menghapus tanda #.</p></section>'+
       flow+'<section class="sc417-section"><h4>Opname fisik</h4>'+
       opHtml+'</section><section class="sc417-section"><h4>Pembelian dan penerimaan</h4>'+
-      (logs||'<p class="sc20-note">Belum ada log pembelian untuk barang ini.</p>')+
+      (d.parts&&d.parts.indexOf('purchaseLogs')>=0?'<p class="sc3-alert">Log pembelian gagal dimuat; tidak boleh dianggap tidak ada.</p>':logs||'<p class="sc20-note">Belum ada log pembelian untuk barang ini.</p>')+
       '<h5>Dokumen penerimaan terpisah</h5>'+
-      (receipt||'<p class="sc20-note">Dokumen goods_receipts belum tersedia untuk barang ini. Faktur atau pembayaran bukan bukti penerimaan.</p>')+
+      (d.parts&&d.parts.indexOf('goodsReceipts')>=0?'<p class="sc3-alert">Data dokumen penerimaan gagal dibaca; status penerimaan belum diketahui.</p>':receipt||'<p class="sc20-note">Dokumen goods_receipts belum tersedia untuk barang ini. Faktur atau pembayaran bukan bukti penerimaan.</p>')+
       '</section><section class="sc417-section"><h4>Resep yang memakai bahan ini</h4>'+
-      (recipe||'<p class="sc20-note">Belum ada komponen resep aktif yang tertaut.</p>')+
+      (d.parts&&d.parts.indexOf('recipes')>=0?'<p class="sc3-alert">Data resep gagal dimuat.</p>':recipe||'<p class="sc20-note">Belum ada komponen resep aktif yang tertaut.</p>')+
       '</section><p class="sc20-note">Tautan hanya muncul ketika referensi ledger cocok dengan dokumen yang ada. Referensi sale_item tanpa hubungan dokumen tidak dibuat tautan palsu.</p>';
   }
 
