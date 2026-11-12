@@ -1135,6 +1135,23 @@
       "notes": "Preview-only implementation and test evidence pending. KPI filters, current-position vs period-flow provenance, last ledger date and partial carry-forward; no DB writes. Owner desktop/mobile acceptance, stage 2 mapping, stage 3 export remain outstanding."
     },
     {
+      "id": "HSN-417",
+      "milestone": "M4",
+      "priority": "P0",
+      "status": "REVIEW",
+      "title": "Stok Tahap 2A: identitas ERP, sumber mutasi dan saldo berjalan per barang",
+      "dependencies": [
+        "HSN-416",
+        "HSN-400",
+        "HSN-402",
+        "HSN-415"
+      ],
+      "owner": "ChatGPT",
+      "updated_at": "2026-11-12",
+      "acceptance": "Owner Detail Barang menampilkan identitas ERP dan Majoo tidak diketahui, ledger berurutan, saldo berjalan hanya dari checkpoint sah, riwayat opname, resep dan pembelian; filter/page bertahan; tanpa posting atau perubahan production.",
+      "notes": "Staged preview only. 194/198 ERP SKU INV-* source inventory_existing, 0 SKU Majoo terverifikasi; 0 goods_receipts. Tidak boleh melengkapi via pencocokan nama dari workbook audit. Original Majoo mapping dan importer source menunggu ekspor asli + persetujuan Owner."
+    },
+    {
       "id": "HSN-500",
       "milestone": "M5",
       "priority": "P0",
