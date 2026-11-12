@@ -342,3 +342,11 @@ Validasi:30 kasus GPS (9 tambahan),25 berkas tes/full build, review independen d
 - Barang tetap bisa kembali ke daftar dengan filter/pagination semula. Tampilan detail responsif pada modal, 4 KPI dan 2 grafik utama tidak berubah.
 - Data purchase goods_receipts 0. Seluruh kode bersifat GET/read-only; tidak ada penerimaan fiktif, posting, BOM approval, migrasi, perubahan role, parser atau rilis production.
 - Status REVIEW sampai tes, preview, dan Owner acceptance; prasyarat Tahap 2B: file ekspor Majoo identitas produk/bahan dan mutasi asli berikut outlet/format unit dan timestamp.
+
+## 2026-11-12 — HSN-418: source trace from stock consumption to Sale
+- Stacked review on HSN-417, no merge/deploy production, no database mutation.
+- Confirmed by read-only Supabase SQL: 7,565/7,565 SALE_CONSUMPTION refs (sale_item → sales) match their source and brand, with 0 differing outlets among known outlet pairs. 1,025 historical movement events have NULL outlet, so outlet identity is never invented.
+- Existing Stock Owner modal now offers on-demand "Lihat transaksi Penjualan" only for UUID-typed sale_item references. Requests are ID-based, brand filtered through join + existing authenticated RLS, and reject different known outlets.
+- In the detail: POS/Majoo external transaction ID where present, date, product, sold units, source sale-line ID, internal sale ID, import batch ID and outlet-completeness warning. Unit sold is never treated as component consumption; product SKU not mistaken for ingredient SKU.
+- Loader uses request sequence invalidation on item change/back/close. Failed or unmatched source explicitly marked unavailable, not linked to a fake destination. Existing checkpoint/running balance unchanged.
+- UI CSS is scoped to Stok modal; four KPI and two charts remain untouched. Regression tests and Vercel preview required. Raw Majoo product/material + stock mutation files remain prerequisites for identity/quantity mapping.

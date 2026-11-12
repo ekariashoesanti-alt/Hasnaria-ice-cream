@@ -2625,3 +2625,12 @@
  #stok .sc417-item-top h4{flex-basis:100%}
  #stok .sc417-ledger{min-width:560px}
 }
+
+/* HSN-418: verified sale source detail stays inside the existing Stock modal. */
+#stok .sc418-source-open{display:inline-flex;align-items:center;justify-content:flex-start;background:#edf8f2;border:1px solid #b9d9ca;border-radius:7px;color:#145c43;font:inherit;font-size:11px;font-weight:650;cursor:pointer;padding:5px 8px;text-align:left;white-space:normal;max-width:100%}
+#stok .sc418-source-open:hover{background:#dff0e6}
+#stok .sc418-source-open:focus-visible,#stok .sc418-source-head button:focus-visible{outline:2px solid #176b55;outline-offset:2px}
+#stok .sc418-source-head{display:flex;gap:7px;flex-wrap:wrap;align-items:center;justify-content:space-between;margin-bottom:9px}
+#stok .sc418-source-head h4{margin:0}
+#stok .sc418-source-head button{padding:6px 10px;border-radius:7px;border:1px solid #c7decf;background:#f7fbf8;color:#225a44;cursor:pointer;font-size:11px}
+@media(max-width:700px){#stok .sc418-source-open{font-size:11px;padding:6px 7px}#stok .sc418-source-head{align-items:flex-start}}

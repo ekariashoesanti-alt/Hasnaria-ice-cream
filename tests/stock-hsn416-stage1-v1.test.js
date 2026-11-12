@@ -23,7 +23,7 @@ test('HSN-416 KPI low/verified/untracked filters match actual rows',()=>{
   'data-sc4-kpi="valued"'].forEach(x=>assert.ok(html.includes(x),x));
  assert.match(html,/sc8-kpi-warning[\s\S]*?<strong[^>]*>2<\/strong>/);
  assert.match(js,/S\.status=kpi\.getAttribute\('data-sc4-kpi'\)\|\|''/);
- assert.match(js,/S\.page=1;S\.modal='position';S\.selectedItemId='';S\.itemDetail=null;\+\+S\.itemDetailSeq;render\(\);stockDialogFocus\(host\)/);
+ assert.match(js,/S\.page=1;S\.modal='position';S\.selectedItemId='';S\.itemDetail=null;\+\+S\.itemDetailSeq;(?:S\.itemSourceDoc=null;\+\+S\.itemSourceSeq;)?render\(\);stockDialogFocus\(host\)/);
 });
 test('HSN-416 provenance distinguishes no ledger entries from missing source',()=>{
  assert.match(js,/inventory_movements\?'\+qs\(\{/);
