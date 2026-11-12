@@ -238,6 +238,13 @@
   }
 
   async function rpc(name, payload) {
+    // HSN-423: A Vercel Preview may use real production Supabase credentials.
+    // These two RPCs only read reports. Reject everything else BEFORE auth/fetch,
+    // including owner review evidence and physical opname correction.
+    if(previewUsesProductionDatabase()&&
+       name!=='get_ui_period_catalog_fast_v1'&&name!=='get_stock_moving_fifo_v1'){
+      throw new Error('Preview terhubung ke database produksi: aksi penyimpanan diblokir. Gunakan staging terisolasi atau rilis yang telah disetujui.');
+    }
     var t = await token();
     if (!t) throw new Error('Session belum tersedia. Silakan login kembali.');
     var res = await fetch(SB + '/rest/v1/rpc/' + name, {
@@ -740,8 +747,9 @@
         '<label>Bukti yang diperiksa (foto, nota, atau catatan fisik)<textarea data-sc17-field="evidence" rows="2" maxlength="400" placeholder="Minimal 12 karakter, contoh nomor foto / berita acara">'+esc(d.evidence)+'</textarea></label>'+
         '<label>Catatan hasil pemeriksaan bahan dan takaran<textarea data-sc17-field="reason" rows="3" maxlength="1000" placeholder="Minimal 30 karakter, tuliskan apa yang sudah dan belum terbukti">'+esc(d.reason)+'</textarea></label>'+
         '<label class="sc17-attest"><input data-sc17-field="attested" type="checkbox"'+(d.attested?' checked':'')+'><span>Saya Owner dan telah memeriksa sumber bukti asli. Saya memahami langkah ini tidak menyetujui resep atau memposting stok.</span></label>'+
-        '<button type="button" data-sc17-save="1"'+(d.saving?' disabled':'')+'>'+
-        (d.saving?'Menyimpan bukti…':'Simpan catatan review')+'</button>'+
+        '<button type="button" data-sc17-save="1"'+(d.saving||previewUsesProductionDatabase()?' disabled':'')+'>'+
+        (d.saving?'Menyimpan bukti…':previewUsesProductionDatabase()?'Simpan nonaktif pada preview':'Simpan catatan review')+'</button>'+
+        (previewUsesProductionDatabase()?'<p class="sc20-note">Mode baca: preview memakai database produksi. Catatan review tidak dapat disimpan dari preview.</p>':'')+
         (d.notice?'<p class="sc17-saved" role="status">'+esc(d.notice)+'</p>':'')+
         '</div>':'')+'</section>';
   }
@@ -749,6 +757,10 @@
   async function saveRecipeEvidence(){
     var d=S.recipeDetail;
     if(!isOwner()||S.modal!=='recipes'||!d||d.loading||d.saving)return;
+    if(previewUsesProductionDatabase()){
+      d.notice='Mode baca: penyimpanan review pada preview database produksi diblokir.';
+      render();return;
+    }
     var evidence=String(d.evidence||'').trim(),reason=String(d.reason||'').trim();
     if(evidence.length<12||reason.length<30){
       d.notice='Referensi bukti minimal 12 karakter dan alasan minimal 30 karakter.';render();return;
