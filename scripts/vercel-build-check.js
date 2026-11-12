@@ -280,6 +280,7 @@ run(process.execPath, ['--test', 'tests/stock-hsn416-stage1-v1.test.js']);
 run(process.execPath, ['--test', 'tests/stock-hsn417-item-trace-v1.test.js']);
 run(process.execPath, ['--test', 'tests/stock-hsn418-sale-source-v1.test.js']);
 run(process.execPath, ['--test', 'tests/stock-hsn419-period-export-v1.test.js']);
+run(process.execPath, ['--test', 'tests/stock-hsn420-visible-columns-v1.test.js']);
 run(process.execPath, ['--test', 'tests/stock-recovery-stage0-readonly-v1.test.js']);
 
 const dist = path.join(ROOT, 'dist');
