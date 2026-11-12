@@ -8,7 +8,7 @@ function part(a,b){const i=js.indexOf(a),j=js.indexOf(b,i+a.length);assert.ok(i>
 function fn(a,b,ctx){return vm.runInNewContext('('+part(a,b)+')',ctx,{timeout:1200});}
 function sku(id,status,unit){return {inventory_item_id:id,ui_status:status,item_name:id,category:'Tes',unit:unit||'pcs'};}
 test('HSN-416 KPI low/verified/untracked filters match actual rows',()=>{
- const S={items:[sku('a','critical'),sku('b','order'),sku('c','untracked'),sku('d','ok')],
+ const S={baseLoaded:true,items:[sku('a','critical'),sku('b','order'),sku('c','untracked'),sku('d','ok')],
   search:'',category:'',status:'low',page:1,valuationLoaded:true,
   valuation:{inventory_items:4,valued_items:1,inventory_value:100},
   verifiedCosts:[{inventory_item_id:'d',unit_cost:1}],error:''};
