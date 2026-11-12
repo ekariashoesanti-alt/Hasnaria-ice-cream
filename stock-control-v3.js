@@ -2394,7 +2394,7 @@
     var previousGap=false;
     months.forEach(function(x){
       x.carriedGap=previousGap;
-      if(x.noSync||(x.row&&Number(x.row.unlinked_sale_rows||0)>0))previousGap=true;
+      if(x.noSync)previousGap=true;
     });
     var existing=months.filter(function(x){return x.n!==null;});
     if(!existing.length)return '<div class="sc22-empty"><b>Belum tersedia saldo akhir bulanan yang dapat digrafikkan</b>'+
