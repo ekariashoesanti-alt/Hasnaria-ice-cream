@@ -2372,6 +2372,7 @@
   function monthlyStockEndInfographic(){
     if(!S.period)return '<div class="sc5-empty">Pilih periode stok.</div>';
     if(S.periodLoading&&!S.monthEndRows.length)return '<div class="sc5-empty">Menghitung stok akhir bulan…</div>';
+    if(S.periodError)return '<div class="sc3-alert">Data tren gagal dimuat, bukan stok nol. '+esc(S.periodError)+'</div>';
     if(S.monthEndUnavailable)return '<div class="sc5-empty">Data stok akhir bulanan belum dapat dimuat; saldo tidak diubah.</div>';
     var unit=S.chartUnit||'';
     if(!unit)return '<div class="sc5-empty">Pilih satuan pada grafik kanan.</div>';
@@ -2388,6 +2389,13 @@
         n:row&&Number(row.checkpoint_skus)>0&&!noSync&&Number.isFinite(n)?n:null,
         row:row,noSync:noSync});
     }
+    // A later snapshot can carry an old quantity across an unposted sales month.
+    // Preserve the partial number but never connect it with a verified-looking line.
+    var previousGap=false;
+    months.forEach(function(x){
+      x.carriedGap=previousGap;
+      if(x.noSync||(x.row&&num(x.row.unlinked_sale_rows)>0))previousGap=true;
+    });
     var existing=months.filter(function(x){return x.n!==null;});
     if(!existing.length)return '<div class="sc22-empty"><b>Belum tersedia saldo akhir bulanan yang dapat digrafikkan</b>'+
       '<small>Data opname baru tersedia mulai September 2026; Oktober belum tersinkronisasi. Bulan tanpa dasar hitung tidak dibuat nol.</small></div>';
@@ -2405,7 +2413,7 @@
     }).join('');
     var paths=[],run=[];
     months.forEach(function(x,i){
-      if(x.n===null){if(run.length>1)paths.push(run.join(' '));run=[];}
+      if(x.n===null||x.carriedGap){if(run.length>1)paths.push(run.join(' '));run=[];}
       else run.push(xc(i).toFixed(1)+','+yc(x.n).toFixed(1));
     });
     if(run.length>1)paths.push(run.join(' '));
@@ -2417,10 +2425,10 @@
         (x.noSync?'penjualan belum disinkronkan':'belum ada data opname'))+
         '</title><text class="sc22-missing-point" x="'+xx.toFixed(1)+'" y="'+(bottom-10)+
         '" text-anchor="middle">—</text>'+axis+'</g>';
-      var yy=yc(x.n),partial=x.row.data_status!=='LEDGER_RECORDED';
+      var yy=yc(x.n),partial=x.carriedGap||x.row.data_status!=='LEDGER_RECORDED'||num(x.row.period_movement_rows)===0;
       var title=x.label+' '+x.year+': '+fmt(x.n)+' '+unit+
         '; '+x.row.checkpoint_skus+'/'+x.row.total_unit_skus+' SKU ber-opname'+
-        (partial?'; belum lengkap':'');
+        (partial?'; parsial atau saldo bawaan, kesinambungan belum terverifikasi':'');
       return '<g><title>'+esc(title)+'</title><circle class="sc22-trend-dot'+
         (partial?' sc22-partial':'')+'" cx="'+xx.toFixed(1)+'" cy="'+yy.toFixed(1)+
         '" r="5.7"/><text class="sc22-point-value" x="'+xx.toFixed(1)+
@@ -2432,13 +2440,14 @@
       '<div class="sc22-summary"><span>Saldo akhir terhitung · '+esc(unit)+'</span>'+
       '<strong>'+esc(fmt(last.n))+' <small>'+esc(unit)+'</small></strong></div>'+
       '<div class="sc22-summary-note">'+esc(last.label+' '+last.year)+' · '+fmt(d.checkpoint_skus)+' dari '+
-        fmt(d.total_unit_skus)+' SKU · <b>data parsial, bukan stok fisik final</b></div>'+
+        fmt(d.total_unit_skus)+' SKU · <b>data parsial, bukan stok fisik final</b>'+
+        (last.carriedGap?' · <b>saldo bawaan melewati bulan yang belum sinkron</b>':'')+'</div>'+
       '<div class="sc22-plot"><svg class="sc22-plot-svg" viewBox="0 0 740 269" role="img" aria-label="Tren saldo akhir bulanan agregat dalam satuan '+esc(unit)+'">'+
         ticks+lines+points+'</svg></div>'+
       '<p class="sc22-chart-note">Total per bulan = jumlah saldo akhir SKU <b>'+esc(unit)+
       '</b> yang punya opname, setelah pergerakan tercatat. '+
       (existing.length<2?'Titik historis belum cukup untuk membentuk garis tren. ':'')+
-      'Tanda — berarti belum dapat dihitung. Angka parsial tidak berarti seluruh transaksi sudah masuk.</p>'+
+      'Tanda — berarti belum dapat dihitung. Titik setelah gap adalah saldo bawaan parsial tanpa garis kesinambungan. Tidak ada mutasi bukan berarti data lengkap.</p>'+
     '</div>';
   }
 
