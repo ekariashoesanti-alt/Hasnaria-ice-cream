@@ -2184,6 +2184,56 @@
       closing:valid&&complete?running:null,valid:valid&&complete,same_day:sameDay,invalid:invalid};
   }
 
+  // HSN-419: Ledger-only monthly flow for ONE SKU/base unit. Never infer missing
+  // physical checkpoints, inventory adjustments, or unposted source movements.
+  function itemLedgerPeriodFlow(movements,checkpoint,period){
+    var month=monthKey(period),match=/^(\d{4})-(\d{2})$/.exec(month);
+    var fail=function(reason){return {available:false,reason:reason,
+      opening:null,incoming:null,outgoing:null,closing:null,events:null}};
+    if(!match||Number(match[2])<1||Number(match[2])>12)return fail('Periode tidak valid');
+    if(!Array.isArray(movements))return fail('Ledger belum lengkap');
+    if(!checkpoint||!checkpoint.opname_date||checkpoint.physical_qty===null||
+       checkpoint.physical_qty===''||!Number.isFinite(Number(checkpoint.physical_qty)))
+      return fail('Belum ada opname fisik yang dapat dijadikan saldo awal');
+    var from=month+'-01',to=new Date(Date.UTC(Number(match[1]),Number(match[2]),1))
+      .toISOString().slice(0,10);
+    var cut=String(checkpoint.opname_date).slice(0,10);
+    if(cut>=from)return fail('Opname terakhir terjadi di dalam/setelah periode; saldo awal belum dapat ditentukan');
+    var opening=Number(checkpoint.physical_qty),incoming=0,outgoing=0,n=0,seen={};
+    var events=movements.slice().sort(function(a,b){
+      var ka=String(a.movement_date||'')+'|'+String(a.created_at||'')+'|'+String(a.id||'');
+      var kb=String(b.movement_date||'')+'|'+String(b.created_at||'')+'|'+String(b.id||'');
+      return ka<kb?-1:ka>kb?1:0;
+    });
+    for(var i=0;i<events.length;i++){
+      var e=events[i],date=String(e.movement_date||'').slice(0,10),ty=String(e.movement_type||'');
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(date))return fail('Ada tanggal mutasi yang tidak dapat diverifikasi');
+      if(date===cut&&(ty==='PURCHASE_RECEIPT'||ty==='SALE_CONSUMPTION'))
+        return fail('Mutasi pada hari opname tidak memiliki urutan fisik yang pasti');
+      if(date<=cut||date>=to)continue;
+      if(!e.id||seen['id:'+e.id])return fail('Duplikasi atau identitas mutasi tidak lengkap');
+      seen['id:'+e.id]=true;
+      if(e.source_key){
+        var sk='source:'+String(e.source_key);
+        if(seen[sk])return fail('Kunci sumber mutasi ganda; tidak dihitung dua kali');
+        seen[sk]=true;
+      }
+      if(ty!=='PURCHASE_RECEIPT'&&ty!=='SALE_CONSUMPTION')
+        return fail('Ada penyesuaian/baseline setelah opname; perlu rekonsiliasi sebelum menghitung');
+      if(e.qty_delta===null||e.qty_delta===''||!Number.isFinite(Number(e.qty_delta)))
+        return fail('Kuantitas mutasi belum valid');
+      var delta=Number(e.qty_delta);
+      if((ty==='PURCHASE_RECEIPT'&&delta<0)||(ty==='SALE_CONSUMPTION'&&delta>0))
+        return fail('Arah mutasi tidak sesuai jenis transaksi');
+      if(date<from)opening+=delta;
+      else if(ty==='PURCHASE_RECEIPT'){incoming+=delta;n++;}
+      else{outgoing-=delta;n++;}
+    }
+    return {available:true,reason:'',opening:opening,incoming:incoming,
+      outgoing:outgoing,closing:opening+incoming-outgoing,events:n,
+      from:from,to:to,checkpoint_date:cut};
+  }
+
   async function readAllItemMovements(id){
     var output=[],limit=500,max=2500,offset=0;
     while(offset<max){
@@ -2369,6 +2419,34 @@
         (S.itemDetailPage>=pages?' disabled':'')+'>Berikutnya</button></div>';
     }
     flow+='</section>';
+    var periodFlow=itemLedgerPeriodFlow(hasLedger?d.movements:null,checkpoint,S.period);
+    var ledgerPeriodRows=(S.monthEndRows||[]).filter(function(x){
+      return String(x.period_month||'').slice(0,7)===S.period&&String(x.unit||'')===String(item.unit||'');
+    });
+    var periodUnsynced=ledgerPeriodRows.some(function(x){
+      return x.data_status==='NO_POSTED_SALES'||Number(x.unlinked_sale_rows||0)>0;
+    });
+    var flowNote='Angka per barang dalam satuan dasar ERP, hanya dari mutasi ledger yang tercatat. '+
+      'Pembelian yang belum diterima dan penjualan yang belum disinkron tidak termasuk. '+
+      'Laporan ini bukan opname fisik baru atau perbandingan final Majoo.';
+    if(periodUnsynced)flowNote+=' Ada penjualan bulan pilihan yang belum tertaut ke ledger.';
+    var flowCards=periodFlow.available?
+      '<div class="sc419-flow-grid">'+
+        '<div><small>Saldo awal</small><b>'+esc(fmt(periodFlow.opening))+'</b></div>'+
+        '<div><small>Masuk · penerimaan</small><b>'+esc(fmt(periodFlow.incoming))+'</b></div>'+
+        '<div><small>Keluar · pemakaian</small><b>'+esc(fmt(periodFlow.outgoing))+'</b></div>'+
+        '<div><small>Saldo akhir ledger</small><b>'+esc(fmt(periodFlow.closing))+'</b></div>'+
+      '</div><p class="sc20-note">'+esc(fmt(periodFlow.opening))+' + '+esc(fmt(periodFlow.incoming))+
+      ' − '+esc(fmt(periodFlow.outgoing))+' = '+esc(fmt(periodFlow.closing))+
+      ' '+esc(readableStockUnit(item.unit))+' · '+esc(fmt(periodFlow.events))+' mutasi bulan pilihan.</p>':
+      '<p class="sc3-alert">Belum dapat dihitung: '+esc(periodFlow.reason)+
+      '. Saldo awal/akhir tidak diganti dengan nol.</p>';
+    var periodSection='<section class="sc417-section sc419-period-flow" aria-label="Arus stok bulan pilihan">'+
+      '<h4>Arus periode · '+esc(monthLabel(S.period))+'</h4>'+
+      '<p class="sc20-note">Berbeda dari posisi stok terkini. Checkpoint terakhir: '+
+      esc(checkpoint?dateLabel(checkpoint.opname_date):'belum tersedia')+'.</p>'+
+      flowCards+'<p class="sc20-note">'+esc(flowNote)+'</p></section>';
+
     var sourceDoc=S.itemSourceDoc,sourcePanel='';
     if(sourceDoc){
       if(sourceDoc.loading)sourcePanel='<p class="sc3-loading" role="status">Memeriksa dokumen transaksi Penjualan…</p>';
@@ -2428,7 +2506,7 @@
     }).join('');
     return head+errors+'<section class="sc417-section"><h4>Identitas & pemetaan</h4>'+info+
       '<p class="sc20-note">Kode INV- adalah SKU internal ERP, bukan SKU asli Majoo. Identitas tidak dicocokkan otomatis berdasarkan nama atau menghapus tanda #.</p></section>'+
-      flow+sourcePanel+'<section class="sc417-section"><h4>Opname fisik</h4>'+
+      flow+periodSection+sourcePanel+'<section class="sc417-section"><h4>Opname fisik</h4>'+
       opHtml+'</section><section class="sc417-section"><h4>Pembelian dan penerimaan</h4>'+
       (d.parts&&d.parts.indexOf('purchaseLogs')>=0?'<p class="sc3-alert">Log pembelian gagal dimuat; tidak boleh dianggap tidak ada.</p>':logs||'<p class="sc20-note">Belum ada log pembelian untuk barang ini.</p>')+
       '<h5>Dokumen penerimaan terpisah</h5>'+
