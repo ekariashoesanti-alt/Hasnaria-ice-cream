@@ -377,3 +377,11 @@ Validasi:30 kasus GPS (9 tambahan),25 berkas tes/full build, review independen d
 - Koreksi/BASELINE setelah opname, ID/source_key ganda, mixed SKU, tanda/qty tidak valid ikut diblokir untuk mencegah angka menyesatkan.
 - Ledger asli, opname, KPI, grafik, filter, dan ekspor tidak dimutasi; tidak ada posting, backfill, schema change, atau deploy ke production.
 - Tes HSN-421 khusus + test HSN-417 diperbarui; status REVIEW sampai Audit Gate, Preview READY dan Owner desktop/mobile acceptance.
+
+## 2026-11-13 — HSN-422: failed-read versus empty detail source (preview only)
+- Continuing stacked branch HSN-421 PR #224, never merge/release main, no Supabase business mutations, no new parser.
+- Found source-truth gap: when the async GET to inventory_stock_opname fails, itemDetail.opnames starts as [] and UI incorrectly said there was no physical checkpoint, even though the source was never read. Registry failures similarly looked like missing master code.
+- Show source-specific "gagal dimuat" state (not no data), keep loaded mutation ledger history accessible and running balance unknown. Monthly flow receives checkpoint only if opname GET succeeded.
+- Source parts warnings remain; genuine successful empty arrays retain "Belum ada..." text.
+- Added VM-based Owner render regression tests for failed/empty opname, failed registry, missing ledger, valid physical checkpoint, non-Owner gate. Fixed HSN-419 old period-flow source assertion to respect valid loaded checkpoint.
+- No dashboard KPIs/graphs, SKU identity, quantities, auth or ledger writes changed. HSN-422 REVIEW awaiting Audit Gate/Preview and authenticated Owner desktop/mobile acceptance.
