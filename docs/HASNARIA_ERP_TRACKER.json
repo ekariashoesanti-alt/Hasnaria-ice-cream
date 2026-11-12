@@ -1170,7 +1170,7 @@
       "id": "HSN-419",
       "milestone": "M4",
       "priority": "P0",
-      "status": "IN_PROGRESS",
+      "status": "REVIEW",
       "title": "Stok Tahap 3A: arus periode per SKU + Atur Kolom dan CSV mengikuti filter",
       "dependencies": [
         "HSN-418",
@@ -1180,7 +1180,7 @@
       "owner": "ChatGPT",
       "updated_at": "2026-11-12",
       "acceptance": "Arus periode hanya menghitung saldo awal/masuk/keluar/akhir SKU dengan checkpoint fisik yang sah sebelum periode, tanpa menjumlah beda satuan; tidak diketahui tetap unknown. Atur Kolom & ekspor CSV menggunakan filter, scope semua/halaman aktif, aman CSV formula, tanpa parser Majoo atau perubahan ledger. Semua build+CI preview lulus; belum production.",
-      "notes": "Preview-only stacked PR di atas HSN-418. Stage 3B perbandingan Majoo menunggu ekspor sumber asli dan verifikasi SKU/Outlet/unit."
+      "notes": "Implemented on stacked preview branch. Production unchanged. Per-SKU month flow from physical checkpoint prior to period, only ledger SALE_CONSUMPTION/PURCHASE_RECEIPT; same-day operational movements, nonstandard adjustments, duplicate source, wrong SKU, invalid qty all fail closed. Existing filtered CSV now supports scope ALL/page and selectable export columns; Atur Kolom only changes CSV, not on-screen table yet. Vercel preview build READY on 5b68c913; Owner visual/role acceptance still needed. Original Majoo master & mutation export not available."
     },
     {
       "id": "HSN-500",
