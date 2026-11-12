@@ -70,6 +70,8 @@
     itemDetail: null,
     itemDetailSeq: 0,
     itemDetailPage: 1,
+    itemSourceDoc: null,
+    itemSourceSeq: 0,
     pendingStockRefresh: false,
     verifiedRefreshing: false,
     pendingUploadRuns: null,
@@ -2204,7 +2206,7 @@
     if(!isOwner()||S.modal!=='position'||!S.items.some(function(x){return x.inventory_item_id===id})||
       !/^[0-9a-f-]{36}$/i.test(String(id||'')))return;
     var seq=++S.itemDetailSeq;
-    S.selectedItemId=id;S.itemDetailPage=1;
+    S.selectedItemId=id;S.itemDetailPage=1;S.itemSourceDoc=null;++S.itemSourceSeq;
     S.itemDetail={id:id,loading:true,error:'',parts:[],registry:[],opnames:[],
       movements:null,recipes:[],purchaseLogs:[],goodsReceipts:[],products:[]};
     render();
@@ -2247,6 +2249,45 @@
     if(result.parts.indexOf('movements')>=0||result.parts.indexOf('opnames')>=0)
       result.error='Ledger atau opname gagal dimuat; saldo berjalan tidak dapat diverifikasi.';
     render();
+  }
+
+
+  // HSN-418: Retrieve source sales document only after Owner clicks a referenced
+  // SALE_CONSUMPTION event. Same-brand and known-outlet checks are mandatory.
+  async function loadStockItemSource(movementId){
+    if(!isOwner()||S.modal!=='position'||!S.selectedItemId||!S.itemDetail||
+       !Array.isArray(S.itemDetail.movements))return;
+    var entry=S.itemDetail.movements.find(function(m){return m.id===movementId;});
+    var uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if(!entry||entry.inventory_item_id!==S.selectedItemId||
+       entry.reference_type!=='sale_item'||!uuid.test(String(entry.reference_id||'')))return;
+    var token=++S.itemSourceSeq, itemId=S.selectedItemId;
+    S.itemSourceDoc={movementId:movementId,loading:true,error:'',record:null};
+    render();
+    try{
+      var rows=await request('sale_items?'+qs({
+        id:'eq.'+entry.reference_id,
+        select:'id,sale_id,item_name,qty,external_sku,sales!inner(id,brand_id,outlet_id,sold_at,external_transaction_id,source_batch_id)',
+        'sales.brand_id':'eq.'+BRAND,
+        limit:'1'
+      }));
+      if(token!==S.itemSourceSeq||S.modal!=='position'||S.selectedItemId!==itemId)return;
+      if(!Array.isArray(rows)||rows.length!==1||rows[0].id!==entry.reference_id)
+        throw Error('Dokumen penjualan tidak dapat dicocokkan menurut ID sumber.');
+      var line=rows[0],sale=Array.isArray(line.sales)?line.sales[0]:line.sales;
+      if(!sale||sale.brand_id!==BRAND||sale.id!==line.sale_id)
+        throw Error('Relasi brand dan dokumen sumber tidak dapat diverifikasi.');
+      if(entry.outlet_id&&sale.outlet_id&&entry.outlet_id!==sale.outlet_id)
+        throw Error('Outlet ledger berbeda dengan outlet dokumen penjualan.');
+      S.itemSourceDoc={movementId:movementId,loading:false,error:'',record:line,
+        outletChecked:!!(entry.outlet_id&&sale.outlet_id),
+        dateMatches:String(entry.movement_date||'').slice(0,10)===String(sale.sold_at||'').slice(0,10)};
+    }catch(err){
+      if(token!==S.itemSourceSeq||S.modal!=='position'||S.selectedItemId!==itemId)return;
+      S.itemSourceDoc={movementId:movementId,loading:false,error:
+        err&&err.message?err.message:'Dokumen sumber gagal dimuat.',record:null};
+    }
+    if(token===S.itemSourceSeq&&S.modal==='position'&&S.selectedItemId===itemId)render();
   }
 
   function renderStockItemDetail(){
@@ -2304,6 +2345,10 @@
           refs='<a href="#sc417-opname-'+esc(rid)+'">Lihat checkpoint opname</a>';
         else if(ty==='inventory_purchase_log'&&(d.purchaseLogs||[]).some(function(o){return o.id===rid}))
           refs='<a href="#sc417-purchase-'+esc(rid)+'">Lihat sumber pembelian</a>';
+        else if(ty==='sale_item'&&/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(rid)&&
+                /^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(String(x.id||'')))
+          refs='<button type="button" class="sc418-source-open" data-sc418-sale="'+esc(x.id)+
+            '">Lihat transaksi Penjualan</button>';
         else refs=ty?esc(ty)+(rid?' · '+esc(rid.slice(0,8)):''):'Tidak ada referensi';
         return refs;
       };
@@ -2324,6 +2369,34 @@
         (S.itemDetailPage>=pages?' disabled':'')+'>Berikutnya</button></div>';
     }
     flow+='</section>';
+    var sourceDoc=S.itemSourceDoc,sourcePanel='';
+    if(sourceDoc){
+      if(sourceDoc.loading)sourcePanel='<p class="sc3-loading" role="status">Memeriksa dokumen transaksi Penjualan…</p>';
+      else if(sourceDoc.error)sourcePanel='<p class="sc3-alert">'+esc(sourceDoc.error)+
+        ' Referensi tidak ditandai cocok tanpa bukti.</p>';
+      else if(sourceDoc.record){
+        var line=sourceDoc.record,src=Array.isArray(line.sales)?line.sales[0]:line.sales;
+        sourcePanel='<div class="sc417-identity">'+
+          '<div><small>Nomor transaksi Majoo/POS</small><b>'+esc(src.external_transaction_id||'Belum tersedia')+'</b></div>'+
+          '<div><small>Tanggal penjualan sumber</small><b>'+esc(dateLabel(src.sold_at))+'</b></div>'+
+          '<div><small>Produk pada transaksi</small><b>'+esc(line.item_name||'Belum tersedia')+'</b></div>'+
+          '<div><small>Jumlah produk terjual</small><b>'+esc(line.qty===null||line.qty===undefined?'Belum tersedia':fmt(line.qty))+'</b></div>'+
+          '<div><small>SKU pada baris penjualan</small><b>'+esc(line.external_sku||'Belum tersedia')+'</b></div>'+
+          '<div><small>ID baris Penjualan</small><code>'+esc(line.id)+'</code></div>'+
+          '<div><small>ID transaksi internal</small><code>'+esc(src.id)+'</code></div>'+
+          '<div><small>Status outlet</small><b>'+(sourceDoc.outletChecked?'Outlet sama':'Outlet tidak tercantum lengkap')+'</b></div>'+
+        '</div><p class="sc20-note">Transaksi sumber memiliki relasi ID dan brand yang cocok. '+
+          'SKU produk pada transaksi tidak otomatis menjadi SKU bahan Majoo. '+
+          'Jumlah produk bukan kuantitas bahan yang dipakai. '+
+          (sourceDoc.dateMatches?'':'Tanggal transaksi dan tanggal ledger berbeda; periksa periode sumber. ')+
+          'Belum menjadi bukti bahwa seluruh penjualan periode sudah tersinkron.</p>';
+      }
+      sourcePanel='<section class="sc417-section" aria-label="Dokumen penjualan sumber">'+
+        '<div class="sc418-source-head"><h4>Dokumen Penjualan terkait</h4>'+
+        '<button type="button" data-sc418-close-source="1">Tutup rincian</button></div>'+
+        sourcePanel+'</section>';
+    }
+
     var opHtml=!hasOpname?'Riwayat opname gagal dimuat.':
       !(d.opnames||[]).length?'Belum ada bukti opname fisik.':
       (d.opnames||[]).slice(0,20).map(function(x){
@@ -2354,7 +2427,7 @@
     }).join('');
     return head+errors+'<section class="sc417-section"><h4>Identitas & pemetaan</h4>'+info+
       '<p class="sc20-note">Kode INV- adalah SKU internal ERP, bukan SKU asli Majoo. Identitas tidak dicocokkan otomatis berdasarkan nama atau menghapus tanda #.</p></section>'+
-      flow+'<section class="sc417-section"><h4>Opname fisik</h4>'+
+      flow+sourcePanel+'<section class="sc417-section"><h4>Opname fisik</h4>'+
       opHtml+'</section><section class="sc417-section"><h4>Pembelian dan penerimaan</h4>'+
       (d.parts&&d.parts.indexOf('purchaseLogs')>=0?'<p class="sc3-alert">Log pembelian gagal dimuat; tidak boleh dianggap tidak ada.</p>':logs||'<p class="sc20-note">Belum ada log pembelian untuk barang ini.</p>')+
       '<h5>Dokumen penerimaan terpisah</h5>'+
@@ -2783,7 +2856,7 @@
   }
   function stockCloseDialog(host) {
     var previous=S.modal;
-    S.modal='';S.selectedItemId='';S.itemDetail=null;++S.itemDetailSeq;
+    S.modal='';S.selectedItemId='';S.itemDetail=null;++S.itemDetailSeq;S.itemSourceDoc=null;++S.itemSourceSeq;
     render();
     var source=host.querySelector('[data-sc4-modal="'+previous+'"]');
     if(source&&source.focus)source.focus({preventScroll:true});
@@ -2800,9 +2873,17 @@
 
   function bind(host) {
     host.onclick = function (e) {
+      var closeSource=e.target&&e.target.closest?e.target.closest('[data-sc418-close-source]'):null;
+      if(closeSource&&S.modal==='position'&&S.selectedItemId){
+        S.itemSourceDoc=null;++S.itemSourceSeq;render();return;
+      }
+      var saleSource=e.target&&e.target.closest?e.target.closest('[data-sc418-sale]'):null;
+      if(saleSource&&S.modal==='position'&&S.selectedItemId&&isOwner()){
+        loadStockItemSource(saleSource.getAttribute('data-sc418-sale'));return;
+      }
       var itemBack=e.target&&e.target.closest?e.target.closest('[data-sc417-back]'):null;
       if(itemBack&&S.modal==='position'){
-        S.selectedItemId='';S.itemDetail=null;++S.itemDetailSeq;
+        S.selectedItemId='';S.itemDetail=null;++S.itemDetailSeq;S.itemSourceDoc=null;++S.itemSourceSeq;
         render();return;
       }
       var itemPage=e.target&&e.target.closest?e.target.closest('[data-sc417-page]'):null;
@@ -2817,12 +2898,12 @@
       var kpi=e.target&&e.target.closest?e.target.closest('[data-sc4-kpi]'):null;
       if(kpi){
         S.search='';S.category='';S.status=kpi.getAttribute('data-sc4-kpi')||'';
-        S.page=1;S.modal='position';S.selectedItemId='';S.itemDetail=null;++S.itemDetailSeq;render();stockDialogFocus(host);return;
+        S.page=1;S.modal='position';S.selectedItemId='';S.itemDetail=null;++S.itemDetailSeq;S.itemSourceDoc=null;++S.itemSourceSeq;render();stockDialogFocus(host);return;
       }
       var review=e.target&&e.target.closest?e.target.closest('[data-sc4-filter]'):null;
       if(review&&S.modal==='position'){
         S.search='';S.category='';S.status=review.getAttribute('data-sc4-filter')||'';
-        S.page=1;S.selectedItemId='';S.itemDetail=null;++S.itemDetailSeq;render();return;
+        S.page=1;S.selectedItemId='';S.itemDetail=null;++S.itemDetailSeq;S.itemSourceDoc=null;++S.itemSourceSeq;render();return;
       }
       var skuSimRefresh=e.target&&e.target.closest?e.target.closest('[data-sc25-refresh]'):null;
       if(skuSimRefresh&&isOwner()&&S.modal==='sku-sim'){loadSkuSimulation();return;}
@@ -2878,7 +2959,7 @@
       var modal = e.target && e.target.closest ? e.target.closest('[data-sc4-modal]') : null;
       if (modal) {
         S.modal = modal.getAttribute('data-sc4-modal') || '';
-        if(S.modal==='position'){S.selectedItemId='';S.itemDetail=null;++S.itemDetailSeq;}
+        if(S.modal==='position'){S.selectedItemId='';S.itemDetail=null;++S.itemDetailSeq;S.itemSourceDoc=null;++S.itemSourceSeq;}
         if (S.modal === 'ledger' && !S.ledgerLoading) loadLedger();
         else if (S.modal === 'recipes') loadRecipeReview();
         else if (S.modal === 'sku-sim') loadSkuSimulation();
