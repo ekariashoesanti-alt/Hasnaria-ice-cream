@@ -2302,7 +2302,7 @@
     var reason=sameDay?'Mutasi Penjualan/Penerimaan pada tanggal opname: urutan fisik belum diketahui':
       wrongItem?'Ledger memuat mutasi dari SKU lain':'';
     var running=valid?Number(checkpoint.physical_qty):null;
-    var complete=valid&&!reason,invalid=0,seenId={},seenSource={};
+    var complete=valid&&!reason,invalid=0,seenId=Object.create(null),seenSource=Object.create(null);
     var result=rows.map(function(x){
       var event=Object.assign({},x,{running_balance:null,balance_reason:''});
       if(!valid){event.balance_reason='Belum ada checkpoint fisik';return event;}

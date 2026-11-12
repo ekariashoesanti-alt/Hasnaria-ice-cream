@@ -1202,7 +1202,7 @@
       "id": "HSN-421",
       "milestone": "M4",
       "priority": "P0",
-      "status": "IN_PROGRESS",
+      "status": "REVIEW",
       "title": "Stok QA: blok saldo berjalan ambigu ketika mutasi Penjualan terjadi pada tanggal opname",
       "dependencies": [
         "HSN-417",
@@ -1212,7 +1212,7 @@
       "owner": "ChatGPT",
       "updated_at": "2026-11-12",
       "acceptance": "Owner Detail Barang tidak menampilkan saldo berjalan numerik jika tanggal opname bertabrakan dengan SALE_CONSUMPTION/PURCHASE_RECEIPT atau ledger rusak. Koreksi/baseline dan duplikasi setelah opname tidak boleh diam-diam dilewati; error state eksplisit; regresi valid tidak berubah; CI Preview pass, tanpa posting/merge.",
-      "notes": "Read-only query production menemukan 24 same-day SALE_CONSUMPTION pada 9 SKU dari 41 SKU beropname. Data berisiko tampak verified pada HSN-417; patch pada branch preview stacked #223."
+      "notes": "Preview-only HSN-421. Prod read-only query: 24 SALE_CONSUMPTION movements on same day as latest physical opname across 9 of 41 checkpointed SKUs, zero same-day purchases, zero post-checkpoint duplicate source_key, no bad signs/deltas. Blocking potentially misleading running balances only in Owner Detail Barang, no DB write. Tests/CI and Owner visual validation remain release gates."
     },
     {
       "id": "HSN-500",

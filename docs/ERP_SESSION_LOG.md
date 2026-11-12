@@ -369,3 +369,11 @@ Validasi:30 kasus GPS (9 tambahan),25 berkas tes/full build, review independen d
 - Four dashboard KPI cards/two main charts unchanged. No business-data write/DDL, no BOM or cost status approvals, no stock posting.
 - Regression tests `tests/stock-hsn420-visible-columns-v1.test.js` added to build gate for default 11/full 15, column parity, paging, unknown values, Owner drilldown, mobile-scoped styling, no mutations.
 - Browser connector could not access Owner session (requires originating connected browser context); no authenticated visual verification claimed. Status REVIEW until CI, preview and Owner desktop/mobile acceptance.
+
+## 2026-11-12 — HSN-421: Guard saldo berjalan saat mutasi di hari opname (preview only)
+- Audit produksi READ ONLY: 41 SKU beropname fisik, 24 SALE_CONSUMPTION pada tanggal opname terbaru yang sama, tersebar pada 9 SKU. Tidak ditemukan penerimaan pembelian yang bertabrakan, duplikasi source_key, atau qty/sign tidak valid setelah checkpoint.
+- HSN-417 sebelumnya mengabaikan peristiwa di hari opname tetapi tetap menampilkan saldo berjalan berikutnya sebagai numerik. Tanpa cap waktu opname fisik, urutan mutasi pada hari yang sama tidak dapat dipastikan.
+- HSN-421 mengubah kalkulator Detail Barang: jika SALE_CONSUMPTION atau PURCHASE_RECEIPT berada pada hari opname, tutup semua saldo berjalan sesudahnya sebagai unknown, bukan 0 atau verified. OPNAME_CORRECTION/BASELINE pada tanggal opname sendiri tidak dianggap konflik.
+- Koreksi/BASELINE setelah opname, ID/source_key ganda, mixed SKU, tanda/qty tidak valid ikut diblokir untuk mencegah angka menyesatkan.
+- Ledger asli, opname, KPI, grafik, filter, dan ekspor tidak dimutasi; tidak ada posting, backfill, schema change, atau deploy ke production.
+- Tes HSN-421 khusus + test HSN-417 diperbarui; status REVIEW sampai Audit Gate, Preview READY dan Owner desktop/mobile acceptance.

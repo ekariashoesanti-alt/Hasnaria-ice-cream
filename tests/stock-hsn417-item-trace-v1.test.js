@@ -8,7 +8,7 @@ const css=fs.readFileSync('stock-control-v3.css','utf8');
 function section(a,b){const i=js.indexOf(a),j=js.indexOf(b,i+a.length);assert.ok(i>=0&&j>i,'section '+a);return js.slice(i,j).trim();}
 function fn(a,b){return vm.runInNewContext('('+section(a,b)+'\n)',{}, {timeout:1200});}
 test('HSN-417 checkpoint balance is deterministic across all pages',()=>{
- const calc=fn('function itemLedgerRunningRows(movements,checkpoint){','function itemLedgerPeriodFlow(movements,checkpoint,period,inventoryId){');
+ const calc=fn('function itemLedgerRunningRows(movements,checkpoint,inventoryId){','function itemLedgerPeriodFlow(movements,checkpoint,period,inventoryId){');
  const rows=[
  {id:'2',movement_date:'2026-09-14',created_at:'2026-09-14T12:00Z',movement_type:'SALE_CONSUMPTION',qty_delta:-3},
  {id:'1',movement_date:'2026-09-13',created_at:'2026-09-13T12:00Z',movement_type:'PURCHASE_RECEIPT',qty_delta:8},
@@ -16,7 +16,7 @@ test('HSN-417 checkpoint balance is deterministic across all pages',()=>{
  {id:'3',movement_date:'2026-09-14',created_at:'2026-09-14T12:00Z',movement_type:'SALE_CONSUMPTION',qty_delta:-1}
  ];
  const result=calc(rows,{opname_date:'2026-09-12',physical_qty:10});
- assert.equal(result.opening,10);assert.equal(result.closing,14);assert.equal(result.same_day,1);
+ assert.equal(result.opening,10);assert.equal(result.closing,14);assert.equal(result.same_day,0); // checkpoint correction is not an ambiguous receipt/sale
  assert.deepEqual(Array.from(result.rows.map(x=>x.id)),['0','1','2','3']);
  assert.deepEqual(Array.from(result.rows.map(x=>x.running_balance)),[null,18,15,14]);
  const displayed=Array.from(result.rows.slice().reverse());
@@ -24,7 +24,7 @@ test('HSN-417 checkpoint balance is deterministic across all pages',()=>{
  assert.equal(displayed.slice(2)[0].running_balance,18);
 });
 test('HSN-417 no checkpoint, invalid quantity, and same-day uncertainty are not zeroed',()=>{
- const calc=fn('function itemLedgerRunningRows(movements,checkpoint){','function itemLedgerPeriodFlow(movements,checkpoint,period,inventoryId){');
+ const calc=fn('function itemLedgerRunningRows(movements,checkpoint,inventoryId){','function itemLedgerPeriodFlow(movements,checkpoint,period,inventoryId){');
  const sale={id:'a',movement_date:'2026-09-13',created_at:'2026-09-13T12:00Z',movement_type:'SALE_CONSUMPTION',qty_delta:-4};
  assert.equal(calc([sale],null).closing,null);
  const bad=calc([sale,{id:'b',movement_date:'2026-09-14',created_at:'x',movement_type:'SALE_CONSUMPTION',qty_delta:null}],
