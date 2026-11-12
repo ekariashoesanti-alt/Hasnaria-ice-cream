@@ -70,6 +70,9 @@
     itemDetail: null,
     itemDetailSeq: 0,
     itemDetailPage: 1,
+    exportColumns: null,
+    exportColumnsOpen: false,
+    exportPageOnly: false,
     itemSourceDoc: null,
     itemSourceSeq: 0,
     pendingStockRefresh: false,
@@ -1384,6 +1387,79 @@
     return '<strong>' + fmt(x.days_cover) + ' hari</strong><small>avg ' + fmt(x.avg_usage) + '/hari</small>';
   }
 
+
+  // HSN-419: Reuse the existing CSV exporter. Scope is the *current* Stock
+  // filter; display pagination is independent unless the user selects page-only.
+  function stockExportColumnDefinitions(){
+    return [
+      {key:'name',label:'Material',get:function(x){return x.item_name;}},
+      {key:'category',label:'Kategori',get:function(x){return x.category;}},
+      {key:'unit',label:'Satuan dasar',get:function(x){return x.unit;}},
+      {key:'purchase',label:'Masuk sejak opname (ledger)',get:function(x){return x.tracking_active?x.purchase_qty:'';}},
+      {key:'usage',label:'Keluar sejak opname (ledger)',get:function(x){return x.tracking_active?x.sales_usage_qty:'';}},
+      {key:'opname',label:'Opname fisik terakhir',get:function(x){return x.tracking_active?x.last_physical_qty:'';}},
+      {key:'date',label:'Tanggal opname',get:function(x){return x.tracking_active?x.last_opname_date:'';}},
+      {key:'variance',label:'Selisih opname',get:function(x){return x.last_variance==null?'':x.last_variance;}},
+      {key:'incoming',label:'Dalam pesanan (bukan barang diterima)',get:function(x){return S.auxLoaded?x.incoming_qty:'';}},
+      {key:'min',label:'Min/Par',get:function(x){return x.min_qty;}},
+      {key:'needs',label:'Kebutuhan (simulasi)',get:function(x){return S.auxLoaded&&x.suggested_order_qty!=null?x.suggested_order_qty:'';}},
+      {key:'avg',label:'Rata-rata pemakaian (estimasi)',get:function(x){return S.auxLoaded&&x.avg_usage!=null?x.avg_usage:'';}},
+      {key:'cover',label:'Days cover (estimasi)',get:function(x){return S.auxLoaded&&x.days_cover!=null?x.days_cover:'';}},
+      {key:'status',label:'Status stok',get:function(x){return statusLabel(x.ui_status);}},
+      {key:'balance',label:'Saldo sistem (parsial)',get:function(x){return x.balance_qty==null?'':x.balance_qty;}}
+    ];
+  }
+
+  function stockExportRows(){
+    var defs=stockExportColumnDefinitions(),chosen=S.exportColumns||defs.map(function(x){return x.key});
+    var columns=defs.filter(function(x){return chosen.indexOf(x.key)>=0;});
+    if(!columns.length)columns=[defs[0]];
+    var filtered=filteredItems(),pageRows=filtered;
+    if(S.exportPageOnly){
+      var pages=Math.max(1,Math.ceil(filtered.length/PAGE_SIZE));
+      var page=Math.max(1,Math.min(pages,S.page));
+      pageRows=filtered.slice((page-1)*PAGE_SIZE,page*PAGE_SIZE);
+    }
+    var rows=[columns.map(function(x){return x.label})];
+    pageRows.forEach(function(item){rows.push(columns.map(function(x){return x.get(item)}))});
+    return {rows:rows,count:pageRows.length,filteredCount:filtered.length,
+      scope:S.exportPageOnly?'halaman-aktif':'semua-hasil-filter',columns:columns.map(function(x){return x.key})};
+  }
+
+  function stockCsvCell(v){
+    var str=String(v===undefined||v===null?'':v);
+    // Protect spreadsheets from formulas hidden in product names/categories.
+    if(typeof v!=='number'&&/^\s*[=+@]/.test(str))str="'"+str;
+    if(typeof v!=='number'&&/^\s*-(?!\d+(?:[.,]\d+)?$)/.test(str))str="'"+str;
+    return /[",\r\n]/.test(str)?'"'+str.replace(/"/g,'""')+'"':str;
+  }
+
+  function renderStockExportOptions(){
+    if(!isOwner())return '';
+    var defs=stockExportColumnDefinitions(),chosen=S.exportColumns||defs.map(function(x){return x.key});
+    var total=filteredItems().length,pages=Math.max(1,Math.ceil(total/PAGE_SIZE));
+    var current=Math.max(1,Math.min(pages,S.page));
+    var included=S.exportPageOnly?Math.max(0,Math.min(PAGE_SIZE,total-(current-1)*PAGE_SIZE)):total;
+    var controls=S.exportColumnsOpen?'<div class="sc419-export-columns" aria-label="Kolom CSV">'+
+      defs.map(function(x){
+        return '<button type="button" data-sc419-column="'+esc(x.key)+'" aria-pressed="'+
+          (chosen.indexOf(x.key)>=0?'true':'false')+'" class="'+
+          (chosen.indexOf(x.key)>=0?'on':'')+'">'+esc(x.label)+'</button>';
+      }).join('')+'</div>':'';
+    return '<section class="sc419-export-panel" aria-label="Pengaturan ekspor stok">'+
+      '<div class="sc419-export-toolbar"><b>Ekspor posisi stok (bukan arus periode)</b>'+
+      '<button type="button" data-sc419-export-columns="1" aria-expanded="'+
+        (S.exportColumnsOpen?'true':'false')+'">Atur Kolom CSV</button>'+
+      '<button type="button" data-sc419-export-scope="1">'+
+        (S.exportPageOnly?'Cakupan: halaman aktif':'Cakupan: semua hasil filter')+'</button>'+
+      '<button type="button" data-sc419-export="1">Ekspor CSV</button></div>'+
+      '<small>'+esc(fmt(included))+' dari '+esc(fmt(total))+
+      ' SKU sesuai filter · '+esc(fmt(chosen.length))+' kolom · tanpa penjumlahan antar-satuan. '+
+      (S.exportPageOnly?'Hanya baris halaman '+esc(fmt(current))+' yang diekspor.':
+       'Seluruh hasil filter diekspor, bukan hanya halaman yang terlihat.')+'</small>'+
+      controls+'</section>';
+  }
+
   function renderTable() {
     var rows = filteredItems();
     var pages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
@@ -2567,7 +2643,7 @@
       (isOwner()?'<div class="sc28-detail-quick"><button type="button" data-sc4-action="opname">＋ Input Opname</button>'+
         '<button type="button" data-sc4-modal="ledger">Riwayat Mutasi</button>'+
         '<button type="button" data-sc4-modal="formula-audit">Audit Integrasi</button></div>':'')+
-      renderAuxState() + renderFilters() + renderTable());
+      renderAuxState() + renderFilters() + renderStockExportOptions() + renderTable());
     return '<div class="sc4-modal-backdrop" data-sc4-close="1"><section class="sc4-modal'+(S.modal==='upload-data'?' sc28-upload-modal':'')+'" role="dialog" aria-modal="true" aria-labelledby="sc4ModalTitle" tabindex="-1"><div class="sc4-modal-head"><div><div class="sc3-eyebrow">DETAIL STOK</div><h3 id="sc4ModalTitle">' + esc(title) + '</h3><p>' + (S.modal === 'upload-data' ? 'Satu tempat untuk kebutuhan upload; tidak perlu mengulang file yang sudah tersimpan.' :
         S.modal === 'sku-sim' ? 'Simulasi teoretis dari rekap Majoo, tidak mengurangi saldo atau menyetujui BOM.' : S.modal === 'ledger' ? 'Movement periode terpilih; quantity tetap dalam satuan masing-masing SKU.' : S.modal === 'recipes' ? 'Penjualan berdasarkan bulan; resep berlaku terus sejak disetujui sampai diubah.' :
         S.modal === 'formula-audit' ? 'Audit hitung ulang semua SKU berdasarkan data yang sudah tercatat, bukan stok fisik baru.' :
@@ -2952,6 +3028,28 @@
 
   function bind(host) {
     host.onclick = function (e) {
+      var showColumns=e.target&&e.target.closest?e.target.closest('[data-sc419-export-columns]'):null;
+      if(showColumns&&S.modal==='position'&&!S.selectedItemId&&isOwner()){
+        S.exportColumnsOpen=!S.exportColumnsOpen;render();return;
+      }
+      var scope=e.target&&e.target.closest?e.target.closest('[data-sc419-export-scope]'):null;
+      if(scope&&S.modal==='position'&&!S.selectedItemId&&isOwner()){
+        S.exportPageOnly=!S.exportPageOnly;render();return;
+      }
+      var toggleColumn=e.target&&e.target.closest?e.target.closest('[data-sc419-column]'):null;
+      if(toggleColumn&&S.modal==='position'&&!S.selectedItemId&&isOwner()){
+        var valid=stockExportColumnDefinitions().map(function(c){return c.key});
+        var key=toggleColumn.getAttribute('data-sc419-column');
+        if(valid.indexOf(key)<0)return;
+        var chosen=S.exportColumns||valid.slice(),present=chosen.indexOf(key)>=0;
+        if(present&&chosen.length<=1)return;
+        S.exportColumns=present?chosen.filter(function(x){return x!==key}):chosen.concat([key]);
+        render();return;
+      }
+      var exportNow=e.target&&e.target.closest?e.target.closest('[data-sc419-export]'):null;
+      if(exportNow&&S.modal==='position'&&!S.selectedItemId&&isOwner()&&S.baseLoaded){
+        exportCsv();return;
+      }
       var closeSource=e.target&&e.target.closest?e.target.closest('[data-sc418-close-source]'):null;
       if(closeSource&&S.modal==='position'&&S.selectedItemId){
         S.itemSourceDoc=null;++S.itemSourceSeq;render();return;
@@ -3223,34 +3321,18 @@
   }
 
   function exportCsv() {
-    var rows = [['Material','Kategori','Satuan','Pembelian Setelah Opname','Pemakaian Setelah Opname','Stok Opname','Tanggal Opname','Selisih Opname','Incoming','Min/Par','Kebutuhan','Avg Pemakaian','Days Cover','Status','Saldo']];
-    filteredItems().forEach(function (x) {
-      rows.push([
-        x.item_name, x.category, x.unit, x.purchase_qty, x.sales_usage_qty,
-        x.tracking_active ? x.last_physical_qty : '', x.last_opname_date || '', x.last_variance == null ? '' : x.last_variance,
-        S.auxLoaded ? x.incoming_qty : '', x.min_qty, S.auxLoaded && x.suggested_order_qty != null ? x.suggested_order_qty : '',
-        S.auxLoaded && x.avg_usage != null ? x.avg_usage : '', S.auxLoaded && x.days_cover != null ? x.days_cover : '',
-        statusLabel(x.ui_status), x.balance_qty == null ? '' : x.balance_qty
-      ]);
-    });
-    var csv = rows.map(function (r) {
-      return r.map(function (v) {
-        var s = String(v == null ? '' : v);
-        return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
-      }).join(',');
-    }).join('\n');
-    var blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
-    var a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'hasnaria-kontrol-stok-' + today() + '.csv';
-    document.body.appendChild(a);
-    a.click();
-    var href = a.href;
-    a.remove();
-    setTimeout(function () { try { URL.revokeObjectURL(href); } catch (_) {} }, 0);
+    var report=stockExportRows();
+    var csv=report.rows.map(function(row){return row.map(stockCsvCell).join(',')}).join('\r\n');
+    var blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'});
+    var a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download='hasnaria-stok-posisi-'+report.scope+'-'+today()+'.csv';
+    document.body.appendChild(a);a.click();
+    var href=a.href;a.remove();
+    setTimeout(function(){try{URL.revokeObjectURL(href)}catch(_){}},0);
   }
 
-  function active() {
+    function active() {
     var host = document.getElementById('stok');
     return !!(host && !host.classList.contains('hidden'));
   }
