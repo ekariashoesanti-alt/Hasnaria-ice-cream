@@ -61,6 +61,11 @@
     correctionNotice: '',
     ledgerAudit: {state:'loading',items:[],count:0},
     lastVerifiedAt: '',
+    latestMovementDate: null,
+    latestMovementLoaded: false,
+    latestMovementLoading: false,
+    latestMovementError: '',
+    latestMovementSeq: 0,
     pendingStockRefresh: false,
     verifiedRefreshing: false,
     pendingUploadRuns: null,
@@ -822,6 +827,28 @@
     }
   }
 
+  // A single brand-scoped ledger read; delayed until after the current stock first paint.
+  async function loadLatestMovement(force){
+    if(S.latestMovementLoading&&!force)return;
+    if(S.latestMovementLoaded&&!force)return;
+    var seq=++S.latestMovementSeq;
+    S.latestMovementLoading=true;S.latestMovementError='';
+    try{
+      var rows=await request('inventory_movements?'+qs({
+        brand_id:'eq.'+BRAND,select:'movement_date',
+        order:'movement_date.desc',limit:'1'
+      }));
+      if(seq!==S.latestMovementSeq)return;
+      S.latestMovementDate=Array.isArray(rows)&&rows.length?rows[0].movement_date:null;
+      S.latestMovementLoaded=true;
+    }catch(e){
+      if(seq!==S.latestMovementSeq)return;
+      S.latestMovementLoaded=false;S.latestMovementError=e&&e.message?e.message:String(e);
+    }finally{
+      if(seq===S.latestMovementSeq){S.latestMovementLoading=false;if(S.modal==='position')render();}
+    }
+  }
+
   async function loadBase() {
     if (S.baseLoading) return;
     var seq = ++S.loadSeq;
@@ -863,6 +890,7 @@
         S.baseLoading = false;
         render();
         if (S.baseLoaded) {
+          loadLatestMovement(false);
           // Defer rarely used PO/BOM detail; the main two charts do not need it.
           if(!S.auxLoaded&&!S.auxLoading&&S.modal==='position')scheduleAux(seq);
           if(!S.valuationLoaded&&!S.valuationLoading)loadVerifiedValuation();
@@ -1135,6 +1163,12 @@
         if(!(S.ledgerAudit&&S.ledgerAudit.items.some(function(i){return i.id===x.inventory_item_id;})))return false;
       } else if (S.status === 'diff') {
         if (!(x.last_variance !== null && x.last_variance !== undefined && Math.abs(num(x.last_variance)) > 0.00001)) return false;
+      } else if(S.status==='low'){
+        if(x.ui_status!=='critical'&&x.ui_status!=='order')return false;
+      } else if(S.status==='valued'){
+        if(!S.valuationLoaded||!(S.verifiedCosts||[]).some(function(c){return c.inventory_item_id===x.inventory_item_id;}))return false;
+      } else if(S.status==='unit-review'){
+        if(String(x.unit||'').trim()!=='purchase_unit')return false;
       } else if (S.status && x.ui_status !== S.status) return false;
       if (q && (String(x.item_name || '') + ' ' + String(x.category || '')).toLowerCase().indexOf(q) < 0) return false;
       return true;
@@ -1254,7 +1288,7 @@
     }).join('');
     return '<header class="sc5-head sc7-head sc28-simple-head">'+
       '<div class="sc5-head-copy"><span class="sc5-eyebrow">STOK</span>'+
-      '<h2>Dashboard Stok</h2><p>Persediaan &amp; aktivitas terkini</p></div>'+
+      '<h2>Dashboard Stok</h2><p>Posisi kini (parsial) · Tren hingga '+esc(monthLabel(S.period))+'</p></div>'+
       '<div class="sc5-head-right sc7-head-right sc7-actions sc7-tools sc28-simple-tools">'+
         '<label class="sc28-period" for="sc4Period"><span>Bulan</span><select id="sc4Period" data-month-filter="stok" aria-label="Periode stok">'+options+'</select></label>'+
         (isOwner()?'<button type="button" class="sc5-primary sc28-upload-btn" data-sc4-modal="upload-data" aria-haspopup="dialog">⇧ Upload Data</button>':'')+
@@ -1301,6 +1335,9 @@
       '<input id="sc3Search" type="search" placeholder="Cari material..." value="' + esc(S.search) + '">' +
       '<select id="sc3Category">' + categoryOptions() + '</select>' +
       '<select id="sc3Status"><option value="">Semua Status</option>' +
+        '<option value="low"' + (S.status === 'low' ? ' selected' : '') + '>Stok rendah (Kritis + Perlu Beli)</option>' +
+        '<option value="valued"' + (S.status === 'valued' ? ' selected' : '') + '>Biaya terverifikasi</option>' +
+        '<option value="unit-review"' + (S.status === 'unit-review' ? ' selected' : '') + '>Satuan belum dipetakan</option>' +
         '<option value="critical"' + (S.status === 'critical' ? ' selected' : '') + '>Kritis / Habis</option>' +
         '<option value="order"' + (S.status === 'order' ? ' selected' : '') + '>Perlu Beli</option>' +
         '<option value="incoming"' + (S.status === 'incoming' ? ' selected' : '') + '>Dalam Pesanan</option>' +
@@ -1324,6 +1361,11 @@
     return '<div class="sc3-pager"><span>Halaman ' + S.page + ' dari ' + pages + '</span><div>' + buttons.join('') + '</div></div>';
   }
 
+  function readableStockUnit(unit){
+    var u=String(unit||'').trim();
+    return u==='purchase_unit'?'Satuan pembelian belum dipetakan (purchase_unit)':u||'Satuan belum tersedia';
+  }
+
   function opnameHtml(x) {
     if (!x.tracking_active) return '<span class="sc3-muted">Belum ada</span>';
     return '<strong>' + fmt(x.last_physical_qty) + '</strong><small>' + dateLabel(x.last_opname_date) + '</small>';
@@ -1343,11 +1385,11 @@
     var start = (S.page - 1) * PAGE_SIZE;
     var pageRows = rows.slice(start, start + PAGE_SIZE);
     var body = pageRows.map(function (x) {
-      var balance = x.tracking_active ? '<strong>' + fmt(x.balance_qty) + '</strong><small>' + esc(x.unit || 'pcs') + '</small>' : '<span class="sc3-muted">-</span>';
+      var balance = x.tracking_active ? '<strong>' + fmt(x.balance_qty) + '</strong><small>' + esc(readableStockUnit(x.unit)) + '</small>' : '<span class="sc3-muted">-</span>';
       var need = !S.auxLoaded ? '<span class="sc3-muted">…</span>' : (x.suggested_order_qty === null ? '<span class="sc3-muted">-</span>' : (x.suggested_order_qty > 0 ? '<strong class="sc3-need">' + fmt(x.suggested_order_qty) + '</strong>' : '<span>0</span>'));
       var incoming = !S.auxLoaded ? '<span class="sc3-muted">…</span>' : (x.incoming_qty > 0 ? '<strong class="sc3-incoming">+' + fmt(x.incoming_qty) + '</strong>' : '<span class="sc3-muted">0</span>');
       return '<tr>' +
-        '<td class="sc3-item"><strong>' + esc(x.item_name) + '</strong><small>' + esc(x.category || 'Lainnya') + ' · ' + esc(x.unit || 'pcs') + '</small></td>' +
+        '<td class="sc3-item"><strong>' + esc(x.item_name) + '</strong><small>' + esc(x.category || 'Lainnya') + ' · ' + esc(readableStockUnit(x.unit)) + '</small></td>' +
         '<td class="sc3-num sc3-plus">+' + fmt(x.purchase_qty) + '</td>' +
         '<td class="sc3-num sc3-minus">-' + fmt(x.sales_usage_qty) + '</td>' +
         '<td class="sc3-num sc3-opname">' + opnameHtml(x) + '</td>' +
@@ -1361,9 +1403,9 @@
       '</tr>';
     }).join('');
 
-    return '<div class="sc3-table-card"><div class="sc3-table-head"><div><strong>Posisi Persediaan Terkini</strong><span>Data utama tampil lebih dulu; Incoming/BOM dilengkapi sesudahnya.</span></div><span>' + rows.length + ' item</span></div>' +
+    return '<div class="sc3-table-card"><div class="sc3-table-head"><div><strong>Posisi Persediaan Terkini</strong><span>Masuk/keluar: mutasi sejak opname, bukan arus bulan pilihan. Tidak diketahui ≠ nol.</span></div><span>' + rows.length + ' item hasil filter</span></div>' +
       '<div class="sc3-table-wrap"><table class="sc3-table"><thead><tr>' +
-        '<th>Material</th><th>+ Pembelian</th><th>− Pemakaian</th><th>Stok Opname</th><th>Selisih</th><th>Incoming</th><th>Min/Par</th><th>Kebutuhan</th><th>Days Cover</th><th>Status</th><th class="sc3-balance-head">Saldo</th>' +
+        '<th>Material</th><th>+ Masuk sejak opname</th><th>− Keluar sejak opname</th><th>Stok Opname</th><th>Selisih</th><th>Incoming</th><th>Min/Par</th><th>Kebutuhan</th><th>Days Cover</th><th>Status</th><th class="sc3-balance-head">Saldo</th>' +
       '</tr></thead><tbody>' + (body || '<tr><td colspan="11" class="sc3-empty">Tidak ada item sesuai filter.</td></tr>') + '</tbody></table></div>' + renderPager(rows.length, pages) + '</div>';
   }
 
@@ -1646,23 +1688,23 @@
     var v=S.valuation,valuationReady=!!(S.valuationLoaded&&v);
     var valuationSkuCount=valuationReady?num(v.inventory_items):0;
     var coverage=valuationSkuCount>0?num(v.valued_items)/valuationSkuCount*100:0;
-    function quantity(n){return loading?'…':fmt(n)}
+    function quantity(n){return loading?(S.error?'—':'…'):fmt(n)}
     var cards=[
-      {kind:'package',label:'Total Item (SKU)',value:quantity(items.length),
+      {kind:'package',filter:'',label:'Total Item (SKU)',value:quantity(items.length),
        note:loading?'Memuat master stok…':'Item terdaftar di backend'},
-      {kind:'value',label:'Nilai Stok (Parsial)',
+      {kind:'value',filter:'valued',label:'Nilai Stok (Parsial)',
        value:valuationReady?stockMoney(v.inventory_value,true):S.valuationError?'—':'…',
        note:valuationReady?('Biaya terverifikasi: '+fmt(v.valued_items)+' dari '+fmt(v.inventory_items)+' SKU ('+
          coverage.toLocaleString('id-ID',{maximumFractionDigits:1})+'%)'):
          (S.valuationError?'Data valuasi belum tersedia':'Menunggu biaya terverifikasi'),
        partial:valuationReady&&num(v.valued_items)<num(v.inventory_items)},
-      {kind:'warning',label:'Item Stok Rendah',value:quantity(need),
+      {kind:'warning',filter:'low',label:'Item Stok Rendah',value:quantity(need),
        note:loading?'Memuat status stok…':'Kritis atau di bawah minimum'},
-      {kind:'opname',label:'Belum Opname Awal',value:quantity(untracked),
+      {kind:'opname',filter:'untracked',label:'Belum Opname Awal',value:quantity(untracked),
        note:loading?'Memuat status opname…':'Belum ada checkpoint awal'}
     ];
     return '<div class="sc5-kpis sc6-kpis sc8-kpis" aria-label="Ringkasan empat KPI stok">'+cards.map(function(c){
-      return '<article class="sc5-kpi sc8-kpi sc8-kpi-'+c.kind+' sc28-clickable-kpi" role="button" tabindex="0" data-sc4-modal="position" aria-label="Lihat detail stok: '+esc(c.label)+'">'+
+      return '<article class="sc5-kpi sc8-kpi sc8-kpi-'+c.kind+' sc28-clickable-kpi" role="button" tabindex="0" data-sc4-kpi="'+esc(c.filter)+'" data-sc4-modal="position" aria-label="Lihat detail stok: '+esc(c.label)+'">'+
         '<span class="sc5-kpi-icon sc8-kpi-icon">'+stockKpiIcon(c.kind)+'</span>'+
         '<div class="sc8-kpi-copy"><span class="sc8-kpi-label" title="'+esc(c.label)+'">'+esc(c.label)+'</span>'+
         '<strong class="sc8-kpi-value" title="'+esc(c.value)+'">'+esc(c.value)+'</strong>'+
@@ -2100,19 +2142,54 @@
       '<p class="sc5-caption">*Refund tidak selalu mengembalikan bahan yang telah diracik. Tidak tersedia tombol posting saldo di halaman simulasi.</p>';
   }
 
+  function renderPositionCoverage(){
+    if(!S.baseLoaded)return '<div class="sc20-note" role="status">'+
+      (S.error?'Posisi stok gagal dimuat: '+esc(S.error):'Memuat posisi stok terkini…')+'</div>';
+    var tracked=S.items.filter(function(x){return !!x.tracking_active}).length;
+    var unknown=S.items.length-tracked;
+    var unitReview=S.items.filter(function(x){return String(x.unit||'').trim()==='purchase_unit'}).length;
+    var price=S.valuationLoaded&&S.valuation?fmt(S.valuation.valued_items)+' dari '+fmt(S.valuation.inventory_items):
+      S.valuationError?'belum dapat diperiksa':'sedang dimuat';
+    var latest=S.latestMovementLoaded?(S.latestMovementDate?dateLabel(S.latestMovementDate):'belum ada mutasi tercatat'):
+      S.latestMovementError?'gagal diperiksa':'sedang dimuat';
+    var periodRows=(S.monthEndRows||[]).filter(function(x){return String(x.period_month||'').slice(0,7)===S.period;});
+    var unsynced=periodRows.some(function(x){return x.data_status==='NO_POSTED_SALES'||num(x.unlinked_sale_rows)>0});
+    var anyMovement=periodRows.some(function(x){return num(x.period_movement_rows)>0;});
+    var periodState=S.periodLoading?'Memuat arus bulan pilihan…':
+      S.periodError?'Gagal memuat arus bulan pilihan: '+S.periodError:
+      !periodRows.length?'Laporan bulan ini belum tersedia (bukan 0 transaksi).':
+      unsynced?'Penjualan belum seluruhnya dibukukan sebagai pengurangan stok.':
+      !anyMovement?'Tidak ada mutasi ledger tercatat; kelengkapan sumber belum dipastikan.':
+      'Ada mutasi ledger tercatat; kelengkapan sumber tetap perlu diperiksa.';
+    var priorGap=(S.monthEndRows||[]).some(function(x){
+      var m=String(x.period_month||'').slice(0,7);
+      return m<S.period&&(x.data_status==='NO_POSTED_SALES'||num(x.unlinked_sale_rows)>0);
+    });
+    return '<section class="sc20-note" aria-label="Cakupan dan sumber saldo stok">'+
+      '<b>Posisi terkini tidak sama dengan arus '+esc(monthLabel(S.period))+'</b> · Posisi menggunakan checkpoint sah dan ledger sesudah opname. '+
+      '<p><b>Mutasi terakhir:</b> '+esc(latest)+' · <b>Opname awal:</b> '+fmt(tracked)+' / '+fmt(S.items.length)+
+      ' SKU · <b>Biaya terverifikasi:</b> '+esc(price)+' SKU.</p>'+
+      '<p><b>Status arus '+esc(monthLabel(S.period))+':</b> '+esc(periodState)+
+      (priorGap?' Saldo bawaan melewati periode yang belum tersinkron: kesinambungan belum terverifikasi.':'')+'</p>'+
+      '<div class="sc3-filter-links"><button type="button" data-sc4-filter="untracked">Lihat '+fmt(unknown)+
+      ' belum opname</button><button type="button" data-sc4-filter="unit-review">Lihat '+fmt(unitReview)+
+      ' perlu pemetaan satuan</button></div>'+
+      '<small>Saldo bawaan tidak berarti ada opname fisik baru. Faktur/pembayaran tidak berarti barang sudah diterima.</small></section>';
+  }
+
   function renderModal() {
     if (!S.modal) return '';
     var title = S.modal === 'ledger' ? 'Ledger · ' + monthLabel(S.period) :
       S.modal === 'upload-data' ? 'Upload Data' :
       S.modal === 'recipes' ? 'Cek Resep Produk · ' + monthLabel(S.period) :
       S.modal === 'sku-sim' ? 'Simulasi Penjualan Produk → BOM' :
-      S.modal === 'formula-audit' ? 'Periksa Hitungan Stok' : 'Posisi SKU Saat Ini';
+      S.modal === 'formula-audit' ? 'Periksa Hitungan Stok' : 'Posisi SKU Saat Ini (bukan arus bulan)';
     var body = S.modal === 'ledger' ? renderLedgerTable() :
       S.modal === 'upload-data' ? renderUploadChoices() :
       S.modal === 'recipes' ? renderRecipeReview() :
       S.modal === 'sku-sim' ? renderSkuSimulation() :
       S.modal === 'formula-audit' ? renderFormulaAudit() :
-      renderFormula() +
+      renderPositionCoverage() + renderFormula() +
       (isOwner()?'<div class="sc28-detail-quick"><button type="button" data-sc4-action="opname">＋ Input Opname</button>'+
         '<button type="button" data-sc4-modal="ledger">Riwayat Mutasi</button>'+
         '<button type="button" data-sc4-modal="formula-audit">Audit Integrasi</button></div>':'')+
@@ -2120,7 +2197,7 @@
     return '<div class="sc4-modal-backdrop" data-sc4-close="1"><section class="sc4-modal'+(S.modal==='upload-data'?' sc28-upload-modal':'')+'" role="dialog" aria-modal="true" aria-labelledby="sc4ModalTitle" tabindex="-1"><div class="sc4-modal-head"><div><div class="sc3-eyebrow">DETAIL STOK</div><h3 id="sc4ModalTitle">' + esc(title) + '</h3><p>' + (S.modal === 'upload-data' ? 'Satu tempat untuk kebutuhan upload; tidak perlu mengulang file yang sudah tersimpan.' :
         S.modal === 'sku-sim' ? 'Simulasi teoretis dari rekap Majoo, tidak mengurangi saldo atau menyetujui BOM.' : S.modal === 'ledger' ? 'Movement periode terpilih; quantity tetap dalam satuan masing-masing SKU.' : S.modal === 'recipes' ? 'Penjualan berdasarkan bulan; resep berlaku terus sejak disetujui sampai diubah.' :
         S.modal === 'formula-audit' ? 'Audit hitung ulang semua SKU berdasarkan data yang sudah tercatat, bukan stok fisik baru.' :
-        'Saldo terkini, opname, incoming, kebutuhan dan days cover.') + '</p></div><button type="button" data-sc4-close="1" class="sc4-close" aria-label="Tutup">×</button></div><div class="sc4-modal-body">' + body + '</div></section></div>';
+        'Saldo kini berasal dari checkpoint dan ledger. Bulan pilihan mengatur laporan arus; yang belum lengkap tetap ditandai.') + '</p></div><button type="button" data-sc4-close="1" class="sc4-close" aria-label="Tutup">×</button></div><div class="sc4-modal-body">' + body + '</div></section></div>';
   }
 
   function openOpname() {
@@ -2491,6 +2568,16 @@
 
   function bind(host) {
     host.onclick = function (e) {
+      var kpi=e.target&&e.target.closest?e.target.closest('[data-sc4-kpi]'):null;
+      if(kpi){
+        S.search='';S.category='';S.status=kpi.getAttribute('data-sc4-kpi')||'';
+        S.page=1;S.modal='position';render();stockDialogFocus(host);return;
+      }
+      var review=e.target&&e.target.closest?e.target.closest('[data-sc4-filter]'):null;
+      if(review&&S.modal==='position'){
+        S.search='';S.category='';S.status=review.getAttribute('data-sc4-filter')||'';
+        S.page=1;render();return;
+      }
       var skuSimRefresh=e.target&&e.target.closest?e.target.closest('[data-sc25-refresh]'):null;
       if(skuSimRefresh&&isOwner()&&S.modal==='sku-sim'){loadSkuSimulation();return;}
       var stockChartPage=e.target&&e.target.closest?e.target.closest('[data-sc21-page]'):null;
@@ -2616,7 +2703,7 @@
         return;
       }
       var action = button.getAttribute('data-sc3-action');
-      if (action === 'refresh') { loadBase(); loadPeriodData(true); loadVerifiedValuation(true); }
+      if (action === 'refresh') { loadBase(); loadPeriodData(true); loadVerifiedValuation(true); loadLatestMovement(true); }
       if (action === 'export' && S.baseLoaded) exportCsv();
     };
     host.oninput = function (e) {
