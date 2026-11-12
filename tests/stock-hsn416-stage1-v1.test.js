@@ -17,7 +17,7 @@ test('HSN-416 KPI low/verified/untracked filters match actual rows',()=>{
  S.status='untracked';assert.equal(filter().length,1);
  S.status='valued';assert.equal(filter().length,1);
  S.status='';assert.equal(filter().length,4);
- const html=fn('function overviewKpis() {','function activityName(',{S,esc:String,fmt:String,
+ const html=fn('function overviewKpis() {','function activityName(',{S,esc:String,fmt:String,num:Number,
   stockMoney:()=>'Rp 100',stockKpiIcon:()=>''})();
  ['data-sc4-kpi=""','data-sc4-kpi="low"','data-sc4-kpi="untracked"',
   'data-sc4-kpi="valued"'].forEach(x=>assert.ok(html.includes(x),x));
