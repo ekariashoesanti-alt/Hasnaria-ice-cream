@@ -277,6 +277,7 @@ run(process.execPath, ['--test', 'tests/stock-first-paint-no-flicker-v1.test.js'
 run(process.execPath, ['--test', 'tests/stock-legacy-first-frame-guard-v1.test.js']);
 run(process.execPath, ['--test', 'tests/stock-integration-audit-readonly-v1.test.js']);
 run(process.execPath, ['--test', 'tests/stock-hsn416-stage1-v1.test.js']);
+run(process.execPath, ['--test', 'tests/stock-hsn417-item-trace-v1.test.js']);
 run(process.execPath, ['--test', 'tests/stock-recovery-stage0-readonly-v1.test.js']);
 
 const dist = path.join(ROOT, 'dist');
