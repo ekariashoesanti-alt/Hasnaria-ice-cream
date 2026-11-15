@@ -2117,7 +2117,7 @@
         '<button type="button" data-sc4-modal="ledger">Riwayat Mutasi</button>'+
         '<button type="button" data-sc4-modal="formula-audit">Audit Integrasi</button></div>':'')+
       renderAuxState() + renderFilters() + renderTable();
-    return '<div class="sc4-modal-backdrop" data-sc4-close="1"><section class="sc4-modal'+(S.modal==='upload-data'?' sc28-upload-modal':'')+'" role="dialog" aria-modal="true" aria-labelledby="sc4ModalTitle" tabindex="-1"><div class="sc4-modal-head"><div><div class="sc3-eyebrow">DETAIL STOK</div><h3 id="sc4ModalTitle">' + esc(title) + '</h3><p>' + (S.modal === 'upload-data' ? 'Satu tempat untuk kebutuhan upload; tidak perlu mengulang file yang sudah tersimpan.' :
+    return '<div class="sc4-modal-backdrop" data-sc4-close="1"><section class="sc4-modal'+(S.modal==='upload-data'?' sc28-upload-modal':S.modal==='position'?' sc424-position':'')+'" role="dialog" aria-modal="true" aria-labelledby="sc4ModalTitle" tabindex="-1"><div class="sc4-modal-head"><div><div class="sc3-eyebrow">DETAIL STOK</div><h3 id="sc4ModalTitle">' + esc(title) + '</h3><p>' + (S.modal === 'upload-data' ? 'Satu tempat untuk kebutuhan upload; tidak perlu mengulang file yang sudah tersimpan.' :
         S.modal === 'sku-sim' ? 'Simulasi teoretis dari rekap Majoo, tidak mengurangi saldo atau menyetujui BOM.' : S.modal === 'ledger' ? 'Movement periode terpilih; quantity tetap dalam satuan masing-masing SKU.' : S.modal === 'recipes' ? 'Penjualan berdasarkan bulan; resep berlaku terus sejak disetujui sampai diubah.' :
         S.modal === 'formula-audit' ? 'Audit hitung ulang semua SKU berdasarkan data yang sudah tercatat, bukan stok fisik baru.' :
         'Saldo terkini, opname, incoming, kebutuhan dan days cover.') + '</p></div><button type="button" data-sc4-close="1" class="sc4-close" aria-label="Tutup">×</button></div><div class="sc4-modal-body">' + body + '</div></section></div>';
@@ -2418,52 +2418,75 @@
       '</div><p class="sc5-caption">Data kedaluwarsa dan valuasi belum ditampilkan tanpa sumber terverifikasi.</p>';
   }
 
+  // HSN-424: keep the dashboard mounted while the independently rendered dialog
+  // changes. Never leave a previous dialog or a correction behind the next one.
   function render() {
     var host = document.getElementById('stok');
     if (!host) return;
     S.viewSeq++;
     ensureCss();
     host.__sc3Rendering = true;
-    var currentDialog=host.querySelector('.sc4-modal');
-    var preserveDialogFocus=!!(S.modal&&currentDialog&&currentDialog.contains(document.activeElement));
-    var shell = host.querySelector('.sc3-shell,[data-stock-v3-boot="1"]');
-    if (!shell) { shell = document.createElement('div'); host.replaceChildren(shell); }
-    shell.className = 'sc3-shell';
-    shell.removeAttribute('data-stock-v3-boot');
-    shell.setAttribute('data-stock-v4','1');
-    var alert = S.error ? '<div class="sc3-alert">' + esc(S.error) + '</div>' : '';
-    var pAlert = S.periodError ? '<div class="sc3-alert">' + esc(S.periodError) + '</div>' : '';
-    var loading = S.baseLoading && !S.baseLoaded ? '<div class="sc3-loading">Memuat posisi SKU terkini…</div>' : '';
-    // Preserve mounted chart DOM. Only update the fragment whose data changed.
-    var headerHtml=renderHeader(),correctionHtml=renderCorrectionPanel();
-    var kpiHtml=overviewKpis(),stockComparison=stockSafetyInfographic();
-    var trendHtml='<article class="sc5-panel sc22-trend-panel"><h3>↗ Tren Stok Akhir Bulanan</h3>'+monthlyStockEndInfographic()+'</article>';
-    var comparisonHtml='<article class="sc5-panel sc22-compare-panel"><h3>▥ Stok Saat Ini vs Batas Aman</h3>'+stockComparison+'</article>';
-    var currentParts={header:headerHtml,kpis:kpiHtml,left:trendHtml,right:comparisonHtml};
-    var previous=shell.__sc3Parts;
-    var stable=previous&&previous.header===headerHtml&&!S.modal&&!S.correction&&
-      !pAlert&&!alert&&!loading&&
-      shell.querySelector('.sc8-kpis')&&shell.querySelector('.sc22-trend-panel')&&
-      shell.querySelector('.sc22-compare-panel');
-    if(stable){
-      if(previous.kpis!==kpiHtml)shell.querySelector('.sc8-kpis').outerHTML=kpiHtml;
-      if(previous.left!==trendHtml)shell.querySelector('.sc22-trend-panel').outerHTML=trendHtml;
-      if(previous.right!==comparisonHtml)shell.querySelector('.sc22-compare-panel').outerHTML=comparisonHtml;
-    }else{
-      var html=headerHtml+correctionHtml+pAlert+kpiHtml+alert+loading+
-        '<div class="sc5-dashboard sc6-dashboard sc22-dashboard" aria-label="Dashboard Stok Hasnaria">'+
-          '<div class="sc22-dual">'+trendHtml+comparisonHtml+'</div>'+
-        '</div>'+renderModal();
-      if(shell.__sc3LastHtml!==html){
-        shell.innerHTML=html;
-        shell.__sc3LastHtml=html;
+    try{
+      var shell = host.querySelector('.sc3-shell,[data-stock-v3-boot="1"]');
+      if (!shell) { shell = document.createElement('div'); host.replaceChildren(shell); }
+      shell.className='sc3-shell';
+      shell.removeAttribute('data-stock-v3-boot');
+      shell.setAttribute('data-stock-v4','1');
+      var pAlert=S.periodError?'<div class="sc3-alert">'+esc(S.periodError)+'</div>':'';
+      var alert=S.error?'<div class="sc3-alert">'+esc(S.error)+'</div>':'';
+      var loading=S.baseLoading&&!S.baseLoaded?'<div class="sc3-loading">Memuat posisi SKU terkini…</div>':'';
+      var headerHtml=renderHeader(),correctionHtml=renderCorrectionPanel();
+      var kpiHtml=overviewKpis(),stockComparison=stockSafetyInfographic();
+      var trendHtml='<article class="sc5-panel sc22-trend-panel"><h3>↗ Tren Stok Akhir Bulanan</h3>'+monthlyStockEndInfographic()+'</article>';
+      var comparisonHtml='<article class="sc5-panel sc22-compare-panel"><h3>▥ Stok Saat Ini vs Batas Aman</h3>'+stockComparison+'</article>';
+      var noticeHtml=(S.correction?'':correctionHtml)+pAlert+alert+loading;
+      var modalHtml=S.correction?correctionHtml:renderModal();
+      var mode=S.correction?'correction':S.modal||'';
+      var currentParts={header:headerHtml,kpis:kpiHtml,left:trendHtml,right:comparisonHtml,notice:noticeHtml,modal:modalHtml,mode:mode};
+      var previous=shell.__sc3Parts;
+      var stable=previous&&shell.querySelector('.sc28-simple-head')&&
+        shell.querySelector('.sc8-kpis')&&shell.querySelector('.sc22-trend-panel')&&
+        shell.querySelector('.sc22-compare-panel')&&shell.querySelector('.sc424-notices')&&
+        shell.querySelector('.sc424-overlay');
+      if(stable){
+        if(previous.header!==headerHtml)shell.querySelector('.sc28-simple-head').outerHTML=headerHtml;
+        if(previous.kpis!==kpiHtml)shell.querySelector('.sc8-kpis').outerHTML=kpiHtml;
+        if(previous.left!==trendHtml)shell.querySelector('.sc22-trend-panel').outerHTML=trendHtml;
+        if(previous.right!==comparisonHtml)shell.querySelector('.sc22-compare-panel').outerHTML=comparisonHtml;
+        if(previous.notice!==noticeHtml)shell.querySelector('.sc424-notices').innerHTML=noticeHtml;
+        var overlay=shell.querySelector('.sc424-overlay');
+        if(previous.modal!==modalHtml){
+          var body=overlay.querySelector('.sc4-modal-body'),table=overlay.querySelector('.sc3-table-wrap');
+          var focused=overlay.contains(document.activeElement)?document.activeElement:null;
+          var focusId=focused&&focused.id,focusField=focused&&focused.getAttribute('data-sc17-field');
+          var top=body?body.scrollTop:0,left=table?table.scrollLeft:0,tableTop=table?table.scrollTop:0;
+          var sameMode=previous.mode===mode;
+          overlay.innerHTML=modalHtml;
+          if(sameMode){
+            body=overlay.querySelector('.sc4-modal-body');table=overlay.querySelector('.sc3-table-wrap');
+            if(body)body.scrollTop=top;
+            if(table){table.scrollLeft=left;table.scrollTop=tableTop;}
+            var next=focusId?document.getElementById(focusId):null;
+            if(!next&&focusField)next=Array.prototype.find.call(overlay.querySelectorAll('[data-sc17-field]'),function(el){
+              return el.getAttribute('data-sc17-field')===focusField;
+            });
+            if(next&&overlay.contains(next)&&next.focus){next.focus({preventScroll:true});}
+            else if(focused)stockDialogFocus(host);
+          }
+        }
+      }else{
+        var html=headerHtml+kpiHtml+'<div class="sc424-notices">'+noticeHtml+'</div>'+
+          '<div class="sc5-dashboard sc6-dashboard sc22-dashboard" aria-label="Dashboard Stok Hasnaria">'+
+          '<div class="sc22-dual">'+trendHtml+comparisonHtml+'</div></div>'+
+          '<div class="sc424-overlay">'+modalHtml+'</div>';
+        // The initial mount or recovery is the only whole-shell render.
+        if(shell.__sc3LastHtml!==html||!shell.querySelector('.sc424-overlay')){
+          shell.innerHTML=html;shell.__sc3LastHtml=html;
+        }
       }
-    }
-    shell.__sc3Parts=currentParts;
-    bind(host);
-    // Data refresh may rebuild the dialog; keep keyboard focus within the dialog.
-    if(preserveDialogFocus)stockDialogFocus(host);
-    host.__sc3Rendering = false;
+      shell.__sc3Parts=currentParts;
+      bind(host);
+    }finally{host.__sc3Rendering=false;}
   }
 
 
