@@ -1121,7 +1121,7 @@
       "id": "HSN-424",
       "milestone": "M4",
       "priority": "P0",
-      "status": "IN_PROGRESS",
+      "status": "REVIEW",
       "title": "Stok production: compact one-view dan popup stabil tanpa perubahan data",
       "dependencies": [
         "HSN-415"
@@ -1129,7 +1129,7 @@
       "owner": "ChatGPT",
       "updated_at": "2026-11-16",
       "acceptance": "Empat KPI dan dua grafik; compact dashboard, popup readable dan tidak menimpa, render dashboard terpisah dari popup, pagination reachable. Tes regresi dan preview sebelum rilis; no stock business writes.",
-      "notes": "Isolated visual hotfix from production b12a42fa, do not release unaccepted PR #219–226. Owner browser unavailable; visual acceptance remains REVIEW."
+      "notes": "Isolated production visual hotfix. Four KPI/two charts, original seven-visible-column position layout retained, independent overlay render, readable modal typography and scroll, no ledger/mapping change. HSN-416–423 draft stack is excluded. Production rollout authorized by user 16 Nov, pending preview CI; Owner E2E still unavailable."
     },
     {
       "id": "HSN-500",
