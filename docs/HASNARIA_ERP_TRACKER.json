@@ -1132,6 +1132,20 @@
       "notes": "Isolated production visual hotfix. Four KPI/two charts, original seven-visible-column position layout retained, independent overlay render, readable modal typography and scroll, no ledger/mapping change. HSN-416–423 draft stack is excluded. Production rollout authorized by user 16 Nov, pending preview CI; Owner E2E still unavailable."
     },
     {
+      "id": "HSN-425",
+      "milestone": "M4",
+      "priority": "P0",
+      "status": "REVIEW",
+      "title": "Stok: KPI/grafik sejajar 4:2 dan tren nilai sistem vs opname",
+      "dependencies": [
+        "HSN-424"
+      ],
+      "owner": "ChatGPT",
+      "updated_at": "2026-11-16",
+      "acceptance": "4 KPI and 2 equal-width panels, common gaps; partial Rp system and physical series from dated verified costs and checkpoints; no unknown values set to zero; preserve quantity trend and safety chart, no stock writes; CI preview before production.",
+      "notes": "Partial Rp historical chart + equal KPI/panel widths; costs currently verified 1/198; 41 physical checkpoint SKUs; no historic completeness claimed. Preview before production, visual acceptance pending; no ledger/schema changes."
+    },
+    {
       "id": "HSN-500",
       "milestone": "M5",
       "priority": "P0",

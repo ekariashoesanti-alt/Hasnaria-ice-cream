@@ -47,6 +47,8 @@
     activity: [],
     trend: [],
     monthEndRows: [],
+    valueHistory:null,
+    trendMode:'value',
     monthEndUnavailable: false,
     periodLoading: false,
     periodError: '',
@@ -890,6 +892,7 @@
     var seq = ++S.periodSeq;
     S.periodLoading = true;
     S.periodError = '';
+    S.valueHistory=null;
     if(!S.firstPeriodLoaded)render();
     try {
       if (!S.periods.length || force) {
@@ -943,6 +946,11 @@
       S.monthEndUnavailable=false;
       S.trend=[];
       S.firstPeriodLoaded=true;
+      try{
+        var valueHistory=await readStockValueHistory(S.period);
+        if(seq!==S.periodSeq)return;
+        S.valueHistory=valueHistory;
+      }catch(_){if(seq!==S.periodSeq)return;S.valueHistory={error:true};}
       // These operational sources belong to detail/actions, not dashboard
       // first paint. Retain lazy, read-only access when those panels are used.
       S.salesLinkAuditUnavailable=false;
@@ -2292,6 +2300,148 @@
       'Hanya barang yang sudah opname dan memiliki batas minimum ditampilkan; angka ini bukan tren bulanan.</p>'+
     '</div>';
   }
+  // HSN-425: partial analytical value, based on dated verified costs exclusively.
+  async function readStockValueHistory(period){
+    var verified=await request('inventory_verified_cost_current?'+qs({brand_id:'eq.'+BRAND,
+      select:'inventory_item_id,unit_cost,effective_from',order:'inventory_item_id.asc',limit:'501'}));
+    if(!Array.isArray(verified)||verified.length>500)throw Error('Cakupan biaya melebihi batas baca');
+    var costs=verified.filter(function(c){return /^[0-9a-f-]{36}$/i.test(c.inventory_item_id)&&
+      c.unit_cost!==null&&Number(c.unit_cost)>0&&Number.isFinite(Number(c.unit_cost))&&
+      /^\d{4}-\d{2}-\d{2}$/.test(String(c.effective_from||''))});
+    var ids=costs.map(function(c){return c.inventory_item_id});
+    if(!ids.length)return {costs:[],opnames:[],movements:[]};
+    var cutoff=new Date(Date.UTC(Number(period.slice(0,4)),Number(period.slice(5,7)),0)).toISOString().slice(0,10);
+    if(cutoff>today())cutoff=today();
+    async function read(table,fields,dateField){
+      var all=[];
+      for(var start=0;start<ids.length;start+=40){
+        var group=ids.slice(start,start+40);
+        for(var offset=0;offset<5000;offset+=500){
+          var q={brand_id:'eq.'+BRAND,inventory_item_id:'in.('+group.join(',')+')',
+            select:fields,order:'inventory_item_id.asc,'+dateField+'.asc,created_at.asc,id.asc',
+            limit:'500',offset:String(offset)};
+          q[dateField]='lte.'+cutoff;
+          var part=await request(table+'?'+qs(q));
+          if(!Array.isArray(part))throw Error('Sumber historis tidak lengkap');
+          all=all.concat(part);
+          if(all.length>5000)throw Error('Riwayat stok melebihi batas aman');
+          if(part.length<500)break;
+          if(offset===4500)throw Error('Riwayat terpotong');
+        }
+      }
+      return all;
+    }
+    var rows=await Promise.all([
+      read('inventory_stock_opname','id,inventory_item_id,opname_date,physical_qty,created_at','opname_date'),
+      read('inventory_movements','id,inventory_item_id,movement_date,movement_type,qty_delta,source_key,created_at','movement_date')
+    ]);
+    return {costs:costs,opnames:rows[0],movements:rows[1]};
+  }
+
+  function stockValueTrendPoints(history,period,monthRows,asOf){
+    if(!history||history.error)return [];
+    var names=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+    var y=Number(period.slice(0,4)),m=Number(period.slice(5,7))-1;
+    var costs=Object.create(null),op=Object.create(null),moves=Object.create(null);
+    (history.costs||[]).forEach(function(c){
+      if(c.inventory_item_id&&c.unit_cost!==null&&Number.isFinite(Number(c.unit_cost))&&Number(c.unit_cost)>0&&
+          /^\d{4}-\d{2}-\d{2}$/.test(String(c.effective_from||''))){
+        if(Object.prototype.hasOwnProperty.call(costs,c.inventory_item_id))costs[c.inventory_item_id]=null;
+        else costs[c.inventory_item_id]=c;
+      }
+    });
+    (history.opnames||[]).forEach(function(o){(op[o.inventory_item_id]||(op[o.inventory_item_id]=[])).push(o)});
+    (history.movements||[]).forEach(function(e){(moves[e.inventory_item_id]||(moves[e.inventory_item_id]=[])).push(e)});
+    var sorted=function(rows,dateField){return (rows||[]).slice().sort(function(a,b){
+      return (String(a[dateField])+'|'+String(a.created_at)+'|'+String(a.id)).localeCompare(
+        String(b[dateField])+'|'+String(b.created_at)+'|'+String(b.id));
+    })};
+    var numeric=function(v){return v!==null&&v!==undefined&&v!==''&&Number.isFinite(Number(v))};
+    var operational=function(e){return e.movement_type==='SALE_CONSUMPTION'||e.movement_type==='PURCHASE_RECEIPT'};
+    var out=[],lastGap='';
+    for(var k=9;k>=0;k--){
+      var d=new Date(Date.UTC(y,m-k,1)),first=d.toISOString().slice(0,10);
+      var last=new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth()+1,0)).toISOString().slice(0,10);
+      var end=last>asOf?asOf:last;
+      var monthData=(monthRows||[]).filter(function(x){return String(x.period_month).slice(0,10)===first});
+      var posted=monthData.some(function(x){return Number(x.period_movement_rows)>0});
+      var syncMissing=monthData.some(function(x){return x.data_status==='NO_POSTED_SALES'});
+      var system=0,physical=0,sysIds=[],phyIds=[],dates=[],blocked=0;
+      Object.keys(costs).sort().forEach(function(id){
+        var cost=costs[id];if(!cost||cost.effective_from>end||end<first)return;
+        var checks=sorted(op[id],'opname_date').filter(function(x){return x.opname_date<=end});
+        var cp=checks[checks.length-1];
+        if(!cp||!numeric(cp.physical_qty))return;
+        if(cp.opname_date>=first&&cp.opname_date>=cost.effective_from){
+          physical+=Number(cp.physical_qty)*Number(cost.unit_cost);phyIds.push(id);dates.push(cp.opname_date);
+        }
+        // A newer physical checkpoint can restart after an unknown period.
+        if(!posted||syncMissing||(lastGap&&cp.opname_date<=lastGap))return;
+        var historyRows=sorted(moves[id],'movement_date'),qty=Number(cp.physical_qty),seen=Object.create(null);
+        var inconsistent=historyRows.some(function(e){return e.movement_date===cp.opname_date&&operational(e)});
+        for(var z=0;z<historyRows.length&&!inconsistent;z++){
+          var e=historyRows[z];if(e.movement_date<=cp.opname_date||e.movement_date>end)continue;
+          var key=e.source_key?'s:'+e.source_key:'i:'+e.id;
+          if(!e.id||seen[key]||!operational(e)||!numeric(e.qty_delta)||
+             (e.movement_type==='PURCHASE_RECEIPT'&&Number(e.qty_delta)<0)||
+             (e.movement_type==='SALE_CONSUMPTION'&&Number(e.qty_delta)>0)){inconsistent=true;break;}
+          seen[key]=true;qty+=Number(e.qty_delta);
+        }
+        if(inconsistent){blocked++;return;}
+        system+=qty*Number(cost.unit_cost);sysIds.push(id);
+      });
+      out.push({key:first,label:names[d.getUTCMonth()],year:d.getUTCFullYear(),end:end,
+        system:sysIds.length?system:null,physical:phyIds.length?physical:null,
+        sysCount:sysIds.length,phyCount:phyIds.length,sysKey:sysIds.join(','),phyKey:phyIds.join(','),
+        dates:dates.sort(),blocked:blocked,posted:posted,syncMissing:syncMissing});
+      if(!posted||syncMissing)lastGap=end;
+    }
+    return out;
+  }
+
+  function stockValueTrendInfographic(){
+    if(!S.period)return '<div class="sc5-empty">Pilih periode stok.</div>';
+    if(S.periodLoading&&!S.valueHistory)return '<div class="sc5-empty">Memuat tren nilai stok…</div>';
+    if(!S.valueHistory||S.valueHistory.error)return '<div class="sc5-empty">Tren nilai belum dapat dimuat. Pilih Kuantitas untuk melihat sumber lama.</div>';
+    var rows=stockValueTrendPoints(S.valueHistory,S.period,S.monthEndRows,today());
+    var values=[];rows.forEach(function(x){if(x.system!==null)values.push(x.system);if(x.physical!==null)values.push(x.physical)});
+    if(!values.length)return '<div class="sc22-empty"><b>Belum ada nilai historis yang didukung biaya dan opname</b><small>Pembelian atau penjualan yang belum tertaut tidak dianggap nol.</small></div>';
+    var low=Math.min.apply(null,values.concat([0])),high=Math.max.apply(null,values.concat([1]));
+    if(high===low)high=low+1;
+    var padding=(high-low)*.13;high+=padding;low-=padding;
+    var L=67,R=681,T=30,B=207,xp=function(i){return L+(R-L)*i/9},yp=function(v){return B-(v-low)/(high-low)*(B-T)};
+    var labelMoney=function(v){return (v/1000000).toLocaleString('id-ID',{maximumFractionDigits:2})};
+    var yAxis=[0,1,2,3,4].map(function(i){var yy=B-(B-T)*i/4;
+      return '<line class="sc22-gridline" x1="'+L+'" x2="'+R+'" y1="'+yy+'" y2="'+yy+'"/>'+
+        '<text class="sc22-axis-label" x="'+(L-7)+'" y="'+(yy+4)+'" text-anchor="end">'+esc(labelMoney(low+(high-low)*i/4))+'</text>';
+    }).join('');
+    var runs=[],run=[],last=null;
+    rows.forEach(function(p,i){
+      if(p.system===null||last&&last.sysKey!==p.sysKey){if(run.length>1)runs.push(run.join(' '));run=[];}
+      if(p.system!==null)run.push(xp(i).toFixed(1)+','+yp(p.system).toFixed(1));
+      last=p.system!==null?p:null;
+    });
+    if(run.length>1)runs.push(run.join(' '));
+    var lines=runs.map(function(p){return '<polyline class="sc22-trend-line" points="'+p+'"/>'}).join('');
+    var marks=rows.map(function(p,i){
+      var x=xp(i),out='<text class="sc22-month-label" x="'+x+'" y="239" text-anchor="middle">'+esc(p.label+(i===0||p.label==='Jan'?' '+String(p.year).slice(-2):''))+'</text>';
+      if(p.system!==null)out+='<g><title>'+esc(p.label+' · saldo ledger '+stockMoney(p.system,false)+' · '+p.sysCount+' SKU parsial')+'</title>'+
+        '<circle class="sc22-trend-dot sc22-partial" cx="'+x+'" cy="'+yp(p.system)+'" r="6"/>'+
+        '<text class="sc22-point-value" x="'+(x-3)+'" y="'+(yp(p.system)-12)+'" text-anchor="end">'+esc(labelMoney(p.system))+'</text></g>';
+      if(p.physical!==null)out+='<g><title>'+esc('Opname '+p.dates.join(', ')+' · '+stockMoney(p.physical,false)+' · '+p.phyCount+' SKU')+'</title>'+
+        '<circle class="sc425-opname-dot" cx="'+(x+7)+'" cy="'+yp(p.physical)+'" r="5"/>'+
+        '<text class="sc425-opname-label" x="'+(x+12)+'" y="'+(yp(p.physical)+15)+'">'+esc(labelMoney(p.physical))+'</text></g>';
+      if(p.system===null&&p.physical===null)out+='<text class="sc22-missing-point" x="'+x+'" y="'+(B-8)+'" text-anchor="middle">—</text>';
+      return out;
+    }).join('');
+    var latest=rows.filter(function(p){return p.system!==null||p.physical!==null}).slice(-1)[0];
+    return '<div class="sc22-month-end sc425-value-trend">'+
+      '<div class="sc425-series-legend"><span class="sc425-system-key">● Saldo sistem</span><span class="sc425-opname-key">● Opname fisik</span><span>Rp juta · parsial</span></div>'+
+      '<div class="sc22-summary-note">'+esc(latest.label+' '+latest.year)+' · sistem '+esc(fmt(latest.sysCount))+' SKU · opname '+esc(fmt(latest.phyCount))+' SKU · '+esc(fmt((S.items||[]).length))+' master SKU</div>'+
+      '<div class="sc22-plot"><svg class="sc22-plot-svg" viewBox="0 0 740 254" role="img" aria-label="Tren nilai saldo sistem dan opname fisik parsial dalam juta rupiah">'+yAxis+lines+marks+'</svg></div>'+
+      '<p class="sc22-chart-note">Sistem = saldo fisik acuan + penerimaan − pemakaian tercatat, × biaya satuan terverifikasi efektif. Opname hanya pada bulan penghitungan fisik (terakhir per SKU). Cakupan/tanggal dapat berbeda; bukan nilai stok total. — data belum memadai.</p></div>';
+  }
+
   function monthlyStockEndInfographic(){
     if(!S.period)return '<div class="sc5-empty">Pilih periode stok.</div>';
     if(S.periodLoading&&!S.monthEndRows.length)return '<div class="sc5-empty">Menghitung stok akhir bulan…</div>';
@@ -2437,7 +2587,10 @@
       var loading=S.baseLoading&&!S.baseLoaded?'<div class="sc3-loading">Memuat posisi SKU terkini…</div>':'';
       var headerHtml=renderHeader(),correctionHtml=renderCorrectionPanel();
       var kpiHtml=overviewKpis(),stockComparison=stockSafetyInfographic();
-      var trendHtml='<article class="sc5-panel sc22-trend-panel"><h3>↗ Tren Stok Akhir Bulanan</h3>'+monthlyStockEndInfographic()+'</article>';
+      var trendHtml='<article class="sc5-panel sc22-trend-panel"><div class="sc425-trend-head"><h3>↗ Tren Stok Akhir Bulanan</h3>'+
+        '<div class="sc425-trend-toggle"><button type="button" data-sc425-mode="value" aria-pressed="'+(S.trendMode!=='qty')+'">Nilai Rp</button>'+
+        '<button type="button" data-sc425-mode="qty" aria-pressed="'+(S.trendMode==='qty')+'">Kuantitas</button></div></div>'+
+        (S.trendMode==='qty'?monthlyStockEndInfographic():stockValueTrendInfographic())+'</article>';
       var comparisonHtml='<article class="sc5-panel sc22-compare-panel"><h3>▥ Stok Saat Ini vs Batas Aman</h3>'+stockComparison+'</article>';
       var noticeHtml=(S.correction?'':correctionHtml)+pAlert+alert+loading;
       var modalHtml=S.correction?correctionHtml:renderModal();
@@ -2514,6 +2667,8 @@
 
   function bind(host) {
     host.onclick = function (e) {
+      var trendMode=e.target&&e.target.closest?e.target.closest('[data-sc425-mode]'):null;
+      if(trendMode){var mode=trendMode.getAttribute('data-sc425-mode');if(mode==='qty'||mode==='value'){S.trendMode=mode;render();}return;}
       var skuSimRefresh=e.target&&e.target.closest?e.target.closest('[data-sc25-refresh]'):null;
       if(skuSimRefresh&&isOwner()&&S.modal==='sku-sim'){loadSkuSimulation();return;}
       var stockChartPage=e.target&&e.target.closest?e.target.closest('[data-sc21-page]'):null;

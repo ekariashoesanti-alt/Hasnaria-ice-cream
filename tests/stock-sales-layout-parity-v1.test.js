@@ -70,14 +70,14 @@ test('responsive panels keep charts and data visible at narrower widths',()=>{
  assert.match(stockStyle,/\.sc22-dual>.sc5-panel\{[\s\S]*?max-height:none!important/);
  assert.match(stockJS,/stock-control-v3\.css\?v=34/);
  for(const f of ['stock-monitor.js','stock-v3-runtime-fix.js']){
-  assert.match(read(f),/stock-control-v3\.js\?v=41/);
+  assert.match(read(f),/stock-control-v3\.js\?v=42/);
  }
 });
 
 
 test('HSN-821: tested Stock one-view geometry is linked without mutating existing calculations',()=>{
  const index=read('index.html'),oneView=read('stock-oneview-hsn821.css');
- assert.match(index,/stock-oneview-hsn821\.css\?v=3/);
+ assert.match(index,/stock-oneview-hsn821\.css\?v=4/);
  assert.match(oneView,/@media \(min-width:901px\) and \(min-height:520px\)/);
  assert.match(oneView,/sc22-dual>.sc5-panel/);
  assert.match(oneView,/sc21-comparison-svg/);
