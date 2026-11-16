@@ -189,3 +189,22 @@ html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-
   html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell .sc21-controls{flex-wrap:wrap!important}
   html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell .sc21-legend{flex-wrap:wrap!important}
 }
+
+/* HSN-425 — each chart spans exactly two equal KPI columns and their gap. */
+@media(min-width:901px){
+html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell>.sc8-kpis,html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell>.sc22-dashboard{box-sizing:border-box!important;width:100%!important;max-width:none!important;min-width:0!important;margin-left:0!important;margin-right:0!important;padding-left:0!important;padding-right:0!important;border:0!important;align-self:stretch!important}
+html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell>.sc8-kpis{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:8px!important}
+html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell>.sc22-dashboard>.sc22-dual{display:grid!important;box-sizing:border-box!important;width:100%!important;min-width:0!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important;padding:0!important;margin:0!important}
+html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell>.sc22-dashboard>.sc22-dual>.sc5-panel{width:100%!important;min-width:0!important;margin:0!important;box-sizing:border-box!important}
+html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell>.sc8-kpis>.sc8-kpi{width:100%!important;min-width:0!important;box-sizing:border-box!important;margin:0!important}
+}
+#stok .sc425-trend-head{display:flex;align-items:center;justify-content:space-between;gap:6px;flex-wrap:wrap;flex:0 0 auto;min-width:0}
+#stok .sc425-trend-head h3{margin:0!important;font-size:12.5px!important;line-height:1.2!important}
+#stok .sc425-trend-toggle{display:flex;gap:3px;flex-wrap:wrap}
+#stok .sc425-trend-toggle button{font:inherit;font-size:10px;min-height:25px;padding:4px 7px;border:1px solid #bfd8c9;border-radius:6px;background:#fff;color:#315b45;cursor:pointer}
+#stok .sc425-trend-toggle button[aria-pressed=true]{background:#176b55;color:#fff;border-color:#176b55}
+#stok .sc425-series-legend{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:10px;line-height:1.2;flex:0 0 auto;color:#526d5d}
+#stok .sc425-system-key{color:#198052;font-weight:650}
+#stok .sc425-opname-key{color:#aa6c18;font-weight:650}
+#stok .sc425-opname-dot{fill:#d59b38;stroke:#fff;stroke-width:1.5}
+#stok .sc425-opname-label{fill:#9c651c;font-size:12px;font-weight:600}

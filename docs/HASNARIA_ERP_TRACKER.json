@@ -1135,7 +1135,7 @@
       "id": "HSN-425",
       "milestone": "M4",
       "priority": "P0",
-      "status": "IN_PROGRESS",
+      "status": "REVIEW",
       "title": "Stok: KPI/grafik sejajar 4:2 dan tren nilai sistem vs opname",
       "dependencies": [
         "HSN-424"
@@ -1143,7 +1143,7 @@
       "owner": "ChatGPT",
       "updated_at": "2026-11-16",
       "acceptance": "4 KPI and 2 equal-width panels, common gaps; partial Rp system and physical series from dated verified costs and checkpoints; no unknown values set to zero; preserve quantity trend and safety chart, no stock writes; CI preview before production.",
-      "notes": "User approved visual changes. Isolated from draft #219–226."
+      "notes": "Partial Rp historical chart + equal KPI/panel widths; costs currently verified 1/198; 41 physical checkpoint SKUs; no historic completeness claimed. Preview before production, visual acceptance pending; no ledger/schema changes."
     },
     {
       "id": "HSN-500",
