@@ -8,7 +8,7 @@
 
   var PAGE_SIZE=25;
   var state={
-    runs:[],periods:[],period:'',loading:false,error:'',loaded:false,subtab:'attendance',loyaltyLoad:null,attendanceLoad:null,
+    runs:[],periods:[],period:'',loading:false,error:'',loaded:false,subtab:'attendance',loyaltyLoad:null,attendanceLoad:null,expensesLoad:null,
     activeRun:null,items:[],itemPage:1,itemTotal:0,itemLoading:false,itemError:'',
     createOpen:false,members:[],membersLoading:false,membersLoaded:false,membersError:'',
     busy:false,notice:'',actionError:'',itemSaves:0,loadSeq:0,itemSeq:0,viewSeq:0,syncSeq:0,syncing:false
@@ -99,6 +99,14 @@
     state.loyaltyLoad=new Promise(function(resolve){var sc=document.createElement('script');sc.id='hasnaria-loyalty-v1-js';sc.src='/loyalty-v1.js?v=1';sc.async=true;sc.onload=resolve;sc.onerror=function(){state.loyaltyLoad=null;resolve()};document.head.appendChild(sc)});
     state.loyaltyLoad.then(function(){if(active()&&state.subtab==='loyalty'&&typeof window.__HASNARIA_LOYALTY_MOUNT==='function')window.__HASNARIA_LOYALTY_MOUNT()});
   }
+  function ensureExpenses(){
+    if(!isOwner()||!active()||state.subtab!=='expenses')return;
+    var target=document.getElementById('opExpensesHost');if(!target)return;
+    if(window.__HASNARIA_ADMIN_V2&&typeof window.__HASNARIA_ADMIN_V2.mount==='function'){window.__HASNARIA_ADMIN_V2.mount({hostId:'opExpensesHost'});return}
+    if(state.expensesLoad)return;
+    state.expensesLoad=new Promise(function(resolve){var sc=document.createElement('script');sc.id='hasnaria-administration-v1-js';sc.src='/administration-v1.js?v=1';sc.async=true;sc.onload=resolve;sc.onerror=function(){state.expensesLoad=null;resolve()};document.head.appendChild(sc)});
+    state.expensesLoad.then(function(){if(active()&&state.subtab==='expenses'&&window.__HASNARIA_ADMIN_V2&&typeof window.__HASNARIA_ADMIN_V2.mount==='function')window.__HASNARIA_ADMIN_V2.mount({hostId:'opExpensesHost'})});
+  }
   function ensureAttendance(){
     if(!isOwner()||!active()||state.subtab!=='attendance')return;
     if(window.__HASNARIA_ATTENDANCE_MOUNT){window.__HASNARIA_ATTENDANCE_MOUNT();return}
@@ -106,7 +114,7 @@
     state.attendanceLoad=Promise.all(['/attendance-charts-v2.js?v=1','/attendance-v1.js?v=3'].map(function(url){return new Promise(function(resolve){var sc=document.createElement('script');sc.src=url;sc.async=true;sc.onload=resolve;sc.onerror=function(){resolve()};document.head.appendChild(sc)})}));
     state.attendanceLoad.then(function(){if(active()&&state.subtab==='attendance'&&window.__HASNARIA_ATTENDANCE_MOUNT)window.__HASNARIA_ATTENDANCE_MOUNT()});
   }
-  function subnav(tab){return '<nav class="op1-loyalty-nav" aria-label="Submenu Operasional"><button type="button" data-op-action="show-attendance"'+(tab==='attendance'?' class="on"':'')+'>Attendance</button><button type="button" data-op-action="show-loyalty"'+(tab==='loyalty'?' class="on"':'')+'>Loyalty</button><button type="button" data-op-action="show-work"'+(tab==='work'?' class="on"':'')+'>Stock Opname</button></nav>'}
+  function subnav(tab){return '<nav class="op1-loyalty-nav" aria-label="Submenu Operasional"><button type="button" data-op-action="show-attendance"'+(tab==='attendance'?' class="on"':'')+'>Attendance</button><button type="button" data-op-action="show-loyalty"'+(tab==='loyalty'?' class="on"':'')+'>Loyalty</button><button type="button" data-op-action="show-work"'+(tab==='work'?' class="on"':'')+'>Stock Opname</button><button type="button" data-op-action="show-expenses"'+(tab==='expenses'?' class="on"':'')+'>Pengeluaran</button></nav>'
   function render(){
     var h=host();if(!h)return;css();var c=counts();
     if(isOwner()&&state.subtab==='attendance'){
@@ -116,6 +124,10 @@
     if(isOwner()&&state.subtab==='loyalty'){
       h.innerHTML='<div class="op1-shell">'+subnav('loyalty')+'<div id="opLoyaltyHost"></div></div>';
       bind(h);ensureLoyalty();return;
+    }
+    if(isOwner()&&state.subtab==='expenses'){
+      h.innerHTML='<div class="op1-shell">'+subnav('expenses')+'<div id="opExpensesHost"></div></div>';
+      bind(h);ensureExpenses();return;
     }
     state.viewSeq++;
     var shell=h.querySelector('[data-operational-v1="1"]');if(!shell){shell=document.createElement('div');shell.className='op1-shell';shell.setAttribute('data-operational-v1','1');h.replaceChildren(shell)}
@@ -276,6 +288,7 @@
       if(action==='show-attendance'){if(isOwner()){state.subtab='attendance';render()}return}
       if(action==='show-loyalty'){if(isOwner()){state.subtab='loyalty';render()}return}
       if(action==='show-work'){state.subtab='work';render();if(!state.loaded&&!state.loading)loadRuns();return}
+      if(action==='show-expenses'){if(isOwner()){state.subtab='expenses';render()}return}
       if(action==='refresh'){clearAction();loadRuns(null,true);return}
       if(action==='new-opname'){state.createOpen=true;clearAction();render();loadMembers();return}
       if(action==='close-create'){state.createOpen=false;clearAction();render();return}
