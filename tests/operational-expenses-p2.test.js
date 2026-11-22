@@ -28,7 +28,8 @@ test('Administration report supports the new host and preserves the legacy host'
  assert.match(admin,/get_ui_period_catalog_fast_v1/);
  assert.match(adminCss,/:is\(#administrasi, #opExpensesHost\)/);
  assert.match(admin,/administration-v1\.css\?v=2/);
- assert.match(read('owner-shell-guard.js'),/administration-v1\.js\?v=7/);
+ assert.doesNotMatch(read('owner-shell-guard.js'),/administration-v1\.js\?v=7/);
+ assert.match(op,/administration-v1\.js\?v=7/);
  assert.doesNotMatch(admin,/\.from\([^)]*\)\.(?:insert|update|upsert|delete)\s*\(/i);
  assert.doesNotMatch(admin,/\.rpc\(['"](?:create|update|delete|post)_/i);
 });
@@ -37,4 +38,15 @@ test('P3 navigation label does not expose standalone Administrasi tab',()=>{
  assert.match(nav,/var LABELS = \{[^}]*ops: 'Keuangan'/);
  assert.doesNotMatch(nav,/administrasi:\s*'Administrasi'/);
  assert.match(nav,/else if\(b\.id!=='userSettingsTab'\)b\.style\.display='none'/);
+});
+
+test('Legacy standalone Administrasi tab is not recreated by Owner shell',()=>{
+ const shell=read('owner-shell-guard.js');
+ assert.doesNotMatch(shell,/data-tab="administrasi"/);
+ assert.doesNotMatch(shell,/id='administrasi'/);
+ assert.doesNotMatch(shell,/state\.active==='administrasi'/);
+ assert.doesNotMatch(shell,/ensureAdministration|mountAdministration|adminRuntime/);
+ assert.match(shell,/OWNER_TABS=\['dashboard','sales','pembelian','stok','operasional','ops','notifikasi'\]/);
+ // The report module remains available only through the Operasional Pengeluaran host.
+ assert.match(op,/window\.__HASNARIA_ADMIN_V2\.mount\(\{hostId:'opExpensesHost'\}\)/);
 });
