@@ -48,7 +48,10 @@
     trend: [],
     monthEndRows: [],
     valueHistory:null,
-    trendMode:'value',
+    trendMode:'activity',
+    monthlyMovementRows: [],
+    monthlyMovementLoading: false,
+    monthlyMovementError: '',
     monthEndUnavailable: false,
     periodLoading: false,
     periodError: '',
@@ -945,6 +948,7 @@
       if(seq!==S.periodSeq)return;
       S.monthEndRows=Array.isArray(trendRows)?trendRows:[];
       S.monthEndUnavailable=false;
+      loadMonthlyMovementActivity(seq);
       S.trend=[];
       S.firstPeriodLoaded=true;
       try{
@@ -977,6 +981,46 @@
         schedulePendingCommittedRefresh();
       }
     }
+  }
+
+  async function loadMonthlyMovementActivity(seq) {
+    var months=['2026-05','2026-06','2026-07'];
+    S.monthlyMovementLoading=true;S.monthlyMovementError='';
+    try{
+      var rows=await Promise.all(months.map(async function(k){
+        var offset=0,total=0,batch=[];
+        while(true){
+          var path='ui_stock_detail_v1?'+qs({select:'movement_id',brand_id:'eq.'+BRAND,period_month:'eq.'+k+'-01',order:'movement_date.asc,movement_id.asc',limit:'1000',offset:String(offset)});
+          var page=await request(path);
+          if(!Array.isArray(page))throw new Error('Format data mutasi bulanan tidak sesuai.');
+          total+=page.length;offset+=page.length;
+          if(page.length<1000)break;
+          if(offset>10000)throw new Error('Batas pembacaan mutasi bulanan terlampaui.');
+        }
+        return {period:k,count:total};
+      }));
+      if(seq!==S.periodSeq)return;
+      S.monthlyMovementRows=rows;
+    }catch(e){
+      if(seq!==S.periodSeq)return;
+      S.monthlyMovementRows=[];S.monthlyMovementError=e&&e.message?e.message:String(e);
+    }finally{
+      if(seq===S.periodSeq){S.monthlyMovementLoading=false;render();}
+    }
+  }
+
+  function monthlyMovementActivityInfographic(){
+    if(S.monthlyMovementLoading&&!S.monthlyMovementRows.length)return '<div class="sc22-empty"><b>Memuat aktivitas mutasi Mei–Juli 2026…</b></div>';
+    if(S.monthlyMovementError)return '<div class="sc22-empty"><b>Aktivitas mutasi belum dapat dimuat</b><small>'+esc(S.monthlyMovementError)+'</small></div>';
+    var names={'2026-05':'Mei 2026','2026-06':'Juni 2026','2026-07':'Juli 2026'};
+    var rows=['2026-05','2026-06','2026-07'].map(function(k){return (S.monthlyMovementRows||[]).find(function(x){return x.period===k;})||{period:k,count:0};});
+    var max=Math.max.apply(null,rows.map(function(x){return x.count;}));
+    if(!max)return '<div class="sc22-empty"><b>Belum ada baris mutasi pada periode ini</b></div>';
+    var left=90,right=690,base=215,top=48,slot=200,bar=86,scale=(base-top)/max;
+    var grid=[0,.25,.5,.75,1].map(function(f){var y=base-(base-top)*f;return '<line class="sc22-gridline" x1="'+left+'" y1="'+y+'" x2="'+right+'" y2="'+y+'"/><text class="sc22-axis-label" x="'+(left-10)+'" y="'+(y+4)+'" text-anchor="end">'+fmt(Math.round(max*f))+'</text>';}).join('');
+    var bars=rows.map(function(x,i){var h=x.count*scale,xx=left+35+i*slot,yy=base-h;return '<g><title>'+names[x.period]+': '+fmt(x.count)+' baris mutasi ledger</title><rect class="sc425-activity-bar" x="'+xx+'" y="'+yy+'" width="'+bar+'" height="'+h+'" rx="8"/><text class="sc22-point-value" x="'+(xx+bar/2)+'" y="'+Math.max(30,yy-10)+'" text-anchor="middle">'+fmt(x.count)+'</text><text class="sc22-month-label" x="'+(xx+bar/2)+'" y="245" text-anchor="middle">'+names[x.period]+'</text></g>';}).join('');
+    var total=rows.reduce(function(a,x){return a+x.count;},0);
+    return '<div class="sc22-month-end"><div class="sc22-summary"><span>Aktivitas mutasi · jumlah baris ledger</span><strong>'+fmt(total)+' <small>mutasi</small></strong></div><div class="sc22-summary-note">Mei–Juli 2026 · sumber riwayat mutasi produksi · bukan saldo fisik</div><div class="sc22-plot"><svg class="sc22-plot-svg" viewBox="0 0 740 269" role="img" aria-label="Jumlah baris mutasi ledger Mei sampai Juli 2026">'+grid+bars+'</svg></div><p class="sc22-chart-note">Grafik menunjukkan <b>jumlah catatan mutasi</b> per bulan dari ledger. Angka ini bukan kuantitas stok dan tidak menggantikan hasil opname.</p></div>';
   }
 
   async function loadLedger() {
@@ -2590,10 +2634,12 @@
       var loading=S.baseLoading&&!S.baseLoaded?'<div class="sc3-loading">Memuat posisi SKU terkini…</div>':'';
       var headerHtml=renderHeader(),correctionHtml=renderCorrectionPanel();
       var kpiHtml=overviewKpis(),stockComparison=stockSafetyInfographic();
-      var trendHtml='<article class="sc5-panel sc22-trend-panel"><div class="sc425-trend-head"><h3>↗ Tren Stok Akhir Bulanan</h3>'+
-        '<div class="sc425-trend-toggle"><button type="button" data-sc425-mode="value" aria-pressed="'+(S.trendMode!=='qty')+'">Nilai Rp</button>'+
-        '<button type="button" data-sc425-mode="qty" aria-pressed="'+(S.trendMode==='qty')+'">Kuantitas</button></div></div>'+
-        (S.trendMode==='qty'?monthlyStockEndInfographic():stockValueTrendInfographic())+'</article>';
+      var trendTitle=S.trendMode==='activity'?'Aktivitas Mutasi Mei–Juli': 'Tren Stok Akhir Bulanan';
+      var trendHtml='<article class="sc5-panel sc22-trend-panel"><div class="sc425-trend-head"><h3>↗ '+trendTitle+'</h3>'+
+        '<div class="sc425-trend-toggle"><button type="button" data-sc425-mode="value" aria-pressed="'+(S.trendMode==='value')+'">Nilai Rp</button>'+
+        '<button type="button" data-sc425-mode="qty" aria-pressed="'+(S.trendMode==='qty')+'">Kuantitas</button>'+
+        '<button type="button" data-sc425-mode="activity" aria-pressed="'+(S.trendMode==='activity')+'">Mutasi</button></div></div>'+
+        (S.trendMode==='activity'?monthlyMovementActivityInfographic():S.trendMode==='qty'?monthlyStockEndInfographic():stockValueTrendInfographic())+'</article';
       var comparisonHtml='<article class="sc5-panel sc22-compare-panel"><h3>▥ Stok Saat Ini vs Batas Aman</h3>'+stockComparison+'</article>';
       var noticeHtml=(S.correction?'':correctionHtml)+pAlert+alert+loading;
       var modalHtml=S.correction?correctionHtml:renderModal();
@@ -2671,7 +2717,7 @@
   function bind(host) {
     host.onclick = function (e) {
       var trendMode=e.target&&e.target.closest?e.target.closest('[data-sc425-mode]'):null;
-      if(trendMode){var mode=trendMode.getAttribute('data-sc425-mode');if(mode==='qty'||mode==='value'){S.trendMode=mode;render();}return;}
+      if(trendMode){var mode=trendMode.getAttribute('data-sc425-mode');if(mode==='qty'||mode==='value'||mode==='activity'){S.trendMode=mode;render();}return;}
       var skuSimRefresh=e.target&&e.target.closest?e.target.closest('[data-sc25-refresh]'):null;
       if(skuSimRefresh&&isOwner()&&S.modal==='sku-sim'){loadSkuSimulation();return;}
       var stockChartPage=e.target&&e.target.closest?e.target.closest('[data-sc21-page]'):null;
