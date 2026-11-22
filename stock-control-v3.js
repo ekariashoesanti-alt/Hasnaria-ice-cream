@@ -941,14 +941,14 @@
       var tq=qs({brand_id:'eq.'+BRAND,period_month:'gte.'+fromMonth,
         select:'period_month,unit,total_unit_skus,checkpoint_skus,recorded_end_qty,period_movement_rows,unlinked_sale_rows,data_status',order:'period_month.asc',limit:'200'})+
         '&period_month=lte.'+month;
+      // Load ledger activity independently: a slow monthly stock-end query
+      // must not suppress the separate movement chart.
+      loadMonthlyMovementActivity(seq);
       // First paint only waits for the actual monthly stock-end series.
-      // Previously six unrelated requests (status/upload/activities/import)
-      // blocked this chart even though their cards were removed from the UI.
       var trendRows=await request('ui_stock_month_end_trend_v1?' + tq);
       if(seq!==S.periodSeq)return;
       S.monthEndRows=Array.isArray(trendRows)?trendRows:[];
       S.monthEndUnavailable=false;
-      loadMonthlyMovementActivity(seq);
       S.trend=[];
       S.firstPeriodLoaded=true;
       try{
