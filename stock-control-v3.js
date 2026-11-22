@@ -2847,7 +2847,7 @@
       var el = e.target;
       if(el.id==='sc4LedgerPeriod' && S.modal==='ledger'){
         var nextPeriod=monthKey(el.value);
-        if(nextPeriod && nextPeriod!==S.ledgerPeriod){S.ledgerPeriod=nextPeriod;S.ledgerPage=1;S.ledger=[];loadLedger();}
+        if(nextPeriod && nextPeriod!==S.ledgerPeriod){S.ledgerPeriod=nextPeriod;S.ledgerPage=1;S.ledger=[];S.ledgerLoading=false;++S.ledgerSeq;loadLedger();}
         return;
       }
       if(el.id==='sc21StockUnit'){
