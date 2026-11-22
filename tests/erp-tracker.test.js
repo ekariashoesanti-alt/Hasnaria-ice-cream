@@ -129,7 +129,7 @@ assert(!ownerShellSource.includes('event.stopImmediatePropagation();'), 'Owner g
 assert(ownerShellSource.includes('c.navigate=safeNavigate'), 'Owner context navigation must be redirected to executive safe navigation');
 assert(ownerShellSource.includes('if(++tries<80)setTimeout(boot,100)'), 'Owner executive bootstrap retry must stay bounded');
 assert(!ownerShellSource.includes('owner-finance-stock-v3.js'), 'Owner shell must not load the legacy Finance/Stock shell in executive mode');
-assert(ownerShellSource.includes("/administration-v1.js?v=6"), 'Owner shell must load the current Administrasi runtime cache');
+assert(ownerShellSource.includes("/administration-v1.js?v=7"), 'Owner shell must load the current Administrasi runtime cache');
 assert(administrationSource.includes('__HASNARIA_ADMIN_V2'), 'Administrasi UI-5 runtime marker must be present');
 assert(administrationSource.includes('window.__HASNARIA_ADMIN_V2={mount:mount}') && administrationSource.includes('window.__HASNARIA_ADMIN_V1=window.__HASNARIA_ADMIN_V2'), 'Administrasi UI-5 must expose V2 runtime with V1 compatibility alias');
 assert(administrationSource.includes('get_ui_period_catalog_fast_v1') && administrationSource.includes('ui_administration_overview_v1') && administrationSource.includes('ui_administration_category_chart_v1') && administrationSource.includes('ui_administration_detail_v1'), 'Administrasi must use fast period RPC plus canonical overview, category, and detail views');
