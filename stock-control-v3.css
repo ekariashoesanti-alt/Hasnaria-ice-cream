@@ -2600,3 +2600,7 @@
   text-decoration:underline!important;cursor:pointer!important;vertical-align:baseline!important;
 }
 #stok .sc28-head-history:hover{color:#104b3d!important}
+
+/* Monthly ledger activity chart */
+#stok .sc425-activity-bar{fill:#16845b;stroke:#fff;stroke-width:2}
+#stok .sc425-trend-toggle [data-sc425-mode="activity"]{font-weight:800}

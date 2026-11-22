@@ -49,9 +49,9 @@ test('background reads do not rebuild both charts, while real data changes patch
   assert.match(stock,/else mount\(false\)/);
 });
 test('version pins, KPI source and data integrity remain untouched',()=>{
-  assert.match(stock,/stock-control-v3\.css\?v=35/);
-  assert.match(bridge,/stock-control-v3\.js\?v=42/);
-  assert.match(opener,/stock-control-v3\.js\?v=42/);
+  assert.match(stock,/stock-control-v3\.css\?v=36/);
+  assert.match(bridge,/stock-control-v3\.js\?v=43/);
+  assert.match(opener,/stock-control-v3\.js\?v=43/);
   for(const x of ['inventory_stock_reconciliation','ui_stock_month_end_trend_v1','inventory_valuation_verified_summary','Nilai Stok (Parsial)','Stok Saat Ini vs Batas Aman']){
     assert.ok(stock.includes(x),x);
   }

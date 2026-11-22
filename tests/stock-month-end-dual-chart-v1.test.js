@@ -60,8 +60,25 @@ test('only 4 KPI and 2 charts render; selected unit shared across left/right',()
  assert.match(css,/#stok \.sc22-dual/);
  assert.match(css,/#stok \.sc22-plot-svg/);
  assert.match(css, /@media\(max-width:700px\)/);
- assert.match(js,/stock-control-v3\.css\?v=35/);
- for(const f of ['stock-monitor.js','stock-v3-runtime-fix.js'])assert.match(fs.readFileSync(f,'utf8'),/stock-control-v3\.js\?v=42/);
+ assert.match(js,/stock-control-v3\.css\?v=36/);
+ for(const f of ['stock-monitor.js','stock-v3-runtime-fix.js'])assert.match(fs.readFileSync(f,'utf8'),/stock-control-v3\.js\?v=43/);
+});
+test('May–July ledger activity is drawn separately from physical month-end stock',()=>{
+ const a=js.indexOf('function monthlyMovementActivityInfographic(){');
+ const b=js.indexOf('async function loadLedger() {',a);
+ assert.ok(a>=0&&b>a,'Monthly ledger activity chart exists');
+ const chart=js.slice(a,b);
+ assert.match(chart,/2026-05/);
+ assert.match(chart,/2026-06/);
+ assert.match(chart,/2026-07/);
+ const loader=js.slice(js.indexOf('async function loadMonthlyMovementActivity(seq)'),a);
+ assert.match(loader,/ui_stock_detail_v1/);
+ assert.match(loader,/movement_id/);
+ assert.match(chart,/sc425-activity-bar/);
+ assert.match(chart,/jumlah catatan mutasi/);
+ assert.match(js,/loadMonthlyMovementActivity\(seq\)/);
+ assert.match(js,/mode==='activity'/);
+ assert.match(js,/data-sc425-mode="activity"/);
 });
 test('historical view uses physical checkpoint, cutoff and account RLS; no writes',()=>{
  assert.match(sql,/with \(security_invoker = true\)/);
