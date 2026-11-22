@@ -54,6 +54,7 @@
     periodError: '',
     modal: '',
     ledger: [],
+    ledgerPeriod: '2026-05',
     ledgerLoading: false,
     ledgerError: '',
     ledgerPage: 1,
@@ -979,8 +980,8 @@
   }
 
   async function loadLedger() {
-    if (!S.period || S.ledgerLoading) return;
-    var seq = ++S.ledgerSeq, period = S.period;
+    if (!S.ledgerPeriod || S.ledgerLoading) return;
+    var seq = ++S.ledgerSeq, period = S.ledgerPeriod;
     S.ledgerLoading = true;
     S.ledgerError = '';
     S.ledger = [];
@@ -988,15 +989,15 @@
     render();
     try {
       var out = await readLedger(period);
-      if (seq !== S.ledgerSeq || period !== S.period) return;
+      if (seq !== S.ledgerSeq || period !== S.ledgerPeriod) return;
       S.ledger = out;
     } catch (e) {
-      if (seq !== S.ledgerSeq || period !== S.period) return;
+      if (seq !== S.ledgerSeq || period !== S.ledgerPeriod) return;
       S.ledgerError = e && e.message ? e.message : String(e);
     } finally {
       if (seq === S.ledgerSeq) {
         S.ledgerLoading = false;
-        if (period === S.period) render();
+        if (period === S.ledgerPeriod) render();
       }
     }
   }
@@ -1018,7 +1019,7 @@
   }
 
   function syncContext() {
-    return JSON.stringify([S.loadSeq, S.periodSeq, S.ledgerSeq, S.viewSeq, S.period, S.modal,
+    return JSON.stringify([S.loadSeq, S.periodSeq, S.ledgerSeq, S.viewSeq, S.period, S.ledgerPeriod, S.modal,
       S.search, S.category, S.status, S.page, S.ledgerPage, window.__HASNARIA_CONTEXT || null]);
   }
 
@@ -1047,7 +1048,7 @@
         reads.push(request('ui_stock_overview_v1?' + qs({brand_id: 'eq.' + BRAND, period_month: 'eq.' + period + '-01', select: '*', limit: '1'})));
         reads.push(request('ui_stock_activity_chart_v1?' + qs({brand_id: 'eq.' + BRAND, period_month: 'eq.' + period + '-01', select: 'movement_type,movement_rows,sku_count', order: 'movement_rows.desc'})));
       }
-      if (modal === 'ledger' && period) reads.push(readLedger(period));
+      if (modal === 'ledger' && S.ledgerPeriod) reads.push(readLedger(S.ledgerPeriod));
       // Recheck audited upload drafts on every cross-tab/data-change notification.
       // Append this read LAST to preserve the existing detail/overview indices.
       var pendingIndex=reads.length;
@@ -1076,7 +1077,7 @@
       var items = supplementalItems(raw, recipes, poRows, receipts);
       var overview = period && result[2] && result[2][0] ? result[2][0] : null;
       var activity = period ? result[3] || [] : [];
-      var ledger = modal === 'ledger' && period ? result[4] || [] : S.ledger;
+      var ledger = modal === 'ledger' && S.ledgerPeriod ? result[4] || [] : S.ledger;
       var periods = result[1] || [];
       if (period && !periods.some(function (x) { return monthKey(x.period_start || x.period_key) === period; })) {
         var selected = S.periods.find(function (x) { return monthKey(x.period_start || x.period_key) === period; });
@@ -1718,8 +1719,10 @@
   }
 
   function renderLedgerTable() {
-    if (S.ledgerLoading) return '<div class="sc3-loading">Memuat ledger ' + esc(monthLabel(S.period)) + '…</div>';
-    if (S.ledgerError) return '<div class="sc3-alert">' + esc(S.ledgerError) + '</div>';
+    var periodOptions = ['2026-05','2026-06','2026-07'];
+    var periodSelect = '<div class="sc4-ledger-period"><label for="sc4LedgerPeriod">Periode riwayat</label><select id="sc4LedgerPeriod" aria-label="Pilih bulan riwayat mutasi">' + periodOptions.map(function(p){return '<option value="'+p+'"'+(S.ledgerPeriod===p?' selected':'')+'>'+esc(monthLabel(p))+'</option>';}).join('') + '</select></div>';
+    if (S.ledgerLoading) return periodSelect + '<div class="sc3-loading">Memuat ledger ' + esc(monthLabel(S.ledgerPeriod)) + '…</div>';
+    if (S.ledgerError) return periodSelect + '<div class="sc3-alert">' + esc(S.ledgerError) + '</div>';
     var pageSize = 50, pages = Math.max(1, Math.ceil(S.ledger.length / pageSize));
     if (S.ledgerPage > pages) S.ledgerPage = pages;
     var start = (S.ledgerPage - 1) * pageSize;
@@ -1730,7 +1733,7 @@
     }).join('');
     var buttons = [];
     for (var p = Math.max(1, S.ledgerPage - 2); p <= Math.min(pages, S.ledgerPage + 2); p++) buttons.push('<button type="button" data-sc4-ledger-page="' + p + '" class="' + (p === S.ledgerPage ? 'on' : '') + '">' + p + '</button>');
-    return '<div class="sc4-ledger-meta">' + S.ledger.length.toLocaleString('id-ID') + ' movement · ' + esc(monthLabel(S.period)) + '</div><div class="sc3-table-wrap"><table class="sc3-table sc4-ledger-table"><thead><tr><th>Tanggal</th><th>SKU</th><th>Jenis</th><th>Qty Δ</th><th>Referensi</th><th>Catatan</th></tr></thead><tbody>' + (body || '<tr><td colspan="6" class="sc3-empty">Belum ada movement.</td></tr>') + '</tbody></table></div><div class="sc3-pager"><span>Halaman ' + S.ledgerPage + ' dari ' + pages + '</span><div>' + buttons.join('') + '</div></div>';
+    return periodSelect + '<div class="sc4-ledger-meta">' + S.ledger.length.toLocaleString('id-ID') + ' mutasi · ' + esc(monthLabel(S.ledgerPeriod)) + '</div><div class="sc3-table-wrap"><table class="sc3-table sc4-ledger-table"><thead><tr><th>Tanggal</th><th>SKU</th><th>Jenis</th><th>Qty Δ</th><th>Referensi</th><th>Catatan</th></tr></thead><tbody>' + (body || '<tr><td colspan="6" class="sc3-empty">Belum ada movement.</td></tr>') + '</tbody></table></div><div class="sc3-pager"><span>Halaman ' + S.ledgerPage + ' dari ' + pages + '</span><div>' + buttons.join('') + '</div></div>';
   }
 
 
@@ -2110,7 +2113,7 @@
 
   function renderModal() {
     if (!S.modal) return '';
-    var title = S.modal === 'ledger' ? 'Ledger · ' + monthLabel(S.period) :
+    var title = S.modal === 'ledger' ? 'Riwayat Mutasi · ' + monthLabel(S.ledgerPeriod) :
       S.modal === 'upload-data' ? 'Upload Data' :
       S.modal === 'recipes' ? 'Cek Resep Produk · ' + monthLabel(S.period) :
       S.modal === 'sku-sim' ? 'Simulasi Penjualan Produk → BOM' :
@@ -2723,7 +2726,7 @@
       var modal = e.target && e.target.closest ? e.target.closest('[data-sc4-modal]') : null;
       if (modal) {
         S.modal = modal.getAttribute('data-sc4-modal') || '';
-        if (S.modal === 'ledger' && !S.ledgerLoading) loadLedger();
+        if (S.modal === 'ledger') { if(!S.ledgerPeriod) S.ledgerPeriod='2026-05'; loadLedger(); }
         else if (S.modal === 'recipes') loadRecipeReview();
         else if (S.modal === 'sku-sim') loadSkuSimulation();
         else if (S.modal === 'formula-audit') loadFormulaAudit();
@@ -2842,6 +2845,11 @@
     };
     host.onchange = function (e) {
       var el = e.target;
+      if(el.id==='sc4LedgerPeriod' && S.modal==='ledger'){
+        var nextPeriod=monthKey(el.value);
+        if(nextPeriod && nextPeriod!==S.ledgerPeriod){S.ledgerPeriod=nextPeriod;S.ledgerPage=1;S.ledger=[];loadLedger();}
+        return;
+      }
       if(el.id==='sc21StockUnit'){
         S.chartUnit=el.value||'';
         S.chartPage=1;
