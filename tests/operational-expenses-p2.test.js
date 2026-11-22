@@ -28,7 +28,8 @@ test('Administration report supports the new host and preserves the legacy host'
  assert.match(admin,/get_ui_period_catalog_fast_v1/);
  assert.match(adminCss,/:is\(#administrasi, #opExpensesHost\)/);
  assert.match(admin,/administration-v1\.css\?v=2/);
- assert.match(read('owner-shell-guard.js'),/administration-v1\.js\?v=7/);
+ assert.doesNotMatch(read('owner-shell-guard.js'),/administration-v1\.js\?v=7/);
+ assert.match(op,/administration-v1\.js\?v=7/);
  assert.doesNotMatch(admin,/\.from\([^)]*\)\.(?:insert|update|upsert|delete)\s*\(/i);
  assert.doesNotMatch(admin,/\.rpc\(['"](?:create|update|delete|post)_/i);
 });
