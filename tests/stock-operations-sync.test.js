@@ -290,6 +290,22 @@ async function main() {
   assert.equal(stockPreview.queries.length,stockCalls,'preview correction must not query or post production ledger');
   assert.match(stockPreview.api.S.correction.error,/produksi/i);
 
+  // Historical ledger has its own month selector, independent of the dashboard snapshot.
+  const stockHistory = stockFixture();
+  stockHistory.api.S.modal = 'ledger';
+  stockHistory.api.S.period = '2026-11';
+  stockHistory.api.S.ledgerPeriod = '2026-05';
+  await stockHistory.api.loadLedger();
+  assert.equal(stockHistory.api.S.period, '2026-11', 'opening history must not change the dashboard month');
+  assert.equal(stockHistory.api.S.ledger.length, 80, 'historical ledger rows load');
+  assert.ok(stockHistory.queries.some(q => q.table === 'ui_stock_detail_v1' && q.query.period_month === 'eq.2026-05-01'),
+    'ledger query must use the independently selected historical month');
+  stockHistory.api.render();
+  assert.match(stockHistory.shell.innerHTML, /sc4LedgerPeriod/, 'history modal exposes its own month selector');
+  assert.match(stockHistory.shell.innerHTML, /Mei 2026/);
+  assert.match(stockHistory.shell.innerHTML, /Juni 2026/);
+  assert.match(stockHistory.shell.innerHTML, /Juli 2026/);
+
   console.log('stock/operations synchronization: PASS');
 }
 
