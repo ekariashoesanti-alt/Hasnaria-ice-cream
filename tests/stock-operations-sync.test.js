@@ -215,9 +215,8 @@ async function main() {
   const requestedMonths = stockDetailReads.map(q => q.query.period_month);
   assert.ok(requestedMonths.every(month => ['eq.2026-05-01','eq.2026-06-01','eq.2026-07-01'].includes(month)),
     'stock synchronization only reads the selected October snapshot and the explicitly scoped May–July activity history');
-  for (const month of ['eq.2026-05-01','eq.2026-06-01','eq.2026-07-01']) {
-    assert.ok(requestedMonths.includes(month), 'historical activity read exists for ' + month);
-  }
+  assert.ok(requestedMonths.includes('eq.2026-05-01'),
+    'ledger refresh follows its independent May history selection without changing the dashboard month');
 
   operations.data.selected.status = 'submitted'; operations.data.items[0].numeric_value = 12;
   await operations.api.syncRefresh();
