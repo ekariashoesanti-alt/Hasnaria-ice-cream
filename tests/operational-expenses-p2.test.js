@@ -38,3 +38,14 @@ test('P3 navigation label does not expose standalone Administrasi tab',()=>{
  assert.doesNotMatch(nav,/administrasi:\s*'Administrasi'/);
  assert.match(nav,/else if\(b\.id!=='userSettingsTab'\)b\.style\.display='none'/);
 });
+
+test('Legacy standalone Administrasi tab is not recreated by Owner shell',()=>{
+ const shell=read('owner-shell-guard.js');
+ assert.doesNotMatch(shell,/data-tab="administrasi"/);
+ assert.doesNotMatch(shell,/id='administrasi'/);
+ assert.doesNotMatch(shell,/state\.active==='administrasi'/);
+ assert.doesNotMatch(shell,/ensureAdministration|mountAdministration|adminRuntime/);
+ assert.match(shell,/OWNER_TABS=\['dashboard','sales','pembelian','stok','operasional','ops','notifikasi'\]/);
+ // The report module remains available only through the Operasional Pengeluaran host.
+ assert.match(op,/window\.__HASNARIA_ADMIN_V2\.mount\(\{hostId:'opExpensesHost'\}\)/);
+});
