@@ -42,7 +42,7 @@ assert.doesNotMatch(stock, /request\('ui_period_catalog_v1\?/,
 
 assert.doesNotMatch(nav, /MutationObserver\(scheduleRun\)\.observe\(document\.body,\{childList:true,subtree:true\}\)/,
   'navigation patch must not watch the whole document body');
-assert.match(nav, /observe\(tabs,\{childList:true,subtree:true\}\)/,
+assert.match(nav, /observe\(tabs,\{childList:true,subtree:true,attributes:true,attributeFilter:\['style'\]\}\)/,
   'navigation patch should watch the navigation surface only');
 
 assert.doesNotMatch(sales, /MutationObserver\(schedule\)\.observe\(document\.body/,
