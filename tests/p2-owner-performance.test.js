@@ -14,6 +14,7 @@ const sales = read('sales-ui-patch.js');
 const app = read('app.js');
 const index = read('index.html');
 const shell = read('owner-shell-guard.js');
+const operational = read('operational-v1.js');
 const buildIndex = read('scripts/build-index-runtime.js');
 
 assert.match(migration, /create or replace function public\.get_ui_dashboard_pack_v1[\s\S]*security definer/i,
@@ -56,8 +57,10 @@ assert.match(index, /\/app\.js\?v=p075/,
   'application runtime must be cache-busted');
 assert.match(index, /\/nav-patch\.js\?v=16/,
   'navigation runtime must be cache-busted');
-assert.match(shell, /\/administration-v1\.js\?v=7/,
-  'Administration runtime must be cache-busted');
+assert.doesNotMatch(shell, /\/administration-v1\.js\?v=7/,
+  'standalone Administration runtime must not be loaded by Owner shell');
+assert.match(operational, /\/administration-v1\.js\?v=7/,
+  'Pengeluaran must load the cache-busted Administration report runtime');
 assert.match(buildIndex, /owner-shell-guard\.js\?v=18/,
   'production Owner shell must be cache-busted');
 
