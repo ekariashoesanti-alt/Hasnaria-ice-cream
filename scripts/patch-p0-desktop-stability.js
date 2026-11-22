@@ -90,6 +90,6 @@ patch('stock-control-v3.js',s=>{
  return one(s,a,b,'stock stable root');
 });
 
-if(!fs.readFileSync(fp('owner-shell-guard.js'),'utf8').includes("if(id==='administrasi')ensureAdministration(true);"))throw new Error('P0 owner navigation lost Administrasi mount');
+const ownerNav=fs.readFileSync(fp('owner-shell-guard.js'),'utf8');\nconst operational=fs.readFileSync(fp('operational-v1.js'),'utf8');\nif(ownerNav.includes("if(id==='administrasi')ensureAdministration(true);"))throw new Error('P0 legacy standalone Administrasi navigation survived');\nif(!operational.includes("document.getElementById('opExpensesHost')")||!operational.includes("window.__HASNARIA_ADMIN_V2.mount({hostId:'opExpensesHost'})"))throw new Error('P0 Pengeluaran lost Administrasi report mount');
 
 console.log('P0 desktop stability: PASS');
