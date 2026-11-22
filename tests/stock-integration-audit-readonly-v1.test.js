@@ -52,8 +52,8 @@ test('Audit stays inside existing scrollable Formula modal and Stock dashboard k
  assert.match(css,/#stok \.sc24-title/);
  assert.match(css,/#stok \.sc24-actions/);
  assert.match(css,/#stok \.sc4-modal-body:has\(\.sc20-cards\)\{/);
- assert.match(js,/stock-control-v3\.css\?v=35/);
- assert.match(b,/stock-control-v3\.js\?v=42/);
+ assert.match(js,/stock-control-v3\.css\?v=36/);
+ assert.match(b,/stock-control-v3\.js\?v=43/);
  const dashboard=section('function render() {','function stockDialogFocus(');
  assert.ok(dashboard.includes('<div class="sc22-dual"'),'main dashboard still has two-column stock charts');
  assert.match(dashboard,/monthlyStockEndInfographic\(\)/);
