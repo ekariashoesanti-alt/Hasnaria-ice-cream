@@ -65,14 +65,15 @@ test('only 4 KPI and 2 charts render; selected unit shared across left/right',()
 });
 test('May–July ledger activity is drawn separately from physical month-end stock',()=>{
  const a=js.indexOf('function monthlyMovementActivityInfographic(){');
- const b=js.indexOf('async function loadLedger(){',a);
+ const b=js.indexOf('async function loadLedger() {',a);
  assert.ok(a>=0&&b>a,'Monthly ledger activity chart exists');
  const chart=js.slice(a,b);
  assert.match(chart,/2026-05/);
  assert.match(chart,/2026-06/);
  assert.match(chart,/2026-07/);
- assert.match(chart,/ui_stock_detail_v1/);
- assert.match(chart,/movement_id/);
+ const loader=js.slice(js.indexOf('async function loadMonthlyMovementActivity(seq)'),a);
+ assert.match(loader,/ui_stock_detail_v1/);
+ assert.match(loader,/movement_id/);
  assert.match(chart,/sc425-activity-bar/);
  assert.match(chart,/jumlah catatan mutasi/);
  assert.match(js,/loadMonthlyMovementActivity\(seq\)/);
