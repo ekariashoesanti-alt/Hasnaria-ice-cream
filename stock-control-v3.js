@@ -2636,8 +2636,7 @@
       var kpiHtml=overviewKpis(),stockComparison=stockSafetyInfographic();
       var trendTitle=S.trendMode==='activity'?'Aktivitas Mutasi Mei–Juli': 'Tren Stok Akhir Bulanan';
       var trendHtml='<article class="sc5-panel sc22-trend-panel"><div class="sc425-trend-head"><h3>↗ '+trendTitle+'</h3>'+
-        '<div class="sc425-trend-toggle"><button type="button" data-sc425-mode="value" aria-pressed="'+(S.trendMode==='value')+'">Nilai Rp</button>'+
-        '<button type="button" data-sc425-mode="qty" aria-pressed="'+(S.trendMode==='qty')+'">Kuantitas</button>'+
+        '<div class="sc425-trend-toggle"><button type="button" data-sc425-mode="qty" aria-pressed="'+(S.trendMode==='qty')+'">Kuantitas</button>'+
         '<button type="button" data-sc425-mode="activity" aria-pressed="'+(S.trendMode==='activity')+'">Mutasi</button></div></div>'+
         (S.trendMode==='activity'?monthlyMovementActivityInfographic():S.trendMode==='qty'?monthlyStockEndInfographic():stockValueTrendInfographic())+'</article>';
       var comparisonHtml='<article class="sc5-panel sc22-compare-panel"><h3>▥ Stok Saat Ini vs Batas Aman</h3>'+stockComparison+'</article>';
