@@ -104,7 +104,7 @@
     var target=document.getElementById('opExpensesHost');if(!target)return;
     if(window.__HASNARIA_ADMIN_V2&&typeof window.__HASNARIA_ADMIN_V2.mount==='function'){window.__HASNARIA_ADMIN_V2.mount({hostId:'opExpensesHost'});return}
     if(state.expensesLoad)return;
-    state.expensesLoad=new Promise(function(resolve){var sc=document.createElement('script');sc.id='hasnaria-administration-v1-js';sc.src='/administration-v1.js?v=1';sc.async=true;sc.onload=resolve;sc.onerror=function(){state.expensesLoad=null;resolve()};document.head.appendChild(sc)});
+    state.expensesLoad=new Promise(function(resolve){var sc=document.createElement('script');sc.id='hasnaria-administration-v1-js';sc.src='/administration-v1.js?v=7';sc.async=true;sc.onload=resolve;sc.onerror=function(){state.expensesLoad=null;resolve()};document.head.appendChild(sc)});
     state.expensesLoad.then(function(){if(active()&&state.subtab==='expenses'&&window.__HASNARIA_ADMIN_V2&&typeof window.__HASNARIA_ADMIN_V2.mount==='function')window.__HASNARIA_ADMIN_V2.mount({hostId:'opExpensesHost'})});
   }
   function ensureAttendance(){
