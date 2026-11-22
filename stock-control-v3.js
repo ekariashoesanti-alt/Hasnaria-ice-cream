@@ -255,7 +255,7 @@
     var l = document.createElement('link');
     l.id = 'stock-control-v3-css';
     l.rel = 'stylesheet';
-    l.href = '/stock-control-v3.css?v=34';
+    l.href = '/stock-control-v3.css?v=35';
     document.head.appendChild(l);
   }
 
@@ -1262,7 +1262,7 @@
     }).join('');
     return '<header class="sc5-head sc7-head sc28-simple-head">'+
       '<div class="sc5-head-copy"><span class="sc5-eyebrow">STOK</span>'+
-      '<h2>Dashboard Stok</h2><p>Persediaan &amp; aktivitas terkini</p></div>'+
+      '<h2>Dashboard Stok</h2><p>Persediaan &amp; aktivitas terkini'+(isOwner()&&S.period?'<button type="button" class="sc28-head-history" data-sc4-modal="ledger" aria-haspopup="dialog">Riwayat Mutasi</button>':'')+'</p></div>'+
       '<div class="sc5-head-right sc7-head-right sc7-actions sc7-tools sc28-simple-tools">'+
         '<label class="sc28-period" for="sc4Period"><span>Bulan</span><select id="sc4Period" data-month-filter="stok" aria-label="Periode stok">'+options+'</select></label>'+
         (isOwner()?'<button type="button" class="sc5-primary sc28-upload-btn" data-sc4-modal="upload-data" aria-haspopup="dialog">⇧ Upload Data</button>':'')+

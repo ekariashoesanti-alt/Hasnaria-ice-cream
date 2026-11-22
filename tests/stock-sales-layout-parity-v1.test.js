@@ -23,14 +23,15 @@ test('matches Sales page visual system without changing other tabs',()=>{
  assert.doesNotMatch(stockStyle,/^#sales\b/m);
 });
 
-test('single-row Stock toolbar shows only period, Upload Data and refresh',()=>{
+test('single-row Stock toolbar exposes period, history, Upload Data and refresh',()=>{
  const header=stockJS.slice(stockJS.indexOf('function renderHeader() {'),stockJS.indexOf('function renderUploadChoices()'));
  assert.match(header,/sc5-head sc7-head sc28-simple-head/);
  assert.match(header,/sc28-simple-tools/);
  assert.match(header,/id="sc4Period"/);
  assert.match(header,/data-sc4-modal="upload-data"/);
+ assert.match(header,/class="sc28-head-history" data-sc4-modal="ledger"/);
  assert.match(header,/data-sc3-action="refresh"/);
- for(const excluded of ['upload-opname','import-recipe','position','opname','ledger','recipes','formula-audit','sku-sim','upload-purchase']){
+ for(const excluded of ['upload-opname','import-recipe','position','opname','recipes','formula-audit','sku-sim','upload-purchase']){
   assert.ok(!header.includes('data-sc4-action="'+excluded+'"')&&!header.includes('data-sc4-modal="'+excluded+'"'),
    'No extra Stock toolbar action: '+excluded);
  }
@@ -68,7 +69,7 @@ test('responsive panels keep charts and data visible at narrower widths',()=>{
  assert.match(stockStyle,/@media\(max-width:640px\)/);
  assert.match(stockStyle,/\.sc21-chart-frame\{[\s\S]*?overflow-x:auto!important/);
  assert.match(stockStyle,/\.sc22-dual>.sc5-panel\{[\s\S]*?max-height:none!important/);
- assert.match(stockJS,/stock-control-v3\.css\?v=34/);
+ assert.match(stockJS,/stock-control-v3\.css\?v=35/);
  for(const f of ['stock-monitor.js','stock-v3-runtime-fix.js']){
   assert.match(read(f),/stock-control-v3\.js\?v=42/);
  }
