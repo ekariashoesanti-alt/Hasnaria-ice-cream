@@ -15,7 +15,7 @@ function key(v){var s=String(v||'');return /^\d{4}-\d{2}/.test(s)?s.slice(0,7):'
 function monthLabel(v){var k=key(v);return k?MONTHS[Number(k.slice(5,7))-1]+' '+k.slice(0,4):'Periode belum tersedia'}
 function cutLabel(){var k=key(S.period);if(!k)return'Periode belum tersedia';var y=Number(k.slice(0,4)),m=Number(k.slice(5,7)),last=new Date(Date.UTC(y,m,0)).getUTCDate();return'1–'+last+' '+monthLabel(k)}
 function dateLabel(v){var s=String(v||'');return /^\d{4}-\d{2}-\d{2}/.test(s)?s.slice(8,10)+'/'+s.slice(5,7)+'/'+s.slice(0,4):'—'}
-function ensureCss(){if(document.getElementById('administration-ui5-css'))return;var l=document.createElement('link');l.id='administration-ui5-css';l.rel='stylesheet';l.href='/administration-v1.css?v=1';document.head.appendChild(l)}
+function ensureCss(){if(document.getElementById('administration-ui5-css'))return;var l=document.createElement('link');l.id='administration-ui5-css';l.rel='stylesheet';l.href='/administration-v1.css?v=2';document.head.appendChild(l)}
 
 function periodOptions(){
  return S.periods.map(function(x){var k=key(x.period_start||x.period_key);return'<option value="'+esc(k)+'"'+(k===S.period?' selected':'')+'>'+esc(monthLabel(k))+'</option>'}).join('');
