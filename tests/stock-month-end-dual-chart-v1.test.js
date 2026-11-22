@@ -71,12 +71,12 @@ test('May–July ledger activity is drawn separately from physical month-end sto
  assert.match(chart,/2026-05/);
  assert.match(chart,/2026-06/);
  assert.match(chart,/2026-07/);
- const loader=js.slice(js.indexOf('async function loadMonthlyMovementActivity(seq)'),a);
+ const loader=js.slice(js.indexOf('async function loadMonthlyMovementActivity()'),a);
  assert.match(loader,/ui_stock_detail_v1/);
  assert.match(loader,/movement_id/);
  assert.match(chart,/sc425-activity-bar/);
  assert.match(chart,/jumlah catatan mutasi/);
- assert.match(js,/loadMonthlyMovementActivity\(seq\)/);
+ assert.match(js,/loadMonthlyMovementActivity\(\)/);
  assert.match(js,/mode==='activity'/);
  assert.match(js,/data-sc425-mode="activity"/);
 });
