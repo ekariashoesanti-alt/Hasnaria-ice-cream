@@ -14,7 +14,7 @@ test('P2 Pengeluaran is mounted lazily inside Operasional for owners',()=>{
  assert.match(op,/id="opExpensesHost"/);
  assert.match(op,/function ensureExpenses\(\)/);
  assert.match(op,/window\.__HASNARIA_ADMIN_V2\.mount\(\{hostId:'opExpensesHost'\}\)/);
- assert.match(op,/sc\.src='\/administration-v1\.js\?v=1'/);
+ assert.match(op,/sc\.src='\/administration-v1\.js\?v=7'/);
  assert.match(op,/if\(!isOwner\(\)\|\|!active\(\)\|\|state\.subtab!=='expenses'\)return/);
 });
 
