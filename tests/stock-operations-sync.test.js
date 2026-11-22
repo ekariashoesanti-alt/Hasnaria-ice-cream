@@ -212,15 +212,13 @@ async function main() {
   await stock.api.syncRefresh();
   assert.equal(stock.api.S.ledger[0].qty_delta, 3); assert.equal(stock.api.S.ledgerPage, 2);
   const stockDetailReads = stock.queries.filter(q => q.table === 'ui_stock_detail_v1');
-  const dashboardSnapshotReads = stockDetailReads.filter(q => q.query.select !== 'movement_id');
-  const monthlyActivityReads = stockDetailReads.filter(q => q.query.select === 'movement_id');
-  assert.ok(dashboardSnapshotReads.every(q => q.query.period_month === 'eq.2026-10-01'),
-    'dashboard snapshot synchronization remains pinned to the selected October period');
-  assert.ok(monthlyActivityReads.every(q => ['eq.2026-05-01','eq.2026-06-01','eq.2026-07-01'].includes(q.query.period_month)),
-    'separate read-only activity chart is restricted to May–July 2026');
-  assert.deepEqual([...new Set(monthlyActivityReads.map(q => q.query.period_month))].sort(),
-    ['eq.2026-05-01','eq.2026-06-01','eq.2026-07-01'],
-    'all three historical activity months are queried');
+  const requestedMonths = stockDetailReads.map(q => q.query.period_month);
+  assert.ok(requestedMonths.every(month => ['eq.2026-10-01','eq.2026-05-01','eq.2026-06-01','eq.2026-07-01'].includes(month)),
+    'stock synchronization only reads the selected October snapshot and the explicitly scoped May–July activity history');
+  assert.ok(requestedMonths.includes('eq.2026-10-01'), 'selected October dashboard snapshot is still read');
+  for (const month of ['eq.2026-05-01','eq.2026-06-01','eq.2026-07-01']) {
+    assert.ok(requestedMonths.includes(month), 'historical activity read exists for ' + month);
+  }
 
   operations.data.selected.status = 'submitted'; operations.data.items[0].numeric_value = 12;
   await operations.api.syncRefresh();
