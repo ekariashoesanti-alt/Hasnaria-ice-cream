@@ -61,7 +61,7 @@ test('only 4 KPI and 2 charts render; selected unit shared across left/right',()
  assert.match(css,/#stok \.sc22-plot-svg/);
  assert.match(css, /@media\(max-width:700px\)/);
  assert.match(js,/stock-control-v3\.css\?v=36/);
- for(const f of ['stock-monitor.js','stock-v3-runtime-fix.js'])assert.match(fs.readFileSync(f,'utf8'),/stock-control-v3\.js\?v=43/);
+ for(const f of ['stock-monitor.js','stock-v3-runtime-fix.js'])assert.match(fs.readFileSync(f,'utf8'),/stock-control-v3\.js\?v=44/);
 });
 test('May–July ledger activity is drawn separately from physical month-end stock',()=>{
  const a=js.indexOf('function monthlyMovementActivityInfographic(){');
