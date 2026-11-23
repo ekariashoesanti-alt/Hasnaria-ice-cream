@@ -2695,7 +2695,7 @@
       if(stable){
         if(previous.header!==headerHtml)shell.querySelector('.sc28-simple-head').outerHTML=headerHtml;
         if(previous.kpis!==kpiHtml)shell.querySelector('.sc8-kpis').outerHTML=kpiHtml;
-        if(previous.analytics!==analyticsHtml){var grid=analyticsHtml.match(/<div class="scytd-grid">[\\s\\S]*?<\\/div>/);if(grid)shell.querySelector('.scytd-grid').outerHTML=grid[0];}
+        if(previous.analytics!==analyticsHtml)shell.querySelector('.sc5-dashboard').innerHTML=analyticsHtml;
         if(previous.notice!==noticeHtml)shell.querySelector('.sc424-notices').innerHTML=noticeHtml;
         var overlay=shell.querySelector('.sc424-overlay');
         if(previous.modal!==modalHtml){
