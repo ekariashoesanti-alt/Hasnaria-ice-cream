@@ -2284,6 +2284,23 @@
       "owner": "Codex/ChatGPT",
       "updated_at": "2026-11-09",
       "notes": "Branch feature/hsn-814-ceo-four-pillar-kpis: implementasi frontend read-only terpisah + unit regression. Tokyo production diinspeksi read-only. Finance 10 bulan 2026 provisional, 19 dari 198 SKU memenuhi filter ranking ketat, loyalty 2/11 bulan, attendance 74 raw scans dan 0 pasangan absensi sah; indikator yang belum terverifikasi tidak ditebak. Menunggu CI Vercel preview dan Owner browser acceptance; produksi tidak diubah."
+    },
+    {
+      "id": "HSN-426",
+      "milestone": "M4",
+      "priority": "P1",
+      "status": "IN_PROGRESS",
+      "title": "Stock monthly purchase vs verified BOM usage reporting",
+      "dependencies": [
+        "HSN-401",
+        "HSN-403",
+        "HSN-404",
+        "HSN-405"
+      ],
+      "acceptance": "Panel 3 reads a production-safe read-only monthly reporting view, groups quantities by canonical base unit, filters Jan through selected month, separates posted purchase ledger from verified effective BOM usage, labels unavailable usage rather than zero, excludes placeholder units and estimates, preserves existing stock posting, passes regression/build/preview checks.",
+      "owner": "ChatGPT",
+      "updated_at": "2026-11-23",
+      "notes": "Production view ui_stock_purchase_usage_monthly_v1 created with SECURITY INVOKER and authenticated SELECT only. Frontend implementation in branch feat/stock-purchase-usage-panel3-20261123; usage currently unavailable because production product_recipe_verifications are all draft. Purchases chart only counts PURCHASE ledger postings, not all purchase_log rows; source completeness caveat displayed. Pending tests/CI/preview and owner visual acceptance. Follow-up migration 20261123173000 explicitly revoked default inherited INSERT/UPDATE/DELETE/TRUNCATE/REFERENCES/TRIGGER grants from authenticated; post-migration grants verify authenticated has SELECT only and anon has no access. Supabase security advisors show no new finding for this view. The same two reporting/ACL migrations were applied to Hasnaria Staging Singapore (rynnpndtzjwpekbiwiif); view schema exists and authenticated is SELECT-only. Staging has zero inventory rows for the synthetic tenant, as expected; preview stays isolated and does not use production records. Panel 3 selector state is isolated from the existing stock chart selector."
     }
   ]
 }

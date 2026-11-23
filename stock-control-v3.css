@@ -2637,3 +2637,24 @@
 #stok .scytd-panel .sc22-plot{margin-top:2px}
 @media(max-width:760px){#stok .scytd-grid{grid-template-columns:1fr}#stok .scytd-panel{min-height:180px}}
 @media(min-width:901px){#stok .scytd-grid{gap:6px;margin-top:5px}#stok .scytd-panel{min-height:170px;padding:8px 9px;border-radius:9px}#stok .scytd-panel h3{font-size:9px}#stok .scytd-panel>small{margin-bottom:6px;font-size:6px}#stok .scytd-total strong{font-size:19px}#stok .scytd-health-row{margin:4px 0;font-size:7px}#stok .scytd-score strong{font-size:22px}#stok .scytd-metrics{margin-top:8px}#stok .scytd-footnote{padding:5px 7px;font-size:6px}}
+
+
+/* Panel 3: verified quantity comparison, unit-specific and source-qualified. */
+#stok .scytd-unit-select{display:flex;align-items:center;justify-content:flex-end;gap:7px;color:#60766c;font-size:10px;font-weight:700;margin:0 0 2px}
+#stok .scytd-unit-select select{min-width:90px;max-width:145px;height:29px;padding:4px 8px;border:1px solid #d4e3dc;border-radius:7px;background:#fff;color:#174b3b;font:inherit;font-size:10px}
+#stok .scytd-chart-legend{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin:5px 0 7px;color:#36584b;font-size:9px}
+#stok .scytd-chart-legend span{display:inline-flex;align-items:center;gap:6px}
+#stok .scytd-chart-legend i{display:inline-block;width:12px;height:8px;border-radius:3px;background:#078c80}
+#stok .scytd-chart-legend i.usage{background:#69d4ca}
+#stok .scytd-quantity-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:3px 0 4px}
+#stok .scytd-quantity-summary span{display:block;padding:7px 9px;border:1px solid #e2ece7;border-radius:8px;color:#74847c;font-size:8px}
+#stok .scytd-quantity-summary strong{display:block;margin-top:3px;color:#145b49;font-size:15px;line-height:1.2}
+#stok .scytd-quantity-chart{width:100%;min-width:0;overflow:hidden}
+#stok .scytd-quantity-chart svg{display:block;width:100%;height:auto;max-height:225px}
+#stok .scytd-chart-grid{stroke:#e8efeb;stroke-width:1;stroke-dasharray:2 3}
+#stok .scytd-chart-axis{fill:#829088;font-size:8px}
+#stok .scytd-chart-month{fill:#38584c;font-size:9px}
+#stok .scytd-purchase-bar{fill:#078c80}
+#stok .scytd-usage-bar{fill:#69d4ca}
+#stok .scytd-usage-missing{fill:#fff;stroke:#b8c6bf;stroke-width:1.5}
+@media(min-width:901px){#stok .scytd-quantity-summary strong{font-size:13px}#stok .scytd-quantity-chart svg{max-height:185px}}

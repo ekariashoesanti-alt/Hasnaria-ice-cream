@@ -113,6 +113,12 @@
     integrationSeq: 0,
     integrationPeriod: '',
     chartUnit: '',
+    purchaseUsageUnit: 'pcs',
+    purchaseUsageRows: [],
+    purchaseUsageLoading: false,
+    purchaseUsageError: '',
+    purchaseUsageSeq: 0,
+    purchaseUsageUnits: [],
     chartPage: 1,
     skuSim: null,
     skuSimLoading: false,
@@ -259,7 +265,7 @@
     var l = document.createElement('link');
     l.id = 'stock-control-v3-css';
     l.rel = 'stylesheet';
-    l.href = '/stock-control-v3.css?v=38';
+    l.href = '/stock-control-v3.css?v=39';
     document.head.appendChild(l);
   }
 
@@ -944,6 +950,7 @@
       // Load ledger activity independently: a slow monthly stock-end query
       // must not suppress the separate movement chart.
       loadMonthlyMovementActivity();
+      loadPurchaseUsageYtd();
       // First paint only waits for the actual monthly stock-end series.
       var trendRows=await request('ui_stock_month_end_trend_v1?' + tq);
       if(seq!==S.periodSeq)return;
@@ -2658,15 +2665,71 @@
     var exact=rows.filter(function(x){return Math.abs(num(x.last_variance))<0.00001;}).length,pct=exact/rows.length*100;
     return '<div class="scytd-gauge-layout"><div class="scytd-gauge"><svg viewBox="0 0 180 112" role="img" aria-label="Kecocokan opname '+pct.toFixed(1)+' persen"><path d="M20 91 A70 70 0 0 1 160 91" pathLength="100" class="scytd-gauge-track"/><path d="M20 91 A70 70 0 0 1 160 91" pathLength="100" stroke-dasharray="'+pct+' 100" class="scytd-gauge-value"/></svg><strong>'+pct.toFixed(1).replace('.',',')+'%</strong></div><div class="scytd-gauge-legend"><span><i></i>SKU sudah opname <b>'+fmt(rows.length)+'</b></span><span><i></i>Sesuai sistem <b>'+fmt(exact)+'</b></span><span><i></i>Memiliki selisih <b>'+fmt(rows.length-exact)+'</b></span></div></div><p class="scytd-note">Kecocokan SKU pada opname terakhir; bukan tren historis bulanan.</p>';
   }
-  function renderPurchaseUsageYtd(){return '<div class="scytd-empty-chart"><div class="scytd-chart-legend"><span><i></i>Pembelian</span><span><i></i>Pemakaian (BOM)</span></div><div class="scytd-empty-plot"><i></i><i></i><i></i><i></i><i></i><div>Data bulanan belum tersedia</div></div><p>Menunggu transaksi pembelian dan pemakaian BOM yang tervalidasi. Tidak menampilkan angka estimasi.</p></div>';}
+
+  async function loadPurchaseUsageYtd(){
+    var seq=++S.purchaseUsageSeq;
+    var selected=monthKey(S.period);
+    if(!selected){S.purchaseUsageRows=[];S.purchaseUsageUnits=[];S.purchaseUsageError='Periode belum tersedia.';return;}
+    var year=selected.slice(0,4),start=year+'-01-01',end=new Date(Date.UTC(Number(year),Number(selected.slice(5,7)),1)).toISOString().slice(0,10);
+    S.purchaseUsageLoading=true;S.purchaseUsageError='';S.purchaseUsageRows=[];S.purchaseUsageUnits=[];
+    try{
+      var path='ui_stock_purchase_usage_monthly_v1?'+qs({
+        select:'period_month,base_unit,purchase_qty,usage_qty,purchase_rows,usage_rows,purchase_skus,usage_skus,has_purchase_data,has_verified_usage_data,usage_data_status',
+        brand_id:'eq.'+BRAND,period_month:'gte.'+start
+      })+'&period_month=lt.'+end+'&order=period_month.asc,base_unit.asc';
+      var rows=await request(path);
+      if(seq!==S.purchaseUsageSeq)return;
+      S.purchaseUsageRows=Array.isArray(rows)?rows:[];
+      var units=Array.from(new Set(S.purchaseUsageRows.map(function(x){return String(x.base_unit||'').trim().toLowerCase();}).filter(Boolean))).sort();
+      S.purchaseUsageUnits=units;
+      if(!units.includes(S.purchaseUsageUnit))S.purchaseUsageUnit=units.includes('pcs')?'pcs':(units[0]||'');
+    }catch(e){
+      if(seq!==S.purchaseUsageSeq)return;
+      S.purchaseUsageRows=[];S.purchaseUsageUnits=[];
+      S.purchaseUsageError=e&&e.message?e.message:String(e);
+    }finally{
+      if(seq===S.purchaseUsageSeq){S.purchaseUsageLoading=false;render();}
+    }
+  }
+
+  function renderPurchaseUsageYtd(){
+    var units=S.purchaseUsageUnits||[],unit=S.purchaseUsageUnit||'';
+    var options=units.map(function(u){return '<option value="'+esc(u)+'"'+(u===unit?' selected':'')+'>'+esc(u.toUpperCase())+'</option>';}).join('');
+    var select='<label class="scytd-unit-select">Satuan <select id="scytdPurchaseUnit" aria-label="Pilih satuan kuantitas">'+(options||'<option value="">Belum ada satuan</option>')+'</select></label>';
+    if(S.purchaseUsageLoading&&!S.purchaseUsageRows.length)return select+'<div class="scytd-empty">Memuat pembelian dan pemakaian...</div>';
+    if(S.purchaseUsageError)return select+'<div class="scytd-empty"><b>Data belum dapat dimuat</b><span>'+esc(S.purchaseUsageError)+'</span></div>';
+    if(!unit)return select+'<div class="scytd-empty"><b>Data kuantitas belum tersedia</b><span>Belum ada transaksi pembelian yang masuk ledger dengan satuan teridentifikasi.</span></div>';
+    var rows=S.purchaseUsageRows.filter(function(x){return String(x.base_unit||'').toLowerCase()===unit;});
+    var selected=monthKey(S.period),year=selected.slice(0,4),last=Number(selected.slice(5,7));
+    var months=Array.from({length:last},function(_,i){return year+'-'+String(i+1).padStart(2,'0');});
+    var byMonth={};rows.forEach(function(x){byMonth[String(x.period_month).slice(0,7)]=x;});
+    var purchaseTotal=0,usageTotal=0,hasUsage=false,hasPurchase=false;
+    months.forEach(function(k){var r=byMonth[k];if(r){purchaseTotal+=Number(r.purchase_qty||0);usageTotal+=Number(r.usage_qty||0);hasPurchase=hasPurchase||Number(r.purchase_rows||0)>0;hasUsage=hasUsage||Number(r.usage_rows||0)>0;}});
+    var max=Math.max(1,...months.map(function(k){var r=byMonth[k]||{};return Math.max(Number(r.purchase_qty||0),Number(r.usage_qty||0));}));
+    var left=42,right=700,top=18,base=184,slot=(right-left)/Math.max(1,months.length),bar=Math.min(19,slot*.32),scale=(base-top)/max;
+    var grid=[0,.33,.66,1].map(function(f){var y=base-(base-top)*f;return '<line class="scytd-chart-grid" x1="'+left+'" y1="'+y+'" x2="'+right+'" y2="'+y+'"/><text class="scytd-chart-axis" x="'+(left-7)+'" y="'+(y+3)+'" text-anchor="end">'+fmt(max*f)+'</text>';}).join('');
+    var bars=months.map(function(k,i){
+      var r=byMonth[k]||{},p=Number(r.purchase_qty||0),u=Number(r.usage_qty||0),x=left+i*slot+slot/2;
+      var ph=p>0?Math.max(1,p*scale):0,uh=u>0?Math.max(1,u*scale):0;
+      var px=x-bar-1,ux=x+1;
+      var pbar=p>0?'<rect class="scytd-purchase-bar" x="'+px+'" y="'+(base-ph)+'" width="'+bar+'" height="'+ph+'" rx="3"><title>'+k+' · Pembelian: '+fmt(p)+' '+esc(unit)+'</title></rect>':'';
+      var ubar=u>0?'<rect class="scytd-usage-bar" x="'+ux+'" y="'+(base-uh)+'" width="'+bar+'" height="'+uh+'" rx="3"><title>'+k+' · Pemakaian BOM: '+fmt(u)+' '+esc(unit)+'</title></rect>':'';
+      var missing=!r||Number(r.usage_rows||0)===0;
+      return '<g>'+pbar+ubar+(missing?'<circle class="scytd-usage-missing" cx="'+(ux+bar/2)+'" cy="'+(base-3)+'" r="2.5"><title>'+k+' · Pemakaian BOM belum tersedia</title></circle>':'')+'<text class="scytd-chart-month" x="'+x+'" y="203" text-anchor="middle">'+['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'][i]+'</text></g>';
+    }).join('');
+    var legend='<div class="scytd-chart-legend"><span><i class="purchase"></i>Pembelian tercatat</span><span><i class="usage"></i>Pemakaian BOM terverifikasi</span></div>';
+    var status=hasUsage?'Pemakaian hanya mencakup transaksi dengan resep terverifikasi dan tanggal efektif. Bulan tanpa catatan ditandai belum tersedia.':'Belum ada pemakaian BOM yang memenuhi verifikasi dan tanggal efektif; bukan berarti pemakaian aktual nol.';
+    if(!hasPurchase)status+=' Belum ada pembelian yang tercatat di ledger untuk satuan ini.';
+    return select+legend+'<div class="scytd-quantity-summary"><span>Pembelian tercatat<strong>'+fmt(purchaseTotal)+' '+esc(unit)+'</strong></span><span>Pemakaian BOM '+(hasUsage?'terverifikasi':'belum tersedia')+'<strong>'+(hasUsage?fmt(usageTotal)+' '+esc(unit):'—')+'</strong></span></div><div class="scytd-quantity-chart"><svg viewBox="0 0 720 216" role="img" aria-label="Pembelian dan pemakaian stok dalam satuan '+esc(unit)+' dari Januari sampai '+esc(monthLabel(selected))+'">'+grid+bars+'</svg></div><p class="scytd-note">'+esc(status)+'</p><p class="scytd-note">Sumber pembelian adalah mutasi PURCHASE yang sudah masuk ledger. Transaksi yang belum diposting, satuan placeholder, konversi belum valid, dan estimasi BOM tidak dijumlahkan.</p>';
+  }
   function renderYtdAnalytics(){
     var period=esc(ytdRangeLabel());
     return '<div class="scytd-grid">'+
       '<article class="scytd-panel"><h3>1. Komposisi Kesehatan Stok</h3><small>Snapshot stok terkini · tidak tersedia historis per bulan</small>'+renderStockHealthYtd()+'</article>'+
       '<article class="scytd-panel"><h3>2. Akurasi Stok dan Hasil Opname</h3><small>Snapshot opname terakhir · tidak tersedia historis per bulan</small>'+renderStockAccuracyYtd()+'</article>'+
-      '<article class="scytd-panel"><h3>3. Pembelian vs Pemakaian Stok</h3><small>Menunggu sumber bulanan yang tervalidasi</small>'+renderPurchaseUsageYtd()+'</article>'+
+      '<article class="scytd-panel"><h3>3. Pembelian vs Pemakaian Stok</h3><small>Akumulasi '+period+' · kuantitas per satuan</small>'+renderPurchaseUsageYtd()+'</article>'+
       '<article class="scytd-panel"><h3>4. Aktivitas Mutasi Stok</h3><small>Akumulasi '+period+'</small>'+monthlyMovementActivityInfographic()+'</article>'+
-      '</div><div class="scytd-footnote">Dropdown periode mengatur grafik aktivitas mutasi. Dua panel snapshot belum memiliki rekonstruksi historis; pembelian vs pemakaian menunggu sumber bulanan yang dapat direkonsiliasi.</div>';
+      '</div><div class="scytd-footnote">Dropdown periode mengatur akumulasi Panel 3 dan Panel 4. Panel 1–2 adalah snapshot terkini; Panel 3 hanya menjumlahkan kuantitas dengan satuan teridentifikasi dan sumber ledger yang memenuhi validasi.</div>';
   }
 
   // HSN-424: keep the dashboard mounted while the independently rendered dialog
@@ -2942,6 +3005,9 @@
         var nextPeriod=monthKey(el.value);
         if(nextPeriod && nextPeriod!==S.ledgerPeriod){S.ledgerPeriod=nextPeriod;S.ledgerPage=1;S.ledger=[];S.ledgerLoading=false;++S.ledgerSeq;loadLedger();}
         return;
+      }
+      if(el.id==='scytdPurchaseUnit'){
+        S.purchaseUsageUnit=String(el.value||'').toLowerCase();render();return;
       }
       if(el.id==='sc21StockUnit'){
         S.chartUnit=el.value||'';
