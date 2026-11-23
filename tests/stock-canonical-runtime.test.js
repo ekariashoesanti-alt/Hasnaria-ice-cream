@@ -84,7 +84,7 @@ assert(!currentAndSafe.includes('event tercatat')&&!currentAndSafe.includes('akt
   'Event activity must not be mistaken for stock quantity');
 assert(greenCss.includes('.sc21-comparison-svg')&&greenCss.includes('.sc21-safe-bar')&&greenCss.includes('.sc21-current-bar'),
   'Comparison chart has scoped visual styles');
-assert(ui4.includes('/stock-control-v3.css?v=38'),'New stock chart stylesheet cache version is fresh');
+assert(ui4.includes('/stock-control-v3.css?v=39'),'New stock chart stylesheet cache version is fresh');
 assert(!ui4.includes('<div class="sc12-status-strip">')&&greenCss.includes('.sc12-status-strip'),
   'Crossed operational warning cards are not rendered on dashboard');
 
