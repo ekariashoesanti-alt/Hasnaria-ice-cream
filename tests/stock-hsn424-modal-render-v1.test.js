@@ -26,7 +26,7 @@ test('HSN-424 modal size and table density with local scroll and pager',()=>{
  assert.match(js,/S\.modal==='position'\?' sc424-position'/);
 });
 test('HSN-424 new asset pins and render preserve scroll when same dialog updates',()=>{
- assert.match(fs.readFileSync('index.html','utf8'),/stock-oneview-hsn821\.css\?v=4/);
+ assert.match(fs.readFileSync('index.html','utf8'),/stock-oneview-hsn821\.css\?v=5/);
  for(const p of ['stock-monitor.js','stock-v3-runtime-fix.js'])assert.match(fs.readFileSync(p,'utf8'),/stock-control-v3\.js\?v=44/);
  assert.match(render,/if\(sameMode\)/);
  assert.match(render,/body\.scrollTop=top/);
