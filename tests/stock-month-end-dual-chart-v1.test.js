@@ -73,7 +73,12 @@ test('May–July ledger activity is drawn separately from physical month-end sto
  assert.match(chart,/2026-07/);
  const loader=js.slice(js.indexOf('async function loadMonthlyMovementActivity()'),a);
  assert.match(loader,/inventory_movements/);
- assert.match(loader,/movement_date:'gte\\.'/);\n assert.match(loader,/movement_date=lt\\.'/);\n assert.match(loader,/requestExactCount\\(path\\)/);\n assert.match(js,/method:'HEAD'/);\n assert.match(js,/Prefer:'count=exact'/);\n assert.match(js,/content-range/);
+ assert.match(loader,/movement_date:'gte\\.'/);
+ assert.match(loader,/movement_date=lt\\.'/);
+ assert.match(loader,/requestExactCount\\(path\\)/);
+ assert.match(js,/method:'HEAD'/);
+ assert.match(js,/Prefer:'count=exact'/);
+ assert.match(js,/content-range/);
  assert.match(chart,/sc425-activity-bar/);
  assert.match(chart,/jumlah catatan mutasi/);
  assert.match(js,/loadMonthlyMovementActivity\(\)/);
