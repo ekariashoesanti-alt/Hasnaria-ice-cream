@@ -35,13 +35,13 @@ test('opening Stok only waits for reconciliation and actual monthly end trend',(
   assert.doesNotMatch(period,/loadMovingStatus\(S\.period\)/);
   assert.match(stock,/if\(!S\.auxLoaded&&!S\.auxLoading&&S\.modal==='position'\)scheduleAux\(seq\)/);
 });
-test('background reads do not rebuild both charts, while real data changes patch only one region',()=>{
+test('background reads patch the analytics region without rebuilding the full Stock shell',()=>{
   const render=range('function render() {','function stockDialogFocus(');
   assert.match(render,/if\(stable\)\{/);
   assert.match(render,/previous\.kpis!==kpiHtml/);
-  assert.match(render,/previous\.left!==trendHtml/);
-  assert.match(render,/previous\.right!==comparisonHtml/);
-  assert.match(render,/shell\.querySelector\('\.sc22-trend-panel'\)\.outerHTML=trendHtml/);
+  assert.match(render,/previous\.analytics!==analyticsHtml/);
+  assert.match(render,/shell\.querySelector\('\.sc5-dashboard'\)\.innerHTML=analyticsHtml/);
+  assert.doesNotMatch(render,/previous\.left|previous\.right|sc22-trend-panel|sc22-compare-panel/);
   assert.match(render,/shell\.__sc3LastHtml!==html/);
   assert.match(stock,/mount\(false\);/);
   assert.doesNotMatch(stock,/setTimeout\(function \(\) \{ watch\(\); mount\(true\); \}, 0\)/);
