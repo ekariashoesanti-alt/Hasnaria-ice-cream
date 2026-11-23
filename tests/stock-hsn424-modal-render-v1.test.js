@@ -9,8 +9,9 @@ test('HSN-424 stable dashboard and one independent overlay',()=>{
  assert.match(render,/var modalHtml=S\.correction\?correctionHtml:renderModal\(\)/);
  assert.match(render,/if\(previous\.modal!==modalHtml\)/);
  assert.match(render,/overlay\.innerHTML=modalHtml/);
- assert.match(render,/if\(previous\.left!==trendHtml\)/);
- assert.match(render,/if\(previous\.right!==comparisonHtml\)/);
+ assert.match(render,/if\(previous\.analytics!==analyticsHtml\)/);
+ assert.match(render,/shell\.querySelector\('\.sc5-dashboard'\)\.innerHTML=analyticsHtml/);
+ assert.doesNotMatch(render,/previous\.left|previous\.right|trendHtml|comparisonHtml/);
  assert.match(render,/finally\{host\.__sc3Rendering=false/);
  assert.doesNotMatch(render,/\brpc\(|\brequest\(/);
 });
