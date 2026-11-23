@@ -5,6 +5,7 @@ const fs=require('node:fs');
 const js=fs.readFileSync('stock-control-v3.js','utf8');
 const css=fs.readFileSync('stock-control-v3.css','utf8');
 const migration=fs.readFileSync('supabase/migrations/20261123170000_create_stock_purchase_usage_monthly_reporting_v1.sql','utf8');
+const aclMigration=fs.readFileSync('supabase/migrations/20261123173000_restrict_stock_purchase_usage_view_to_select.sql','utf8');
 
 test('panel 3 reads the period-scoped monthly reporting view and supports unit selection',()=>{
  assert.match(js,/async function loadPurchaseUsageYtd\(\)/);
@@ -35,6 +36,8 @@ test('reporting view is read-only, unit-qualified and security-invoker',()=>{
  assert.doesNotMatch(migration,/BOM_BASELINE_ESTIMATE_V1/);
  assert.match(migration,/revoke all .* from anon, public/i);
  assert.match(migration,/grant select .* to authenticated/i);
+ assert.match(aclMigration,/revoke all .* from anon, authenticated, public/i);
+ assert.match(aclMigration,/grant select .* to authenticated/i);
  assert.doesNotMatch(migration,/insert into public\.|update public\.|delete from public\./i);
 });
 
