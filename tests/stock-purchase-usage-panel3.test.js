@@ -17,12 +17,11 @@ test('panel 3 reads the period-scoped monthly reporting view and supports unit s
 });
 
 test('panel 3 does not represent missing verified BOM data as zero usage',()=>{
- assert.match(js,/hasVerifiedUsageData/); // view field consumed via row usage_rows
  assert.match(js,/Number\(r\.usage_rows\|\|0\)===0/);
+ assert.doesNotMatch(js,/BOM_BASELINE_ESTIMATE_V1/);
  assert.match(js,/Pemakaian BOM belum tersedia/);
  assert.match(js,/Belum ada pemakaian BOM yang memenuhi verifikasi/);
  assert.match(js,/BOM terverifikasi/);
- assert.match(js,/BOM_BASELINE_ESTIMATE_V1/===undefined ? /x/ : /x/); // no estimate marker is used as eligible source
  assert.doesNotMatch(js,/BOM_BASELINE_ESTIMATE_V1.*usageTotal/);
 });
 
@@ -33,7 +32,7 @@ test('reporting view is read-only, unit-qualified and security-invoker',()=>{
  assert.match(migration,/rv\.status = 'verified'/);
  assert.match(migration,/rv\.effective_from <= s\.sold_at/);
  assert.match(migration,/base_unit/);
- assert.match(migration,/BOM_BASELINE_ESTIMATE_V1/===undefined ? /x/ : /x/);
+ assert.doesNotMatch(migration,/BOM_BASELINE_ESTIMATE_V1/);
  assert.match(migration,/revoke all .* from anon, public/i);
  assert.match(migration,/grant select .* to authenticated/i);
  assert.doesNotMatch(migration,/insert into public\.|update public\.|delete from public\./i);
