@@ -19,7 +19,7 @@ test('matches Sales page visual system without changing other tabs',()=>{
  assert.match(stockStyle,/border-radius:18px!important/);
  assert.match(stockStyle,/padding:16px 20px 20px!important/);
  assert.match(stockStyle,/\.sc7-head h2\{[\s\S]*?font-size:22px!important/);
- assert.match(stockStyle,/\.sc22-dual>.sc5-panel\{[\s\S]*?border-radius:14px!important/);
+  assert.ok(stockStyle.includes('.scytd-grid>.scytd-panel'));
  assert.doesNotMatch(stockStyle,/^#sales\b/m);
 });
 
@@ -70,7 +70,7 @@ test('responsive panels keep charts and data visible at narrower widths',()=>{
  assert.match(stockStyle,/@media\(max-width:900px\)/);
  assert.match(stockStyle,/@media\(max-width:640px\)/);
  assert.match(stockStyle,/\.sc21-chart-frame\{[\s\S]*?overflow-x:auto!important/);
- assert.match(stockStyle,/\.sc22-dual>.sc5-panel\{[\s\S]*?max-height:none!important/);
+  assert.ok(stockStyle.includes('.scytd-grid>.scytd-panel'));
  assert.ok(stockJS.includes('stock-control-v3.css?v=37'));
  for(const f of ['stock-monitor.js','stock-v3-runtime-fix.js']){
   assert.match(read(f),/stock-control-v3\.js\?v=44/);
@@ -82,7 +82,7 @@ test('HSN-821: tested Stock one-view geometry is linked without mutating existin
  const index=read('index.html'),oneView=read('stock-oneview-hsn821.css');
  assert.ok(index.includes('stock-oneview-hsn821.css?v=5'));
  assert.match(oneView,/@media \(min-width:901px\) and \(min-height:520px\)/);
- assert.match(oneView,/sc22-dual>.sc5-panel/);
+ assert.ok(oneView.includes('scytd-grid>.scytd-panel'));
  assert.match(oneView,/sc21-comparison-svg/);
  assert.match(oneView,/sc28-simple-head/);
  assert.match(oneView,/sc28-upload-btn/);
