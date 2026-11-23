@@ -2604,3 +2604,36 @@
 /* Monthly ledger activity chart */
 #stok .sc425-activity-bar{fill:#16845b;stroke:#fff;stroke-width:2}
 #stok .sc425-trend-toggle [data-sc425-mode="activity"]{font-weight:800}
+
+/* Four-panel YTD stock analytics — existing Hasnaria green/teal palette. */
+#stok .scytd-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:8px}
+#stok .scytd-panel{min-width:0;min-height:205px;padding:11px 12px;border:1px solid #dce8e3;border-radius:12px;background:#fff;color:#173c31}
+#stok .scytd-panel h3{margin:0 0 3px;font-size:11px;line-height:1.2;color:#173f33}
+#stok .scytd-panel>small{display:block;margin-bottom:10px;color:#819089;font-size:7.5px}
+#stok .scytd-total{display:flex;align-items:baseline;gap:7px;margin:2px 0 9px}
+#stok .scytd-total strong{font-size:24px;color:#12634e}
+#stok .scytd-total span,.scytd-note{font-size:7px;color:#7e8c85}
+#stok .scytd-health-row{display:grid;grid-template-columns:1fr auto 44px;gap:6px;align-items:center;margin:6px 0;font-size:8px}
+#stok .scytd-health-row>span{display:flex;align-items:center;gap:5px;color:#36574b}
+#stok .scytd-health-row>span>i{width:8px;height:8px;border-radius:3px}
+#stok .scytd-health-row>b{font-size:8px;color:#294b40}
+#stok .scytd-health-row>em{text-align:right;font-style:normal;color:#7c8b84;font-size:7px}
+#stok .scytd-health-row>div{grid-column:1/-1;height:5px;border-radius:10px;background:#eef3f0;overflow:hidden}
+#stok .scytd-health-row>div>i{display:block;height:100%;border-radius:10px}
+#stok .scytd-score{display:flex;align-items:baseline;gap:8px;margin:10px 0}
+#stok .scytd-score strong{font-size:27px;color:#12634e}
+#stok .scytd-score span{font-size:8px;color:#64766e}
+#stok .scytd-progress{height:9px;border-radius:12px;background:#edf2ef;overflow:hidden}
+#stok .scytd-progress i{display:block;height:100%;background:#168363;border-radius:12px}
+#stok .scytd-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:12px}
+#stok .scytd-metrics span{padding:7px;border:1px solid #e4ece8;border-radius:8px;color:#7c8b84;font-size:7px}
+#stok .scytd-metrics b{display:block;margin-top:3px;color:#244b3d;font-size:11px}
+#stok .scytd-note{margin:9px 0 0;line-height:1.4}
+#stok .scytd-empty{min-height:125px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:7px;padding:12px;text-align:center;color:#718179;font-size:8px;line-height:1.5}
+#stok .scytd-empty b{color:#49665b}
+#stok .scytd-footnote{margin-top:7px;padding:7px 9px;border:1px solid #dce8e3;border-radius:8px;background:#f5faf7;color:#64766e;font-size:7px}
+#stok .scytd-panel .sc22-month-end{margin:0;padding:0;border:0;background:transparent}
+#stok .scytd-panel .sc22-summary-note{font-size:6.5px}
+#stok .scytd-panel .sc22-plot{margin-top:2px}
+@media(max-width:760px){#stok .scytd-grid{grid-template-columns:1fr}#stok .scytd-panel{min-height:180px}}
+@media(min-width:901px){#stok .scytd-grid{gap:6px;margin-top:5px}#stok .scytd-panel{min-height:170px;padding:8px 9px;border-radius:9px}#stok .scytd-panel h3{font-size:9px}#stok .scytd-panel>small{margin-bottom:6px;font-size:6px}#stok .scytd-total strong{font-size:19px}#stok .scytd-health-row{margin:4px 0;font-size:7px}#stok .scytd-score strong{font-size:22px}#stok .scytd-metrics{margin-top:8px}#stok .scytd-footnote{padding:5px 7px;font-size:6px}}
