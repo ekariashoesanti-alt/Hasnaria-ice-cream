@@ -56,7 +56,8 @@ test('Audit stays inside existing scrollable Formula modal and Stock dashboard k
  assert.match(b,/stock-control-v3\.js\?v=44/);
   const dashboard=section('function render() {','function stockDialogFocus(');
   assert.ok(dashboard.includes('renderYtdAnalytics()'),'main dashboard mounts the four-panel YTD renderer');
-  assert.ok(dashboard.includes('scytd-grid'),'main dashboard keeps the two-by-two YTD grid');
+  const analytics=js.slice(js.indexOf('function renderYtdAnalytics(){'),js.indexOf('// HSN-424:',js.indexOf('function renderYtdAnalytics(){')));
+  assert.ok(analytics.includes('scytd-grid'),'analytics renderer contains the two-by-two YTD grid');
   assert.ok(!dashboard.includes('sc22-dual'),'retired two-chart wrapper is not mounted');
  assert.doesNotMatch(dashboard,/loadIntegrationAudit\(/);
 });
