@@ -9,17 +9,17 @@ const css=read('stock-control-v3.css');
 const overrides=css.slice(css.indexOf('/* Stock visual integrity 2026-10-30.'));
 const stockSnippet=(start,end)=>{const a=js.indexOf(start),b=js.indexOf(end,a+1);assert.ok(a>=0&&b>a,start+' / '+end);return js.slice(a,b)};
 
-test('keeps 4 KPIs and precisely two requested responsive panels',()=>{
+test('four YTD analytics panels render through the dedicated analytics renderer',()=>{
   assert.match(js,/Ringkasan empat KPI stok/);
   const render=js.slice(js.indexOf('function render() {'),js.indexOf('function stockDialogFocus(',js.indexOf('function render() {')));
-  assert.match(render,/renderYtdAnalytics\(\)/);
-  assert.match(render,/scytd-grid/);
-  assert.match(render,/scytd-panel/);
+  assert.match(render,/renderYtdAnalytics\\(\\)/);
   assert.doesNotMatch(render,/sc12-status-strip|sc6-top-panel|sc15-moving-panel|sc6-category-panel/);
-  assert.match(css,/#stok \.scytd-grid/);
-  assert.match(css, /grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
+  const analytics=js.slice(js.indexOf('function renderYtdAnalytics(){'),js.indexOf('// HSN-424:',js.indexOf('function renderYtdAnalytics(){')));
+  assert.match(analytics,/scytd-grid/);
+  assert.match(analytics,/scytd-panel/);
+  assert.match(css,/#stok \\.scytd-grid/);
+  assert.match(css, /grid-template-columns:repeat\\(2,minmax\\(0,1fr)\\)/);
 });
-
 test('prevents fixed-height clipping and keeps SVG labels/legend/rows visible',()=>{
   assert.ok(overrides.length>5500,'scoped override exists');
   assert.match(overrides,/height:auto!important;min-height:100%!important;max-height:none!important/);
