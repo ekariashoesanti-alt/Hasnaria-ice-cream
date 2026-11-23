@@ -86,13 +86,13 @@ test('YTD stock dashboard uses four panels and keeps warning in Owner audit',()=
  assert.ok(js.includes('renderYtdAnalytics()'));
  assert.ok(js.includes('scytd-grid'));
  assert.ok(js.includes('scytd-panel'));
- assert.doesNotMatch(js,/monthlyTrendInfographic\\(\\)/);
- assert.doesNotMatch(js,/renderStockIntegrityWarning\\(\\) \\+/);
+ assert.ok(!js.includes('monthlyTrendInfographic()'));
+ assert.ok(!js.includes('renderStockIntegrityWarning() +'));
  assert.match(js,/data-sc4-modal="formula-audit"/);
  assert.match(js,/Saldo stok belum terverifikasi penuh/);
- assert.match(js,/stock-control-v3\\.css\\?v=37/);
+ assert.ok(js.includes('stock-control-v3.css?v=37'));
  for(const f of ['stock-monitor.js','stock-v3-runtime-fix.js']){
-  assert.match(fs.readFileSync(f,'utf8'),/stock-control-v3\\.js\\?v=44/);
+  assert.ok(fs.readFileSync(f,'utf8').includes('stock-control-v3.js?v=44'));
  }
  assert.ok(css.includes('#stok .scytd-grid'));
  assert.ok(css.includes('#stok .scytd-panel'));
