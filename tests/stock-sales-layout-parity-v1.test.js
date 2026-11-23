@@ -55,21 +55,23 @@ test('four existing KPI values and chart computations are unchanged; KPI CSS is 
  assert.match(stockStyle,/\.sc8-kpi \.sc8-kpi-note\{[\s\S]*?white-space:normal!important/);
  const render=stockJS.slice(stockJS.indexOf('function render() {'),stockJS.indexOf('function stockDialogFocus(',stockJS.indexOf('function render() {')));
  assert.match(render,/overviewKpis\(\)/);
- assert.match(render,/monthlyStockEndInfographic\(\)/);
- assert.match(render,/stockSafetyInfographic\(\)/);
+ assert.ok(render.includes('renderYtdAnalytics()'));
+ assert.ok(!render.includes('sc22-dual'));
+ assert.ok(!render.includes('stockSafetyInfographic()'));
  assert.doesNotMatch(render,/lowestStockFive\(|renderSalesStockAudit\(/);
  assert.match(stockJS,/ui_stock_month_end_trend_v1/);
  assert.match(stockJS,/inventory_stock_reconciliation/);
 });
 
 test('responsive panels keep charts and data visible at narrower widths',()=>{
- assert.match(stockStyle,/\.sc22-dual\{[\s\S]*?grid-template-columns:minmax\(0,1\.25fr\) minmax\(0,1fr\)/);
+ assert.ok(stockStyle.includes('.scytd-grid'));
+ assert.ok(stockStyle.includes('grid-template-columns:repeat(2,minmax(0,1fr))'));
  assert.match(stockStyle,/@media\(max-width:1050px\)/);
  assert.match(stockStyle,/@media\(max-width:900px\)/);
  assert.match(stockStyle,/@media\(max-width:640px\)/);
  assert.match(stockStyle,/\.sc21-chart-frame\{[\s\S]*?overflow-x:auto!important/);
  assert.match(stockStyle,/\.sc22-dual>.sc5-panel\{[\s\S]*?max-height:none!important/);
- assert.match(stockJS,/stock-control-v3\.css\?v=36/);
+ assert.ok(stockJS.includes('stock-control-v3.css?v=37'));
  for(const f of ['stock-monitor.js','stock-v3-runtime-fix.js']){
   assert.match(read(f),/stock-control-v3\.js\?v=44/);
  }
@@ -78,7 +80,7 @@ test('responsive panels keep charts and data visible at narrower widths',()=>{
 
 test('HSN-821: tested Stock one-view geometry is linked without mutating existing calculations',()=>{
  const index=read('index.html'),oneView=read('stock-oneview-hsn821.css');
- assert.match(index,/stock-oneview-hsn821\.css\?v=4/);
+ assert.ok(index.includes('stock-oneview-hsn821.css?v=5'));
  assert.match(oneView,/@media \(min-width:901px\) and \(min-height:520px\)/);
  assert.match(oneView,/sc22-dual>.sc5-panel/);
  assert.match(oneView,/sc21-comparison-svg/);
