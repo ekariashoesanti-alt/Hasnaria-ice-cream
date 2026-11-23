@@ -51,16 +51,18 @@ test('empty or unavailable history shows explanation instead of numeric zero',()
 });
 test('four YTD analytics panels render with selected-period range',()=>{
  const body=js.slice(js.indexOf('function render() {'),js.indexOf('function stockDialogFocus(',js.indexOf('function render() {')));
- assert.match(body,/overviewKpis\(\)/);
- assert.match(body,/renderYtdAnalytics\(\)/);
- assert.match(body,/scytd-grid/);
- assert.match(js,/1 Januari–/);
- assert.match(js,/length:lastMonth/);
- assert.match(css,/#stok \.scytd-grid/);
- assert.match(css,/#stok \.scytd-panel/);
- assert.match(css, /@media\(max-width:760px\)/);
- assert.match(js,/stock-control-v3\.css\?v=37/);
- for(const f of ['stock-monitor.js','stock-v3-runtime-fix.js'])assert.match(fs.readFileSync(f,'utf8'),/stock-control-v3\.js\?v=44/);
+ assert.ok(body.includes('overviewKpis()'));
+ assert.ok(body.includes('renderYtdAnalytics()'));
+ const analytics=js.slice(js.indexOf('function renderYtdAnalytics(){'),js.indexOf('// HSN-424:',js.indexOf('function renderYtdAnalytics(){')));
+ assert.ok(analytics.includes('scytd-grid'));
+ assert.ok(analytics.includes('scytd-panel'));
+ assert.ok(js.includes('1 Januari–'));
+ assert.ok(js.includes('length:lastMonth'));
+ assert.ok(css.includes('#stok .scytd-grid'));
+ assert.ok(css.includes('#stok .scytd-panel'));
+ assert.ok(css.includes('@media(max-width:760px)'));
+ assert.ok(js.includes('stock-control-v3.css?v=37'));
+ for(const f of ['stock-monitor.js','stock-v3-runtime-fix.js'])assert.ok(fs.readFileSync(f,'utf8').includes('stock-control-v3.js?v=44'));
 });
 test('ledger activity is counted for every month from January through selected period',()=>{
  const a=js.indexOf('function monthlyMovementActivityInfographic(){');
