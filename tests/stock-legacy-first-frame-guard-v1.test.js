@@ -55,8 +55,8 @@ test('versioned runtime prevents browser from using outdated Owner navigation an
 });
 test('old renderer block is presentation-only; stock calculation paths remain untouched',()=>{
  const main=source('stock-control-v3.js');
- for(const s of ['inventory_stock_reconciliation','ui_stock_month_end_trend_v1','Stok Saat Ini vs Batas Aman','Tren Stok Akhir Bulanan']){
+ for(const s of ['inventory_stock_reconciliation','ui_stock_month_end_trend_v1','Komposisi Kesehatan Stok','Aktivitas Mutasi Stok']){
   assert.ok(main.includes(s),s);
  }
- assert.match(main,/stock-control-v3\.css\?v=36/);
+ assert.match(main,/stock-control-v3\.css\?v=38/);
 });

@@ -27,8 +27,9 @@ test('latest physical observation only; no synthetic historical line',()=>{
 test('aligned 4:2 common grid gap, retained existing chart and read-only paths',()=>{
  assert.match(css,/grid-template-columns:repeat\(4,minmax\(0,1fr\)\)!important;gap:8px!important/);
  assert.match(css,/grid-template-columns:repeat\(2,minmax\(0,1fr\)\)!important;gap:8px!important/);
- assert.match(js,/S\.trendMode==='qty'\?monthlyStockEndInfographic\(\):stockValueTrendInfographic\(\)/);
- assert.match(js,/stockComparison=stockSafetyInfographic\(\)/);
+ assert.ok(js.includes('renderYtdAnalytics()'));
+ assert.ok(js.includes('function renderYtdAnalytics(){'));
+ assert.ok(!js.includes('stockComparison=stockSafetyInfographic()'));
  const read=js.slice(js.indexOf('async function readStockValueHistory'),a);
  assert.match(read,/inventory_verified_cost_current/);assert.match(read,/inventory_stock_opname/);assert.match(read,/inventory_movements/);
  assert.doesNotMatch(read,/\brpc\(|\b(?:INSERT|DELETE|PATCH|UPSERT)\b/);

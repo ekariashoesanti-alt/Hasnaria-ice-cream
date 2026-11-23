@@ -17,10 +17,10 @@ const ui4=fs.readFileSync('stock-control-v3.js','utf8');
 assert(ui4.includes('__HASNARIA_STOCK_UI4'),'Stock UI-4 runtime marker must be present');
 assert(ui4.includes('ui_stock_month_end_trend_v1')&&ui4.includes('inventory_stock_reconciliation')&&ui4.includes('ui_stock_detail_v1'),'Stock uses the needed month-end series, reconciliation, and ledger details');
 assert(ui4.includes('data-sc4-modal="ledger"')&&ui4.includes('data-sc4-action="opname"'),'Stock UI-4 must keep ledger detail and direct opname actions');
-assert(ui4.includes('sc6-dashboard') && ui4.includes('stockSafetyInfographic()'),'Stock dashboard must show current system stock and per-SKU minimum');
-assert(ui4.includes('sc22-dual')&&ui4.includes('sc22-trend-panel')&&ui4.includes('sc22-compare-panel'),'Stock uses only two requested panels');
-assert(ui4.indexOf('sc22-trend-panel')<ui4.indexOf('sc22-compare-panel'),'Monthly end balance on left, current vs safe on right');
-assert(ui4.includes('monthlyStockEndInfographic()')&&ui4.includes('stockSafetyInfographic()'),'Visible charts must use monthly computed data and current ledger');
+assert(ui4.includes('sc6-dashboard') && ui4.includes('renderYtdAnalytics()'),'Stock dashboard mounts the YTD analytics renderer');
+assert(ui4.includes('scytd-grid')&&ui4.includes('scytd-panel'),'Stock dashboard uses the four-panel YTD layout');
+assert(!ui4.includes('sc22-trend-panel')&&!ui4.includes('sc22-compare-panel'),'Retired two-panel chart wrappers are not mounted');
+assert(ui4.includes('function monthlyStockEndInfographic(){')&&ui4.includes('function stockSafetyInfographic(){'),'Legacy calculation helpers remain available for audit-safe calculations');
 assert(!ui4.includes('sc5-grid-bottom'),'Removed obsolete lower infographic row');
 assert(ui4.includes('inventory_valuation_verified_summary')&&ui4.includes('inventory_verified_cost_current'),'Stock value must use verified unit costs only');
 assert(ui4.includes('Valuasi parsial')&&ui4.includes('Bukan total nilai seluruh persediaan'),'Incomplete value coverage must be disclosed');
@@ -84,7 +84,7 @@ assert(!currentAndSafe.includes('event tercatat')&&!currentAndSafe.includes('akt
   'Event activity must not be mistaken for stock quantity');
 assert(greenCss.includes('.sc21-comparison-svg')&&greenCss.includes('.sc21-safe-bar')&&greenCss.includes('.sc21-current-bar'),
   'Comparison chart has scoped visual styles');
-assert(ui4.includes('/stock-control-v3.css?v=36'),'New stock chart stylesheet cache version is fresh');
+assert(ui4.includes('/stock-control-v3.css?v=38'),'New stock chart stylesheet cache version is fresh');
 assert(!ui4.includes('<div class="sc12-status-strip">')&&greenCss.includes('.sc12-status-strip'),
   'Crossed operational warning cards are not rendered on dashboard');
 

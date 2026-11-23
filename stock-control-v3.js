@@ -259,7 +259,7 @@
     var l = document.createElement('link');
     l.id = 'stock-control-v3-css';
     l.rel = 'stylesheet';
-    l.href = '/stock-control-v3.css?v=36';
+    l.href = '/stock-control-v3.css?v=38';
     document.head.appendChild(l);
   }
 
@@ -1006,7 +1006,9 @@
     // and avoid PostgREST page limits for this read-only historical chart.
     var movementSeq=(S.monthlyMovementSeq||0)+1;
     S.monthlyMovementSeq=movementSeq;
-    var months=['2026-05','2026-06','2026-07'];
+    var selected=monthKey(S.period)||'2026-01';
+    var year=Number(selected.slice(0,4)),lastMonth=Number(selected.slice(5,7));
+    var months=Array.from({length:lastMonth},function(_,i){return year+'-'+String(i+1).padStart(2,'0');});
     S.monthlyMovementLoading=true;S.monthlyMovementError='';
     try{
       var rows=await Promise.all(months.map(async function(k){
@@ -1028,17 +1030,17 @@
   }
 
   function monthlyMovementActivityInfographic(){
-    if(S.monthlyMovementLoading&&!S.monthlyMovementRows.length)return '<div class="sc22-empty"><b>Memuat aktivitas mutasi Mei–Juli 2026…</b></div>';
+    if(S.monthlyMovementLoading&&!S.monthlyMovementRows.length)return '<div class="sc22-empty"><b>Memuat aktivitas mutasi '+esc(ytdRangeLabel())+'…</b></div>';
     if(S.monthlyMovementError)return '<div class="sc22-empty"><b>Aktivitas mutasi belum dapat dimuat</b><small>'+esc(S.monthlyMovementError)+'</small></div>';
-    var names={'2026-05':'Mei 2026','2026-06':'Juni 2026','2026-07':'Juli 2026'};
-    var rows=['2026-05','2026-06','2026-07'].map(function(k){return (S.monthlyMovementRows||[]).find(function(x){return x.period===k;})||{period:k,count:0};});
+    var rows=(S.monthlyMovementRows||[]).slice().sort(function(a,b){return a.period.localeCompare(b.period);});
+    var names={};rows.forEach(function(x){names[x.period]=monthLabel(x.period);});
     var max=Math.max.apply(null,rows.map(function(x){return x.count;}));
-    if(!max)return '<div class="sc22-empty"><b>Belum ada baris mutasi pada periode ini</b></div>';
-    var left=90,right=690,base=215,top=48,slot=200,bar=86,scale=(base-top)/max;
+    if(!max)return '<div class="sc22-empty"><b>Tidak ada baris mutasi tercatat pada '+esc(ytdRangeLabel())+'</b></div>';
+    var left=64,right=720,base=215,top=48,slot=(right-left)/Math.max(rows.length,1),bar=Math.min(46,slot*.58),scale=(base-top)/max;
     var grid=[0,.25,.5,.75,1].map(function(f){var y=base-(base-top)*f;return '<line class="sc22-gridline" x1="'+left+'" y1="'+y+'" x2="'+right+'" y2="'+y+'"/><text class="sc22-axis-label" x="'+(left-10)+'" y="'+(y+4)+'" text-anchor="end">'+fmt(Math.round(max*f))+'</text>';}).join('');
-    var bars=rows.map(function(x,i){var h=x.count*scale,xx=left+35+i*slot,yy=base-h;return '<g><title>'+names[x.period]+': '+fmt(x.count)+' baris mutasi ledger</title><rect class="sc425-activity-bar" x="'+xx+'" y="'+yy+'" width="'+bar+'" height="'+h+'" rx="8"/><text class="sc22-point-value" x="'+(xx+bar/2)+'" y="'+Math.max(30,yy-10)+'" text-anchor="middle">'+fmt(x.count)+'</text><text class="sc22-month-label" x="'+(xx+bar/2)+'" y="245" text-anchor="middle">'+names[x.period]+'</text></g>';}).join('');
+    var bars=rows.map(function(x,i){var h=x.count*scale,xx=left+i*slot+(slot-bar)/2,yy=base-h;return '<g><title>'+names[x.period]+': '+fmt(x.count)+' baris mutasi ledger</title><rect class="sc425-activity-bar" x="'+xx+'" y="'+yy+'" width="'+bar+'" height="'+h+'" rx="5"/><text class="sc22-point-value" x="'+(xx+bar/2)+'" y="'+Math.max(30,yy-8)+'" text-anchor="middle">'+fmt(x.count)+'</text><text class="sc22-month-label" x="'+(xx+bar/2)+'" y="245" text-anchor="middle">'+String(names[x.period]||'').slice(0,3)+'</text></g>';}).join('');
     var total=rows.reduce(function(a,x){return a+x.count;},0);
-    return '<div class="sc22-month-end"><div class="sc22-summary"><span>Aktivitas mutasi · jumlah baris ledger</span><strong>'+fmt(total)+' <small>mutasi</small></strong></div><div class="sc22-summary-note">Mei–Juli 2026 · sumber riwayat mutasi produksi · bukan saldo fisik</div><div class="sc22-plot"><svg class="sc22-plot-svg" viewBox="0 0 740 269" role="img" aria-label="Jumlah baris mutasi ledger Mei sampai Juli 2026">'+grid+bars+'</svg></div><p class="sc22-chart-note">Grafik menunjukkan <b>jumlah catatan mutasi</b> per bulan dari ledger. Angka ini bukan kuantitas stok dan tidak menggantikan hasil opname.</p></div>';
+    return '<div class="sc22-month-end"><div class="sc22-summary"><span>Aktivitas mutasi · jumlah baris ledger</span><strong>'+fmt(total)+' <small>mutasi</small></strong></div><div class="sc22-summary-note">'+esc(ytdRangeLabel())+' · sumber riwayat mutasi produksi · bukan saldo fisik</div><div class="sc22-plot"><svg class="sc22-plot-svg" viewBox="0 0 740 269" role="img" aria-label="Jumlah baris mutasi ledger '+esc(ytdRangeLabel())+'">'+grid+bars+'</svg></div><p class="sc22-chart-note">Grafik menunjukkan <b>jumlah catatan mutasi</b> per bulan dari ledger. Angka ini bukan kuantitas stok dan tidak menggantikan hasil opname.</p></div>';
   }
 
   async function loadLedger() {
@@ -2633,6 +2635,32 @@
       '</div><p class="sc5-caption">Data kedaluwarsa dan valuasi belum ditampilkan tanpa sumber terverifikasi.</p>';
   }
 
+  function ytdRangeLabel(){var k=monthKey(S.period);return k?'1 Januari–'+monthLabel(k):'Periode belum tersedia';}
+  function renderStockHealthYtd(){
+    var rows=S.raw||[],counts={ok:0,order:0,critical:0,untracked:0};
+    rows.forEach(function(x){var s=initialStatus(x);counts[s]=(counts[s]||0)+1;});
+    var total=rows.length||0;if(!total)return '<div class="scytd-empty">Menunggu data SKU.</div>';
+    var colors={ok:'#168363',order:'#d3a13a',critical:'#c65a4a',untracked:'#aab5af'};
+    var parts=Object.keys(counts).map(function(k){var n=counts[k]||0;return '<div class="scytd-health-row"><span><i style="background:'+colors[k]+'"></i>'+({ok:'Aman',order:'Menipis',critical:'Kritis',untracked:'Belum terlacak'}[k])+'</span><b>'+fmt(n)+' SKU</b><em>'+((n/total)*100).toFixed(1).replace('.',',')+'%</em><div><i style="width:'+(n/total*100)+'%;background:'+colors[k]+'"></i></div></div>';}).join('');
+    return '<div class="scytd-total"><strong>'+fmt(total)+'</strong><span>total SKU terdaftar</span></div>'+parts+'<p class="scytd-note">Snapshot stok sistem saat ini; bukan agregasi mutasi bulanan.</p>';
+  }
+  function renderStockAccuracyYtd(){
+    var rows=(S.raw||[]).filter(function(x){return !!x.tracking_active&&!!x.last_opname_date;});
+    if(!rows.length)return '<div class="scytd-empty">Belum ada hasil opname valid yang tersedia.</div>';
+    var exact=rows.filter(function(x){return Math.abs(num(x.last_variance))<0.00001;}).length,pct=exact/rows.length*100;
+    return '<div class="scytd-score"><strong>'+pct.toFixed(1).replace('.',',')+'%</strong><span>kecocokan pada opname terakhir yang tercatat</span></div><div class="scytd-progress"><i style="width:'+pct+'%"></i></div><div class="scytd-metrics"><span>SKU sudah opname <b>'+fmt(rows.length)+'</b></span><span>Sesuai sistem <b>'+fmt(exact)+'</b></span><span>Memiliki selisih <b>'+fmt(rows.length-exact)+'</b></span></div><p class="scytd-note">Snapshot opname terakhir; bukan tren historis bulanan atau persentase kuantitas fisik.</p>';
+  }
+  function renderPurchaseUsageYtd(){return '<div class="scytd-empty"><b>Data pembelian vs pemakaian bulanan belum tersedia.</b><span>Grafik menunggu sumber transaksi pembelian dan pemakaian BOM yang dapat direkonsiliasi per bulan. Tidak ditampilkan angka estimasi.</span></div>';}
+  function renderYtdAnalytics(){
+    var period=esc(ytdRangeLabel());
+    return '<div class="scytd-grid">'+
+      '<article class="scytd-panel"><h3>1. Komposisi Kesehatan Stok</h3><small>Snapshot stok terkini · tidak tersedia historis per bulan</small>'+renderStockHealthYtd()+'</article>'+
+      '<article class="scytd-panel"><h3>2. Akurasi Stok dan Hasil Opname</h3><small>Snapshot opname terakhir · tidak tersedia historis per bulan</small>'+renderStockAccuracyYtd()+'</article>'+
+      '<article class="scytd-panel"><h3>3. Pembelian vs Pemakaian Stok</h3><small>Menunggu sumber bulanan yang tervalidasi</small>'+renderPurchaseUsageYtd()+'</article>'+
+      '<article class="scytd-panel"><h3>4. Aktivitas Mutasi Stok</h3><small>Akumulasi '+period+'</small>'+monthlyMovementActivityInfographic()+'</article>'+
+      '</div><div class="scytd-footnote">Dropdown periode mengatur grafik aktivitas mutasi. Dua panel snapshot belum memiliki rekonstruksi historis; pembelian vs pemakaian menunggu sumber bulanan yang dapat direkonsiliasi.</div>';
+  }
+
   // HSN-424: keep the dashboard mounted while the independently rendered dialog
   // changes. Never leave a previous dialog or a correction behind the next one.
   function render() {
@@ -2651,27 +2679,21 @@
       var alert=S.error?'<div class="sc3-alert">'+esc(S.error)+'</div>':'';
       var loading=S.baseLoading&&!S.baseLoaded?'<div class="sc3-loading">Memuat posisi SKU terkini…</div>':'';
       var headerHtml=renderHeader(),correctionHtml=renderCorrectionPanel();
-      var kpiHtml=overviewKpis(),stockComparison=stockSafetyInfographic();
-      var trendTitle=S.trendMode==='activity'?'Aktivitas Mutasi Mei–Juli': 'Tren Stok Akhir Bulanan';
-      var trendHtml='<article class="sc5-panel sc22-trend-panel"><div class="sc425-trend-head"><h3>↗ '+trendTitle+'</h3>'+
-        '<div class="sc425-trend-toggle"><button type="button" data-sc425-mode="qty" aria-pressed="'+(S.trendMode==='qty')+'">Kuantitas</button>'+
-        '<button type="button" data-sc425-mode="activity" aria-pressed="'+(S.trendMode==='activity')+'">Mutasi</button></div></div>'+
-        (S.trendMode==='activity'?monthlyMovementActivityInfographic():S.trendMode==='qty'?monthlyStockEndInfographic():stockValueTrendInfographic())+'</article>';
-      var comparisonHtml='<article class="sc5-panel sc22-compare-panel"><h3>▥ Stok Saat Ini vs Batas Aman</h3>'+stockComparison+'</article>';
+      var kpiHtml=overviewKpis();
+      var analyticsHtml=renderYtdAnalytics();
       var noticeHtml=(S.correction?'':correctionHtml)+pAlert+alert+loading;
       var modalHtml=S.correction?correctionHtml:renderModal();
       var mode=S.correction?'correction':S.modal||'';
-      var currentParts={header:headerHtml,kpis:kpiHtml,left:trendHtml,right:comparisonHtml,notice:noticeHtml,modal:modalHtml,mode:mode};
+      var currentParts={header:headerHtml,kpis:kpiHtml,analytics:analyticsHtml,notice:noticeHtml,modal:modalHtml,mode:mode};
       var previous=shell.__sc3Parts;
       var stable=previous&&shell.querySelector('.sc28-simple-head')&&
-        shell.querySelector('.sc8-kpis')&&shell.querySelector('.sc22-trend-panel')&&
-        shell.querySelector('.sc22-compare-panel')&&shell.querySelector('.sc424-notices')&&
+        shell.querySelector('.sc8-kpis')&&shell.querySelector('.sc5-dashboard')&&
+        shell.querySelector('.sc424-notices')&&
         shell.querySelector('.sc424-overlay');
       if(stable){
         if(previous.header!==headerHtml)shell.querySelector('.sc28-simple-head').outerHTML=headerHtml;
         if(previous.kpis!==kpiHtml)shell.querySelector('.sc8-kpis').outerHTML=kpiHtml;
-        if(previous.left!==trendHtml)shell.querySelector('.sc22-trend-panel').outerHTML=trendHtml;
-        if(previous.right!==comparisonHtml)shell.querySelector('.sc22-compare-panel').outerHTML=comparisonHtml;
+        if(previous.analytics!==analyticsHtml)shell.querySelector('.sc5-dashboard').innerHTML=analyticsHtml;
         if(previous.notice!==noticeHtml)shell.querySelector('.sc424-notices').innerHTML=noticeHtml;
         var overlay=shell.querySelector('.sc424-overlay');
         if(previous.modal!==modalHtml){
@@ -2696,7 +2718,7 @@
       }else{
         var html=headerHtml+kpiHtml+'<div class="sc424-notices">'+noticeHtml+'</div>'+
           '<div class="sc5-dashboard sc6-dashboard sc22-dashboard" aria-label="Dashboard Stok Hasnaria">'+
-          '<div class="sc22-dual">'+trendHtml+comparisonHtml+'</div></div>'+
+          analyticsHtml+'</div>'+
           '<div class="sc424-overlay">'+modalHtml+'</div>';
         // The initial mount or recovery is the only whole-shell render.
         if(shell.__sc3LastHtml!==html||!shell.querySelector('.sc424-overlay')){

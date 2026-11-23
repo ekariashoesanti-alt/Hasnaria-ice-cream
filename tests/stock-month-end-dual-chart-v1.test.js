@@ -49,28 +49,28 @@ test('empty or unavailable history shows explanation instead of numeric zero',()
  assert.match(js,/ui_stock_month_end_trend_v1\?/);
  assert.match(js,/&period_month=lte\.'\+month/);
 });
-test('only 4 KPI and 2 charts render; selected unit shared across left/right',()=>{
+test('four YTD analytics panels render with selected-period range',()=>{
  const body=js.slice(js.indexOf('function render() {'),js.indexOf('function stockDialogFocus(',js.indexOf('function render() {')));
- assert.match(body,/overviewKpis\(\)/);
- assert.match(body,/stockComparison=stockSafetyInfographic\(\)/);
- assert.match(body,/monthlyStockEndInfographic\(\)/);
- assert.ok(body.indexOf('monthlyStockEndInfographic()')<body.indexOf("sc22-compare-panel"));
- assert.doesNotMatch(body,/renderSalesStockAudit|renderLedgerAudit|renderUploadStatus|renderStockIntegrityWarning/);
- assert.doesNotMatch(body,/lowestStockFive\(|stockMovingPanel\(|stockValueByCategory\(/);
- assert.match(css,/#stok \.sc22-dual/);
- assert.match(css,/#stok \.sc22-plot-svg/);
- assert.match(css, /@media\(max-width:700px\)/);
- assert.match(js,/stock-control-v3\.css\?v=36/);
- for(const f of ['stock-monitor.js','stock-v3-runtime-fix.js'])assert.match(fs.readFileSync(f,'utf8'),/stock-control-v3\.js\?v=44/);
+ assert.ok(body.includes('overviewKpis()'));
+ assert.ok(body.includes('renderYtdAnalytics()'));
+ const analytics=js.slice(js.indexOf('function renderYtdAnalytics(){'),js.indexOf('// HSN-424:',js.indexOf('function renderYtdAnalytics(){')));
+ assert.ok(analytics.includes('scytd-grid'));
+ assert.ok(analytics.includes('scytd-panel'));
+ assert.ok(js.includes('1 Januari–'));
+ assert.ok(js.includes('length:lastMonth'));
+ assert.ok(css.includes('#stok .scytd-grid'));
+ assert.ok(css.includes('#stok .scytd-panel'));
+ assert.ok(css.includes('@media(max-width:760px)'));
+ assert.ok(js.includes('stock-control-v3.css?v=38'));
+ for(const f of ['stock-monitor.js','stock-v3-runtime-fix.js'])assert.ok(fs.readFileSync(f,'utf8').includes('stock-control-v3.js?v=44'));
 });
-test('May–July ledger activity is drawn separately from physical month-end stock',()=>{
+test('ledger activity is counted for every month from January through selected period',()=>{
  const a=js.indexOf('function monthlyMovementActivityInfographic(){');
  const b=js.indexOf('async function loadLedger() {',a);
  assert.ok(a>=0&&b>a,'Monthly ledger activity chart exists');
  const chart=js.slice(a,b);
- assert.match(chart,/2026-05/);
- assert.match(chart,/2026-06/);
- assert.match(chart,/2026-07/);
+ assert.match(chart,/rows=\(S\.monthlyMovementRows\|\|\[\]\)/);
+ assert.match(chart,/monthLabel\(x\.period\)/);
  const loader=js.slice(js.indexOf('async function loadMonthlyMovementActivity()'),a);
  assert.match(loader,/inventory_movements/);
  assert.ok(loader.includes("movement_date:'gte.'"));
@@ -82,8 +82,8 @@ test('May–July ledger activity is drawn separately from physical month-end sto
  assert.match(chart,/sc425-activity-bar/);
  assert.match(chart,/jumlah catatan mutasi/);
  assert.match(js,/loadMonthlyMovementActivity\(\)/);
- assert.match(js,/mode==='activity'/);
- assert.match(js,/data-sc425-mode="activity"/);
+ assert.match(js,/length:lastMonth/);
+ assert.match(js,/renderYtdAnalytics\(\)/);
 });
 test('historical view uses physical checkpoint, cutoff and account RLS; no writes',()=>{
  assert.match(sql,/with \(security_invoker = true\)/);

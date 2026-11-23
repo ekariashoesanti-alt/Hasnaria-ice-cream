@@ -9,8 +9,9 @@ test('HSN-424 stable dashboard and one independent overlay',()=>{
  assert.match(render,/var modalHtml=S\.correction\?correctionHtml:renderModal\(\)/);
  assert.match(render,/if\(previous\.modal!==modalHtml\)/);
  assert.match(render,/overlay\.innerHTML=modalHtml/);
- assert.match(render,/if\(previous\.left!==trendHtml\)/);
- assert.match(render,/if\(previous\.right!==comparisonHtml\)/);
+ assert.match(render,/if\(previous\.analytics!==analyticsHtml\)/);
+ assert.match(render,/shell\.querySelector\('\.sc5-dashboard'\)\.innerHTML=analyticsHtml/);
+ assert.doesNotMatch(render,/previous\.left|previous\.right|trendHtml|comparisonHtml/);
  assert.match(render,/finally\{host\.__sc3Rendering=false/);
  assert.doesNotMatch(render,/\brpc\(|\brequest\(/);
 });
@@ -25,7 +26,7 @@ test('HSN-424 modal size and table density with local scroll and pager',()=>{
  assert.match(js,/S\.modal==='position'\?' sc424-position'/);
 });
 test('HSN-424 new asset pins and render preserve scroll when same dialog updates',()=>{
- assert.match(fs.readFileSync('index.html','utf8'),/stock-oneview-hsn821\.css\?v=4/);
+ assert.match(fs.readFileSync('index.html','utf8'),/stock-oneview-hsn821\.css\?v=5/);
  for(const p of ['stock-monitor.js','stock-v3-runtime-fix.js'])assert.match(fs.readFileSync(p,'utf8'),/stock-control-v3\.js\?v=44/);
  assert.match(render,/if\(sameMode\)/);
  assert.match(render,/body\.scrollTop=top/);

@@ -35,13 +35,13 @@ test('opening Stok only waits for reconciliation and actual monthly end trend',(
   assert.doesNotMatch(period,/loadMovingStatus\(S\.period\)/);
   assert.match(stock,/if\(!S\.auxLoaded&&!S\.auxLoading&&S\.modal==='position'\)scheduleAux\(seq\)/);
 });
-test('background reads do not rebuild both charts, while real data changes patch only one region',()=>{
+test('background reads patch the analytics region without rebuilding the full Stock shell',()=>{
   const render=range('function render() {','function stockDialogFocus(');
   assert.match(render,/if\(stable\)\{/);
   assert.match(render,/previous\.kpis!==kpiHtml/);
-  assert.match(render,/previous\.left!==trendHtml/);
-  assert.match(render,/previous\.right!==comparisonHtml/);
-  assert.match(render,/shell\.querySelector\('\.sc22-trend-panel'\)\.outerHTML=trendHtml/);
+  assert.match(render,/previous\.analytics!==analyticsHtml/);
+  assert.match(render,/shell\.querySelector\('\.sc5-dashboard'\)\.innerHTML=analyticsHtml/);
+  assert.doesNotMatch(render,/previous\.left|previous\.right|sc22-trend-panel|sc22-compare-panel/);
   assert.match(render,/shell\.__sc3LastHtml!==html/);
   assert.match(stock,/mount\(false\);/);
   assert.doesNotMatch(stock,/setTimeout\(function \(\) \{ watch\(\); mount\(true\); \}, 0\)/);
@@ -49,10 +49,10 @@ test('background reads do not rebuild both charts, while real data changes patch
   assert.match(stock,/else mount\(false\)/);
 });
 test('version pins, KPI source and data integrity remain untouched',()=>{
-  assert.match(stock,/stock-control-v3\.css\?v=36/);
+  assert.match(stock,/stock-control-v3\.css\?v=38/);
   assert.match(bridge,/stock-control-v3\.js\?v=44/);
   assert.match(opener,/stock-control-v3\.js\?v=44/);
-  for(const x of ['inventory_stock_reconciliation','ui_stock_month_end_trend_v1','inventory_valuation_verified_summary','Nilai Stok (Parsial)','Stok Saat Ini vs Batas Aman']){
+  for(const x of ['inventory_stock_reconciliation','ui_stock_month_end_trend_v1','inventory_valuation_verified_summary','Nilai Stok (Parsial)','Komposisi Kesehatan Stok']){
     assert.ok(stock.includes(x),x);
   }
   assert.match(read('scripts/vercel-build-check.js'),/stock-first-paint-no-flicker-v1\.test\.js/);

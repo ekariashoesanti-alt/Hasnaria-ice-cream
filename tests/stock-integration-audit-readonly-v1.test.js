@@ -52,12 +52,13 @@ test('Audit stays inside existing scrollable Formula modal and Stock dashboard k
  assert.match(css,/#stok \.sc24-title/);
  assert.match(css,/#stok \.sc24-actions/);
  assert.match(css,/#stok \.sc4-modal-body:has\(\.sc20-cards\)\{/);
- assert.match(js,/stock-control-v3\.css\?v=36/);
+ assert.match(js,/stock-control-v3\.css\?v=38/);
  assert.match(b,/stock-control-v3\.js\?v=44/);
- const dashboard=section('function render() {','function stockDialogFocus(');
- assert.ok(dashboard.includes('<div class="sc22-dual"'),'main dashboard still has two-column stock charts');
- assert.match(dashboard,/monthlyStockEndInfographic\(\)/);
- assert.match(dashboard,/stockSafetyInfographic\(\)/);
+  const dashboard=section('function render() {','function stockDialogFocus(');
+  assert.ok(dashboard.includes('renderYtdAnalytics()'),'main dashboard mounts the four-panel YTD renderer');
+  const analytics=js.slice(js.indexOf('function renderYtdAnalytics(){'),js.indexOf('// HSN-424:',js.indexOf('function renderYtdAnalytics(){')));
+  assert.ok(analytics.includes('scytd-grid'),'analytics renderer contains the two-by-two YTD grid');
+  assert.ok(!dashboard.includes('sc22-dual'),'retired two-chart wrapper is not mounted');
  assert.doesNotMatch(dashboard,/loadIntegrationAudit\(/);
 });
 

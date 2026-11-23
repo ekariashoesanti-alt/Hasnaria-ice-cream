@@ -28,17 +28,18 @@ test('outer scroll plus natural-height inner shell makes last chart captions rea
  assert.match(fix,/scroll-padding-bottom:24px/);
  assert.match(fix,/overscroll-behavior-y:contain/);
  assert.match(fix,/@media \(min-width:901px\) and \(max-height:850px\)/);
- assert.match(fix,/\.sc22-dual>.sc5-panel\{[\s\S]*?min-height:0!important/);
+ assert.ok(fix.includes('.scytd-grid>.scytd-panel'));
  assert.doesNotMatch(fix,/\.sc22-plot-svg\{[\s\S]*?(?:display:none|max-height:0)/);
 });
 
 test('the corrected release preserves stock math and backend paths',()=>{
- assert.match(js,/stock-control-v3\.css\?v=36/);
+ assert.ok(js.includes('stock-control-v3.css?v=38'));
  for(const p of ['stock-monitor.js','stock-v3-runtime-fix.js']){
   assert.match(read(p),/stock-control-v3\.js\?v=44/);
  }
- for(const label of ['Tren Stok Akhir Bulanan','Stok Saat Ini vs Batas Aman','Ringkasan empat KPI stok']){
-  assert.ok(js.includes(label),label);
+ const analytics=js.slice(js.indexOf('function renderYtdAnalytics(){'),js.indexOf('// HSN-424:',js.indexOf('function renderYtdAnalytics(){')));
+ for(const label of ['Komposisi Kesehatan Stok','Akurasi Stok dan Hasil Opname','Pembelian vs Pemakaian Stok','Aktivitas Mutasi Stok']){
+  assert.ok(analytics.includes(label),label);
  }
  assert.match(read('scripts/vercel-build-check.js'),/stock-bottom-viewport-recovery-v1\.test\.js/);
 });
