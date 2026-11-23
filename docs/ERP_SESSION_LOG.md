@@ -347,3 +347,6 @@ Validasi:30 kasus GPS (9 tambahan),25 berkas tes/full build, review independen d
 
 - Security verification follow-up: Supabase default privileges initially left authenticated with broad view privileges. Applied and committed `20261123173000_restrict_stock_purchase_usage_view_to_select.sql`; verified `authenticated` now has SELECT only and `anon` has no grant on this view. Existing unrelated security advisor findings remain outside HSN-426; no new finding references this view.
 - Preview build initially exposed stale CSS v38 assertions in legacy stock recipe tests. Updated those tests to v39 and queued a fresh preview build; prior failed previews are not promoted.
+
+- Applied the same two migrations to Hasnaria Staging Singapore (`rynnpndtzjwpekbiwiif`) so the preview schema matches production. Verified the staging view exists, authenticated is SELECT-only, anon has no grant; staging currently has zero stock-ledger rows for the synthetic tenant, expected and intentionally not seeded with production data.
+- Isolated Panel 3's unit selector state from the existing stock chart selector to prevent cross-panel state changes.
