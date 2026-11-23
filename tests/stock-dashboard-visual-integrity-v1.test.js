@@ -12,12 +12,12 @@ const stockSnippet=(start,end)=>{const a=js.indexOf(start),b=js.indexOf(end,a+1)
 test('keeps 4 KPIs and precisely two requested responsive panels',()=>{
   assert.match(js,/Ringkasan empat KPI stok/);
   const render=js.slice(js.indexOf('function render() {'),js.indexOf('function stockDialogFocus(',js.indexOf('function render() {')));
-  assert.match(render,/sc22-dual/);
-  assert.match(render,/sc22-trend-panel/);
-  assert.match(render,/sc22-compare-panel/);
+  assert.match(render,/renderYtdAnalytics\(\)/);
+  assert.match(render,/scytd-grid/);
+  assert.match(render,/scytd-panel/);
   assert.doesNotMatch(render,/sc12-status-strip|sc6-top-panel|sc15-moving-panel|sc6-category-panel/);
-  assert.match(css,/#stok \.sc22-dual/);
-  assert.match(css, /grid-template-columns:minmax\(0,1fr\) minmax\(0,1fr\)/);
+  assert.match(css,/#stok \.scytd-grid/);
+  assert.match(css, /grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
 });
 
 test('prevents fixed-height clipping and keeps SVG labels/legend/rows visible',()=>{
@@ -34,7 +34,7 @@ test('prevents fixed-height clipping and keeps SVG labels/legend/rows visible',(
   assert.match(overrides,/\.sc15-moving-panel\{[\s\S]*?overflow:visible!important/);
   assert.match(overrides,/@media\(max-width:700px\)/);
   assert.match(overrides,/@media\(max-width:440px\)/);
-  assert.match(js,/stock-control-v3\.css\?v=36/);
+  assert.match(js,/stock-control-v3\.css\?v=37/);
   for(const p of ['stock-monitor.js','stock-v3-runtime-fix.js'])assert.match(read(p),/stock-control-v3\.js\?v=44/);
 });
 
