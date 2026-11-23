@@ -259,7 +259,7 @@
     var l = document.createElement('link');
     l.id = 'stock-control-v3-css';
     l.rel = 'stylesheet';
-    l.href = '/stock-control-v3.css?v=36';
+    l.href = '/stock-control-v3.css?v=37';
     document.head.appendChild(l);
   }
 
@@ -2642,13 +2642,13 @@
     var total=rows.length||0;if(!total)return '<div class="scytd-empty">Menunggu data SKU.</div>';
     var colors={ok:'#168363',order:'#d3a13a',critical:'#c65a4a',untracked:'#aab5af'};
     var parts=Object.keys(counts).map(function(k){var n=counts[k]||0;return '<div class="scytd-health-row"><span><i style="background:'+colors[k]+'"></i>'+({ok:'Aman',order:'Menipis',critical:'Kritis',untracked:'Belum terlacak'}[k])+'</span><b>'+fmt(n)+' SKU</b><em>'+((n/total)*100).toFixed(1).replace('.',',')+'%</em><div><i style="width:'+(n/total*100)+'%;background:'+colors[k]+'"></i></div></div>';}).join('');
-    return '<div class="scytd-total"><strong>'+fmt(total)+'</strong><span>total SKU terdaftar</span></div>'+parts+'<p class="scytd-note">Klasifikasi mengikuti status stok sistem dan batas minimum SKU.</p>';
+    return '<div class="scytd-total"><strong>'+fmt(total)+'</strong><span>total SKU terdaftar</span></div>'+parts+'<p class="scytd-note">Klasifikasi adalah snapshot stok sistem saat ini; bukan agregasi mutasi bulanan.</p>';
   }
   function renderStockAccuracyYtd(){
     var rows=(S.raw||[]).filter(function(x){return !!x.tracking_active&&!!x.last_opname_date;});
     if(!rows.length)return '<div class="scytd-empty">Belum ada hasil opname valid pada rentang '+esc(ytdRangeLabel())+'.</div>';
     var exact=rows.filter(function(x){return Math.abs(num(x.last_variance))<0.00001;}).length,pct=exact/rows.length*100;
-    return '<div class="scytd-score"><strong>'+pct.toFixed(1).replace('.',',')+'%</strong><span>SKU cocok pada hasil opname terakhir</span></div><div class="scytd-progress"><i style="width:'+pct+'%"></i></div><div class="scytd-metrics"><span>SKU sudah opname <b>'+fmt(rows.length)+'</b></span><span>Sesuai sistem <b>'+fmt(exact)+'</b></span><span>Memiliki selisih <b>'+fmt(rows.length-exact)+'</b></span></div><p class="scytd-note">Berbasis SKU dengan tanggal opname dan nilai selisih tersimpan; bukan persentase kuantitas fisik.</p>';
+    return '<div class="scytd-score"><strong>'+pct.toFixed(1).replace('.',',')+'%</strong><span>kecocokan pada opname terakhir yang tercatat</span></div><div class="scytd-progress"><i style="width:'+pct+'%"></i></div><div class="scytd-metrics"><span>SKU sudah opname <b>'+fmt(rows.length)+'</b></span><span>Sesuai sistem <b>'+fmt(exact)+'</b></span><span>Memiliki selisih <b>'+fmt(rows.length-exact)+'</b></span></div><p class="scytd-note">Snapshot opname terakhir yang tersedia; bukan tren historis bulanan atau persentase kuantitas fisik.</p>';
   }
   function renderPurchaseUsageYtd(){
     return '<div class="scytd-empty"><b>Data pembelian vs pemakaian bulanan belum tersedia.</b><span>Grafik menunggu sumber transaksi pembelian dan pemakaian BOM yang dapat direkonsiliasi per bulan. Tidak ditampilkan angka estimasi.</span></div>';
