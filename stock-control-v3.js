@@ -1030,17 +1030,17 @@
   }
 
   function monthlyMovementActivityInfographic(){
-    if(S.monthlyMovementLoading&&!S.monthlyMovementRows.length)return '<div class="sc22-empty"><b>Memuat aktivitas mutasi Mei–Juli 2026…</b></div>';
+    if(S.monthlyMovementLoading&&!S.monthlyMovementRows.length)return '<div class="sc22-empty"><b>Memuat aktivitas mutasi '+esc(ytdRangeLabel())+'…</b></div>';
     if(S.monthlyMovementError)return '<div class="sc22-empty"><b>Aktivitas mutasi belum dapat dimuat</b><small>'+esc(S.monthlyMovementError)+'</small></div>';
     var rows=(S.monthlyMovementRows||[]).slice().sort(function(a,b){return a.period.localeCompare(b.period);});
     var names={};rows.forEach(function(x){names[x.period]=monthLabel(x.period);});
     var max=Math.max.apply(null,rows.map(function(x){return x.count;}));
-    if(!max)return '<div class="sc22-empty"><b>Belum ada baris mutasi pada periode ini</b></div>';
-    var left=90,right=690,base=215,top=48,slot=200,bar=86,scale=(base-top)/max;
+    if(!max)return '<div class="sc22-empty"><b>Tidak ada baris mutasi tercatat pada '+esc(ytdRangeLabel())+'</b></div>';
+    var left=64,right=720,base=215,top=48,slot=(right-left)/Math.max(rows.length,1),bar=Math.min(46,slot*.58),scale=(base-top)/max;
     var grid=[0,.25,.5,.75,1].map(function(f){var y=base-(base-top)*f;return '<line class="sc22-gridline" x1="'+left+'" y1="'+y+'" x2="'+right+'" y2="'+y+'"/><text class="sc22-axis-label" x="'+(left-10)+'" y="'+(y+4)+'" text-anchor="end">'+fmt(Math.round(max*f))+'</text>';}).join('');
-    var bars=rows.map(function(x,i){var h=x.count*scale,xx=left+35+i*slot,yy=base-h;return '<g><title>'+names[x.period]+': '+fmt(x.count)+' baris mutasi ledger</title><rect class="sc425-activity-bar" x="'+xx+'" y="'+yy+'" width="'+bar+'" height="'+h+'" rx="8"/><text class="sc22-point-value" x="'+(xx+bar/2)+'" y="'+Math.max(30,yy-10)+'" text-anchor="middle">'+fmt(x.count)+'</text><text class="sc22-month-label" x="'+(xx+bar/2)+'" y="245" text-anchor="middle">'+names[x.period]+'</text></g>';}).join('');
+    var bars=rows.map(function(x,i){var h=x.count*scale,xx=left+i*slot+(slot-bar)/2,yy=base-h;return '<g><title>'+names[x.period]+': '+fmt(x.count)+' baris mutasi ledger</title><rect class="sc425-activity-bar" x="'+xx+'" y="'+yy+'" width="'+bar+'" height="'+h+'" rx="5"/><text class="sc22-point-value" x="'+(xx+bar/2)+'" y="'+Math.max(30,yy-8)+'" text-anchor="middle">'+fmt(x.count)+'</text><text class="sc22-month-label" x="'+(xx+bar/2)+'" y="245" text-anchor="middle">'+String(names[x.period]||'').slice(0,3)+'</text></g>';}).join('');
     var total=rows.reduce(function(a,x){return a+x.count;},0);
-    return '<div class="sc22-month-end"><div class="sc22-summary"><span>Aktivitas mutasi · jumlah baris ledger</span><strong>'+fmt(total)+' <small>mutasi</small></strong></div><div class="sc22-summary-note">Mei–Juli 2026 · sumber riwayat mutasi produksi · bukan saldo fisik</div><div class="sc22-plot"><svg class="sc22-plot-svg" viewBox="0 0 740 269" role="img" aria-label="Jumlah baris mutasi ledger Mei sampai Juli 2026">'+grid+bars+'</svg></div><p class="sc22-chart-note">Grafik menunjukkan <b>jumlah catatan mutasi</b> per bulan dari ledger. Angka ini bukan kuantitas stok dan tidak menggantikan hasil opname.</p></div>';
+    return '<div class="sc22-month-end"><div class="sc22-summary"><span>Aktivitas mutasi · jumlah baris ledger</span><strong>'+fmt(total)+' <small>mutasi</small></strong></div><div class="sc22-summary-note">'+esc(ytdRangeLabel())+' · sumber riwayat mutasi produksi · bukan saldo fisik</div><div class="sc22-plot"><svg class="sc22-plot-svg" viewBox="0 0 740 269" role="img" aria-label="Jumlah baris mutasi ledger '+esc(ytdRangeLabel())+'">'+grid+bars+'</svg></div><p class="sc22-chart-note">Grafik menunjukkan <b>jumlah catatan mutasi</b> per bulan dari ledger. Angka ini bukan kuantitas stok dan tidak menggantikan hasil opname.</p></div>';
   }
 
   async function loadLedger() {
@@ -2654,11 +2654,11 @@
   function renderYtdAnalytics(){
     var period=esc(ytdRangeLabel());
     return '<div class="scytd-grid">'+
-      '<article class="scytd-panel"><h3>1. Komposisi Kesehatan Stok</h3><small>Akumulasi '+period+'</small>'+renderStockHealthYtd()+'</article>'+
-      '<article class="scytd-panel"><h3>2. Akurasi Stok dan Hasil Opname</h3><small>Akumulasi '+period+'</small>'+renderStockAccuracyYtd()+'</article>'+
-      '<article class="scytd-panel"><h3>3. Pembelian vs Pemakaian Stok</h3><small>Akumulasi '+period+'</small>'+renderPurchaseUsageYtd()+'</article>'+
+      '<article class="scytd-panel"><h3>1. Komposisi Kesehatan Stok</h3><small>Snapshot stok terkini · tidak tersedia historis per bulan</small>'+renderStockHealthYtd()+'</article>'+
+      '<article class="scytd-panel"><h3>2. Akurasi Stok dan Hasil Opname</h3><small>Snapshot opname terakhir · tidak tersedia historis per bulan</small>'+renderStockAccuracyYtd()+'</article>'+
+      '<article class="scytd-panel"><h3>3. Pembelian vs Pemakaian Stok</h3><small>Menunggu sumber bulanan yang tervalidasi</small>'+renderPurchaseUsageYtd()+'</article>'+
       '<article class="scytd-panel"><h3>4. Aktivitas Mutasi Stok</h3><small>Akumulasi '+period+'</small>'+monthlyMovementActivityInfographic()+'</article>'+
-      '</div><div class="scytd-footnote">Rentang periode: akumulasi 1 Januari sampai bulan terpilih.</div>';
+      '</div><div class="scytd-footnote">Dropdown periode mengatur grafik aktivitas mutasi. Dua panel snapshot belum memiliki rekonstruksi historis; pembelian vs pemakaian menunggu sumber bulanan yang dapat direkonsiliasi.</div>';
   }
 
   // HSN-424: keep the dashboard mounted while the independently rendered dialog
