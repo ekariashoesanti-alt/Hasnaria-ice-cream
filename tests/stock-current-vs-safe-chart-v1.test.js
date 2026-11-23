@@ -82,18 +82,18 @@ test('does not fake a valid zero or force false safe thresholds',()=>{
  const fraction=render([sku('SAUS','porsi',40.5,5)]);
  assert.match(fraction.html,/Saat ini: 40,5/);
 });
-test('monthly activity chart removed from main dashboard and warning kept in Owner audit',()=>{
- assert.match(js,/Stok Saat Ini vs Batas Aman/);
- assert.match(js,/stockSafetyInfographic\(\)/);
- assert.doesNotMatch(js,/monthlyTrendInfographic\(\)/);
- assert.doesNotMatch(js,/renderStockIntegrityWarning\(\) \+/);
+test('YTD stock dashboard uses four panels and keeps warning in Owner audit',()=>{
+ assert.ok(js.includes('renderYtdAnalytics()'));
+ assert.ok(js.includes('scytd-grid'));
+ assert.ok(js.includes('scytd-panel'));
+ assert.doesNotMatch(js,/monthlyTrendInfographic\\(\\)/);
+ assert.doesNotMatch(js,/renderStockIntegrityWarning\\(\\) \\+/);
  assert.match(js,/data-sc4-modal="formula-audit"/);
  assert.match(js,/Saldo stok belum terverifikasi penuh/);
- assert.match(js,/stock-control-v3\.css\?v=37/);
+ assert.match(js,/stock-control-v3\\.css\\?v=37/);
  for(const f of ['stock-monitor.js','stock-v3-runtime-fix.js']){
-  assert.match(fs.readFileSync(f,'utf8'),/stock-control-v3\.js\?v=44/);
+  assert.match(fs.readFileSync(f,'utf8'),/stock-control-v3\\.js\\?v=44/);
  }
- assert.match(css,/#stok \.sc21-comparison-svg/);
- assert.match(css,/#stok \.sc21-safe-bar/);
- assert.match(css,/#stok \.sc21-current-bar/);
+ assert.ok(css.includes('#stok .scytd-grid'));
+ assert.ok(css.includes('#stok .scytd-panel'));
 });
