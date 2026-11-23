@@ -15,7 +15,7 @@ test('panel 3 reads the period-scoped monthly reporting view and supports unit s
  assert.match(js,/period_month=lt\.'\+end/);
  assert.match(js,/scytdPurchaseUnit/);
  assert.match(js,/S\.purchaseUsageUnits/);
- assert.match(js,/S\.chartUnit/);
+ assert.match(js,/S\.purchaseUsageUnit/);
 });
 
 test('panel 3 does not represent missing verified BOM data as zero usage',()=>{
