@@ -983,24 +983,38 @@
     }
   }
 
+  async function requestExactCount(path) {
+    var t=await token();
+    if(!t)throw new Error('Session belum tersedia. Silakan login kembali.');
+    var res=await fetch(SB+'/rest/v1/'+path,{
+      method:'HEAD',
+      headers:{apikey:KEY,Authorization:'Bearer '+t,Prefer:'count=exact',Range:'0-0','Range-Unit':'items'}
+    });
+    if(!res.ok){
+      var detail='';
+      try{detail=await res.text();}catch(_){}
+      throw new Error('Gagal menghitung aktivitas mutasi ('+res.status+')'+(detail?': '+detail.slice(0,120):''));
+    }
+    var range=res.headers.get('content-range')||'';
+    var match=range.match(/\\/(\\d+)$/);
+    if(!match)throw new Error('Server tidak mengirim total hitungan mutasi yang valid.');
+    return Number(match[1]);
+  }
+
   async function loadMonthlyMovementActivity() {
-    // Own sequence: unrelated period refreshes must not invalidate this
-    // fixed historical chart while its three independent reads are in flight.
+    // Exact-count HEAD requests avoid transferring thousands of ledger IDs
+    // and avoid PostgREST page limits for this read-only historical chart.
     var movementSeq=(S.monthlyMovementSeq||0)+1;
     S.monthlyMovementSeq=movementSeq;
     var months=['2026-05','2026-06','2026-07'];
     S.monthlyMovementLoading=true;S.monthlyMovementError='';
     try{
       var rows=await Promise.all(months.map(async function(k){
-        var offset=0,total=0,batch=[];
-        while(true){
-          var path='ui_stock_detail_v1?'+qs({select:'movement_id',brand_id:'eq.'+BRAND,period_month:'eq.'+k+'-01',order:'movement_date.asc,movement_id.asc',limit:'1000',offset:String(offset)});
-          var page=await request(path);
-          if(!Array.isArray(page))throw new Error('Format data mutasi bulanan tidak sesuai.');
-          total+=page.length;offset+=page.length;
-          if(page.length<1000)break;
-          if(offset>10000)throw new Error('Batas pembacaan mutasi bulanan terlampaui.');
-        }
+        var start=k+'-01';
+        var end=new Date(Date.UTC(Number(k.slice(0,4)),Number(k.slice(5,7)),1)).toISOString().slice(0,10);
+        var path='inventory_movements?'+qs({select:'id',brand_id:'eq.'+BRAND,movement_date:'gte.'+start})+
+          '&movement_date=lt.'+end;
+        var total=await requestExactCount(path);
         return {period:k,count:total};
       }));
       if(movementSeq!==S.monthlyMovementSeq)return;
