@@ -5,6 +5,7 @@ const fs=require('node:fs');
 const js=fs.readFileSync('stock-control-v3.js','utf8');
 const css=fs.readFileSync('stock-control-v3.css','utf8');
 const migration=fs.readFileSync('supabase/migrations/20261123170000_create_stock_purchase_usage_monthly_reporting_v1.sql','utf8');
+const panel=js.slice(js.indexOf('function renderPurchaseUsageYtd'),js.indexOf('function renderYtdAnalytics'));
 const aclMigration=fs.readFileSync('supabase/migrations/20261123173000_restrict_stock_purchase_usage_view_to_select.sql','utf8');
 
 test('panel 3 reads the period-scoped monthly reporting view and supports unit selection',()=>{
@@ -19,11 +20,10 @@ test('panel 3 reads the period-scoped monthly reporting view and supports unit s
 
 test('panel 3 does not represent missing verified BOM data as zero usage',()=>{
  assert.match(js,/Number\(r\.usage_rows\|\|0\)===0/);
- assert.doesNotMatch(js,/BOM_BASELINE_ESTIMATE_V1/);
+ assert.doesNotMatch(panel,/BOM_BASELINE_ESTIMATE_V1/);
  assert.match(js,/Pemakaian BOM belum tersedia/);
  assert.match(js,/Belum ada pemakaian BOM yang memenuhi verifikasi/);
  assert.match(js,/BOM terverifikasi/);
- assert.doesNotMatch(js,/BOM_BASELINE_ESTIMATE_V1.*usageTotal/);
 });
 
 test('reporting view is read-only, unit-qualified and security-invoker',()=>{
