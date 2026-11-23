@@ -2640,11 +2640,17 @@
     var rows=S.raw||[],counts={ok:0,order:0,critical:0,untracked:0};
     rows.forEach(function(x){var s=initialStatus(x);counts[s]=(counts[s]||0)+1;});
     var total=rows.length||0;if(!total)return '<div class="scytd-empty">Menunggu data SKU.</div>';
-    var colors={ok:'#36a852',order:'#f6ad22',critical:'#e04444',untracked:'#b9c1c8'};
-    var p1=counts.ok/total*100,p2=counts.order/total*100,p3=counts.critical/total*100;
-    var donut='background:conic-gradient('+colors.ok+' 0% '+p1+'%,'+colors.order+' '+p1+'% '+(p1+p2)+'%,'+colors.critical+' '+(p1+p2)+'% '+(p1+p2+p3)+'%,'+colors.untracked+' '+(p1+p2+p3)+'% 100%)';
-    var parts=[['ok','Aman'],['order','Menipis'],['critical','Kritis'],['untracked','Belum Opname']].map(function(a){var n=counts[a[0]]||0;return '<div class="scytd-legend-row"><i style="background:'+colors[a[0]]+'"></i><span>'+a[1]+'</span><b>'+fmt(n)+'</b><em>'+((n/total)*100).toFixed(1).replace('.',',')+'%</em></div>';}).join('');
-    return '<div class="scytd-donut-layout"><div class="scytd-donut" style="'+donut+'"><div><b>'+fmt(total)+'</b><span>SKU</span></div></div><div class="scytd-legend">'+parts+'</div></div><p class="scytd-note">Snapshot status stok terkini berdasarkan saldo sistem dan batas minimum.</p>';
+    // Keep category colors/order aligned with the approved mockup. Draw the
+    // donut with SVG strokes so global CSS cannot silently suppress conic gradients.
+    var colors={ok:'#36a852',order:'#20b6bf',critical:'#ffb21b',untracked:'#e04444'};
+    var categories=[['ok','Aman'],['order','Menipis'],['critical','Kritis'],['untracked','Belum Opname']];
+    var offset=0;
+    var arcs=categories.map(function(a){
+      var pct=(counts[a[0]]||0)/total*100,arc='<circle cx="50" cy="50" r="39" fill="none" stroke="'+colors[a[0]]+'" stroke-width="18" pathLength="100" stroke-dasharray="'+pct+' '+(100-pct)+'" stroke-dashoffset="'+(-offset)+'" transform="rotate(-90 50 50)"/>';
+      offset+=pct;return arc;
+    }).join('');
+    var parts=categories.map(function(a){var n=counts[a[0]]||0;return '<div class="scytd-legend-row"><i style="background:'+colors[a[0]]+'"></i><span>'+a[1]+'</span><b>'+fmt(n)+'</b><em>'+((n/total)*100).toFixed(1).replace('.',',')+'%</em></div>';}).join('');
+    return '<div class="scytd-donut-layout"><div class="scytd-donut"><svg class="scytd-donut-svg" viewBox="0 0 100 100" role="img" aria-label="Komposisi kesehatan stok: '+fmt(total)+' SKU"><circle cx="50" cy="50" r="39" fill="none" stroke="#edf1f3" stroke-width="18"/>'+arcs+'<circle cx="50" cy="50" r="29" fill="#fff"/></svg><div class="scytd-donut-center"><b>'+fmt(total)+'</b><span>SKU</span></div></div><div class="scytd-legend">'+parts+'</div></div><p class="scytd-note">Snapshot status stok terkini berdasarkan saldo sistem dan batas minimum.</p>';
   }
   function renderStockAccuracyYtd(){
     var rows=(S.raw||[]).filter(function(x){return !!x.tracking_active&&!!x.last_opname_date;});
