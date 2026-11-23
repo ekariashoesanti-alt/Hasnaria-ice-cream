@@ -2640,17 +2640,19 @@
     var rows=S.raw||[],counts={ok:0,order:0,critical:0,untracked:0};
     rows.forEach(function(x){var s=initialStatus(x);counts[s]=(counts[s]||0)+1;});
     var total=rows.length||0;if(!total)return '<div class="scytd-empty">Menunggu data SKU.</div>';
-    var colors={ok:'#168363',order:'#d3a13a',critical:'#c65a4a',untracked:'#aab5af'};
-    var parts=Object.keys(counts).map(function(k){var n=counts[k]||0;return '<div class="scytd-health-row"><span><i style="background:'+colors[k]+'"></i>'+({ok:'Aman',order:'Menipis',critical:'Kritis',untracked:'Belum terlacak'}[k])+'</span><b>'+fmt(n)+' SKU</b><em>'+((n/total)*100).toFixed(1).replace('.',',')+'%</em><div><i style="width:'+(n/total*100)+'%;background:'+colors[k]+'"></i></div></div>';}).join('');
-    return '<div class="scytd-total"><strong>'+fmt(total)+'</strong><span>total SKU terdaftar</span></div>'+parts+'<p class="scytd-note">Snapshot stok sistem saat ini; bukan agregasi mutasi bulanan.</p>';
+    var colors={ok:'#36a852',order:'#f6ad22',critical:'#e04444',untracked:'#b9c1c8'};
+    var p1=counts.ok/total*100,p2=counts.order/total*100,p3=counts.critical/total*100;
+    var donut='background:conic-gradient('+colors.ok+' 0% '+p1+'%,'+colors.order+' '+p1+'% '+(p1+p2)+'%,'+colors.critical+' '+(p1+p2)+'% '+(p1+p2+p3)+'%,'+colors.untracked+' '+(p1+p2+p3)+'% 100%)';
+    var parts=[['ok','Aman'],['order','Menipis'],['critical','Kritis'],['untracked','Belum Opname']].map(function(a){var n=counts[a[0]]||0;return '<div class="scytd-legend-row"><i style="background:'+colors[a[0]]+'"></i><span>'+a[1]+'</span><b>'+fmt(n)+'</b><em>'+((n/total)*100).toFixed(1).replace('.',',')+'%</em></div>';}).join('');
+    return '<div class="scytd-donut-layout"><div class="scytd-donut" style="'+donut+'"><div><b>'+fmt(total)+'</b><span>SKU</span></div></div><div class="scytd-legend">'+parts+'</div></div><p class="scytd-note">Snapshot status stok terkini berdasarkan saldo sistem dan batas minimum.</p>';
   }
   function renderStockAccuracyYtd(){
     var rows=(S.raw||[]).filter(function(x){return !!x.tracking_active&&!!x.last_opname_date;});
     if(!rows.length)return '<div class="scytd-empty">Belum ada hasil opname valid yang tersedia.</div>';
     var exact=rows.filter(function(x){return Math.abs(num(x.last_variance))<0.00001;}).length,pct=exact/rows.length*100;
-    return '<div class="scytd-score"><strong>'+pct.toFixed(1).replace('.',',')+'%</strong><span>kecocokan pada opname terakhir yang tercatat</span></div><div class="scytd-progress"><i style="width:'+pct+'%"></i></div><div class="scytd-metrics"><span>SKU sudah opname <b>'+fmt(rows.length)+'</b></span><span>Sesuai sistem <b>'+fmt(exact)+'</b></span><span>Memiliki selisih <b>'+fmt(rows.length-exact)+'</b></span></div><p class="scytd-note">Snapshot opname terakhir; bukan tren historis bulanan atau persentase kuantitas fisik.</p>';
+    return '<div class="scytd-gauge-layout"><div class="scytd-gauge"><svg viewBox="0 0 180 112" role="img" aria-label="Kecocokan opname '+pct.toFixed(1)+' persen"><path d="M20 91 A70 70 0 0 1 160 91" pathLength="100" class="scytd-gauge-track"/><path d="M20 91 A70 70 0 0 1 160 91" pathLength="100" stroke-dasharray="'+pct+' 100" class="scytd-gauge-value"/></svg><strong>'+pct.toFixed(1).replace('.',',')+'%</strong></div><div class="scytd-gauge-legend"><span><i></i>SKU sudah opname <b>'+fmt(rows.length)+'</b></span><span><i></i>Sesuai sistem <b>'+fmt(exact)+'</b></span><span><i></i>Memiliki selisih <b>'+fmt(rows.length-exact)+'</b></span></div></div><p class="scytd-note">Kecocokan SKU pada opname terakhir; bukan tren historis bulanan.</p>';
   }
-  function renderPurchaseUsageYtd(){return '<div class="scytd-empty"><b>Data pembelian vs pemakaian bulanan belum tersedia.</b><span>Grafik menunggu sumber transaksi pembelian dan pemakaian BOM yang dapat direkonsiliasi per bulan. Tidak ditampilkan angka estimasi.</span></div>';}
+  function renderPurchaseUsageYtd(){return '<div class="scytd-empty-chart"><div class="scytd-chart-legend"><span><i></i>Pembelian</span><span><i></i>Pemakaian (BOM)</span></div><div class="scytd-empty-plot"><i></i><i></i><i></i><i></i><i></i><div>Data bulanan belum tersedia</div></div><p>Menunggu transaksi pembelian dan pemakaian BOM yang tervalidasi. Tidak menampilkan angka estimasi.</p></div>';}
   function renderYtdAnalytics(){
     var period=esc(ytdRangeLabel());
     return '<div class="scytd-grid">'+
