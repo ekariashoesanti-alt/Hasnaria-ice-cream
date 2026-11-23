@@ -2670,7 +2670,7 @@
     var selected=monthKey(S.period);
     if(!selected){S.purchaseUsageRows=[];S.purchaseUsageUnits=[];S.purchaseUsageError='Periode belum tersedia.';return;}
     var year=selected.slice(0,4),start=year+'-01-01',end=new Date(Date.UTC(Number(year),Number(selected.slice(5,7)),1)).toISOString().slice(0,10);
-    S.purchaseUsageLoading=true;S.purchaseUsageError='';
+    S.purchaseUsageLoading=true;S.purchaseUsageError='';S.purchaseUsageRows=[];S.purchaseUsageUnits=[];
     try{
       var path='ui_stock_purchase_usage_monthly_v1?'+qs({
         select:'period_month,base_unit,purchase_qty,usage_qty,purchase_rows,usage_rows,purchase_skus,usage_skus,has_purchase_data,has_verified_usage_data,usage_data_status',
@@ -2726,9 +2726,9 @@
     return '<div class="scytd-grid">'+
       '<article class="scytd-panel"><h3>1. Komposisi Kesehatan Stok</h3><small>Snapshot stok terkini · tidak tersedia historis per bulan</small>'+renderStockHealthYtd()+'</article>'+
       '<article class="scytd-panel"><h3>2. Akurasi Stok dan Hasil Opname</h3><small>Snapshot opname terakhir · tidak tersedia historis per bulan</small>'+renderStockAccuracyYtd()+'</article>'+
-      '<article class="scytd-panel"><h3>3. Pembelian vs Pemakaian Stok</h3><small>Menunggu sumber bulanan yang tervalidasi</small>'+renderPurchaseUsageYtd()+'</article>'+
+      '<article class="scytd-panel"><h3>3. Pembelian vs Pemakaian Stok</h3><small>Akumulasi '+period+' · kuantitas per satuan</small>'+renderPurchaseUsageYtd()+'</article>'+
       '<article class="scytd-panel"><h3>4. Aktivitas Mutasi Stok</h3><small>Akumulasi '+period+'</small>'+monthlyMovementActivityInfographic()+'</article>'+
-      '</div><div class="scytd-footnote">Dropdown periode mengatur grafik aktivitas mutasi. Dua panel snapshot belum memiliki rekonstruksi historis; pembelian vs pemakaian menunggu sumber bulanan yang dapat direkonsiliasi.</div>';
+      '</div><div class="scytd-footnote">Dropdown periode mengatur akumulasi Panel 3 dan Panel 4. Panel 1–2 adalah snapshot terkini; Panel 3 hanya menjumlahkan kuantitas dengan satuan teridentifikasi dan sumber ledger yang memenuhi validasi.</div>';
   }
 
   // HSN-424: keep the dashboard mounted while the independently rendered dialog
