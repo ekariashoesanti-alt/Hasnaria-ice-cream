@@ -52,7 +52,7 @@ test('version pins, KPI source and data integrity remain untouched',()=>{
   assert.match(stock,/stock-control-v3\.css\?v=36/);
   assert.match(bridge,/stock-control-v3\.js\?v=44/);
   assert.match(opener,/stock-control-v3\.js\?v=44/);
-  for(const x of ['inventory_stock_reconciliation','ui_stock_month_end_trend_v1','inventory_valuation_verified_summary','Nilai Stok (Parsial)','Stok Saat Ini vs Batas Aman']){
+  for(const x of ['inventory_stock_reconciliation','ui_stock_month_end_trend_v1','inventory_valuation_verified_summary','Nilai Stok (Parsial)','Komposisi Kesehatan Stok']){
     assert.ok(stock.includes(x),x);
   }
   assert.match(read('scripts/vercel-build-check.js'),/stock-first-paint-no-flicker-v1\.test\.js/);
