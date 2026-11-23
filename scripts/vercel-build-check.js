@@ -269,6 +269,7 @@ run(process.execPath, ['--test', 'tests/stock-recipe-approval-guard-v1.test.js']
 run(process.execPath, ['--test', 'tests/stock-recipe-plain-language-v1.test.js']);
 run(process.execPath, ['--test', 'tests/stock-formula-source-audit-v1.test.js']);
 run(process.execPath, ['--test', 'tests/stock-purchase-existing-gap-v1.test.js']);
+run(process.execPath, ['--test', 'tests/stock-purchase-usage-panel3.test.js']);
 run(process.execPath, ['--test', 'tests/stock-dashboard-visual-integrity-v1.test.js']);
 run(process.execPath, ['--test', 'tests/stock-current-vs-safe-chart-v1.test.js']);
 run(process.execPath, ['--test', 'tests/stock-month-end-dual-chart-v1.test.js']);
