@@ -12,13 +12,13 @@ const stockSnippet=(start,end)=>{const a=js.indexOf(start),b=js.indexOf(end,a+1)
 test('four YTD analytics panels render through the dedicated analytics renderer',()=>{
   assert.match(js,/Ringkasan empat KPI stok/);
   const render=js.slice(js.indexOf('function render() {'),js.indexOf('function stockDialogFocus(',js.indexOf('function render() {')));
-  assert.match(render,/renderYtdAnalytics\\(\\)/);
+  assert.ok(render.includes('renderYtdAnalytics()'));
   assert.doesNotMatch(render,/sc12-status-strip|sc6-top-panel|sc15-moving-panel|sc6-category-panel/);
   const analytics=js.slice(js.indexOf('function renderYtdAnalytics(){'),js.indexOf('// HSN-424:',js.indexOf('function renderYtdAnalytics(){')));
   assert.match(analytics,/scytd-grid/);
   assert.match(analytics,/scytd-panel/);
-  assert.match(css,/#stok \\.scytd-grid/);
-  assert.match(css, /grid-template-columns:repeat\\(2,minmax\\(0,1fr)\\)/);
+  assert.ok(css.includes('#stok .scytd-grid'));
+  assert.ok(css.includes('grid-template-columns:repeat(2,minmax(0,1fr))'));
 });
 test('prevents fixed-height clipping and keeps SVG labels/legend/rows visible',()=>{
   assert.ok(overrides.length>5500,'scoped override exists');
