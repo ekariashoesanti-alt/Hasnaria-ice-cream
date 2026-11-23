@@ -943,7 +943,7 @@
         '&period_month=lte.'+month;
       // Load ledger activity independently: a slow monthly stock-end query
       // must not suppress the separate movement chart.
-      loadMonthlyMovementActivity(seq);
+      loadMonthlyMovementActivity();
       // First paint only waits for the actual monthly stock-end series.
       var trendRows=await request('ui_stock_month_end_trend_v1?' + tq);
       if(seq!==S.periodSeq)return;
@@ -983,7 +983,11 @@
     }
   }
 
-  async function loadMonthlyMovementActivity(seq) {
+  async function loadMonthlyMovementActivity() {
+    // Own sequence: unrelated period refreshes must not invalidate this
+    // fixed historical chart while its three independent reads are in flight.
+    var movementSeq=(S.monthlyMovementSeq||0)+1;
+    S.monthlyMovementSeq=movementSeq;
     var months=['2026-05','2026-06','2026-07'];
     S.monthlyMovementLoading=true;S.monthlyMovementError='';
     try{
@@ -999,13 +1003,13 @@
         }
         return {period:k,count:total};
       }));
-      if(seq!==S.periodSeq)return;
+      if(movementSeq!==S.monthlyMovementSeq)return;
       S.monthlyMovementRows=rows;
     }catch(e){
-      if(seq!==S.periodSeq)return;
+      if(movementSeq!==S.monthlyMovementSeq)return;
       S.monthlyMovementRows=[];S.monthlyMovementError=e&&e.message?e.message:String(e);
     }finally{
-      if(seq===S.periodSeq){S.monthlyMovementLoading=false;render();}
+      if(movementSeq===S.monthlyMovementSeq){S.monthlyMovementLoading=false;render();}
     }
   }
 

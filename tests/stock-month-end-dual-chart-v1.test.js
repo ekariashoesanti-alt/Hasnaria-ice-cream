@@ -61,7 +61,7 @@ test('only 4 KPI and 2 charts render; selected unit shared across left/right',()
  assert.match(css,/#stok \.sc22-plot-svg/);
  assert.match(css, /@media\(max-width:700px\)/);
  assert.match(js,/stock-control-v3\.css\?v=36/);
- for(const f of ['stock-monitor.js','stock-v3-runtime-fix.js'])assert.match(fs.readFileSync(f,'utf8'),/stock-control-v3\.js\?v=43/);
+ for(const f of ['stock-monitor.js','stock-v3-runtime-fix.js'])assert.match(fs.readFileSync(f,'utf8'),/stock-control-v3\.js\?v=44/);
 });
 test('May–July ledger activity is drawn separately from physical month-end stock',()=>{
  const a=js.indexOf('function monthlyMovementActivityInfographic(){');
@@ -71,12 +71,12 @@ test('May–July ledger activity is drawn separately from physical month-end sto
  assert.match(chart,/2026-05/);
  assert.match(chart,/2026-06/);
  assert.match(chart,/2026-07/);
- const loader=js.slice(js.indexOf('async function loadMonthlyMovementActivity(seq)'),a);
+ const loader=js.slice(js.indexOf('async function loadMonthlyMovementActivity()'),a);
  assert.match(loader,/ui_stock_detail_v1/);
  assert.match(loader,/movement_id/);
  assert.match(chart,/sc425-activity-bar/);
  assert.match(chart,/jumlah catatan mutasi/);
- assert.match(js,/loadMonthlyMovementActivity\(seq\)/);
+ assert.match(js,/loadMonthlyMovementActivity\(\)/);
  assert.match(js,/mode==='activity'/);
  assert.match(js,/data-sc425-mode="activity"/);
 });

@@ -18,7 +18,6 @@ test('root cause: global one-view clips taller Stock section; override is specif
  assert.match(fix,/height:100%!important;max-height:100%!important;min-height:0!important/);
  assert.match(fix,/scrollbar-gutter:stable/);
  assert.match(fix,/padding-bottom:clamp\(24px,3\.5vh,44px\)!important/);
- // Avoid breaking other one-view ERP sections when fixing Stock.
  assert.doesNotMatch(fix,/#sales\b|#pembelian\b|#ops\b|#operasional\b|#dashboard\b/);
  assert.doesNotMatch(fix,/(?:html,body)\s*\{/);
 });
@@ -36,7 +35,7 @@ test('outer scroll plus natural-height inner shell makes last chart captions rea
 test('the corrected release preserves stock math and backend paths',()=>{
  assert.match(js,/stock-control-v3\.css\?v=36/);
  for(const p of ['stock-monitor.js','stock-v3-runtime-fix.js']){
-  assert.match(read(p),/stock-control-v3\.js\?v=43/);
+  assert.match(read(p),/stock-control-v3\.js\?v=44/);
  }
  for(const label of ['Tren Stok Akhir Bulanan','Stok Saat Ini vs Batas Aman','Ringkasan empat KPI stok']){
   assert.ok(js.includes(label),label);
