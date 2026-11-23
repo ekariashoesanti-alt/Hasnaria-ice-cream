@@ -282,3 +282,15 @@ html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-
  #stok .scytd-gauge-legend{gap:8px}
  #stok .scytd-panel .sc22-plot-svg{max-height:125px}
 }
+
+/* HSN-427: SVG donut is the source of truth for the health composition.
+   Avoid conic-gradient/background cascade conflicts in the owner ERP shell. */
+#stok .scytd-donut{width:min(100%,210px)!important;aspect-ratio:1!important;position:relative!important;display:block!important;flex:0 1 210px!important;background:none!important}
+#stok .scytd-donut:before{display:none!important;content:none!important}
+#stok .scytd-donut-svg{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;display:block!important;overflow:visible!important}
+#stok .scytd-donut-center{position:absolute!important;inset:0!important;display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:2px!important;pointer-events:none!important}
+#stok .scytd-donut-center b{font-size:21px!important;line-height:1.1!important;color:#101b31!important}
+#stok .scytd-donut-center span{font-size:10px!important;color:#64748b!important}
+#stok .scytd-donut-layout{grid-template-columns:minmax(140px,1fr) minmax(145px,1fr)!important}
+#stok .scytd-legend{gap:13px!important}
+#stok .scytd-legend-row i{width:12px!important;height:12px!important;border-radius:3px!important}
