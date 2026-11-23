@@ -344,3 +344,6 @@ Validasi:30 kasus GPS (9 tambahan),25 berkas tes/full build, review independen d
 - Added unit selector, monthly quantity chart and explicit source/completeness notes to Panel 3; period changes reload the view and clear stale data. CSS cache advanced to v39. No stock movement, purchase, sale, BOM or recipe data was modified.
 - Added regression test `tests/stock-purchase-usage-panel3.test.js`, wired into `scripts/vercel-build-check.js`, updated existing v38 cache assertions.
 - Status remains IN_PROGRESS pending full CI, Vercel Preview, production API/auth smoke and Owner visual acceptance. Do not claim all purchases or all BOM usage are represented until missing purchase postings, SKU units and recipe approvals are reconciled.
+
+- Security verification follow-up: Supabase default privileges initially left authenticated with broad view privileges. Applied and committed `20261123173000_restrict_stock_purchase_usage_view_to_select.sql`; verified `authenticated` now has SELECT only and `anon` has no grant on this view. Existing unrelated security advisor findings remain outside HSN-426; no new finding references this view.
+- Preview build initially exposed stale CSS v38 assertions in legacy stock recipe tests. Updated those tests to v39 and queued a fresh preview build; prior failed previews are not promoted.
