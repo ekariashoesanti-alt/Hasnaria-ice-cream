@@ -112,7 +112,8 @@
     integrationError: '',
     integrationSeq: 0,
     integrationPeriod: '',
-    chartUnit: 'pcs',
+    chartUnit: '',
+    purchaseUsageUnit: 'pcs',
     purchaseUsageRows: [],
     purchaseUsageLoading: false,
     purchaseUsageError: '',
@@ -2681,7 +2682,7 @@
       S.purchaseUsageRows=Array.isArray(rows)?rows:[];
       var units=Array.from(new Set(S.purchaseUsageRows.map(function(x){return String(x.base_unit||'').trim().toLowerCase();}).filter(Boolean))).sort();
       S.purchaseUsageUnits=units;
-      if(!units.includes(S.chartUnit))S.chartUnit=units.includes('pcs')?'pcs':(units[0]||'');
+      if(!units.includes(S.purchaseUsageUnit))S.purchaseUsageUnit=units.includes('pcs')?'pcs':(units[0]||'');
     }catch(e){
       if(seq!==S.purchaseUsageSeq)return;
       S.purchaseUsageRows=[];S.purchaseUsageUnits=[];
@@ -2692,7 +2693,7 @@
   }
 
   function renderPurchaseUsageYtd(){
-    var units=S.purchaseUsageUnits||[],unit=S.chartUnit||'';
+    var units=S.purchaseUsageUnits||[],unit=S.purchaseUsageUnit||'';
     var options=units.map(function(u){return '<option value="'+esc(u)+'"'+(u===unit?' selected':'')+'>'+esc(u.toUpperCase())+'</option>';}).join('');
     var select='<label class="scytd-unit-select">Satuan <select id="scytdPurchaseUnit" aria-label="Pilih satuan kuantitas">'+(options||'<option value="">Belum ada satuan</option>')+'</select></label>';
     if(S.purchaseUsageLoading&&!S.purchaseUsageRows.length)return select+'<div class="scytd-empty">Memuat pembelian dan pemakaian...</div>';
@@ -3006,7 +3007,7 @@
         return;
       }
       if(el.id==='scytdPurchaseUnit'){
-        S.chartUnit=String(el.value||'').toLowerCase();render();return;
+        S.purchaseUsageUnit=String(el.value||'').toLowerCase();render();return;
       }
       if(el.id==='sc21StockUnit'){
         S.chartUnit=el.value||'';
