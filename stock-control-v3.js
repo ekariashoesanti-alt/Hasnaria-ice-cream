@@ -996,7 +996,7 @@
       throw new Error('Gagal menghitung aktivitas mutasi ('+res.status+')'+(detail?': '+detail.slice(0,120):''));
     }
     var range=res.headers.get('content-range')||'';
-    var match=range.match(/\\/(\\d+)$/);
+    var match=range.match(/\/(\d+)$/);
     if(!match)throw new Error('Server tidak mengirim total hitungan mutasi yang valid.');
     return Number(match[1]);
   }
