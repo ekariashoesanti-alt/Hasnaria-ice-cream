@@ -50,6 +50,7 @@
     valueHistory:null,
     trendMode:'activity',
     monthlyMovementRows: [],
+    monthlyMovementDetailRows: [],
     monthlyMovementLoading: false,
     monthlyMovementError: '',
     monthEndUnavailable: false,
@@ -1027,10 +1028,17 @@
         return {period:k,count:total};
       }));
       if(movementSeq!==S.monthlyMovementSeq)return;
+      var detailQuery=qs({brand_id:'eq.'+BRAND,
+        select:'period_month,source_movement_type,ledger_type,base_unit,movement_rows,sku_count,inbound_qty,outbound_qty',
+        order:'period_month.asc,source_movement_type.asc,base_unit.asc',limit:'2000'})+
+        '&period_month=gte.'+year+'-01-01&period_month=lte.'+selected+'-01';
+      var details=await request('ui_stock_activity_detail_monthly_v1?'+detailQuery);
+      if(movementSeq!==S.monthlyMovementSeq)return;
       S.monthlyMovementRows=rows;
+      S.monthlyMovementDetailRows=Array.isArray(details)?details:[];
     }catch(e){
       if(movementSeq!==S.monthlyMovementSeq)return;
-      S.monthlyMovementRows=[];S.monthlyMovementError=e&&e.message?e.message:String(e);
+      S.monthlyMovementRows=[];S.monthlyMovementDetailRows=[];S.monthlyMovementError=e&&e.message?e.message:String(e);
     }finally{
       if(movementSeq===S.monthlyMovementSeq){S.monthlyMovementLoading=false;render();}
     }
@@ -1047,7 +1055,10 @@
     var grid=[0,.25,.5,.75,1].map(function(f){var y=base-(base-top)*f;return '<line class="sc22-gridline" x1="'+left+'" y1="'+y+'" x2="'+right+'" y2="'+y+'"/><text class="sc22-axis-label" x="'+(left-10)+'" y="'+(y+4)+'" text-anchor="end">'+fmt(Math.round(max*f))+'</text>';}).join('');
     var bars=rows.map(function(x,i){var h=x.count*scale,xx=left+i*slot+(slot-bar)/2,yy=base-h;return '<g><title>'+names[x.period]+': '+fmt(x.count)+' baris mutasi ledger</title><rect class="sc425-activity-bar" x="'+xx+'" y="'+yy+'" width="'+bar+'" height="'+h+'" rx="5"/><text class="sc22-point-value" x="'+(xx+bar/2)+'" y="'+Math.max(30,yy-8)+'" text-anchor="middle">'+fmt(x.count)+'</text><text class="sc22-month-label" x="'+(xx+bar/2)+'" y="245" text-anchor="middle">'+String(names[x.period]||'').slice(0,3)+'</text></g>';}).join('');
     var total=rows.reduce(function(a,x){return a+x.count;},0);
-    return '<div class="sc22-month-end"><div class="sc22-summary"><span>Aktivitas mutasi · jumlah baris ledger</span><strong>'+fmt(total)+' <small>mutasi</small></strong></div><div class="sc22-summary-note">'+esc(ytdRangeLabel())+' · sumber riwayat mutasi produksi · bukan saldo fisik</div><div class="sc22-plot"><svg class="sc22-plot-svg" viewBox="0 0 740 269" role="img" aria-label="Jumlah baris mutasi ledger '+esc(ytdRangeLabel())+'">'+grid+bars+'</svg></div><p class="sc22-chart-note">Grafik menunjukkan <b>jumlah catatan mutasi</b> per bulan dari ledger. Angka ini bukan kuantitas stok dan tidak menggantikan hasil opname.</p></div>';
+    var labels={PURCHASE_RECEIPT:'Penerimaan pembelian',SALE_CONSUMPTION:'Pemakaian penjualan',OPNAME_CORRECTION:'Koreksi opname',BASELINE:'Saldo awal'};
+    var detailRows=(S.monthlyMovementDetailRows||[]).slice();
+    var detailHtml=detailRows.length?'<div class="sc22-summary-note"><b>Rincian mutasi per satuan</b></div><div class="sc22-table-wrap"><table class="sc22-table"><thead><tr><th>Jenis mutasi</th><th>Satuan</th><th>Baris</th><th>SKU</th><th>Masuk</th><th>Keluar</th></tr></thead><tbody>'+detailRows.map(function(x){return '<tr><td>'+esc(labels[x.source_movement_type]||x.source_movement_type||x.ledger_type)+'</td><td>'+esc(x.base_unit||'-')+'</td><td>'+fmt(x.movement_rows)+'</td><td>'+fmt(x.sku_count)+'</td><td>'+fmt(x.inbound_qty)+'</td><td>'+fmt(x.outbound_qty)+'</td></tr>';}).join('')+'</tbody></table></div>':'<p class="sc22-chart-note">Rincian kuantitas per satuan belum tersedia.</p>';
+    return '<div class="sc22-month-end"><div class="sc22-summary"><span>Aktivitas mutasi · jumlah baris ledger</span><strong>'+fmt(total)+' <small>mutasi</small></strong></div><div class="sc22-summary-note">'+esc(ytdRangeLabel())+' · sumber riwayat mutasi produksi · bukan saldo fisik</div><div class="sc22-plot"><svg class="sc22-plot-svg" viewBox="0 0 740 269" role="img" aria-label="Jumlah baris mutasi ledger '+esc(ytdRangeLabel())+'">'+grid+bars+'</svg></div><p class="sc22-chart-note">Grafik menunjukkan <b>jumlah catatan mutasi</b> per bulan. Rincian kuantitas dipisahkan berdasarkan satuan, sehingga pcs, porsi, gram, dan satuan lain tidak dijumlahkan menjadi satu angka.</p>'+detailHtml+'</div>';
   }
 
   async function loadLedger() {
