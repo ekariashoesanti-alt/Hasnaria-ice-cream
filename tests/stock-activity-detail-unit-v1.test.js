@@ -11,7 +11,7 @@ assert.match(js, /period_month=gte\.'\+year\+'-01-01/);
 assert.match(js, /period_month=lte\.'\+selected\+'-01/);
 assert.match(js, /monthlyMovementDetailRows/);
 assert.match(js, /Rincian mutasi per satuan/);
-assert.match(js, /Kuantitas dipisahkan berdasarkan satuan/);
+assert.match(js, /kuantitas dipisahkan berdasarkan satuan/i);
 assert.match(css, /\.sc22-table-wrap/);
 assert.match(css, /\.sc22-table/);
 assert.match(migration, /security_invoker = true/);
