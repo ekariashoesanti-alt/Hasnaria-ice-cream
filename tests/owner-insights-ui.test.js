@@ -22,7 +22,8 @@ test('Notifications tab stays visible after legacy navigation and does not trigg
  assert.match(nav,/notifikasi: 'Notifikasi'/);
  assert.match(nav,/if\(b\.textContent!==label\)b\.textContent=label/);
  assert.match(shell,/if\(x\.textContent!==labels\[id\]\)x\.textContent=labels\[id\]/);
- assert.match(html,/\/nav-patch\.js\?v=16/);
+ assert.match(nav,/observe\(tabs,\{childList:true,subtree:true,attributes:true,attributeFilter:\['style'\]\}\)/);
+ assert.match(html,/\/nav-patch\.js\?v=17/);
 });
 test('Notifications in-flight fetch unlocks after leaving tab',async()=>{
  const source=read('owner-notifications-v1.js'),deferred=[];

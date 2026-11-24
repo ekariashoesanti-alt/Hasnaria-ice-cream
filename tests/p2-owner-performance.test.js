@@ -43,7 +43,7 @@ assert.doesNotMatch(stock, /request\('ui_period_catalog_v1\?/,
 
 assert.doesNotMatch(nav, /MutationObserver\(scheduleRun\)\.observe\(document\.body,\{childList:true,subtree:true\}\)/,
   'navigation patch must not watch the whole document body');
-assert.match(nav, /observe\(tabs,\{childList:true,subtree:true\}\)/,
+assert.match(nav, /observe\(tabs,\{childList:true,subtree:true,attributes:true,attributeFilter:\['style'\]\}\)/,
   'navigation patch should watch the navigation surface only');
 
 assert.doesNotMatch(sales, /MutationObserver\(schedule\)\.observe\(document\.body/,
@@ -55,7 +55,7 @@ assert.match(app, /SALES_UI = '\/sales-ui-patch\.js\?v=13'/,
   'Sales performance patch must be cache-busted');
 assert.match(index, /\/app\.js\?v=p075/,
   'application runtime must be cache-busted');
-assert.match(index, /\/nav-patch\.js\?v=16/,
+assert.match(index, /\/nav-patch\.js\?v=17/,
   'navigation runtime must be cache-busted');
 assert.doesNotMatch(shell, /\/administration-v1\.js\?v=7/,
   'standalone Administration runtime must not be loaded by Owner shell');
