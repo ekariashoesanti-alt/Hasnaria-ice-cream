@@ -2658,3 +2658,13 @@
 #stok .scytd-usage-bar{fill:#69d4ca}
 #stok .scytd-usage-missing{fill:#fff;stroke:#b8c6bf;stroke-width:1.5}
 @media(min-width:901px){#stok .scytd-quantity-summary strong{font-size:13px}#stok .scytd-quantity-chart svg{max-height:185px}}
+
+
+/* Panel 4 — unit-aware movement detail */
+.sc22-table-wrap{width:100%;overflow-x:auto;margin-top:10px;border:1px solid var(--sc-border,#dce5e4);border-radius:10px}
+.sc22-table{width:100%;border-collapse:collapse;min-width:640px;font-size:12px}
+.sc22-table th,.sc22-table td{padding:9px 11px;border-bottom:1px solid var(--sc-border,#e5eceb);text-align:right;white-space:nowrap}
+.sc22-table th:first-child,.sc22-table td:first-child,.sc22-table th:nth-child(2),.sc22-table td:nth-child(2){text-align:left}
+.sc22-table thead th{background:var(--sc-soft,#f4f8f7);font-weight:700;color:var(--sc-text,#334)
+}
+.sc22-table tbody tr:last-child td{border-bottom:0}
