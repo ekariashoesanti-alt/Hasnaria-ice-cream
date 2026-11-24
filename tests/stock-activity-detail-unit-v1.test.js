@@ -1,0 +1,23 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const js = fs.readFileSync(path.join(__dirname, '..', 'stock-control-v3.js'), 'utf8');
+const css = fs.readFileSync(path.join(__dirname, '..', 'stock-control-v3.css'), 'utf8');
+const migration = fs.readFileSync(path.join(__dirname, '..', 'supabase/migrations/20261124093000_stock_activity_detail_monthly_v1.sql'), 'utf8');
+const unitGuard = fs.readFileSync(path.join(__dirname, '..', 'supabase/migrations/20261124101500_stock_activity_detail_monthly_v1_unit_guard.sql'), 'utf8');
+
+assert.match(js, /ui_stock_activity_detail_monthly_v1/);
+assert.match(js, /period_month=gte\.'\+year\+'-01-01/);
+assert.match(js, /period_month=lte\.'\+selected\+'-01/);
+assert.match(js, /monthlyMovementDetailRows/);
+assert.match(js, /Rincian mutasi per satuan/);
+assert.match(js, /Kuantitas dipisahkan berdasarkan satuan/);
+assert.match(css, /\.sc22-table-wrap/);
+assert.match(css, /\.sc22-table/);
+assert.match(migration, /security_invoker = true/);
+assert.match(migration, /sum\(qty_delta\) filter \(where qty_delta > 0\)/);
+assert.match(migration, /sum\(-qty_delta\) filter \(where qty_delta < 0\)/);
+assert.match(migration, /revoke all on public\.ui_stock_activity_detail_monthly_v1 from public, anon/);
+assert.match(unitGuard, /purchase_unit/);
+assert.doesNotMatch(migration, /sum\(qty_delta\) as total_qty/i);
+console.log('Panel 4 unit-aware movement detail static regression: PASS');
