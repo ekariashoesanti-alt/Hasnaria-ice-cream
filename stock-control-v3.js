@@ -1028,9 +1028,10 @@
         return {period:k,count:total};
       }));
       if(movementSeq!==S.monthlyMovementSeq)return;
-      var detailQuery=qs({brand_id:'eq.'+BRAND,period_month:'gte.'+year+'-01-01',period_month:'lte.'+selected+'-01',
+      var detailQuery=qs({brand_id:'eq.'+BRAND,
         select:'period_month,source_movement_type,ledger_type,base_unit,movement_rows,sku_count,inbound_qty,outbound_qty',
-        order:'period_month.asc,source_movement_type.asc,base_unit.asc',limit:'2000'});
+        order:'period_month.asc,source_movement_type.asc,base_unit.asc',limit:'2000'})+
+        '&period_month=gte.'+year+'-01-01&period_month=lte.'+selected+'-01';
       var details=await request('ui_stock_activity_detail_monthly_v1?'+detailQuery);
       if(movementSeq!==S.monthlyMovementSeq)return;
       S.monthlyMovementRows=rows;
