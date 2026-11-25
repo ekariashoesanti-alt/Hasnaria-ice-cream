@@ -42,7 +42,7 @@ test('reporting view is read-only, unit-qualified and security-invoker',()=>{
 });
 
 test('panel 3 chart uses distinct unit-specific series styles and refreshed CSS cache',()=>{
- assert.match(js,/stock-control-v3\.css\?v=39/);
+ assert.match(js,/stock-control-v3\.css\?v=40/);
  assert.ok(css.includes('.scytd-purchase-bar'));
  assert.ok(css.includes('.scytd-usage-bar'));
  assert.ok(css.includes('.scytd-unit-select'));
