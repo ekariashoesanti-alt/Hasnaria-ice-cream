@@ -266,7 +266,7 @@
     var l = document.createElement('link');
     l.id = 'stock-control-v3-css';
     l.rel = 'stylesheet';
-    l.href = '/stock-control-v3.css?v=39';
+    l.href = '/stock-control-v3.css?v=40';
     document.head.appendChild(l);
   }
 
