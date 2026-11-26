@@ -23,7 +23,7 @@ test('panel 3 keeps missing verified BOM data visibly unavailable, not as a fabr
  assert.match(panel,/var hasUsage=!!\(row&&num\(row\.usage_rows\)>0\)/);
  assert.match(panel,/hasUsage\?fmt\(usageTotal\).*:'—'/);
  assert.match(panel,/Pemakaian BOM untuk periode ini belum tersedia/);
- assert.match(panel,/scytd-usage-bar/);
+ assert.match(panel,/scytd-usage-bar/);\n assert.doesNotMatch(panel,/style=/);
 });
 
 test('reporting view is read-only, unit-qualified and security-invoker',()=>{
@@ -47,7 +47,7 @@ test('panel 3 uses separate series styles and refreshed CSS cache',()=>{
  assert.ok(css.includes('.scytd-usage-bar'));
  assert.ok(css.includes('.scytd-unit-select'));
  assert.ok(css.includes('.scytd-comparison-track'));
- assert.ok(css.includes('.scytd-comparison-row'));
+ assert.ok(css.includes('.scytd-comparison-row'));\n assert.ok(css.includes('.scytd-comparison-track-bg'));
 });
 
 test('panel 3 renders only the selected month as two horizontal comparisons',()=>{
