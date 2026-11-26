@@ -58,5 +58,5 @@ test('old renderer block is presentation-only; stock calculation paths remain un
  for(const s of ['inventory_stock_reconciliation','ui_stock_month_end_trend_v1','Komposisi Kesehatan Stok','Aktivitas Mutasi Stok']){
   assert.ok(main.includes(s),s);
  }
- assert.match(main,/stock-control-v3\.css\?v=39/);
+ assert.match(main,/stock-control-v3\.css\?v=40/);
 });
