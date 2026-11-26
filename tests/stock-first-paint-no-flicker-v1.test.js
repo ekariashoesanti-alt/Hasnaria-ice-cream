@@ -50,8 +50,8 @@ test('background reads patch the analytics region without rebuilding the full St
 });
 test('version pins, KPI source and data integrity remain untouched',()=>{
   assert.match(stock,/stock-control-v3\.css\?v=42/);
-  assert.match(bridge,/stock-control-v3\.js\?v=45/);
-  assert.match(opener,/stock-control-v3\.js\?v=45/);
+  assert.match(bridge,/stock-control-v3\.js\?v=46/);
+  assert.match(opener,/stock-control-v3\.js\?v=46/);
   for(const x of ['inventory_stock_reconciliation','ui_stock_month_end_trend_v1','inventory_valuation_verified_summary','Nilai Stok (Parsial)','Komposisi Kesehatan Stok']){
     assert.ok(stock.includes(x),x);
   }

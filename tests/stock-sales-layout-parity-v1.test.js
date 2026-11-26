@@ -73,14 +73,14 @@ test('responsive panels keep charts and data visible at narrower widths',()=>{
   assert.ok(stockStyle.includes('#stok .scytd-panel{'));
  assert.ok(stockJS.includes('stock-control-v3.css?v=42'));
  for(const f of ['stock-monitor.js','stock-v3-runtime-fix.js']){
-  assert.match(read(f),/stock-control-v3\.js\?v=45/);
+  assert.match(read(f),/stock-control-v3\.js\?v=46/);
  }
 });
 
 
 test('HSN-821: tested Stock one-view geometry is linked without mutating existing calculations',()=>{
  const index=read('index.html'),oneView=read('stock-oneview-hsn821.css');
- assert.ok(index.includes('stock-oneview-hsn821.css?v=8'));
+ assert.ok(index.includes('stock-oneview-hsn821.css?v=9'));
  assert.match(oneView,/@media \(min-width:761px\) and \(min-height:520px\)/);
  assert.ok(oneView.includes('scytd-grid>.scytd-panel'));
  assert.match(oneView,/sc21-comparison-svg/);
