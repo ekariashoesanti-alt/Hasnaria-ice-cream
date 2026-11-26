@@ -61,8 +61,8 @@ test('four YTD analytics panels render with selected-period range',()=>{
  assert.ok(css.includes('#stok .scytd-grid'));
  assert.ok(css.includes('#stok .scytd-panel'));
  assert.ok(css.includes('@media(max-width:760px)'));
- assert.ok(js.includes('stock-control-v3.css?v=41'));
- for(const f of ['stock-monitor.js','stock-v3-runtime-fix.js'])assert.ok(fs.readFileSync(f,'utf8').includes('stock-control-v3.js?v=44'));
+ assert.ok(js.includes('stock-control-v3.css?v=42'));
+ for(const f of ['stock-monitor.js','stock-v3-runtime-fix.js'])assert.ok(fs.readFileSync(f,'utf8').includes('stock-control-v3.js?v=45'));
 });
 test('ledger activity is counted for every month from January through selected period',()=>{
  const a=js.indexOf('function monthlyMovementActivityInfographic(){');
