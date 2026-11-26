@@ -2671,7 +2671,7 @@
 
 
 /* Stock dashboard one-view 100% zoom — compact four infographic layout. */
-@media (min-width: 761px) and (min-height: 760px) {
+@media (min-width: 761px) {
   #stok:has(.scytd-grid) { min-height:0!important; height:calc(100dvh - 18px)!important; overflow:hidden!important; }
   #stok .sc3-shell:has(.scytd-grid) {
     display:flex!important; flex-direction:column!important; gap:8px!important;
@@ -2741,7 +2741,7 @@
 
 
 /* HSN-ONEVIEW-FIX-2: constrain stock host to actual app viewport and prevent nested page overflow. */
-@media (min-width: 761px) and (min-height: 760px) {
+@media (min-width: 761px) {
   /* The app content area starts below the browser/app top edge; reserve a small safety inset. */
   #stok:has(.scytd-grid) {
     box-sizing:border-box!important;
@@ -2901,7 +2901,7 @@
 
 
 /* HSN-ONEVIEW-HALFSIZE: halve four quadrant card footprint and contents. */
-@media (min-width: 761px) and (min-height: 760px) {
+@media (min-width: 761px) {
   #stok:has(.scytd-grid) {
     box-sizing:border-box!important;
     height:calc(100dvh - 42px)!important;
