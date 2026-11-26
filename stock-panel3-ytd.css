@@ -317,3 +317,27 @@ html body.hasnaria-owner-erp #app > main.wrap > section#stok:not(.hidden):has(.s
     line-height:1.2!important;
   }
 }
+
+
+/* Keep the compact horizontal donut proportions covered by the layout regression test. */
+@media (min-width:761px) {
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell .scytd-donut-layout {
+    display:grid!important;
+    grid-template-columns:minmax(112px,.88fr) minmax(0,1.12fr)!important;
+    align-items:center!important;
+    justify-items:center!important;
+  }
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell .scytd-donut {
+    width:min(100%,142px)!important;
+    max-width:142px!important;
+    min-width:112px!important;
+  }
+}
+@media(max-width:760px) {
+  #stok .scytd-donut-layout {
+    display:grid!important;
+    grid-template-columns:minmax(112px,.88fr) minmax(0,1.12fr)!important;
+    align-items:center!important;
+  }
+  #stok .scytd-donut { max-width:142px!important; }
+}
