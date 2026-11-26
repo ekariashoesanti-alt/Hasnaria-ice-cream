@@ -52,8 +52,8 @@ test('Audit stays inside existing scrollable Formula modal and Stock dashboard k
  assert.match(css,/#stok \.sc24-title/);
  assert.match(css,/#stok \.sc24-actions/);
  assert.match(css,/#stok \.sc4-modal-body:has\(\.sc20-cards\)\{/);
- assert.match(js,/stock-control-v3\.css\?v=41/);
- assert.match(b,/stock-control-v3\.js\?v=44/);
+ assert.match(js,/stock-control-v3\.css\?v=42/);
+ assert.match(b,/stock-control-v3\.js\?v=45/);
   const dashboard=section('function render() {','function stockDialogFocus(');
   assert.ok(dashboard.includes('renderYtdAnalytics()'),'main dashboard mounts the four-panel YTD renderer');
   const analytics=js.slice(js.indexOf('function renderYtdAnalytics(){'),js.indexOf('// HSN-424:',js.indexOf('function renderYtdAnalytics(){')));

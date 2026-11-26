@@ -33,9 +33,9 @@ test('outer scroll plus natural-height inner shell makes last chart captions rea
 });
 
 test('the corrected release preserves stock math and backend paths',()=>{
- assert.ok(js.includes('stock-control-v3.css?v=41'));
+ assert.ok(js.includes('stock-control-v3.css?v=42'));
  for(const p of ['stock-monitor.js','stock-v3-runtime-fix.js']){
-  assert.match(read(p),/stock-control-v3\.js\?v=44/);
+  assert.match(read(p),/stock-control-v3\.js\?v=45/);
  }
  const analytics=js.slice(js.indexOf('function renderYtdAnalytics(){'),js.indexOf('// HSN-424:',js.indexOf('function renderYtdAnalytics(){')));
  for(const label of ['Komposisi Kesehatan Stok','Akurasi Stok dan Hasil Opname','Pembelian vs Pemakaian Stok','Aktivitas Mutasi Stok']){
