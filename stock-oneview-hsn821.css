@@ -1,1 +1,334 @@
-PLACEHOLDER
+/* =========================================================
+   HASNARIA STOCK DASHBOARD — DESKTOP ONE VIEW (HSN-821+)
+   Header + KPI + 4 equal panels in one viewport at 100% zoom.
+   Loaded last so it wins over stock-control-v3.css.
+   Safe rollback: remove the <link id="stock-oneview-hsn821">.
+   ========================================================= */
+
+@media (min-width: 761px) {
+  /* 1. Host section fills remaining viewport under app chrome */
+  #stok:has(.scytd-grid) {
+    --stock-gap: 8px;
+    --stock-header-h: 56px;
+    --stock-kpi-h: 64px;
+    --stock-panel-pad: 10px;
+    --stock-chrome: 108px; /* top nav + main padding safety */
+
+    box-sizing: border-box !important;
+    height: calc(100dvh - var(--stock-chrome)) !important;
+    min-height: 0 !important;
+    max-height: calc(100dvh - var(--stock-chrome)) !important;
+    overflow: hidden !important;
+    padding: 0 !important;
+  }
+
+  /* 2. Vertical shell: header → KPI → panels */
+  #stok:has(.scytd-grid) > .sc3-shell {
+    display: grid !important;
+    grid-template-rows:
+      var(--stock-header-h)
+      var(--stock-kpi-h)
+      minmax(0, 1fr) !important;
+    gap: var(--stock-gap) !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    max-height: 100% !important;
+    box-sizing: border-box !important;
+    margin: 0 !important;
+    padding: 6px 10px 4px !important;
+    overflow: hidden !important;
+  }
+
+  /* 3. Header (title + month + upload + refresh) */
+  #stok .sc28-simple-head,
+  #stok .sc7-head.sc28-simple-head {
+    box-sizing: border-box !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    max-height: 100% !important;
+    margin: 0 !important;
+    padding: 6px 10px !important;
+    overflow: hidden !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    flex-wrap: nowrap !important;
+  }
+
+  /* 4. Four KPI cards */
+  #stok .sc8-kpis {
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: var(--stock-gap) !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    overflow: hidden !important;
+  }
+
+  #stok .sc8-kpi {
+    box-sizing: border-box !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    max-height: 100% !important;
+    padding: 6px 10px !important;
+    overflow: hidden !important;
+  }
+
+  /* Hide empty notices so they don't steal height */
+  #stok .sc424-notices:empty,
+  #stok .sc424-notices {
+    display: none !important;
+  }
+
+  /* 5. Dashboard body takes remaining height */
+  #stok .sc5-dashboard.sc6-dashboard,
+  #stok .sc22-dashboard {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    max-height: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    flex: 1 1 0 !important;
+  }
+
+  /* 6. 2×2 equal panels */
+  #stok .scytd-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    grid-template-rows: repeat(2, minmax(0, 1fr)) !important;
+    gap: var(--stock-gap) !important;
+    flex: 1 1 0 !important;
+    width: 100% !important;
+    height: 0 !important; /* critical: lets flex child shrink */
+    min-height: 0 !important;
+    max-height: 100% !important;
+    box-sizing: border-box !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+  }
+
+  /* 7. Each panel fills its cell */
+  #stok .scytd-panel {
+    display: flex !important;
+    flex-direction: column !important;
+    box-sizing: border-box !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    max-height: 100% !important;
+    padding: var(--stock-panel-pad) !important;
+    gap: 4px !important;
+    overflow: hidden !important;
+    border-radius: 11px !important;
+  }
+
+  /* Panel titles stay compact */
+  #stok .scytd-panel > h3 {
+    flex: 0 0 auto !important;
+    margin: 0 !important;
+    font-size: 13px !important;
+    line-height: 1.2 !important;
+  }
+
+  #stok .scytd-panel > small {
+    flex: 0 0 auto !important;
+    margin: 0 !important;
+    font-size: 9px !important;
+    line-height: 1.25 !important;
+  }
+
+  /* 8. Charts & gauges consume remaining panel space */
+  #stok .scytd-donut-layout,
+  #stok .scytd-gauge-layout {
+    display: flex !important;
+    flex: 1 1 0 !important;
+    align-items: center !important;
+    justify-content: space-around !important;
+    width: 100% !important;
+    height: 0 !important;
+    min-height: 0 !important;
+    gap: 10px !important;
+    overflow: hidden !important;
+  }
+
+  #stok .scytd-donut {
+    width: min(42%, 160px) !important;
+    min-width: 90px !important;
+    max-width: 160px !important;
+  }
+
+  #stok .scytd-gauge {
+    width: 42% !important;
+    min-width: 110px !important;
+    max-width: 170px !important;
+  }
+
+  #stok .scytd-gauge svg {
+    width: 100% !important;
+    max-height: 100px !important;
+  }
+
+  #stok .scytd-legend,
+  #stok .scytd-gauge-legend {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 6px !important;
+    min-width: 0 !important;
+    font-size: 10px !important;
+  }
+
+  #stok .scytd-legend-row {
+    font-size: 10px !important;
+  }
+
+  /* 9. Pembelian vs Pemakaian */
+  #stok .scytd-quantity-summary {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 5px !important;
+    margin: 2px 0 !important;
+    flex: 0 0 auto !important;
+  }
+
+  #stok .scytd-quantity-summary span {
+    min-width: 0 !important;
+    padding: 5px 7px !important;
+    font-size: 9px !important;
+  }
+
+  #stok .scytd-quantity-summary strong {
+    font-size: 12px !important;
+  }
+
+  #stok .scytd-quantity-chart {
+    flex: 1 1 0 !important;
+    height: 0 !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+  }
+
+  #stok .scytd-quantity-chart svg {
+    display: block !important;
+    width: 100% !important;
+    height: 100% !important;
+    max-height: none !important;
+  }
+
+  /* 10. Aktivitas Mutasi */
+  #stok .sc22-month-end {
+    display: flex !important;
+    flex: 1 1 0 !important;
+    height: 0 !important;
+    min-height: 0 !important;
+    gap: 4px !important;
+    overflow: hidden !important;
+  }
+
+  #stok .sc22-plot {
+    flex: 1 1 0 !important;
+    height: 0 !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+  }
+
+  #stok .sc22-plot-svg {
+    display: block !important;
+    width: 100% !important;
+    height: 100% !important;
+    max-height: none !important;
+  }
+
+  /* 11. Footnote stays tiny */
+  #stok .scytd-footnote {
+    flex: 0 0 16px !important;
+    height: 16px !important;
+    min-height: 16px !important;
+    max-height: 16px !important;
+    box-sizing: border-box !important;
+    margin: 0 !important;
+    padding: 2px 4px !important;
+    font-size: 7px !important;
+    line-height: 1.2 !important;
+    overflow: hidden !important;
+    white-space: nowrap !important;
+    text-overflow: ellipsis !important;
+  }
+}
+
+/* Slightly tighter on mid-size desktops */
+@media (min-width: 761px) and (max-width: 1100px) {
+  #stok:has(.scytd-grid) {
+    --stock-header-h: 50px;
+    --stock-kpi-h: 58px;
+    --stock-gap: 6px;
+    --stock-panel-pad: 8px;
+  }
+
+  #stok .scytd-panel > h3 {
+    font-size: 12px !important;
+  }
+
+  #stok .scytd-legend,
+  #stok .scytd-gauge-legend {
+    font-size: 9px !important;
+  }
+}
+
+/* Short viewports (laptop 100% + OS scaling) */
+@media (min-width: 761px) and (max-height: 720px) {
+  #stok:has(.scytd-grid) {
+    --stock-header-h: 48px;
+    --stock-kpi-h: 52px;
+    --stock-gap: 5px;
+    --stock-panel-pad: 6px;
+    --stock-chrome: 96px;
+  }
+
+  #stok .scytd-panel > h3 {
+    font-size: 11px !important;
+  }
+
+  #stok .scytd-panel > small {
+    font-size: 8px !important;
+  }
+}
+
+/* Mobile: normal scroll flow */
+@media (max-width: 760px) {
+  #stok:has(.scytd-grid) {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  #stok:has(.scytd-grid) > .sc3-shell {
+    display: flex !important;
+    flex-direction: column !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  #stok .scytd-grid {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    grid-template-rows: auto !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  #stok .scytd-panel {
+    min-height: 240px !important;
+    height: auto !important;
+  }
+}
