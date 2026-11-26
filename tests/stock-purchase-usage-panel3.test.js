@@ -18,12 +18,12 @@ test('panel 3 reads the period-scoped monthly reporting view and supports unit s
  assert.match(js,/S\.purchaseUsageUnit/);
 });
 
-test('panel 3 does not represent missing verified BOM data as zero usage',()=>{
- assert.match(js,/Number\(r\.usage_rows\|\|0\)===0/);
+test('panel 3 keeps missing verified BOM data visibly unavailable, not as a fabricated zero',()=>{
  assert.doesNotMatch(panel,/BOM_BASELINE_ESTIMATE_V1/);
- assert.match(js,/Pemakaian BOM belum tersedia/);
- assert.match(js,/Belum ada pemakaian BOM yang memenuhi verifikasi/);
- assert.match(js,/BOM terverifikasi/);
+ assert.match(panel,/var hasUsage=!!\(row&&num\(row\.usage_rows\)>0\)/);
+ assert.match(panel,/hasUsage\?fmt\(usageTotal\).*:'—'/);
+ assert.match(panel,/Pemakaian BOM untuk periode ini belum tersedia/);
+ assert.match(panel,/scytd-usage-bar/);
 });
 
 test('reporting view is read-only, unit-qualified and security-invoker',()=>{
@@ -41,9 +41,28 @@ test('reporting view is read-only, unit-qualified and security-invoker',()=>{
  assert.doesNotMatch(migration,/insert into public\.|update public\.|delete from public\./i);
 });
 
-test('panel 3 chart uses distinct unit-specific series styles and refreshed CSS cache',()=>{
- assert.match(js,/stock-control-v3\.css\?v=41/);
+test('panel 3 uses separate series styles and refreshed CSS cache',()=>{
+ assert.match(js,/stock-control-v3\.css\?v=42/);
  assert.ok(css.includes('.scytd-purchase-bar'));
  assert.ok(css.includes('.scytd-usage-bar'));
  assert.ok(css.includes('.scytd-unit-select'));
+ assert.ok(css.includes('.scytd-comparison-track'));
+ assert.ok(css.includes('.scytd-comparison-row'));
+});
+
+test('panel 3 renders only the selected month as two horizontal comparisons',()=>{
+ assert.match(panel,/var selected=monthKey\(S\.period\)/);
+ assert.match(panel,/S\.purchaseUsageRows\.find/);
+ assert.match(panel,/scytd-comparison-row/);
+ assert.match(panel,/scytd-purchase-bar/);
+ assert.match(panel,/scytd-usage-bar/);
+ assert.doesNotMatch(panel,/Array\.from\(\{length:last\}/);
+ assert.match(js,/<small>Periode \'\+esc\(monthLabel\(S\.period\)\)/);
+});
+
+test('health donut remains horizontal and proportionate on desktop and mobile',()=>{
+ assert.ok(css.includes('.scytd-donut-layout'));
+ assert.ok(css.includes('minmax(112px,.88fr) minmax(145px,1.12fr)'));
+ assert.ok(css.includes('width:min(100%,148px)'));
+ assert.ok(css.includes('@media (max-width:760px)'));
 });
