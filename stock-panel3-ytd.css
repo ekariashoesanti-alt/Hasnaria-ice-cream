@@ -1,0 +1,131 @@
+/* HSN Panel 3 YTD horizontal + donut proportion — load after stock-control-v3.css */
+
+/* Panel 3 — horizontal YTD comparison bars */
+#stok .scytd-quantity-chart{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  width:100%;
+  min-height:72px;
+  margin:6px 0 4px;
+}
+#stok .scytd-comparison-row{
+  display:grid;
+  grid-template-columns: minmax(110px,0.9fr) minmax(0,1.6fr) minmax(72px,auto);
+  align-items:center;
+  gap:8px;
+  width:100%;
+}
+#stok .scytd-comparison-label{
+  font-size:11px;
+  color:#4b6359;
+  font-weight:700;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+#stok .scytd-comparison-track-wrap{
+  min-width:0;
+  width:100%;
+  height:20px;
+}
+#stok .scytd-comparison-track{
+  display:block;
+  width:100%;
+  height:20px;
+}
+#stok .scytd-comparison-track-bg{
+  fill:#e8efeb;
+}
+#stok .scytd-purchase-bar{
+  fill:#176b55;
+}
+#stok .scytd-usage-bar{
+  fill:#5b9bd5;
+}
+#stok .scytd-comparison-row strong{
+  font-size:12px;
+  color:#173f34;
+  text-align:right;
+  white-space:nowrap;
+  font-variant-numeric:tabular-nums;
+}
+#stok .scytd-chart-legend{
+  display:flex;
+  gap:14px;
+  flex-wrap:wrap;
+  font-size:10px;
+  color:#5e736a;
+  margin:2px 0 4px;
+}
+#stok .scytd-chart-legend i{
+  display:inline-block;
+  width:9px;
+  height:9px;
+  border-radius:2px;
+  margin-right:5px;
+  vertical-align:middle;
+}
+#stok .scytd-chart-legend i.purchase{background:#176b55}
+#stok .scytd-chart-legend i.usage{background:#5b9bd5}
+
+/* Donut proportion — balanced with legend */
+#stok .scytd-donut-layout{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+  width:100%;
+  min-height:140px;
+}
+#stok .scytd-donut{
+  flex:0 0 auto;
+  width:min(42%,150px);
+  min-width:110px;
+  max-width:150px;
+  position:relative;
+}
+#stok .scytd-donut-svg{
+  width:100%;
+  height:auto;
+  display:block;
+}
+#stok .scytd-donut-center{
+  position:absolute;
+  inset:0;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  pointer-events:none;
+}
+#stok .scytd-donut-center b{
+  font-size:22px;
+  line-height:1;
+  color:#173f34;
+}
+#stok .scytd-donut-center span{
+  font-size:10px;
+  color:#6b7d75;
+  margin-top:2px;
+}
+#stok .scytd-legend{
+  flex:1 1 0;
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  gap:7px;
+  font-size:12px;
+}
+#stok .scytd-legend-row{
+  display:grid;
+  grid-template-columns:10px 1fr auto auto;
+  gap:8px;
+  align-items:center;
+}
+#stok .scytd-legend-row i{
+  width:10px;
+  height:10px;
+  border-radius:2px;
+  display:block;
+}
