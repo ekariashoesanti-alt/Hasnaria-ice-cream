@@ -522,3 +522,135 @@ html body.hasnaria-owner-erp #app > main.wrap > section#stok:not(.hidden):has(.s
 }
 
 /* Mobile keeps natural panel sizing and scrolling; desktop density overrides stay off. */
+
+
+/* HSN-821D: final desktop fit override.
+   This file is linked after stock-oneview-hsn821.css in index.html.
+   Remove nested scroll traps and allocate compact, explicit chart space.
+   CSS-only: no data, SVG generation, labels, or calculations changed. */
+@media (min-width:761px) {
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell .scytd-grid {
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    grid-template-rows:repeat(2,minmax(0,1fr))!important;
+    overflow:visible!important;
+  }
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell .scytd-grid>.scytd-panel {
+    min-height:0!important;
+    height:100%!important;
+    padding:7px 9px!important;
+    gap:3px!important;
+    overflow:hidden!important;
+  }
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell .scytd-panel * {
+    scrollbar-width:none!important;
+  }
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell .scytd-panel h3 {
+    flex:0 0 auto!important;
+    font-size:15px!important;
+    line-height:1.12!important;
+    margin:0!important;
+  }
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell .scytd-panel>small {
+    flex:0 0 auto!important;
+    font-size:9px!important;
+    line-height:1.15!important;
+    margin:0!important;
+  }
+  /* Panel 1: keep donut and all four legend rows in the available height. */
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell .scytd-donut-layout {
+    display:grid!important;
+    grid-template-columns:minmax(100px, .9fr) minmax(0,1.1fr)!important;
+    align-items:center!important;
+    flex:1 1 auto!important;
+    min-height:0!important;
+    height:auto!important;
+    overflow:visible!important;
+    gap:8px!important;
+  }
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell .scytd-donut-layout svg {
+    width:100%!important;
+    height:auto!important;
+    max-height:142px!important;
+    overflow:visible!important;
+  }
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell .scytd-legend {
+    display:flex!important;
+    flex-direction:column!important;
+    justify-content:center!important;
+    gap:5px!important;
+    min-height:0!important;
+    overflow:visible!important;
+  }
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell .scytd-legend-row {
+    min-height:0!important;
+    line-height:1.1!important;
+    font-size:9px!important;
+  }
+  /* Panel 2: gauge and legend share one compact row; note remains visible. */
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell .scytd-gauge-layout {
+    display:grid!important;
+    grid-template-columns:minmax(130px,.9fr) minmax(0,1.1fr)!important;
+    align-items:center!important;
+    flex:1 1 auto!important;
+    min-height:0!important;
+    height:auto!important;
+    overflow:visible!important;
+    gap:8px!important;
+  }
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell .scytd-gauge-layout svg {
+    max-height:110px!important;
+    width:100%!important;
+    height:auto!important;
+    overflow:visible!important;
+  }
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell .scytd-gauge-legend {
+    gap:6px!important;
+    overflow:visible!important;
+    font-size:10px!important;
+  }
+  /* Panel 3: compact summary and chart; no nested vertical scroll. */
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell .scytd-quantity-summary {
+    flex:0 0 auto!important;
+    gap:6px!important;
+  }
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell .scytd-quantity-chart {
+    flex:1 1 auto!important;
+    min-height:72px!important;
+    max-height:112px!important;
+    height:auto!important;
+    overflow:visible!important;
+  }
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell .scytd-quantity-chart svg {
+    min-height:68px!important;
+    max-height:112px!important;
+    height:100%!important;
+    overflow:visible!important;
+  }
+  /* Panel 4: give chart labels and bars a real viewport instead of clipping. */
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell .sc22-month-end {
+    display:flex!important;
+    flex:1 1 auto!important;
+    min-height:0!important;
+    overflow:visible!important;
+  }
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell .sc22-plot {
+    flex:1 1 auto!important;
+    min-height:82px!important;
+    max-height:116px!important;
+    height:auto!important;
+    overflow:visible!important;
+  }
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell .sc22-plot-svg {
+    min-height:78px!important;
+    max-height:116px!important;
+    height:100%!important;
+    overflow:visible!important;
+  }
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell .scytd-footnote,
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell .sc22-chart-note,
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell .sc22-summary-note {
+    flex:0 0 auto!important;
+    font-size:8px!important;
+    line-height:1.15!important;
+  }
+}
