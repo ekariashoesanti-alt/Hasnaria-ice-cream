@@ -2740,3 +2740,196 @@
 }
 
 /* Stock one-view layout lives in stock-oneview-hsn821.css (HSN-821B). */
+
+
+/* HSN-822 — balanced health donut and horizontal selected-month comparison. */
+@media (min-width:761px) {
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell .scytd-donut-layout {
+    display:grid!important;
+    grid-template-columns:minmax(112px,.88fr) minmax(145px,1.12fr)!important;
+    align-items:center!important;
+    justify-items:stretch!important;
+    gap:clamp(8px,1vw,14px)!important;
+    flex:1 1 auto!important;
+    width:100%!important;
+    height:auto!important;
+    min-width:0!important;
+    min-height:118px!important;
+    overflow:visible!important;
+  }
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell .scytd-donut {
+    width:min(100%,148px)!important;
+    max-width:148px!important;
+    min-width:0!important;
+    aspect-ratio:1/1!important;
+    justify-self:center!important;
+    align-self:center!important;
+    flex:0 1 148px!important;
+    margin:0 auto!important;
+  }
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell .scytd-donut-svg {
+    width:100%!important;
+    height:100%!important;
+  }
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell .scytd-donut-center {
+    position:absolute!important;
+    inset:0!important;
+    display:flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    flex-direction:column!important;
+    gap:2px!important;
+    pointer-events:none!important;
+  }
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell .scytd-donut-center b {
+    font-size:clamp(17px,1.5vw,22px)!important;
+    line-height:1.05!important;
+  }
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell .scytd-legend {
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr)!important;
+    align-content:center!important;
+    gap:clamp(6px,.7vw,10px)!important;
+    min-width:0!important;
+    width:100%!important;
+  }
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell .scytd-legend-row {
+    display:grid!important;
+    grid-template-columns:10px minmax(0,1fr) auto auto!important;
+    gap:6px!important;
+    align-items:center!important;
+    min-width:0!important;
+    font-size:clamp(8px,.68vw,10px)!important;
+    line-height:1.2!important;
+  }
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell .scytd-legend-row span {
+    min-width:0!important;
+    overflow-wrap:anywhere!important;
+  }
+
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell .scytd-quantity-summary {
+    flex:0 0 auto!important;
+    display:grid!important;
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:6px!important;
+    margin:2px 0 4px!important;
+  }
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell .scytd-quantity-chart {
+    display:flex!important;
+    flex:1 1 auto!important;
+    flex-direction:column!important;
+    justify-content:center!important;
+    gap:12px!important;
+    width:100%!important;
+    height:auto!important;
+    min-width:0!important;
+    min-height:88px!important;
+    max-height:150px!important;
+    padding:5px 2px!important;
+    box-sizing:border-box!important;
+    overflow:visible!important;
+  }
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell .scytd-comparison-row {
+    display:grid!important;
+    grid-template-columns:minmax(90px,1.05fr) minmax(70px,2fr) minmax(66px,.9fr)!important;
+    align-items:center!important;
+    gap:8px!important;
+    width:100%!important;
+    min-width:0!important;
+  }
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell .scytd-comparison-label {
+    color:#36584b!important;
+    font-size:clamp(8px,.7vw,10px)!important;
+    line-height:1.2!important;
+    min-width:0!important;
+  }
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell .scytd-comparison-track {
+    display:block!important;
+    width:100%!important;
+    height:13px!important;
+    min-width:0!important;
+    overflow:hidden!important;
+    border-radius:999px!important;
+    background:#edf2ef!important;
+  }
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell .scytd-purchase-bar,
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell .scytd-usage-bar {
+    display:block!important;
+    height:100%!important;
+    min-width:0!important;
+    border-radius:999px!important;
+    transition:width .2s ease!important;
+  }
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell .scytd-purchase-bar {
+    background:#078c80!important;
+  }
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell .scytd-usage-bar {
+    background:#69d4ca!important;
+  }
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell .scytd-comparison-row>strong {
+    color:#145b49!important;
+    font-size:clamp(9px,.72vw,11px)!important;
+    line-height:1.2!important;
+    text-align:right!important;
+    white-space:nowrap!important;
+  }
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell .scytd-quantity-chart svg {
+    display:none!important;
+  }
+}
+
+/* Narrow screens retain the two-column donut, but allow natural vertical scrolling. */
+@media (max-width:760px) {
+  #stok .scytd-donut-layout {
+    display:grid!important;
+    grid-template-columns:minmax(105px,112px) minmax(0,1fr)!important;
+    align-items:center!important;
+    gap:10px!important;
+    min-height:112px!important;
+    overflow:visible!important;
+  }
+  #stok .scytd-donut {
+    width:112px!important;
+    max-width:100%!important;
+  }
+  #stok .scytd-legend {
+    display:grid!important;
+    gap:7px!important;
+    min-width:0!important;
+  }
+  #stok .scytd-legend-row {
+    grid-template-columns:10px minmax(0,1fr) auto auto!important;
+    gap:5px!important;
+    font-size:9px!important;
+  }
+  #stok .scytd-quantity-chart {
+    display:flex!important;
+    flex-direction:column!important;
+    gap:10px!important;
+    min-height:88px!important;
+    padding:6px 0!important;
+  }
+  #stok .scytd-comparison-row {
+    display:grid!important;
+    grid-template-columns:minmax(84px,1fr) minmax(64px,1.6fr) auto!important;
+    gap:6px!important;
+    align-items:center!important;
+  }
+  #stok .scytd-comparison-track {
+    height:12px!important;
+    background:#edf2ef!important;
+    border-radius:999px!important;
+    overflow:hidden!important;
+  }
+  #stok .scytd-purchase-bar,#stok .scytd-usage-bar {
+    display:block!important;
+    height:100%!important;
+    border-radius:999px!important;
+  }
+  #stok .scytd-purchase-bar {background:#078c80!important}
+  #stok .scytd-usage-bar {background:#69d4ca!important}
+  #stok .scytd-comparison-row>strong {
+    font-size:9px!important;
+    white-space:nowrap!important;
+  }
+}
