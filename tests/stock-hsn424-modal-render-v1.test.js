@@ -21,7 +21,7 @@ test('HSN-424 modal size and table density with local scroll and pager',()=>{
  assert.match(css,/font-size:10\.5px!important/);
  assert.match(css,/sc424-position \.sc3-table-wrap\{flex:1 1 auto!important;min-height:0!important/);
  assert.match(css,/sc3-pager:after\{content:none!important/);
- assert.match(css,/overflow-y:auto!important/);
+ assert.match(css,/sc4-modal-body\\{[^}]*overflow:auto!important/);\n assert.match(css,/sc3-table-wrap\\{overflow:auto!important/);
  assert.doesNotMatch(css,/#sales\b|#pembelian\b|#operasional\b/);
  assert.match(js,/S\.modal==='position'\?' sc424-position'/);
 });
