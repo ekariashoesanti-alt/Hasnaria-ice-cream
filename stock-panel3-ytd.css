@@ -1,165 +1,199 @@
-/* HSN Panel 3 — YTD horizontal bars + donut proportion
-   Simple selectors so bars always show regardless of body class / one-view overrides. */
+/* HSN Panel 3 — force horizontal YTD bars visible; prevent panel clip */
+
+/* Never let one-view collapse the comparison chart */
+#stok .scytd-panel:nth-child(3),
+#stok .scytd-grid > .scytd-panel:nth-of-type(3){
+  overflow: visible !important;
+  min-height: 0 !important;
+}
 
 #stok .scytd-quantity-chart{
-  display:flex !important;
-  flex-direction:column !important;
-  gap:10px !important;
-  width:100% !important;
-  min-height:78px !important;
-  margin:8px 0 6px !important;
-  overflow:visible !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 12px !important;
+  width: 100% !important;
+  min-height: 88px !important;
+  height: auto !important;
+  max-height: none !important;
+  margin: 10px 0 8px !important;
+  overflow: visible !important;
+  flex: 0 0 auto !important;
+  flex-shrink: 0 !important;
 }
 
 #stok .scytd-comparison-row{
-  display:grid !important;
-  grid-template-columns:minmax(100px,110px) minmax(80px,1fr) minmax(70px,auto) !important;
-  align-items:center !important;
-  gap:8px !important;
-  width:100% !important;
-  min-height:22px !important;
+  display: grid !important;
+  grid-template-columns: 120px minmax(100px, 1fr) auto !important;
+  align-items: center !important;
+  gap: 10px !important;
+  width: 100% !important;
+  min-height: 28px !important;
+  height: auto !important;
+  flex-shrink: 0 !important;
 }
 
 #stok .scytd-comparison-label{
-  font-size:11px !important;
-  font-weight:700 !important;
-  color:#4b6359 !important;
-  line-height:1.2 !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  color: #4b6359 !important;
+  line-height: 1.25 !important;
 }
 
+/* Prefer plain div track so SVG collapse cannot hide the bar */
 #stok .scytd-comparison-track{
-  display:block !important;
-  width:100% !important;
-  height:18px !important;
-  min-width:60px !important;
+  display: block !important;
+  width: 100% !important;
+  height: 18px !important;
+  min-width: 80px !important;
+  min-height: 18px !important;
+  overflow: visible !important;
 }
 
 #stok .scytd-comparison-track-bg{
-  fill:#e8efeb !important;
+  fill: #e8efeb !important;
 }
 
 #stok .scytd-purchase-bar{
-  fill:#176b55 !important;
+  fill: #176b55 !important;
 }
 
 #stok .scytd-usage-bar{
-  fill:#5b9bd5 !important;
+  fill: #5b9bd5 !important;
 }
 
 #stok .scytd-comparison-row strong{
-  font-size:12px !important;
-  color:#173f34 !important;
-  text-align:right !important;
-  white-space:nowrap !important;
-  font-variant-numeric:tabular-nums !important;
+  font-size: 12px !important;
+  color: #173f34 !important;
+  text-align: right !important;
+  white-space: nowrap !important;
+  font-variant-numeric: tabular-nums !important;
 }
 
 #stok .scytd-chart-legend{
-  display:flex !important;
-  gap:14px !important;
-  flex-wrap:wrap !important;
-  font-size:10px !important;
-  color:#5e736a !important;
-  margin:4px 0 !important;
+  display: flex !important;
+  gap: 14px !important;
+  flex-wrap: wrap !important;
+  font-size: 10px !important;
+  color: #5e736a !important;
+  margin: 4px 0 2px !important;
+  flex-shrink: 0 !important;
 }
 
 #stok .scytd-chart-legend i{
-  display:inline-block !important;
-  width:9px !important;
-  height:9px !important;
-  border-radius:2px !important;
-  margin-right:5px !important;
-  vertical-align:middle !important;
+  display: inline-block !important;
+  width: 9px !important;
+  height: 9px !important;
+  border-radius: 2px !important;
+  margin-right: 5px !important;
+  vertical-align: middle !important;
 }
 
-#stok .scytd-chart-legend i.purchase{ background:#176b55 !important; }
-#stok .scytd-chart-legend i.usage{ background:#5b9bd5 !important; }
+#stok .scytd-chart-legend i.purchase{ background: #176b55 !important; }
+#stok .scytd-chart-legend i.usage{ background: #5b9bd5 !important; }
 
 #stok .scytd-quantity-summary{
-  display:grid !important;
-  grid-template-columns:repeat(2,minmax(0,1fr)) !important;
-  gap:8px !important;
-  width:100% !important;
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 8px !important;
+  width: 100% !important;
+  flex-shrink: 0 !important;
 }
 
 #stok .scytd-quantity-summary > span{
-  display:flex !important;
-  flex-direction:column !important;
-  gap:2px !important;
-  font-size:10px !important;
-  color:#64766e !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 2px !important;
+  font-size: 10px !important;
+  color: #64766e !important;
 }
 
 #stok .scytd-quantity-summary strong{
-  font-size:16px !important;
-  color:#173f34 !important;
-  font-variant-numeric:tabular-nums !important;
+  font-size: 16px !important;
+  color: #173f34 !important;
+  font-variant-numeric: tabular-nums !important;
+}
+
+#stok .scytd-unit-select{
+  flex-shrink: 0 !important;
+  margin-bottom: 4px !important;
 }
 
 /* Donut proportion */
 #stok .scytd-donut-layout{
-  display:flex !important;
-  align-items:center !important;
-  justify-content:space-between !important;
-  gap:14px !important;
-  width:100% !important;
-  min-height:130px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 14px !important;
+  width: 100% !important;
+  min-height: 130px !important;
 }
 
 #stok .scytd-donut{
-  flex:0 0 auto !important;
-  width:min(42%,148px) !important;
-  min-width:108px !important;
-  max-width:148px !important;
-  position:relative !important;
+  flex: 0 0 auto !important;
+  width: min(42%, 148px) !important;
+  min-width: 108px !important;
+  max-width: 148px !important;
+  position: relative !important;
 }
 
 #stok .scytd-donut-svg{
-  width:100% !important;
-  height:auto !important;
-  display:block !important;
+  width: 100% !important;
+  height: auto !important;
+  display: block !important;
 }
 
 #stok .scytd-donut-center{
-  position:absolute !important;
-  inset:0 !important;
-  display:flex !important;
-  flex-direction:column !important;
-  align-items:center !important;
-  justify-content:center !important;
-  pointer-events:none !important;
+  position: absolute !important;
+  inset: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  pointer-events: none !important;
 }
 
 #stok .scytd-donut-center b{
-  font-size:22px !important;
-  line-height:1 !important;
-  color:#173f34 !important;
+  font-size: 22px !important;
+  line-height: 1 !important;
+  color: #173f34 !important;
 }
 
 #stok .scytd-donut-center span{
-  font-size:10px !important;
-  color:#6b7d75 !important;
+  font-size: 10px !important;
+  color: #6b7d75 !important;
 }
 
 #stok .scytd-legend{
-  flex:1 1 0 !important;
-  min-width:0 !important;
-  display:flex !important;
-  flex-direction:column !important;
-  gap:7px !important;
-  font-size:12px !important;
+  flex: 1 1 0 !important;
+  min-width: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 7px !important;
+  font-size: 12px !important;
 }
 
 #stok .scytd-legend-row{
-  display:grid !important;
-  grid-template-columns:10px 1fr auto auto !important;
-  gap:8px !important;
-  align-items:center !important;
+  display: grid !important;
+  grid-template-columns: 10px 1fr auto auto !important;
+  gap: 8px !important;
+  align-items: center !important;
 }
 
 #stok .scytd-legend-row i{
-  width:10px !important;
-  height:10px !important;
-  border-radius:2px !important;
-  display:block !important;
+  width: 10px !important;
+  height: 10px !important;
+  border-radius: 2px !important;
+  display: block !important;
+}
+
+/* Soften one-view clip on analytics panels so charts are not zero-height */
+html body.hasnaria-owner-erp #app > main.wrap > section#stok:not(.hidden):has(.sc22-dashboard) > .sc3-shell .scytd-grid > .scytd-panel{
+  overflow: auto !important;
+}
+html body.hasnaria-owner-erp #app > main.wrap > section#stok:not(.hidden):has(.sc22-dashboard) > .sc3-shell .scytd-quantity-chart{
+  display: flex !important;
+  min-height: 88px !important;
+  height: auto !important;
+  flex-shrink: 0 !important;
+  overflow: visible !important;
 }
