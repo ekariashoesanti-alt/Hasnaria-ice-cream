@@ -73,7 +73,7 @@ test('responsive panels keep charts and data visible at narrower widths',()=>{
   assert.ok(stockStyle.includes('#stok .scytd-panel{'));
  assert.ok(stockJS.includes('stock-control-v3.css?v=42'));
  for(const f of ['stock-monitor.js','stock-v3-runtime-fix.js']){
-  assert.match(read(f),/stock-control-v3\.js\?v=44/);
+  assert.match(read(f),/stock-control-v3\.js\?v=45/);
  }
 });
 
