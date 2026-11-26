@@ -266,7 +266,7 @@
     var l = document.createElement('link');
     l.id = 'stock-control-v3-css';
     l.rel = 'stylesheet';
-    l.href = '/stock-control-v3.css?v=41';
+    l.href = '/stock-control-v3.css?v=42';
     document.head.appendChild(l);
   }
 
@@ -2707,35 +2707,34 @@
     if(S.purchaseUsageLoading&&!S.purchaseUsageRows.length)return select+'<div class="scytd-empty">Memuat pembelian dan pemakaian...</div>';
     if(S.purchaseUsageError)return select+'<div class="scytd-empty"><b>Data belum dapat dimuat</b><span>'+esc(S.purchaseUsageError)+'</span></div>';
     if(!unit)return select+'<div class="scytd-empty"><b>Data kuantitas belum tersedia</b><span>Belum ada transaksi pembelian yang masuk ledger dengan satuan teridentifikasi.</span></div>';
-    var rows=S.purchaseUsageRows.filter(function(x){return String(x.base_unit||'').toLowerCase()===unit;});
-    var selected=monthKey(S.period),year=selected.slice(0,4),last=Number(selected.slice(5,7));
-    var months=Array.from({length:last},function(_,i){return year+'-'+String(i+1).padStart(2,'0');});
-    var byMonth={};rows.forEach(function(x){byMonth[String(x.period_month).slice(0,7)]=x;});
-    var purchaseTotal=0,usageTotal=0,hasUsage=false,hasPurchase=false;
-    months.forEach(function(k){var r=byMonth[k];if(r){purchaseTotal+=Number(r.purchase_qty||0);usageTotal+=Number(r.usage_qty||0);hasPurchase=hasPurchase||Number(r.purchase_rows||0)>0;hasUsage=hasUsage||Number(r.usage_rows||0)>0;}});
-    var max=Math.max(1,...months.map(function(k){var r=byMonth[k]||{};return Math.max(Number(r.purchase_qty||0),Number(r.usage_qty||0));}));
-    var left=42,right=700,top=18,base=184,slot=(right-left)/Math.max(1,months.length),bar=Math.min(19,slot*.32),scale=(base-top)/max;
-    var grid=[0,.33,.66,1].map(function(f){var y=base-(base-top)*f;return '<line class="scytd-chart-grid" x1="'+left+'" y1="'+y+'" x2="'+right+'" y2="'+y+'"/><text class="scytd-chart-axis" x="'+(left-7)+'" y="'+(y+3)+'" text-anchor="end">'+fmt(max*f)+'</text>';}).join('');
-    var bars=months.map(function(k,i){
-      var r=byMonth[k]||{},p=Number(r.purchase_qty||0),u=Number(r.usage_qty||0),x=left+i*slot+slot/2;
-      var ph=p>0?Math.max(1,p*scale):0,uh=u>0?Math.max(1,u*scale):0;
-      var px=x-bar-1,ux=x+1;
-      var pbar=p>0?'<rect class="scytd-purchase-bar" x="'+px+'" y="'+(base-ph)+'" width="'+bar+'" height="'+ph+'" rx="3"><title>'+k+' · Pembelian: '+fmt(p)+' '+esc(unit)+'</title></rect>':'';
-      var ubar=u>0?'<rect class="scytd-usage-bar" x="'+ux+'" y="'+(base-uh)+'" width="'+bar+'" height="'+uh+'" rx="3"><title>'+k+' · Pemakaian BOM: '+fmt(u)+' '+esc(unit)+'</title></rect>':'';
-      var missing=!r||Number(r.usage_rows||0)===0;
-      return '<g>'+pbar+ubar+(missing?'<circle class="scytd-usage-missing" cx="'+(ux+bar/2)+'" cy="'+(base-3)+'" r="2.5"><title>'+k+' · Pemakaian BOM belum tersedia</title></circle>':'')+'<text class="scytd-chart-month" x="'+x+'" y="203" text-anchor="middle">'+['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'][i]+'</text></g>';
-    }).join('');
+
+    // The view remains YTD for the selected reporting year; this panel visualizes
+    // only the selected month. No ledger values or verification rules are changed.
+    var selected=monthKey(S.period);
+    var row=S.purchaseUsageRows.find(function(x){return String(x.period_month||'').slice(0,7)===selected&&String(x.base_unit||'').toLowerCase()===unit;})||null;
+    var purchaseTotal=row?num(row.purchase_qty):0;
+    var usageTotal=row?num(row.usage_qty):0;
+    var hasPurchase=!!(row&&num(row.purchase_rows)>0);
+    var hasUsage=!!(row&&num(row.usage_rows)>0);
+    var max=Math.max(purchaseTotal,usageTotal,1);
+    var purchaseWidth=purchaseTotal>0?Math.max(1,purchaseTotal/max*100):0;
+    var usageWidth=hasUsage&&usageTotal>0?Math.max(1,usageTotal/max*100):0;
     var legend='<div class="scytd-chart-legend"><span><i class="purchase"></i>Pembelian tercatat</span><span><i class="usage"></i>Pemakaian BOM terverifikasi</span></div>';
-    var status=hasUsage?'Pemakaian hanya mencakup transaksi dengan resep terverifikasi dan tanggal efektif. Bulan tanpa catatan ditandai belum tersedia.':'Belum ada pemakaian BOM yang memenuhi verifikasi dan tanggal efektif; bukan berarti pemakaian aktual nol.';
+    var summary='<div class="scytd-quantity-summary"><span>Pembelian tercatat<strong>'+fmt(purchaseTotal)+' '+esc(unit)+'</strong></span><span>Pemakaian BOM '+(hasUsage?'terverifikasi':'belum tersedia')+'<strong>'+(hasUsage?fmt(usageTotal)+' '+esc(unit):'—')+'</strong></span></div>';
+    var chart='<div class="scytd-quantity-chart" role="group" aria-label="Perbandingan pembelian dan pemakaian BOM '+esc(monthLabel(selected))+'">'+
+      '<div class="scytd-comparison-row"><span class="scytd-comparison-label">Pembelian tercatat</span><div class="scytd-comparison-track"><span class="scytd-purchase-bar" style="width:'+purchaseWidth.toFixed(2)+'%"></span></div><strong>'+fmt(purchaseTotal)+' '+esc(unit)+'</strong></div>'+
+      '<div class="scytd-comparison-row"><span class="scytd-comparison-label">Pemakaian BOM</span><div class="scytd-comparison-track"><span class="scytd-usage-bar" style="width:'+usageWidth.toFixed(2)+'%"></span></div><strong>'+(hasUsage?fmt(usageTotal)+' '+esc(unit):'—')+'</strong></div>'+
+      '</div>';
+    var status=hasUsage?'Pemakaian hanya mencakup transaksi dengan resep terverifikasi dan tanggal efektif.':'Pemakaian BOM untuk periode ini belum tersedia; tanda — bukan berarti pemakaian aktual nol.';
     if(!hasPurchase)status+=' Belum ada pembelian yang tercatat di ledger untuk satuan ini.';
-    return select+legend+'<div class="scytd-quantity-summary"><span>Pembelian tercatat<strong>'+fmt(purchaseTotal)+' '+esc(unit)+'</strong></span><span>Pemakaian BOM '+(hasUsage?'terverifikasi':'belum tersedia')+'<strong>'+(hasUsage?fmt(usageTotal)+' '+esc(unit):'—')+'</strong></span></div><div class="scytd-quantity-chart"><svg viewBox="0 0 720 216" role="img" aria-label="Pembelian dan pemakaian stok dalam satuan '+esc(unit)+' dari Januari sampai '+esc(monthLabel(selected))+'">'+grid+bars+'</svg></div><p class="scytd-note">'+esc(status)+'</p><p class="scytd-note">Sumber pembelian adalah mutasi PURCHASE yang sudah masuk ledger. Transaksi yang belum diposting, satuan placeholder, konversi belum valid, dan estimasi BOM tidak dijumlahkan.</p>';
+    return select+summary+legend+chart+'<p class="scytd-note">'+esc(status)+'</p><p class="scytd-note">Sumber pembelian adalah mutasi PURCHASE yang sudah masuk ledger. Transaksi yang belum diposting, satuan placeholder, konversi belum valid, dan estimasi BOM tidak dijumlahkan.</p>';
   }
   function renderYtdAnalytics(){
     var period=esc(ytdRangeLabel());
     return '<div class="scytd-grid">'+
       '<article class="scytd-panel"><h3>1. Komposisi Kesehatan Stok</h3><small>Snapshot stok terkini · tidak tersedia historis per bulan</small>'+renderStockHealthYtd()+'</article>'+
       '<article class="scytd-panel"><h3>2. Akurasi Stok dan Hasil Opname</h3><small>Snapshot opname terakhir · tidak tersedia historis per bulan</small>'+renderStockAccuracyYtd()+'</article>'+
-      '<article class="scytd-panel"><h3>3. Pembelian vs Pemakaian Stok</h3><small>Akumulasi '+period+' · kuantitas per satuan</small>'+renderPurchaseUsageYtd()+'</article>'+
+      '<article class="scytd-panel"><h3>3. Pembelian vs Pemakaian Stok</h3><small>Periode '+esc(monthLabel(S.period))+' · kuantitas per satuan</small>'+renderPurchaseUsageYtd()+'</article>'+
       '<article class="scytd-panel"><h3>4. Aktivitas Mutasi Stok</h3><small>Akumulasi '+period+'</small>'+monthlyMovementActivityInfographic()+'</article>'+
       '</div><div class="scytd-footnote">Dropdown periode mengatur akumulasi Panel 3 dan Panel 4. Panel 1–2 adalah snapshot terkini; Panel 3 hanya menjumlahkan kuantitas dengan satuan teridentifikasi dan sumber ledger yang memenuhi validasi.</div>';
   }
