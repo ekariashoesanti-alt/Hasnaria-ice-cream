@@ -1,10 +1,8 @@
-/* HSN Panel 3 — force horizontal YTD bars visible; prevent panel clip */
+/* HSN Panel 3 — div-based horizontal bars; never clip inside panel */
 
-/* Never let one-view collapse the comparison chart */
 #stok .scytd-panel:nth-child(3),
-#stok .scytd-grid > .scytd-panel:nth-of-type(3){
+#stok .scytd-grid > article.scytd-panel:nth-of-type(3){
   overflow: visible !important;
-  min-height: 0 !important;
 }
 
 #stok .scytd-quantity-chart{
@@ -14,7 +12,6 @@
   width: 100% !important;
   min-height: 88px !important;
   height: auto !important;
-  max-height: none !important;
   margin: 10px 0 8px !important;
   overflow: visible !important;
   flex: 0 0 auto !important;
@@ -28,7 +25,6 @@
   gap: 10px !important;
   width: 100% !important;
   min-height: 28px !important;
-  height: auto !important;
   flex-shrink: 0 !important;
 }
 
@@ -39,26 +35,33 @@
   line-height: 1.25 !important;
 }
 
-/* Prefer plain div track so SVG collapse cannot hide the bar */
-#stok .scytd-comparison-track{
+#stok .scytd-bar-track{
   display: block !important;
   width: 100% !important;
   height: 18px !important;
   min-width: 80px !important;
+  background: #e8efeb !important;
+  border-radius: 999px !important;
+  overflow: hidden !important;
+  position: relative !important;
+}
+
+#stok .scytd-bar-fill{
+  display: block !important;
+  height: 100% !important;
   min-height: 18px !important;
-  overflow: visible !important;
+  border-radius: 999px !important;
+  transition: width 0.2s ease;
 }
 
-#stok .scytd-comparison-track-bg{
-  fill: #e8efeb !important;
+#stok .scytd-bar-fill.scytd-purchase-bar,
+#stok .scytd-purchase-bar.scytd-bar-fill{
+  background: #176b55 !important;
 }
 
-#stok .scytd-purchase-bar{
-  fill: #176b55 !important;
-}
-
-#stok .scytd-usage-bar{
-  fill: #5b9bd5 !important;
+#stok .scytd-bar-fill.scytd-usage-bar,
+#stok .scytd-usage-bar.scytd-bar-fill{
+  background: #5b9bd5 !important;
 }
 
 #stok .scytd-comparison-row strong{
@@ -186,7 +189,7 @@
   display: block !important;
 }
 
-/* Soften one-view clip on analytics panels so charts are not zero-height */
+/* Override one-view overflow that clips charts */
 html body.hasnaria-owner-erp #app > main.wrap > section#stok:not(.hidden):has(.sc22-dashboard) > .sc3-shell .scytd-grid > .scytd-panel{
   overflow: auto !important;
 }
@@ -196,4 +199,10 @@ html body.hasnaria-owner-erp #app > main.wrap > section#stok:not(.hidden):has(.s
   height: auto !important;
   flex-shrink: 0 !important;
   overflow: visible !important;
+}
+html body.hasnaria-owner-erp #app > main.wrap > section#stok:not(.hidden):has(.sc22-dashboard) > .sc3-shell .scytd-bar-track{
+  display: block !important;
+  height: 18px !important;
+  background: #e8efeb !important;
+  border-radius: 999px !important;
 }
