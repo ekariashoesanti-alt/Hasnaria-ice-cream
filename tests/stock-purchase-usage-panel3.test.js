@@ -48,7 +48,8 @@ test('panel 3 uses separate series styles and refreshed CSS cache',()=>{
  assert.ok(css.includes('.scytd-usage-bar'));
  assert.ok(css.includes('.scytd-unit-select'));
  assert.ok(css.includes('.scytd-comparison-track'));
- assert.ok(css.includes('.scytd-comparison-row'));\n assert.ok(css.includes('.scytd-comparison-track-bg'));
+ assert.ok(css.includes('.scytd-comparison-row'));
+ assert.ok(css.includes('.scytd-comparison-track-bg'));
 });
 
 test('panel 3 renders only the selected month as two horizontal comparisons',()=>{
