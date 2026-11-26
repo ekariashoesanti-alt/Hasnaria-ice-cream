@@ -3008,3 +3008,96 @@
   #stok .sc22-plot { flex:1 1 0!important; height:0!important; min-height:0!important; overflow:hidden!important; }
   #stok .sc22-plot-svg { width:100%!important; height:100%!important; max-height:58px!important; }
 }
+
+
+/* HSN-ONEVIEW-FINAL: fit header, KPI, four stock panels and footnote into the
+   actual app content viewport. The app chrome occupies the top/bottom insets. */
+@media (min-width: 761px) {
+  #stok:has(.scytd-grid) {
+    box-sizing:border-box!important;
+    height:calc(100dvh - 112px)!important;
+    min-height:0!important;
+    max-height:calc(100dvh - 112px)!important;
+    overflow:hidden!important;
+  }
+  #stok:has(.scytd-grid) > .sc3-shell {
+    display:flex!important;
+    flex-direction:column!important;
+    height:100%!important;
+    min-height:0!important;
+    max-height:100%!important;
+    gap:5px!important;
+    overflow:hidden!important;
+  }
+  #stok:has(.scytd-grid) > .sc3-shell > .sc28-simple-head {
+    flex:0 0 52px!important;
+    height:52px!important;
+    min-height:52px!important;
+    max-height:52px!important;
+    padding:4px 10px!important;
+  }
+  #stok:has(.scytd-grid) > .sc3-shell > .sc8-kpis {
+    flex:0 0 58px!important;
+    height:58px!important;
+    min-height:58px!important;
+    max-height:58px!important;
+    margin:0!important;
+    gap:6px!important;
+  }
+  #stok:has(.scytd-grid) > .sc3-shell > .sc8-kpis > .sc8-kpi {
+    height:58px!important;
+    min-height:58px!important;
+    max-height:58px!important;
+    padding:4px 7px!important;
+  }
+  #stok:has(.scytd-grid) > .sc3-shell > .sc424-notices { display:none!important; }
+  #stok:has(.scytd-grid) > .sc3-shell > .sc5-dashboard.sc6-dashboard {
+    display:flex!important;
+    flex:1 1 0!important;
+    flex-direction:column!important;
+    width:100%!important;
+    height:0!important;
+    min-height:0!important;
+    max-height:100%!important;
+    overflow:hidden!important;
+    margin:0!important;
+    padding:0!important;
+    gap:0!important;
+  }
+  #stok .scytd-grid {
+    display:grid!important;
+    flex:1 1 0!important;
+    width:100%!important;
+    height:0!important;
+    min-height:0!important;
+    max-height:100%!important;
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    grid-template-rows:repeat(2,minmax(0,1fr))!important;
+    gap:5px!important;
+    margin:0!important;
+    padding:0!important;
+    overflow:hidden!important;
+  }
+  #stok .scytd-grid > .scytd-panel {
+    min-width:0!important;
+    min-height:0!important;
+    height:100%!important;
+    max-height:100%!important;
+    padding:4px 6px!important;
+    gap:1px!important;
+    overflow:hidden!important;
+  }
+  #stok .scytd-footnote {
+    flex:0 0 12px!important;
+    height:12px!important;
+    min-height:12px!important;
+    max-height:12px!important;
+    margin:0!important;
+    padding:1px 4px!important;
+    font-size:6px!important;
+    line-height:1.1!important;
+    overflow:hidden!important;
+    white-space:nowrap!important;
+    text-overflow:ellipsis!important;
+  }
+}

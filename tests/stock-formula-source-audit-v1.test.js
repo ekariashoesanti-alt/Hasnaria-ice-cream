@@ -91,7 +91,7 @@ test('mocked Owner UI shows precise formula and missing-data warnings',()=>{
 });
 
 test('new JS/CSS versions are pinned and full Stock release checks retained',()=>{
-  assert.match(js,/stock-control-v3\.css\?v=40/);
+  assert.match(js,/stock-control-v3\.css\?v=41/);
   for(const f of ['stock-monitor.js','stock-v3-runtime-fix.js']){
     assert.match(read(f),/stock-control-v3\.js\?v=44/);
   }
