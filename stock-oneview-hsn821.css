@@ -480,3 +480,104 @@ html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-
     overflow:visible!important;
   }
 }
+
+
+/* HSN-821C — prevent Stock chart regions from collapsing.
+   CSS-only: keep summary/legend visible and reserve chart space on desktop. */
+@media (min-width:761px) {
+  #stok .scytd-grid {
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    grid-template-rows:repeat(2,minmax(0,1fr))!important;
+    min-height:0!important;
+  }
+
+  #stok .scytd-grid>.scytd-panel {
+    display:flex!important;
+    flex-direction:column!important;
+    min-width:0!important;
+    min-height:0!important;
+    height:100%!important;
+    overflow:hidden!important;
+  }
+
+  /* Donut and gauge panels retain enough room for chart + legend. */
+  #stok .scytd-donut-layout,
+  #stok .scytd-gauge-layout {
+    display:grid!important;
+    flex:1 1 auto!important;
+    height:auto!important;
+    min-height:100px!important;
+    min-width:0!important;
+    overflow:visible!important;
+  }
+
+  /* Panel 3: summary remains a fixed-content row above the quantity chart.
+     The chart container must not inherit the old height:0 flex sizing. */
+  #stok .scytd-quantity-summary {
+    display:grid!important;
+    flex:0 0 auto!important;
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    min-width:0!important;
+    min-height:0!important;
+  }
+
+  #stok .scytd-quantity-chart {
+    display:flex!important;
+    flex:1 1 auto!important;
+    align-items:stretch!important;
+    width:100%!important;
+    height:auto!important;
+    min-width:0!important;
+    min-height:110px!important;
+    max-height:190px!important;
+    overflow:visible!important;
+  }
+
+  #stok .scytd-quantity-chart>svg {
+    display:block!important;
+    flex:1 1 auto!important;
+    width:100%!important;
+    height:100%!important;
+    min-width:0!important;
+    min-height:100px!important;
+    max-width:100%!important;
+    max-height:190px!important;
+    overflow:visible!important;
+  }
+
+  /* Panel 4: reserve chart height without forcing its flex basis to zero. */
+  #stok .sc22-plot {
+    display:flex!important;
+    flex:1 1 auto!important;
+    align-items:stretch!important;
+    width:100%!important;
+    height:auto!important;
+    min-width:0!important;
+    min-height:105px!important;
+    max-height:190px!important;
+    overflow:visible!important;
+  }
+
+  #stok .sc22-plot-svg {
+    display:block!important;
+    flex:1 1 auto!important;
+    width:100%!important;
+    height:100%!important;
+    min-width:0!important;
+    min-height:95px!important;
+    max-width:100%!important;
+    max-height:180px!important;
+    overflow:visible!important;
+  }
+
+  /* Keep explanatory text and chart summaries from being squeezed away. */
+  #stok .scytd-panel>.scytd-chart-legend,
+  #stok .scytd-panel>.scytd-quantity-summary,
+  #stok .scytd-panel>.sc22-summary,
+  #stok .scytd-panel>.sc22-summary-note,
+  #stok .scytd-panel>.sc22-chart-note,
+  #stok .scytd-panel>.scytd-note {
+    flex:0 0 auto!important;
+    min-width:0!important;
+  }
+}
