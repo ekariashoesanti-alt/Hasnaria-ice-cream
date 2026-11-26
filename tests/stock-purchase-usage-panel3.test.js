@@ -20,9 +20,9 @@ test('panel 3 reads the period-scoped monthly reporting view and supports unit s
 
 test('panel 3 keeps missing verified BOM data visibly unavailable, not as a fabricated zero',()=>{
  assert.doesNotMatch(panel,/BOM_BASELINE_ESTIMATE_V1/);
- assert.match(panel,/var hasUsage=!!\(row&&num\(row\.usage_rows\)>0\)/);
+ assert.match(panel,/var hasUsage=selectedRows\.some\(function\(x\)\{return num\(x\.usage_rows\)>0\|\|num\(x\.usage_qty\)>0;\}\)/);
  assert.match(panel,/hasUsage\?fmt\(usageTotal\).*:'—'/);
- assert.match(panel,/Pemakaian BOM untuk periode ini belum tersedia/);
+ assert.match(panel,/Data pemakaian BOM belum tersedia pada rentang YTD/);
  assert.match(panel,/scytd-usage-bar/);
  assert.doesNotMatch(panel,/style=/);
 });
@@ -52,14 +52,17 @@ test('panel 3 uses separate series styles and refreshed CSS cache',()=>{
  assert.ok(css.includes('.scytd-comparison-track-bg'));
 });
 
-test('panel 3 renders only the selected month as two horizontal comparisons',()=>{
+test('panel 3 aggregates every month from January through the selected month',()=>{
  assert.match(panel,/var selected=monthKey\(S\.period\)/);
- assert.match(panel,/S\.purchaseUsageRows\.find/);
+ assert.match(panel,/period>=selected\.slice\(0,4\)\+'-01'&&period<=selected/);
+ assert.match(panel,/selectedRows\.reduce\(function\(total,x\)\{return total\+num\(x\.purchase_qty\);\},0\)/);
+ assert.match(panel,/selectedRows\.reduce\(function\(total,x\)\{return total\+num\(x\.usage_qty\);\},0\)/);
+ assert.doesNotMatch(panel,/S\.purchaseUsageRows\.find/);
  assert.match(panel,/scytd-comparison-row/);
  assert.match(panel,/scytd-purchase-bar/);
  assert.match(panel,/scytd-usage-bar/);
  assert.doesNotMatch(panel,/Array\.from\(\{length:last\}/);
- assert.match(js,/<small>Periode \'\+esc\(monthLabel\(S\.period\)\)/);
+ assert.match(js,/<small>Akumulasi 1 Januari–\'\+esc\(monthLabel\(S\.period\)\)/);
 });
 
 test('health donut remains horizontal and proportionate on desktop and mobile',()=>{
@@ -67,4 +70,6 @@ test('health donut remains horizontal and proportionate on desktop and mobile',(
  assert.ok(css.includes('minmax(112px,.88fr) minmax(145px,1.12fr)'));
  assert.ok(css.includes('width:min(100%,148px)'));
  assert.ok(css.includes('@media (max-width:760px)'));
+ assert.ok(fs.readFileSync('stock-panel3-ytd.css','utf8').includes('.scytd-comparison-row'));
+ assert.ok(fs.readFileSync('stock-oneview-hsn821.css','utf8').length>10000);
 });
