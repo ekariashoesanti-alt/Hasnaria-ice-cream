@@ -206,3 +206,27 @@ html body.hasnaria-owner-erp #app > main.wrap > section#stok:not(.hidden):has(.s
   background: #e8efeb !important;
   border-radius: 999px !important;
 }
+
+
+/* HSN-824: preserve compact horizontal donut proportions on desktop and mobile. */
+@media (min-width:761px) {
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell .scytd-donut-layout {
+    display:grid!important;
+    grid-template-columns:minmax(112px,.88fr) minmax(0,1.12fr)!important;
+    align-items:center!important;
+    justify-items:center!important;
+  }
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell .scytd-donut {
+    width:min(100%,142px)!important;
+    max-width:142px!important;
+    min-width:112px!important;
+  }
+}
+@media(max-width:760px) {
+  #stok .scytd-donut-layout {
+    display:grid!important;
+    grid-template-columns:minmax(112px,.88fr) minmax(0,1.12fr)!important;
+    align-items:center!important;
+  }
+  #stok .scytd-donut { max-width:142px!important; }
+}
