@@ -206,3 +206,138 @@ html body.hasnaria-owner-erp #app > main.wrap > section#stok:not(.hidden):has(.s
   background: #e8efeb !important;
   border-radius: 999px !important;
 }
+
+
+/* HSN-823 — restore visible SVG bars and keep all four YTD infographics inside cards.
+   CSS-only presentation repair; no stock, ledger, API, or database calculations changed. */
+@media (min-width:761px) {
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell .scytd-grid>.scytd-panel {
+    min-height:0!important;
+    overflow:auto!important;
+    scrollbar-width:thin;
+  }
+
+  /* Panel 1: fixed compact donut so its lower arc is never cut by the card. */
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell .scytd-donut-layout {
+    display:flex!important;
+    flex:1 1 auto!important;
+    align-items:center!important;
+    justify-content:space-around!important;
+    gap:12px!important;
+    min-height:150px!important;
+    max-height:172px!important;
+    overflow:visible!important;
+  }
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell .scytd-donut {
+    display:block!important;
+    flex:0 0 148px!important;
+    width:148px!important;
+    min-width:120px!important;
+    max-width:148px!important;
+    aspect-ratio:1/1!important;
+  }
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell .scytd-donut-svg {
+    display:block!important;
+    width:100%!important;
+    height:auto!important;
+    aspect-ratio:1/1!important;
+  }
+
+  /* Panel 3: SVG had no sizing/fill rules because the previous CSS targeted
+     .scytd-bar-track while the renderer emits .scytd-comparison-track. */
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell .scytd-quantity-chart {
+    display:flex!important;
+    flex:1 1 auto!important;
+    flex-direction:column!important;
+    justify-content:center!important;
+    gap:10px!important;
+    width:100%!important;
+    min-height:76px!important;
+    height:auto!important;
+    max-height:112px!important;
+    overflow:visible!important;
+  }
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell .scytd-comparison-row {
+    display:grid!important;
+    grid-template-columns:minmax(100px,120px) minmax(80px,1fr) auto!important;
+    align-items:center!important;
+    gap:9px!important;
+    min-height:22px!important;
+    width:100%!important;
+  }
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell svg.scytd-comparison-track {
+    display:block!important;
+    width:100%!important;
+    height:16px!important;
+    min-width:80px!important;
+    max-width:100%!important;
+    overflow:hidden!important;
+  }
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell .scytd-comparison-track-bg {
+    fill:#e8efeb!important;
+  }
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell .scytd-purchase-bar {
+    fill:#176b55!important;
+  }
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell .scytd-usage-bar {
+    fill:#5b9bd5!important;
+  }
+
+  /* Panel 4: give the monthly SVG enough room for axis, bars and month labels. */
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell .sc22-month-end {
+    display:flex!important;
+    flex:1 1 auto!important;
+    flex-direction:column!important;
+    min-height:0!important;
+    height:auto!important;
+    overflow:visible!important;
+    gap:5px!important;
+  }
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell .sc22-plot {
+    display:flex!important;
+    flex:1 1 138px!important;
+    min-height:126px!important;
+    height:auto!important;
+    max-height:158px!important;
+    align-items:stretch!important;
+    overflow:visible!important;
+  }
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell .sc22-plot-svg {
+    display:block!important;
+    width:100%!important;
+    height:100%!important;
+    min-height:126px!important;
+    max-height:158px!important;
+    max-width:100%!important;
+    overflow:visible!important;
+  }
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell .sc22-chart-note {
+    flex:0 0 auto!important;
+    margin:0!important;
+    line-height:1.2!important;
+  }
+}
+
+
+/* Keep the compact horizontal donut proportions covered by the layout regression test. */
+@media (min-width:761px) {
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell .scytd-donut-layout {
+    display:grid!important;
+    grid-template-columns:minmax(112px,.88fr) minmax(0,1.12fr)!important;
+    align-items:center!important;
+    justify-items:center!important;
+  }
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell .scytd-donut {
+    width:min(100%,142px)!important;
+    max-width:142px!important;
+    min-width:112px!important;
+  }
+}
+@media(max-width:760px) {
+  #stok .scytd-donut-layout {
+    display:grid!important;
+    grid-template-columns:minmax(112px,.88fr) minmax(0,1.12fr)!important;
+    align-items:center!important;
+  }
+  #stok .scytd-donut { max-width:142px!important; }
+}
