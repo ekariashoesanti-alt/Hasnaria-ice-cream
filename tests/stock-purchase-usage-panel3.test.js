@@ -67,9 +67,9 @@ test('panel 3 aggregates every month from January through the selected month',()
 
 test('health donut remains horizontal and proportionate on desktop and mobile',()=>{
  assert.ok(css.includes('.scytd-donut-layout'));
- assert.ok(css.includes('minmax(112px,.88fr) minmax(145px,1.12fr)'));
- assert.ok(css.includes('width:min(100%,148px)'));
- assert.ok(css.includes('@media (max-width:760px)'));
+ assert.ok(fs.readFileSync('stock-panel3-ytd.css','utf8').includes('minmax(112px,.88fr) minmax(0,1.12fr)'));
+ assert.ok(fs.readFileSync('stock-panel3-ytd.css','utf8').includes('max-width:142px'));
+ assert.ok(fs.readFileSync('stock-panel3-ytd.css','utf8').includes('@media(max-width:760px)'));
  assert.ok(fs.readFileSync('stock-panel3-ytd.css','utf8').includes('.scytd-comparison-row'));
  assert.ok(fs.readFileSync('stock-oneview-hsn821.css','utf8').length>10000);
 });
