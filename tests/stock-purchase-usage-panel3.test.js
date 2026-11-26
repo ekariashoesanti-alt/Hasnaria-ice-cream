@@ -23,7 +23,8 @@ test('panel 3 keeps missing verified BOM data visibly unavailable, not as a fabr
  assert.match(panel,/var hasUsage=!!\(row&&num\(row\.usage_rows\)>0\)/);
  assert.match(panel,/hasUsage\?fmt\(usageTotal\).*:'—'/);
  assert.match(panel,/Pemakaian BOM untuk periode ini belum tersedia/);
- assert.match(panel,/scytd-usage-bar/);\n assert.doesNotMatch(panel,/style=/);
+ assert.match(panel,/scytd-usage-bar/);
+ assert.doesNotMatch(panel,/style=/);
 });
 
 test('reporting view is read-only, unit-qualified and security-invoker',()=>{
