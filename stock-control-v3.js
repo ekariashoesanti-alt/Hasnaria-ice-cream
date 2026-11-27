@@ -1069,7 +1069,7 @@
     var grid=[0,.25,.5,.75,1].map(function(f){var y=base-(base-top)*f;return '<line class="sc22-gridline" x1="'+left+'" y1="'+y+'" x2="'+right+'" y2="'+y+'"/><text class="sc22-axis-label" x="'+(left-10)+'" y="'+(y+4)+'" text-anchor="end">'+fmt(Math.round(max*f))+'</text>';}).join('');
     var bars=rows.map(function(x,i){var h=x.count*scale,xx=left+i*slot+(slot-bar)/2,yy=base-h;return '<g><title>'+names[x.period]+': '+fmt(x.count)+' baris mutasi ledger</title><rect class="sc425-activity-bar" x="'+xx+'" y="'+yy+'" width="'+bar+'" height="'+h+'" rx="5"/><text class="sc22-point-value" x="'+(xx+bar/2)+'" y="'+Math.max(30,yy-8)+'" text-anchor="middle">'+fmt(x.count)+'</text><text class="sc22-month-label" x="'+(xx+bar/2)+'" y="245" text-anchor="middle">'+String(names[x.period]||'').slice(0,3)+'</text></g>';}).join('');
     var total=rows.reduce(function(a,x){return a+x.count;},0);
-    return '<div class="sc22-month-end sc22-compact"><div class="sc22-summary"><strong>'+fmt(total)+' <small>mutasi</small></strong></div><div class="sc22-plot"><svg class="sc22-plot-svg" viewBox="0 0 740 269" role="img" aria-label="Jumlah baris mutasi ledger '+esc(ytdRangeLabel())+'">'+grid+bars+'</svg></div></div>';
+    return '<div class="sc22-month-end sc22-compact"><div class="sc22-summary"><strong>'+fmt(total)+' <small>mutasi</small></strong></div><div class="sc22-plot"><svg class="sc22-plot-svg" viewBox="0 0 740 269" role="img" aria-label="Jumlah catatan mutasi ledger '+esc(ytdRangeLabel())+'">'+grid+bars+'</svg></div></div>';
   }
 
   async function loadLedger() {
