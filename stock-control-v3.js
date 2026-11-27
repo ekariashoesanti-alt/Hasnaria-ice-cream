@@ -271,7 +271,7 @@
       document.head.appendChild(link);
     }
     ensureLink('stock-control-v3-css', '/stock-control-v3.css?v=42');
-    ensureLink('stock-panel3-ytd-css', '/stock-panel3-ytd.css?v=1');
+    ensureLink('stock-panel3-ytd-css', '/stock-panel3-ytd.css?v=2');
   }
 
   function initialStatus(x) {
