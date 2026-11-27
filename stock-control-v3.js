@@ -947,27 +947,18 @@
         return;
       }
       var month = S.period + '-01';
-      var y=Number(S.period.slice(0,4)),m=Number(S.period.slice(5,7))-1;
-      var fromMonth=new Date(Date.UTC(y,m-9,1)).toISOString().slice(0,10);
-      var tq=qs({brand_id:'eq.'+BRAND,period_month:'gte.'+fromMonth,
-        select:'period_month,unit,total_unit_skus,checkpoint_skus,recorded_end_qty,period_movement_rows,unlinked_sale_rows,data_status',order:'period_month.asc',limit:'200'})+
-        '&period_month=lte.'+month;
-      // Load ledger activity independently: a slow monthly stock-end query
-      // must not suppress the separate movement chart.
+      // The current Stock dashboard renders snapshot KPIs, YTD purchase-vs-BOM,
+      // and movement activity. The legacy month-end/value trend infographics
+      // have no active render consumer, so do not execute their expensive
+      // month-end view and valuation reads during dashboard initialization.
+      // This keeps an unused historical query from failing the whole period load.
       loadMonthlyMovementActivity();
       loadPurchaseUsageYtd();
-      // First paint only waits for the actual monthly stock-end series.
-      var trendRows=await request('ui_stock_month_end_trend_v1?' + tq);
-      if(seq!==S.periodSeq)return;
-      S.monthEndRows=Array.isArray(trendRows)?trendRows:[];
-      S.monthEndUnavailable=false;
+      S.monthEndRows=[];
+      S.monthEndUnavailable=true;
+      S.valueHistory={error:true};
       S.trend=[];
       S.firstPeriodLoaded=true;
-      try{
-        var valueHistory=await readStockValueHistory(S.period);
-        if(seq!==S.periodSeq)return;
-        S.valueHistory=valueHistory;
-      }catch(_){if(seq!==S.periodSeq)return;S.valueHistory={error:true};}
       // These operational sources belong to detail/actions, not dashboard
       // first paint. Retain lazy, read-only access when those panels are used.
       S.salesLinkAuditUnavailable=false;
