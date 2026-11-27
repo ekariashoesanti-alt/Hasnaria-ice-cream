@@ -947,15 +947,31 @@
         return;
       }
       var month = S.period + '-01';
-      // The current Stock dashboard renders snapshot KPIs, YTD purchase-vs-BOM,
-      // and movement activity. The legacy month-end/value trend infographics
-      // have no active render consumer, so do not execute their expensive
-      // month-end view and valuation reads during dashboard initialization.
-      // This keeps an unused historical query from failing the whole period load.
+      var y=Number(S.period.slice(0,4)),m=Number(S.period.slice(5,7))-1;
+      var fromMonth=new Date(Date.UTC(y,m-9,1)).toISOString().slice(0,10);
+      var tq=qs({brand_id:'eq.'+BRAND,period_month:'gte.'+fromMonth,
+        select:'period_month,unit,total_unit_skus,checkpoint_skus,recorded_end_qty,period_movement_rows,unlinked_sale_rows,data_status',order:'period_month.asc',limit:'200'})+
+        '&period_month=lte.'+month;
       loadMonthlyMovementActivity();
       loadPurchaseUsageYtd();
-      S.monthEndRows=[];
-      S.monthEndUnavailable=true;
+      // The current dashboard has no active month-end trend panel. Keep the
+      // historical query available only for an explicitly mounted consumer;
+      // never let an unused, expensive history view block the Stock overview.
+      if(document.querySelector('[data-stock-month-end-trend="1"]')){
+        request('ui_stock_month_end_trend_v1?' + tq).then(function(trendRows){
+          if(seq!==S.periodSeq)return;
+          S.monthEndRows=Array.isArray(trendRows)?trendRows:[];
+          S.monthEndUnavailable=false;
+          render();
+        }).catch(function(){
+          if(seq!==S.periodSeq)return;
+          S.monthEndRows=[];
+          S.monthEndUnavailable=true;
+        });
+      }else{
+        S.monthEndRows=[];
+        S.monthEndUnavailable=true;
+      }
       S.valueHistory={error:true};
       S.trend=[];
       S.firstPeriodLoaded=true;
