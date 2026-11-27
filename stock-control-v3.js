@@ -958,16 +958,19 @@
       // historical query available only for an explicitly mounted consumer;
       // never let an unused, expensive history view block the Stock overview.
       if(document.querySelector('[data-stock-month-end-trend="1"]')){
-        request('ui_stock_month_end_trend_v1?' + tq).then(function(trendRows){
-          if(seq!==S.periodSeq)return;
-          S.monthEndRows=Array.isArray(trendRows)?trendRows:[];
-          S.monthEndUnavailable=false;
-          render();
-        }).catch(function(){
-          if(seq!==S.periodSeq)return;
-          S.monthEndRows=[];
-          S.monthEndUnavailable=true;
-        });
+        (async function(){
+          try{
+            var trendRows=await request('ui_stock_month_end_trend_v1?' + tq);
+            if(seq!==S.periodSeq)return;
+            S.monthEndRows=Array.isArray(trendRows)?trendRows:[];
+            S.monthEndUnavailable=false;
+            render();
+          }catch(_){
+            if(seq!==S.periodSeq)return;
+            S.monthEndRows=[];
+            S.monthEndUnavailable=true;
+          }
+        })();
       }else{
         S.monthEndRows=[];
         S.monthEndUnavailable=true;
