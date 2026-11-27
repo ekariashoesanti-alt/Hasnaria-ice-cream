@@ -2708,11 +2708,9 @@
     var units=S.purchaseUsageUnits||[],unit=S.purchaseUsageUnit||'';
     var options=units.map(function(u){return '<option value="'+esc(u)+'"'+(u===unit?' selected':'')+'>'+esc(u.toUpperCase())+'</option>';}).join('');
     var select='<label class="scytd-unit-select">Satuan <select id="scytdPurchaseUnit" aria-label="Pilih satuan kuantitas">'+(options||'<option value="">Belum ada satuan</option>')+'</select></label>';
-    if(S.purchaseUsageLoading&&!S.purchaseUsageRows.length)return select+'<div class="scytd-empty">Memuat pembelian dan pemakaian...</div>';
+    if(S.purchaseUsageLoading&&!S.purchaseUsageRows.length)return select+'<div class="scytd-empty">Memuat data perbandingan...</div>';
     if(S.purchaseUsageError)return select+'<div class="scytd-empty"><b>Data belum dapat dimuat</b><span>'+esc(S.purchaseUsageError)+'</span></div>';
-    if(!unit)return select+'<div class="scytd-empty"><b>Data kuantitas belum tersedia</b><span>Belum ada transaksi pembelian yang masuk ledger dengan satuan teridentifikasi.</span></div>';
-    // Aggregate every monthly row from January through the selected month.
-    // The source view already applies the date window; this guard excludes future rows.
+    if(!unit)return select+'<div class="scytd-empty"><b>Data kuantitas belum tersedia</b></div>';
     var selected=monthKey(S.period);
     var selectedRows=(S.purchaseUsageRows||[]).filter(function(x){
       var period=String(x.period_month||'').slice(0,7);
@@ -2726,15 +2724,14 @@
     var max=Math.max(purchaseTotal,usageTotal,1);
     var purchaseBarWidth=purchaseTotal>0?Math.max(1,Math.round(purchaseTotal/max*1000)):0;
     var usageBarWidth=hasUsage&&usageTotal>0?Math.max(1,Math.round(usageTotal/max*1000)):0;
-    var legend='<div class="scytd-chart-legend"><span><i class="purchase"></i>Pembelian tercatat</span><span><i class="usage"></i>Pemakaian BOM terverifikasi</span></div>';
-    var summary='<div class="scytd-quantity-summary"><span>Pembelian tercatat<strong>'+fmt(purchaseTotal)+' '+esc(unit)+'</strong></span><span>Pemakaian BOM '+(hasUsage?'terverifikasi':'belum tersedia')+'<strong>'+(hasUsage?fmt(usageTotal)+' '+esc(unit):'—')+'</strong></span></div>';
-    var chart='<div class="scytd-quantity-chart" role="group" aria-label="Perbandingan akumulasi pembelian dan pemakaian BOM Januari sampai '+esc(monthLabel(selected))+'">'+
-      '<div class="scytd-comparison-row"><span class="scytd-comparison-label">Pembelian tercatat</span><svg class="scytd-comparison-track" viewBox="0 0 1000 16" preserveAspectRatio="none" aria-hidden="true"><rect class="scytd-comparison-track-bg" x="0" y="0" width="1000" height="16" rx="8"/><rect class="scytd-purchase-bar" x="0" y="0" width="'+purchaseBarWidth+'" height="16" rx="8"/></svg><strong>'+fmt(purchaseTotal)+' '+esc(unit)+'</strong></div>'+
-      '<div class="scytd-comparison-row"><span class="scytd-comparison-label">Pemakaian BOM</span><svg class="scytd-comparison-track" viewBox="0 0 1000 16" preserveAspectRatio="none" aria-hidden="true"><rect class="scytd-comparison-track-bg" x="0" y="0" width="1000" height="16" rx="8"/><rect class="scytd-usage-bar" x="0" y="0" width="'+usageBarWidth+'" height="16" rx="8"/></svg><strong>'+(hasUsage?fmt(usageTotal)+' '+esc(unit):'—')+'</strong></div>'+
-      '</div>';
-    var status=hasUsage?'Pemakaian BOM terverifikasi diakumulasikan sejak 1 Januari sampai periode terpilih.':'Data pemakaian BOM belum tersedia pada rentang YTD; area grafik tetap ditampilkan dengan nilai —.';
-    if(!hasPurchase)status+=' Belum ada pembelian tercatat di ledger untuk satuan ini pada rentang tersebut.';
-    return select+summary+legend+chart+'<p class="scytd-note">'+esc(status)+'</p><p class="scytd-note">Sumber pembelian adalah mutasi PURCHASE yang sudah masuk ledger. Transaksi yang belum diposting, satuan placeholder, konversi belum valid, dan estimasi BOM tidak dijumlahkan.</p>';
+    var chart='<div class="scytd-quantity-chart scytd-compare-compact" role="group" aria-label="Perbandingan pembelian dan pemakaian BOM Januari sampai '+esc(monthLabel(selected))+'">'+
+      '<div class="scytd-comparison-row"><span class="scytd-comparison-label">Pembelian</span><svg class="scytd-comparison-track" viewBox="0 0 1000 20" preserveAspectRatio="none" aria-hidden="true"><rect class="scytd-comparison-track-bg" x="0" y="0" width="1000" height="20" rx="10"/><rect class="scytd-purchase-bar" x="0" y="0" width="'+purchaseBarWidth+'" height="20" rx="10"/></svg><strong>'+fmt(purchaseTotal)+' '+esc(unit)+'</strong></div>'+
+      '<div class="scytd-comparison-row"><span class="scytd-comparison-label">Pemakaian BOM</span><svg class="scytd-comparison-track" viewBox="0 0 1000 20" preserveAspectRatio="none" aria-hidden="true"><rect class="scytd-comparison-track-bg" x="0" y="0" width="1000" height="20" rx="10"/><rect class="scytd-usage-bar" x="0" y="0" width="'+usageBarWidth+'" height="20" rx="10"/></svg><strong>'+(hasUsage?fmt(usageTotal)+' '+esc(unit):'—')+'</strong></div></div>';
+    var state=hasUsage?'Data pembelian dan pemakaian BOM terverifikasi':'Data pemakaian BOM belum tersedia pada rentang YTD';
+    if(!hasPurchase)state='Pembelian belum tercatat pada periode ini · '+state.toLowerCase();
+    return '<div class="scytd-compare-head"><span>'+esc(monthLabel(selected))+' YTD</span>'+select+'</div>'+chart+
+      '<div class="scytd-compare-legend"><span><i class="purchase"></i>Pembelian tercatat</span><span><i class="usage"></i>Pemakaian BOM terverifikasi</span></div>'+
+      '<p class="scytd-note">'+esc(state)+'.</p>';
   }
   function renderYtdAnalytics(){
     var period=esc(ytdRangeLabel());

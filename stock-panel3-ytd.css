@@ -654,3 +654,137 @@ html body.hasnaria-owner-erp #app > main.wrap > section#stok:not(.hidden):has(.s
     line-height:1.15!important;
   }
 }
+
+
+/* HSN-826 — final targeted fit for Panel 1 and simplified comparison in Panel 3.
+   Panel 2 and Panel 4 are intentionally untouched. */
+@media (min-width:761px) {
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell .scytd-grid>.scytd-panel:nth-child(1) {
+    min-height:0!important;
+    overflow:hidden!important;
+    padding:10px 12px!important;
+    gap:2px!important;
+  }
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell .scytd-grid>.scytd-panel:nth-child(1) .scytd-donut-layout {
+    display:grid!important;
+    grid-template-columns:112px minmax(0,1fr)!important;
+    align-items:center!important;
+    justify-content:stretch!important;
+    gap:14px!important;
+    min-height:112px!important;
+    max-height:112px!important;
+    height:112px!important;
+    overflow:visible!important;
+    flex:0 0 112px!important;
+  }
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell .scytd-grid>.scytd-panel:nth-child(1) .scytd-donut {
+    width:112px!important;
+    min-width:112px!important;
+    max-width:112px!important;
+    height:112px!important;
+    aspect-ratio:1!important;
+  }
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell .scytd-grid>.scytd-panel:nth-child(1) .scytd-donut-svg {
+    width:112px!important;
+    height:112px!important;
+  }
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell .scytd-grid>.scytd-panel:nth-child(1) .scytd-legend {
+    gap:6px!important;
+    font-size:11px!important;
+  }
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell .scytd-grid>.scytd-panel:nth-child(1) .scytd-note {
+    margin:2px 0 0!important;
+    font-size:8px!important;
+    line-height:1.2!important;
+  }
+
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell .scytd-grid>.scytd-panel:nth-child(3) {
+    min-height:0!important;
+    overflow:hidden!important;
+    padding:10px 12px!important;
+    gap:5px!important;
+  }
+  .scytd-compare-head {
+    display:flex!important;
+    align-items:center!important;
+    justify-content:space-between!important;
+    gap:10px!important;
+    min-height:28px!important;
+    color:#60746b!important;
+    font-size:10px!important;
+  }
+  .scytd-compare-head .scytd-unit-select {
+    display:flex!important;
+    align-items:center!important;
+    gap:6px!important;
+    margin:0!important;
+    font-size:9px!important;
+  }
+  .scytd-compare-head .scytd-unit-select select {
+    height:28px!important;
+    min-width:72px!important;
+    padding:3px 7px!important;
+    font-size:10px!important;
+  }
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell .scytd-quantity-chart.scytd-compare-compact {
+    display:flex!important;
+    flex:1 1 auto!important;
+    justify-content:center!important;
+    flex-direction:column!important;
+    gap:18px!important;
+    width:100%!important;
+    min-height:92px!important;
+    max-height:120px!important;
+    height:auto!important;
+    margin:4px 0!important;
+    overflow:visible!important;
+  }
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell .scytd-compare-compact .scytd-comparison-row {
+    display:grid!important;
+    grid-template-columns:105px minmax(0,1fr) auto!important;
+    align-items:center!important;
+    gap:10px!important;
+    min-height:26px!important;
+  }
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell .scytd-compare-compact .scytd-comparison-label {
+    font-size:11px!important;
+    font-weight:650!important;
+  }
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell .scytd-compare-compact svg.scytd-comparison-track {
+    display:block!important;
+    width:100%!important;
+    height:20px!important;
+    min-width:100px!important;
+    max-width:100%!important;
+  }
+  .scytd-compare-compact .scytd-comparison-track-bg { fill:#e9efec!important; }
+  .scytd-compare-compact .scytd-purchase-bar { fill:#147d5a!important; }
+  .scytd-compare-compact .scytd-usage-bar { fill:#5b9bd5!important; }
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell .scytd-compare-compact .scytd-comparison-row strong {
+    font-size:12px!important;
+    white-space:nowrap!important;
+  }
+  .scytd-compare-legend {
+    display:flex!important;
+    flex-wrap:wrap!important;
+    gap:14px!important;
+    font-size:9px!important;
+    color:#62766d!important;
+  }
+  .scytd-compare-legend i {
+    display:inline-block!important;
+    width:9px!important;height:9px!important;border-radius:2px!important;margin-right:5px!important;
+  }
+  .scytd-compare-legend i.purchase {background:#147d5a!important;}
+  .scytd-compare-legend i.usage {background:#5b9bd5!important;}
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell .scytd-grid>.scytd-panel:nth-child(3) .scytd-note {
+    margin:1px 0 0!important;
+    font-size:8px!important;
+    line-height:1.2!important;
+  }
+}
+@media (max-width:760px) {
+  #stok .scytd-compare-head {display:flex;justify-content:space-between;align-items:center;gap:8px;}
+  #stok .scytd-quantity-chart.scytd-compare-compact {display:flex;flex-direction:column;gap:12px;min-height:88px;}
+  #stok .scytd-compare-compact .scytd-comparison-row {display:grid;grid-template-columns:88px minmax(0,1fr) auto;gap:6px;align-items:center;}
+}
