@@ -902,3 +902,124 @@ html body.hasnaria-owner-erp #app > main.wrap > section#stok:not(.hidden):has(.s
   #stok .scytd-compare-compact progress.scytd-purchase-bar::-moz-progress-bar {background:#147d5a;}
   #stok .scytd-compare-compact progress.scytd-usage-bar::-moz-progress-bar {background:#5b9bd5;}
 }
+
+
+/* HSN-828 — final spacing cleanup based on production screenshot.
+   Panel 3: compact unit selector and reserve room for both comparison rows + legend.
+   Panel 4: removed redundant explanatory lines in markup; let chart use the space. */
+@media (min-width:761px) {
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell .scytd-grid>.scytd-panel:nth-child(3) {
+    display:flex!important;
+    flex-direction:column!important;
+    gap:5px!important;
+    padding:10px 12px 9px!important;
+    overflow:hidden!important;
+  }
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell .scytd-grid>.scytd-panel:nth-child(3) .scytd-compare-head {
+    display:flex!important;
+    align-items:center!important;
+    justify-content:space-between!important;
+    flex:0 0 34px!important;
+    min-height:34px!important;
+    gap:10px!important;
+    margin:0!important;
+    line-height:1.2!important;
+  }
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell .scytd-grid>.scytd-panel:nth-child(3) .scytd-compare-head .scytd-unit-select {
+    display:flex!important;
+    flex-direction:row!important;
+    align-items:center!important;
+    justify-content:flex-end!important;
+    gap:7px!important;
+    flex:0 0 auto!important;
+    height:34px!important;
+    margin:0!important;
+    padding:0!important;
+    white-space:nowrap!important;
+    line-height:1!important;
+  }
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell .scytd-grid>.scytd-panel:nth-child(3) .scytd-compare-head .scytd-unit-select select {
+    display:block!important;
+    box-sizing:border-box!important;
+    width:94px!important;
+    min-width:94px!important;
+    max-width:94px!important;
+    height:32px!important;
+    min-height:32px!important;
+    max-height:32px!important;
+    margin:0!important;
+    padding:3px 8px!important;
+    font-size:11px!important;
+    line-height:1.1!important;
+  }
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell .scytd-grid>.scytd-panel:nth-child(3) .scytd-quantity-chart.scytd-compare-compact {
+    flex:0 0 82px!important;
+    min-height:82px!important;
+    max-height:82px!important;
+    height:82px!important;
+    margin:2px 0 0!important;
+    padding:0!important;
+    gap:12px!important;
+    justify-content:center!important;
+    overflow:visible!important;
+  }
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell .scytd-grid>.scytd-panel:nth-child(3) .scytd-compare-compact .scytd-comparison-row {
+    grid-template-columns:104px minmax(0,1fr) auto!important;
+    min-height:24px!important;
+    height:24px!important;
+    gap:9px!important;
+  }
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell .scytd-grid>.scytd-panel:nth-child(3) .scytd-compare-compact progress.scytd-bar-track {
+    width:100%!important;
+    height:13px!important;
+    min-height:13px!important;
+    max-height:13px!important;
+  }
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell .scytd-grid>.scytd-panel:nth-child(3) .scytd-compare-legend {
+    flex:0 0 auto!important;
+    display:flex!important;
+    align-items:center!important;
+    flex-wrap:nowrap!important;
+    gap:12px!important;
+    margin:0!important;
+    min-height:16px!important;
+    font-size:9px!important;
+    line-height:1.2!important;
+  }
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell .scytd-grid>.scytd-panel:nth-child(3) .scytd-note {
+    display:none!important;
+  }
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell .scytd-grid>.scytd-panel:nth-child(4) .sc22-month-end.sc22-compact {
+    display:flex!important;
+    flex:1 1 auto!important;
+    flex-direction:column!important;
+    justify-content:flex-end!important;
+    min-height:0!important;
+    gap:0!important;
+    overflow:hidden!important;
+  }
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell .scytd-grid>.scytd-panel:nth-child(4) .sc22-summary {
+    display:flex!important;
+    justify-content:flex-end!important;
+    align-items:center!important;
+    flex:0 0 34px!important;
+    min-height:34px!important;
+    margin:0!important;
+    padding:0 4px!important;
+  }
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell .scytd-grid>.scytd-panel:nth-child(4) .sc22-plot {
+    flex:1 1 auto!important;
+    min-height:132px!important;
+    max-height:160px!important;
+    margin:0!important;
+  }
+  html body.hasnaria-owner-erp #app>main.wrap>section#stok:not(.hidden):has(.sc22-dashboard)>.sc3-shell .scytd-grid>.scytd-panel:nth-child(4) .sc22-plot-svg {
+    min-height:132px!important;
+    max-height:160px!important;
+  }
+}
+@media (max-width:760px) {
+  #stok .scytd-compare-head .scytd-unit-select {height:32px;align-items:center;}
+  #stok .scytd-compare-head .scytd-unit-select select {height:32px;min-height:32px;}
+  #stok .sc22-month-end.sc22-compact .sc22-chart-note {display:none;}
+}
