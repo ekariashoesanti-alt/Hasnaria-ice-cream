@@ -2727,7 +2727,7 @@
     var chart='<div class="scytd-quantity-chart scytd-compare-compact" role="group" aria-label="Perbandingan pembelian dan pemakaian BOM Januari sampai '+esc(monthLabel(selected))+'">'+
       '<div class="scytd-comparison-row"><span class="scytd-comparison-label">Pembelian</span><svg class="scytd-comparison-track" viewBox="0 0 1000 20" preserveAspectRatio="none" aria-hidden="true"><rect class="scytd-comparison-track-bg" x="0" y="0" width="1000" height="20" rx="10"/><rect class="scytd-purchase-bar" x="0" y="0" width="'+purchaseBarWidth+'" height="20" rx="10"/></svg><strong>'+fmt(purchaseTotal)+' '+esc(unit)+'</strong></div>'+
       '<div class="scytd-comparison-row"><span class="scytd-comparison-label">Pemakaian BOM</span><svg class="scytd-comparison-track" viewBox="0 0 1000 20" preserveAspectRatio="none" aria-hidden="true"><rect class="scytd-comparison-track-bg" x="0" y="0" width="1000" height="20" rx="10"/><rect class="scytd-usage-bar" x="0" y="0" width="'+usageBarWidth+'" height="20" rx="10"/></svg><strong>'+(hasUsage?fmt(usageTotal)+' '+esc(unit):'—')+'</strong></div></div>';
-    var state=hasUsage?'Data pembelian dan pemakaian BOM terverifikasi':'Pemakaian BOM belum tersedia; tidak ditampilkan sebagai nol';
+    var state=hasUsage?'Data pembelian dan pemakaian BOM terverifikasi':'Data pemakaian BOM belum tersedia pada rentang YTD';
     if(!hasPurchase)state='Pembelian belum tercatat pada periode ini · '+state.toLowerCase();
     return '<div class="scytd-compare-head"><span>'+esc(monthLabel(selected))+' YTD</span>'+select+'</div>'+chart+
       '<div class="scytd-compare-legend"><span><i class="purchase"></i>Pembelian tercatat</span><span><i class="usage"></i>Pemakaian BOM terverifikasi</span></div>'+
