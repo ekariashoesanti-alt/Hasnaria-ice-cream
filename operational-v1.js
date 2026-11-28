@@ -129,13 +129,12 @@
       h.innerHTML='<div class="op1-shell">'+subnav('expenses')+'<div id="opExpensesHost"></div></div>';
       bind(h);ensureExpenses();return;
     }
-    if(state.subtab==='work')state.subtab='attendance';
     state.viewSeq++;
     var shell=h.querySelector('[data-operational-v1="1"]');if(!shell){shell=document.createElement('div');shell.className='op1-shell';shell.setAttribute('data-operational-v1','1');h.replaceChildren(shell)}
-    shell.innerHTML='<div class="op1-head"><div><div class="op1-eyebrow">OPERASIONAL · '+esc(monthLabel(state.period))+'</div><h2>Pelaksanaan & Kontrol Harian</h2><p>Kontrol operasional harian. Fitur Stock Opname tidak ditampilkan di aplikasi.</p></div><div class="op1-head-actions"><label class="op1-month"><span>Bulan</span><select id="op1Month" data-month-filter="operasional">'+periodOptions()+'</select></label><button type="button" class="op1-refresh" data-op-action="refresh">↻ Refresh</button></div></div>'+
+    shell.innerHTML=(isOwner()?subnav('work'):'')+'<div class="op1-head"><div><div class="op1-eyebrow">OPERASIONAL · '+esc(monthLabel(state.period))+'</div><h2>Pelaksanaan & Kontrol Harian</h2><p>Daftar pekerjaan ringan; anggota tim dan detail opname hanya dimuat saat dibutuhkan.</p></div><div class="op1-head-actions"><label class="op1-month"><span>Bulan</span><select id="op1Month" data-month-filter="operasional">'+periodOptions()+'</select></label>'+'<button type="button" class="op1-refresh" data-op-action="refresh">↻ Refresh</button></div></div>'+
       '<div class="op1-kpis"><div><span>Aktif</span><strong>'+c.open+'</strong></div><div><span>Menunggu Review</span><strong>'+c.review+'</strong></div><div><span>Selesai</span><strong>'+c.done+'</strong></div></div>'+
       (state.notice?'<div class="op1-notice">'+esc(state.notice)+'</div>':'')+(state.actionError?'<div class="op1-alert">'+esc(state.actionError)+'</div>':'')+(state.error?'<div class="op1-alert">'+esc(state.error)+'</div>':'')+(state.loading&&!state.loaded?'<div class="op1-loading">Memuat daftar pekerjaan…</div>':'')+
-      '<div class="op1-notice">Fitur Stock Opname telah disembunyikan dari tampilan aplikasi.</div>'+
+      renderCreate()+'<div class="op1-grid"><section><div class="op1-section-title"><strong>Pekerjaan terbaru</strong><span>Maks. 30 run</span></div>'+renderRunList()+'</section>'+renderDetails()+'</div>'+
       '<div class="op1-foot"><span>Loading policy</span><b>30 run header → 25 item/page → pegawai hanya saat create.</b></div>';
     bind(h);
   }
@@ -288,7 +287,7 @@
     h.onclick=function(e){var b=e.target&&e.target.closest?e.target.closest('button'):null;if(!b)return;var action=b.getAttribute('data-op-action');
       if(action==='show-attendance'){if(isOwner()){state.subtab='attendance';render()}return}
       if(action==='show-loyalty'){if(isOwner()){state.subtab='loyalty';render()}return}
-      if(action==='show-work'){return}
+      if(action==='show-work'){state.subtab='work';render();if(!state.loaded&&!state.loading)loadRuns();return}
       if(action==='show-expenses'){if(isOwner()){state.subtab='expenses';render()}return}
       if(action==='refresh'){clearAction();loadRuns(null,true);return}
       if(action==='new-opname'){state.createOpen=true;clearAction();render();loadMembers();return}
