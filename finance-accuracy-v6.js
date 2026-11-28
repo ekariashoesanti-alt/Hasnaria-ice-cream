@@ -89,7 +89,7 @@ function renderOwnerDashboard(){
    var u=n(x.utilization_pct),over=u>100;
    return '<div><span>'+esc(x.category)+'</span><b class="'+(over?'neg':'')+'">'+money(x.actual_amount)+' / '+money(x.budget_amount)+'</b><small class="'+(over?'neg':'')+'">'+pct(u)+(over?' · OVER BUDGET':'')+'</small></div>';
  }).join('');
- return '<section class="finmg-dashboard">'+
+ return '<section class="finmg-dashboard" data-finance-management="1">'+
  '<div class="finmg-dash-head"><div><span>OWNER CONTROL CENTER</span><h2>Kesehatan Keuangan</h2><p>Ringkasan keputusan untuk '+esc(monthLabel(state.period))+'.</p></div><span class="finmg-dash-status '+(cur.cashflow_data_status==='classified'?'ok':'warn')+'">'+esc(cur.cashflow_data_status==='classified'?'Cashflow terklasifikasi':'Cashflow sebagian')+'</span></div>'+
  '<div class="finmg-dash-kpis">'+
  '<div><span>Omzet</span><b>'+money(rev)+'</b><small>'+((change>=0?'▲ ':'▼ '))+Math.abs(change).toFixed(1)+'% vs sebelumnya</small></div>'+
